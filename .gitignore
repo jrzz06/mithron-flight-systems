@@ -1,9 +1,15 @@
 .env.local
 .env
 .env.*
+!.env.example
 
 # MCP secrets (use mcp.json.example as a template)
 .cursor/mcp.json
+
+# local pipeline state (never commit)
+tools/.enhance-*
+tools/.migrate-*
+tools/load-test-results.json
 
 # dependencies
 node_modules/

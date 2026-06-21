@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
 const envLocal = join(root, ".env.local");
 let exitCode = 0;
+
+const FORBIDDEN_TRACKED = [".env.local", ".env", ".cursor/mcp.json"];
+const SECRET_PATTERNS = [
+  { name: "Supabase JWT", regex: /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g },
+  { name: "Wix API key", regex: /IST\.ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g },
+  { name: "GitHub token", regex: /gho_[A-Za-z0-9]{20,}/g },
+  { name: "Hardcoded live password", regex: /password:\s*["'][^"']{8,}["']/g }
+];
 
 function fail(message) {
   console.error(`[secrets-hygiene] FAIL: ${message}`);
@@ -14,6 +22,12 @@ function fail(message) {
 
 function pass(message) {
   console.log(`[secrets-hygiene] OK: ${message}`);
+}
+
+function trackedFiles() {
+  return execSync("git ls-files -z", { cwd: root, encoding: "utf8" })
+    .split("\0")
+    .filter(Boolean);
 }
 
 try {
@@ -25,6 +39,15 @@ try {
   }
 } catch {
   fail("git check-ignore failed — is this a git repository?");
+}
+
+for (const path of FORBIDDEN_TRACKED) {
+  try {
+    execSync(`git ls-files --error-unmatch ${path}`, { cwd: root, stdio: "pipe" });
+    fail(`${path} is tracked by git — remove it immediately`);
+  } catch {
+    pass(`${path} is not tracked`);
+  }
 }
 
 try {
@@ -46,6 +69,27 @@ if (existsSync(envLocal)) {
   pass(".env.local exists locally (expected for development only)");
 } else {
   console.warn("[secrets-hygiene] WARN: .env.local not found — use .env.example as a template");
+}
+
+if (!trackedFiles().includes(".env.example")) {
+  fail(".env.example is not tracked — commit the env template for deploys");
+}
+
+for (const file of trackedFiles()) {
+  if (file.endsWith(".env.example") || file.includes("node_modules/")) continue;
+  const content = readFileSync(join(root, file), "utf8");
+  for (const pattern of SECRET_PATTERNS) {
+    const matches = content.match(pattern.regex);
+    if (!matches) continue;
+    const filtered = matches.filter((value) => !value.includes("...") && !value.includes("YOUR_"));
+    if (filtered.length > 0) {
+      fail(`${pattern.name} pattern found in tracked file ${file}`);
+    }
+  }
+}
+
+if (exitCode === 0) {
+  pass("no secret patterns detected in tracked source files");
 }
 
 if (process.env.NODE_ENV === "production" && existsSync(envLocal)) {

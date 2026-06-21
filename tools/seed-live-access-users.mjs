@@ -16,26 +16,28 @@ function loadEnvLocal() {
   }
 }
 
-const LIVE_ACCOUNTS = [
-  {
-    email: "live-admin@mithron.com",
-    password: "MithronLiveAdmin26!",
-    role: "admin",
-    label: "Live Admin Demo"
-  },
-  {
-    email: "live-supplier@mithron.com",
-    password: "MithronLiveSupplier26!",
-    role: "supplier",
-    label: "Live Supplier Demo"
-  },
-  {
-    email: "live-warehouse@mithron.com",
-    password: "MithronLiveWarehouse26!",
-    role: "warehouse",
-    label: "Live Warehouse Demo"
-  }
+const LIVE_PASSWORD_ENV_KEYS = {
+  admin: "LIVE_ADMIN_PASSWORD",
+  supplier: "LIVE_SUPPLIER_PASSWORD",
+  warehouse: "LIVE_WAREHOUSE_PASSWORD"
+};
+
+const LIVE_ACCOUNT_DEFS = [
+  { email: "live-admin@mithron.com", role: "admin", label: "Live Admin Demo" },
+  { email: "live-supplier@mithron.com", role: "supplier", label: "Live Supplier Demo" },
+  { email: "live-warehouse@mithron.com", role: "warehouse", label: "Live Warehouse Demo" }
 ];
+
+function loadLiveAccounts() {
+  return LIVE_ACCOUNT_DEFS.map((account) => {
+    const envKey = LIVE_PASSWORD_ENV_KEYS[account.role];
+    const password = process.env[envKey]?.trim() ?? "";
+    if (!password) {
+      throw new Error(`Missing ${envKey} for ${account.role} live account (${account.email}).`);
+    }
+    return { ...account, password };
+  });
+}
 
 async function findAuthUserByEmail(supabase, email) {
   const normalizedEmail = email.toLowerCase();
@@ -133,7 +135,9 @@ async function main() {
 
   await ensureRoles(supabase);
 
-  for (const account of LIVE_ACCOUNTS) {
+  const liveAccounts = loadLiveAccounts();
+
+  for (const account of liveAccounts) {
     const email = account.email.toLowerCase();
     const existing = await findAuthUserByEmail(supabase, email);
     let userId = existing?.id ?? null;
