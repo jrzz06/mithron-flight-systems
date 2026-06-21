@@ -1,0 +1,38 @@
+.env.local
+.env
+.env.*
+
+# MCP secrets (use mcp.json.example as a template)
+.cursor/mcp.json
+
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# logs
+logs/
+*.log
+.audit/
+validation/
+
+# generated reports (keep folder, ignore outputs)
+reports/*.json
+reports/*.md
+!reports/.gitkeep
+
+# test outputs
+test-results/
+playwright-report/
+
+# misc
+.DS_Store
+Thumbs.db
+tsconfig.tsbuildinfo
+tools/realesrgan-bin/
+
+# supabase
+supabase/.temp/

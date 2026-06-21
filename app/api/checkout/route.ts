@@ -1,0 +1,259 @@
+import { NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
+import { parseCheckoutRequestBody, type GuestAddress } from "@/lib/api/checkout-schema";
+import { createClient } from "@/lib/server";
+import { assertSupabaseAdminConfig } from "@/lib/env";
+import { assertCustomerAddressBelongsToUser } from "@/services/customer-addresses";
+import {
+  createCustomerCheckoutOrderItemRecord,
+  createCustomerCheckoutOrderRecord,
+  createCustomerCheckoutPaymentRecord,
+  fetchAdminRecordsByColumn,
+  updateAdminRecord
+} from "@/services/admin-actions";
+import { getProducts } from "@/services/catalog";
+import { buildCustomerCheckoutDraft } from "@/services/orders";
+import { releaseCheckoutStock, reserveCheckoutStock, resolveCheckoutStockSkus } from "@/services/checkout-stock";
+import { createPaymentIntent, isPaymentGatewayConfigured } from "@/services/payments/gateway";
+
+type CheckoutResponse = {
+  ok: true;
+  orderId: string;
+  orderNumber: string;
+  paymentIntentId: string;
+  checkoutUrl: string | null;
+  clientSecret: string | null;
+};
+
+const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function buildShippingMetadata(addressId?: string, guestAddress?: GuestAddress) {
+  return {
+    shipping_address_id: addressId ?? null,
+    ...(guestAddress ? { guest_shipping_address: guestAddress } : {})
+  };
+}
+
+async function findCheckoutByIdempotencyKey(
+  idempotencyKey: string,
+  scope: { userId: string } | { guestEmail: string; guestPhone: string }
+): Promise<CheckoutResponse | null> {
+  const config = assertSupabaseAdminConfig(process.env);
+  const filter =
+    "userId" in scope
+      ? `created_by_user_id=eq.${scope.userId}`
+      : `created_by_user_id=is.null&customer_email=eq.${encodeURIComponent(scope.guestEmail.trim())}&metadata->>customer_phone=eq.${encodeURIComponent(scope.guestPhone.trim())}`;
+
+  const response = await fetch(
+    `${config.url}/rest/v1/orders?select=id,order_number,metadata&${filter}&metadata->>idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`,
+    {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`
+      },
+      cache: "no-store"
+    }
+  );
+  if (!response.ok) return null;
+
+  const rows = (await response.json()) as Array<Record<string, unknown>>;
+  const order = rows[0];
+  if (!order?.id) return null;
+
+  const orderId = String(order.id);
+  const payments = await fetchAdminRecordsByColumn("payments", "order_id", orderId);
+  const payment = payments.find((row) => !["failed", "cancelled"].includes(String(row.status ?? ""))) ?? payments[0];
+  if (!payment?.provider_intent_id) return null;
+
+  return {
+    ok: true,
+    orderId,
+    orderNumber: String(order.order_number ?? orderId),
+    paymentIntentId: String(payment.provider_intent_id),
+    checkoutUrl: null,
+    clientSecret: null
+  };
+}
+
+async function cancelCheckoutOrder(orderId: string, actorId: string | null, reason: string) {
+  try {
+    await releaseCheckoutStock(orderId);
+  } catch {
+    // Best-effort release; order still marked cancelled.
+  }
+
+  await updateAdminRecord(
+    "orders",
+    "id",
+    orderId,
+    {
+      status: "cancelled",
+      payment_status: "failed",
+      metadata: { cancellation_reason: reason },
+      updated_at: new Date().toISOString()
+    },
+    actorId,
+    process.env,
+    actorId ? {} : { allowSystemActor: true }
+  );
+}
+
+export async function POST(request: Request) {
+  const idempotencyKey = request.headers.get("X-Idempotency-Key")?.trim() ?? "";
+  if (idempotencyKey && !UUID_V4.test(idempotencyKey)) {
+    return NextResponse.json({ error: "X-Idempotency-Key must be a UUID v4." }, { status: 400 });
+  }
+  const rawBody = await request.json().catch(() => null);
+  const body = parseCheckoutRequestBody(rawBody);
+
+  if (!body) {
+    return NextResponse.json({ error: "Valid email, phone, and cart items are required." }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
+
+  const rateKey = userId ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+  const limit = await checkDistributedRateLimit(`checkout:${rateKey}`, 5, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  }
+
+  if (process.env.NODE_ENV === "production" && !isPaymentGatewayConfigured()) {
+    return NextResponse.json(
+      { error: "Payments are not configured. Set PAYMENT_PROVIDER and provider credentials before accepting checkout." },
+      { status: 503 }
+    );
+  }
+
+  if (!body.addressId && !body.guestAddress) {
+    return NextResponse.json({ error: "A shipping address is required to pay online." }, { status: 400 });
+  }
+
+  if (body.addressId && !userId) {
+    return NextResponse.json({ error: "Sign in to use a saved address, or enter a shipping address below." }, { status: 400 });
+  }
+
+  if (idempotencyKey) {
+    const existing = userId
+      ? await findCheckoutByIdempotencyKey(idempotencyKey, { userId })
+      : await findCheckoutByIdempotencyKey(idempotencyKey, { guestEmail: body.email, guestPhone: body.phone });
+    if (existing) {
+      return NextResponse.json(existing);
+    }
+  }
+
+  if (body.addressId && userId) {
+    try {
+      await assertCustomerAddressBelongsToUser(userId, body.addressId);
+    } catch {
+      return NextResponse.json({ error: "Invalid shipping address for this account." }, { status: 403 });
+    }
+  }
+
+  let stockItems;
+  try {
+    stockItems = await resolveCheckoutStockSkus(body.items);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to resolve product inventory.";
+    return NextResponse.json({ error: message }, { status: 409 });
+  }
+
+  const products = await getProducts();
+  const catalog = products.map((product) => ({
+    slug: product.slug,
+    name: product.name,
+    price: product.price,
+    category: product.category
+  }));
+
+  const draft = buildCustomerCheckoutDraft(
+    {
+      customerEmail: body.email,
+      phone: body.phone,
+      region: body.region,
+      items: stockItems.map((item) => ({
+        productSlug: item.productSlug,
+        quantity: item.quantity,
+        sku: item.sku ?? undefined
+      })),
+      metadata: {
+        ...buildShippingMetadata(body.addressId, body.guestAddress),
+        ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {})
+      }
+    },
+    catalog,
+    userId
+  );
+
+  const orderNumber = `ORD-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const order = await createCustomerCheckoutOrderRecord(
+    {
+      ...draft.order,
+      created_by_user_id: userId,
+      order_number: orderNumber
+    },
+    userId
+  );
+
+  const orderId = String(order.id ?? "");
+  if (!orderId) {
+    return NextResponse.json({ error: "Order creation failed." }, { status: 500 });
+  }
+
+  for (const item of draft.orderItems) {
+    await createCustomerCheckoutOrderItemRecord({ ...item, order_id: orderId }, userId);
+  }
+
+  try {
+    await reserveCheckoutStock(orderId, stockItems);
+  } catch (error) {
+    await cancelCheckoutOrder(orderId, userId, "stock_reservation_failed");
+    const message = error instanceof Error ? error.message : "Insufficient stock for one or more items.";
+    return NextResponse.json({ error: message }, { status: 409 });
+  }
+
+  let intent;
+  try {
+    intent = await createPaymentIntent({
+      orderId,
+      amount: draft.order.total,
+      currency: draft.order.currency,
+      customerEmail: body.email,
+      metadata: { address_id: body.addressId ?? "", phone: body.phone }
+    });
+  } catch (error) {
+    await cancelCheckoutOrder(orderId, userId, "payment_intent_failed");
+    const message = error instanceof Error ? error.message : "Payment initialization failed.";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+
+  await createCustomerCheckoutPaymentRecord(
+    {
+      order_id: orderId,
+      provider: process.env.PAYMENT_PROVIDER ?? "stub",
+      provider_intent_id: intent.intentId,
+      amount: draft.order.total,
+      currency: draft.order.currency,
+      status: "requires_payment"
+    },
+    userId
+  );
+
+  const paymentProvider = (process.env.PAYMENT_PROVIDER ?? "stub").toLowerCase();
+  const razorpayKeyId = paymentProvider === "razorpay" ? process.env.RAZORPAY_KEY_ID?.trim() ?? null : null;
+
+  return NextResponse.json({
+    ok: true,
+    orderId,
+    orderNumber,
+    paymentIntentId: intent.intentId,
+    checkoutUrl: intent.checkoutUrl ?? null,
+    clientSecret: intent.clientSecret ?? null,
+    amount: draft.order.total,
+    currency: draft.order.currency,
+    razorpayKeyId
+  });
+}

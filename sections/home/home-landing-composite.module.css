@@ -1,0 +1,2816 @@
+.root {
+  --home-ink: #0f172a;
+  --home-muted: #64748b;
+  --home-page: var(--surface-page);
+  --home-card: #ffffff;
+  --home-well: #f7f8fa;
+  --home-border: rgba(15, 23, 42, 0.08);
+  --home-border-strong: rgba(15, 23, 42, 0.16);
+  --home-accent: var(--brand-accent);
+  --home-composite-progress: 0;
+  position: relative;
+  overflow-x: clip;
+  background:
+    linear-gradient(180deg, #ffffff 0%, var(--home-page) 16%, #ffffff 38%, var(--home-page) 72%, #ffffff 100%);
+  color: var(--home-ink);
+  font-family: var(--type-ui);
+}
+
+.progressTrack {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 3px;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.progressFill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #0f172a;
+  transform: scaleX(var(--home-composite-progress));
+  transform-origin: 0 50%;
+}
+
+.container {
+  width: min(100%, 1560px);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 64px);
+}
+
+.miniCarousel {
+  overflow: hidden;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: #ffffff;
+  min-height: 142px;
+  padding: 14px 0 18px;
+}
+
+.miniCarouselViewport {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.miniCarouselViewport::before,
+.miniCarouselViewport::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: clamp(58px, 7vw, 132px);
+  pointer-events: none;
+}
+
+.miniCarouselViewport::before {
+  left: 0;
+  background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.82) 42%, rgba(255, 255, 255, 0) 100%);
+}
+
+.miniCarouselViewport::after {
+  right: 0;
+  background: linear-gradient(270deg, #ffffff 0%, rgba(255, 255, 255, 0.86) 46%, rgba(255, 255, 255, 0) 100%);
+}
+
+.miniCarouselRail {
+  display: flex;
+  gap: clamp(22px, 3.2vw, 58px);
+  align-items: start;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 0 clamp(108px, 8vw, 152px);
+  scroll-padding-inline: clamp(108px, 8vw, 152px);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.miniCarouselRail::-webkit-scrollbar {
+  display: none;
+}
+
+.miniCarouselItem {
+  display: grid;
+  flex: 0 0 clamp(57px, 4.3vw, 77px);
+  gap: 15px;
+  justify-items: center;
+  color: var(--home-ink);
+  text-align: center;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.miniCarouselImageWell {
+  position: relative;
+  width: 100%;
+  height: clamp(58px, 4.4vw, 76px);
+}
+
+.miniCarouselImage {
+  object-fit: contain;
+  padding: 2px;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform 260ms var(--ease-cinematic);
+}
+
+.miniCarouselBuyNow {
+  composes: glass-button from global;
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 1;
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--type-ui);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 0 9px;
+  white-space: nowrap;
+  transform: translate3d(-50%, 22%, 0);
+}
+
+.miniCarouselItem:hover .miniCarouselImage,
+.miniCarouselItem:focus-visible .miniCarouselImage {
+  transform: translate3d(0, 0, 0) scale(1.024);
+}
+
+.miniCarouselItem:hover .miniCarouselBuyNow,
+.miniCarouselItem:focus-visible .miniCarouselBuyNow {
+  transform: translate3d(-50%, 18%, 0);
+}
+
+.miniCarouselLabel {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  color: #0f172a;
+  font-family: var(--type-ui);
+  font-size: clamp(0.62rem, 0.7vw, 0.78rem);
+  font-weight: 430;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.miniCarouselItem:focus-visible {
+  border-radius: 10px;
+  outline: 2px solid rgba(15, 23, 42, 0.22);
+  outline-offset: 6px;
+}
+
+.miniCarouselNext {
+  position: absolute;
+  top: 50%;
+  right: clamp(10px, 3vw, 52px);
+  z-index: 3;
+  display: grid;
+  width: clamp(44px, 4.4vw, 58px);
+  height: clamp(44px, 4.4vw, 58px);
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.9);
+  color: rgba(15, 23, 42, 0.72);
+  transform: translateY(-50%);
+  transition:
+    background-color 220ms var(--ease-system),
+    color 220ms var(--ease-system);
+}
+
+.miniCarouselNext:hover,
+.miniCarouselNext:focus-visible {
+  background: rgba(15, 23, 42, 0.82);
+  color: #ffffff;
+  outline: none;
+}
+
+.promoImageBand {
+  background: var(--home-page);
+  padding: clamp(46px, 5.2vw, 72px) 0 clamp(52px, 6vw, 84px);
+}
+
+.promoImageFrame {
+  width: min(100%, 1740px);
+  padding: 0 clamp(11px, 2.9vw, 40px);
+  margin: 0 auto;
+}
+
+.promoImageEyebrow {
+  margin: 0 0 clamp(18px, 2vw, 28px);
+  color: #0f172a;
+  font-family: var(--type-display);
+  font-size: clamp(1.75rem, 2.3vw, 2.35rem);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.04;
+  text-transform: none;
+}
+
+.promoImageCard {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: clamp(260px, 19vw, 360px);
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #dbeafe;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.promoImageCard::before,
+.promoImageCard::after {
+  content: none;
+}
+
+.promoImage {
+  opacity: 1;
+  filter: none;
+  mix-blend-mode: normal;
+  object-fit: cover;
+  object-position: 52% 46%;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform 420ms var(--ease-cinematic);
+}
+
+.promoImageCard:hover .promoImage,
+.promoImageCard:focus-visible .promoImage {
+  transform: translate3d(0, 0, 0) scale(1.018);
+}
+
+.promoImageCard:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.28);
+  outline-offset: -6px;
+}
+
+.eyebrow {
+  margin: 0 0 9px;
+  color: var(--home-muted);
+  font-family: var(--type-technical);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.viewAllLink {
+  transition:
+    background-color 260ms var(--ease-cinematic),
+    border-color 260ms var(--ease-cinematic),
+    color 260ms var(--ease-cinematic),
+    opacity 260ms var(--ease-cinematic),
+    transform 260ms var(--ease-cinematic);
+}
+
+.chapter {
+  position: relative;
+  padding: clamp(44px, 6vw, 82px) 0;
+  scroll-margin-top: 96px;
+}
+
+.productShelfSection {
+  background: var(--home-page);
+  border-top: 0;
+  padding: clamp(20px, 2.8vw, 32px) 0;
+}
+
+.productShelfSection .container {
+  width: min(100%, 1740px);
+  padding: 0 clamp(11px, 2.9vw, 40px);
+}
+
+.productShelfSection+.productShelfSection {
+  padding-top: 0;
+}
+
+.productShelfSection+.missionWorldSection {
+  padding-top: clamp(48px, 5vh, 72px);
+}
+
+.productShelfSection+.missionWorldSection[data-composition="agri-field"] {
+  padding-top: clamp(40px, 4.5vh, 56px);
+}
+
+.productShelfHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.productShelfSection .eyebrow {
+  display: none;
+}
+
+.shelfTitle {
+  margin: 0;
+  color: var(--home-ink);
+  font-family: var(--type-display);
+  font-size: clamp(1.75rem, 2.3vw, 2.35rem);
+  font-weight: 540;
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.shelfHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.viewAllLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--home-ink);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.viewAllIcon {
+  display: inline-flex;
+  width: 31px;
+  height: 31px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--home-border-strong);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--home-ink);
+}
+
+.viewAllLink:hover,
+.viewAllLink:focus-visible {
+  color: #111827;
+  outline: none;
+}
+
+.viewAllLink:hover .viewAllIcon,
+.viewAllLink:focus-visible .viewAllIcon {
+  border-color: rgba(15, 23, 42, 0.28);
+}
+
+.shelfBoard {
+  display: grid;
+  gap: 10px;
+}
+
+.productShelfHero {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: clamp(240px, 30vw, 440px);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--home-page);
+  --shelf-hero-ink: #0f172a;
+  --shelf-hero-muted: rgba(15, 23, 42, 0.68);
+  --shelf-hero-cta-bg: var(--brand-cta-gradient);
+  --shelf-hero-cta-bg-hover: var(--brand-cta-gradient-hover);
+  --shelf-hero-cta-ink: var(--brand-cta-ink);
+  color: var(--shelf-hero-ink);
+  text-decoration: none;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productShelfHero {
+  --shelf-hero-ink: #ffffff;
+  --shelf-hero-muted: rgba(255, 255, 255, 0.78);
+  --shelf-hero-cta-bg: var(--brand-cta-gradient);
+  --shelf-hero-cta-bg-hover: var(--brand-cta-gradient-hover);
+  --shelf-hero-cta-ink: var(--brand-cta-ink);
+}
+
+.productShelfSection[data-shelf-tone="care"] .productShelfHero {
+  --shelf-hero-ink: #101418;
+  --shelf-hero-muted: rgba(16, 20, 24, 0.78);
+  --shelf-hero-cta-bg: #101418;
+  --shelf-hero-cta-bg-hover: #1a2028;
+  --shelf-hero-cta-ink: #ffffff;
+}
+
+.productShelfSection[data-shelf-tone="global"] .productShelfHero {
+  --shelf-hero-ink: #ffffff;
+  --shelf-hero-muted: rgba(255, 255, 255, 0.78);
+  --shelf-hero-cta-bg: var(--brand-cta-gradient);
+  --shelf-hero-cta-bg-hover: var(--brand-cta-gradient-hover);
+  --shelf-hero-cta-ink: var(--brand-cta-ink);
+}
+
+.shelfHeroBackdrop {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.shelfHeroBackdrop::after {
+  display: none;
+  content: none;
+}
+
+.shelfHeroContextImage {
+  object-fit: cover;
+  image-rendering: auto;
+}
+
+.productShelfSection[data-shelf-tone="world"] .shelfHeroContextImage {
+  object-position: 72% center;
+}
+
+.productShelfSection[data-shelf-tone="care"] .shelfHeroContextImage {
+  object-position: 82% center;
+}
+
+.productShelfSection[data-shelf-tone="global"] .shelfHeroContextImage {
+  object-position: 58% center;
+}
+
+.shelfHeroCopy {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: clamp(22px, 3.8vw, 60px);
+  transform: translateY(-50%);
+  display: grid;
+  width: min(440px, 43%);
+  gap: 8px;
+  justify-items: start;
+  padding: 0;
+  text-align: left;
+}
+
+.shelfHeroHeading {
+  display: block;
+  max-width: 18ch;
+  color: var(--shelf-hero-ink, #111113);
+  font-family: var(--type-display);
+  font-size: clamp(1.5rem, 2.05vw, 2.2rem);
+  font-weight: 520;
+  letter-spacing: 0;
+  line-height: 1.08;
+  transition: color 320ms var(--ease-cinematic);
+}
+
+.shelfHeroTitle {
+  color: var(--shelf-hero-muted);
+  font-family: var(--type-ui);
+  font-size: 0.86rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: color 320ms var(--ease-cinematic);
+}
+
+.shelfHeroCopy strong {
+  display: block;
+  max-width: 18ch;
+  font-family: var(--type-display);
+  font-size: clamp(1.5rem, 2.05vw, 2.2rem);
+  font-weight: 520;
+  letter-spacing: 0;
+  line-height: 1.08;
+  transition: color 320ms var(--ease-cinematic);
+}
+
+.shelfHeroBody {
+  display: -webkit-box;
+  overflow: hidden;
+  max-width: 400px;
+  color: var(--shelf-hero-muted);
+  font-family: var(--type-ui);
+  font-size: clamp(0.84rem, 0.95vw, 0.96rem);
+  font-weight: 420;
+  line-height: 1.4;
+  transition: color 320ms var(--ease-cinematic);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.shelfHeroCta {
+  composes: glass-button from global;
+  display: inline-flex;
+  width: fit-content;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0 26px;
+}
+
+.productShelfHero:hover .shelfHeroCta,
+.productShelfHero:focus-visible .shelfHeroCta {
+  transform: translateY(-1px);
+}
+
+.productShelfHero:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.34);
+  outline-offset: 3px;
+}
+
+.productShelfGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 298px)) minmax(220px, 1fr);
+  gap: clamp(12px, 1.2vw, 18px);
+  justify-content: start;
+}
+
+.productCard {
+  position: relative;
+  min-width: 0;
+  min-height: 470px;
+  display: grid;
+  grid-template-rows: 58% 42%;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--home-ink);
+  text-decoration: none;
+  box-shadow:
+    inset 0 0 0 0 rgba(15, 23, 42, 0),
+    0 0 0 rgba(15, 23, 42, 0);
+  transition:
+    background-color 300ms var(--ease-cinematic),
+    box-shadow 300ms var(--ease-cinematic),
+    filter 300ms var(--ease-cinematic);
+}
+
+.productCard::after {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  z-index: 2;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  content: ">";
+  font-family: var(--type-ui);
+  font-size: 0.9rem;
+  font-weight: 560;
+  opacity: 0;
+  transform: translate3d(6px, 0, 0) scale(0.92);
+  transition:
+    opacity 260ms var(--ease-cinematic),
+    transform 260ms var(--ease-cinematic);
+}
+
+.productCard:hover,
+.productCard:focus-visible {
+  background: #fbfcfe;
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 8px 18px rgba(15, 23, 42, 0.08);
+  outline: none;
+}
+
+.productCard:hover::after,
+.productCard:focus-visible::after {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.productImageWell {
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  background:
+    radial-gradient(ellipse 88% 54% at 50% 84%, rgba(15, 23, 42, 0.09) 0%, rgba(15, 23, 42, 0.025) 42%, transparent 68%),
+    #ffffff;
+  transition: background-color 320ms var(--ease-cinematic);
+}
+
+.productCutoutShadowGround,
+.productCutoutShadowContact {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+}
+
+.productCutoutShadowGround {
+  bottom: 12%;
+  z-index: 0;
+  width: 76%;
+  height: 38px;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0) 72%);
+  filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.productCutoutShadowContact {
+  bottom: 14%;
+  z-index: 0;
+  width: 50%;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.24);
+  filter: blur(8px);
+  opacity: 0.88;
+  transform: translateX(-50%);
+}
+
+.productImage {
+  z-index: 1;
+  object-fit: contain;
+  padding: 22px 24px 18px;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform 320ms var(--ease-cinematic);
+}
+
+.productCard:hover .productImage,
+.productCard:focus-visible .productImage {
+  transform: translate3d(0, 0, 0) scale(1.03);
+}
+
+.productBody {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  min-height: 0;
+  padding: 22px 24px 24px;
+  transform: translate3d(0, 0, 0);
+  transition: transform 300ms var(--ease-cinematic);
+}
+
+.productCard:hover .productBody,
+.productCard:focus-visible .productBody {
+  transform: translate3d(0, -2px, 0);
+}
+
+.productKicker {
+  display: block;
+  min-height: 1.45em;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--home-muted);
+  font-family: var(--type-ui);
+  font-size: clamp(0.82rem, 0.9vw, 0.96rem);
+  font-weight: 400;
+  line-height: 1.35;
+  transition: color 260ms var(--ease-cinematic);
+}
+
+.productKicker span {
+  color: inherit;
+  font-weight: 500;
+}
+
+.productName {
+  display: -webkit-box;
+  min-height: 2.08em;
+  margin: 0;
+  overflow: hidden;
+  color: var(--home-ink);
+  font-family: var(--type-display);
+  font-size: clamp(1.05rem, 1.16vw, 1.28rem);
+  font-weight: 500;
+  line-height: 1.12;
+  transition: color 260ms var(--ease-cinematic);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.productCard:hover .productKicker,
+.productCard:focus-visible .productKicker {
+  color: #334155;
+}
+
+.productCard:hover .productName,
+.productCard:focus-visible .productName {
+  color: #000000;
+}
+
+.productFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-right: 42px;
+  gap: 12px;
+  align-self: end;
+  color: var(--home-ink);
+  font-family: var(--type-ui);
+  font-size: clamp(1rem, 1.06vw, 1.16rem);
+  font-weight: 500;
+  transition: color 260ms var(--ease-cinematic);
+}
+
+.productCard:hover .productFooter,
+.productCard:focus-visible .productFooter {
+  color: #000000;
+}
+
+.productBuyNow {
+  composes: glass-button from global;
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--type-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 15px;
+  white-space: nowrap;
+}
+
+.productCard:hover .productBuyNow,
+.productCard:focus-visible .productBuyNow {
+  transform: translate3d(0, -1px, 0);
+}
+
+.productActionDot {
+  display: none;
+}
+
+.productCard:hover .productActionDot,
+.productCard:focus-visible .productActionDot {
+  transform: none;
+}
+
+.guideCard {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  min-height: 470px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--home-ink);
+  padding: 24px 24px;
+  text-decoration: none;
+  box-shadow:
+    inset 0 0 0 0 rgba(15, 23, 42, 0),
+    0 0 0 rgba(15, 23, 42, 0);
+  transition:
+    background-color 300ms var(--ease-cinematic),
+    box-shadow 300ms var(--ease-cinematic),
+    filter 300ms var(--ease-cinematic);
+}
+
+.guideCard:hover,
+.guideCard:focus-visible {
+  background: #fbfcfe;
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 8px 18px rgba(15, 23, 42, 0.08);
+  filter: contrast(1.025) saturate(1.015);
+  outline: none;
+}
+
+.guideLabel {
+  position: relative;
+  z-index: 2;
+  color: var(--home-muted);
+  font-family: var(--type-ui);
+  font-size: 0.82rem;
+  font-weight: 430;
+}
+
+.guideCard strong {
+  position: relative;
+  z-index: 2;
+  max-width: 210px;
+  margin-top: 8px;
+  color: var(--home-ink);
+  font-family: var(--type-display);
+  font-size: clamp(1.08rem, 1.22vw, 1.36rem);
+  font-weight: 520;
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.guideArrow {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--home-ink);
+  color: #ffffff;
+  transition:
+    background-color 260ms var(--ease-cinematic),
+    transform 260ms var(--ease-cinematic);
+}
+
+.guideCard:hover .guideArrow,
+.guideCard:focus-visible .guideArrow {
+  background: #111827;
+  transform: scale(1.03);
+}
+
+.guideImage {
+  object-fit: contain;
+  object-position: right bottom;
+  padding: 112px 0 0 22px;
+  opacity: 0.92;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform 320ms var(--ease-cinematic);
+}
+
+.guideCard:hover .guideImage,
+.guideCard:focus-visible .guideImage {
+  transform: translate3d(0, 0, 0) scale(1.03);
+}
+
+.shelfFallback {
+  border: 1px solid var(--home-border);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 20px;
+}
+
+.shelfFallback p {
+  margin: 0;
+  color: var(--home-muted);
+}
+
+.missionWorldSection {
+  display: flex;
+  min-height: clamp(760px, 88svh, 980px);
+  align-items: center;
+  overflow: hidden;
+  background: var(--home-page);
+  padding: clamp(88px, 9vh, 128px) 0 clamp(96px, 10vh, 140px);
+}
+
+.missionWorldSection .container {
+  width: min(100%, 1740px);
+  padding: 0 clamp(24px, 4vw, 72px);
+}
+
+.missionWorldLayout {
+  display: grid;
+  gap: clamp(34px, 5vh, 64px);
+  width: 100%;
+}
+
+.missionWorldHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 0.68fr) minmax(320px, 0.32fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: end;
+}
+
+.missionWorldIntro {
+  display: grid;
+  justify-items: start;
+}
+
+.missionWorldTitle {
+  margin: 0;
+  color: var(--home-ink);
+  font-family: var(--type-display);
+  font-size: clamp(2.45rem, 4.25vw, 5rem);
+  font-weight: 640;
+  letter-spacing: 0;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.missionWorldIntro p:first-child {
+  max-width: 560px;
+  margin: 0;
+  color: var(--home-muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.mediaStateNote {
+  max-width: 470px;
+  margin: 12px 0 0;
+  color: var(--home-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.missionWorldGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  grid-auto-rows: clamp(124px, 9vw, 174px);
+  gap: clamp(20px, 1.7vw, 28px);
+}
+
+.missionWorldTile {
+  --mission-image-reveal-scale: 1;
+  position: relative;
+  grid-column: span 3;
+  grid-row: span 2;
+  min-height: 260px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  cursor: default;
+  margin: 0;
+  text-decoration: none;
+  box-shadow: none;
+  isolation: isolate;
+}
+
+.missionWorldTileStandard {
+  grid-column: span 3;
+  grid-row: span 2;
+}
+
+.missionWorldTileHero {
+  min-height: 430px;
+}
+
+.missionWorldTileWide {
+  min-height: 284px;
+}
+
+.missionWorldTileTall {
+  min-height: 430px;
+}
+
+.missionWorldSection[data-composition="agri-field"] .container,
+.missionWorldSection[data-composition="city-urban"] .container {
+  width: min(100%, 1740px);
+  padding: 0 clamp(24px, 4vw, 72px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldGrid,
+.missionWorldSection[data-composition="city-urban"] .missionWorldGrid {
+  grid-template-columns:
+    minmax(280px, 0.92fr)
+    minmax(0, 1.04fr)
+    minmax(0, 1.04fr)
+    minmax(280px, 0.92fr);
+  grid-template-areas:
+    "mission-left mission-hero mission-hero mission-right"
+    "mission-left mission-small-a mission-small-b mission-right";
+  grid-template-rows:
+    clamp(300px, 33vh, 360px)
+    clamp(220px, 24vh, 270px);
+  grid-auto-flow: row;
+  grid-auto-rows: clamp(220px, 18vw, 280px);
+  gap: clamp(20px, 1.7vw, 28px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile,
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile {
+  grid-column: auto;
+  grid-row: auto;
+  min-height: 0;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(1),
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(1) {
+  grid-area: mission-left;
+  min-height: 0;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2),
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(2) {
+  grid-area: mission-hero;
+  min-height: 0;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(3),
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(3) {
+  grid-area: mission-right;
+  min-height: 0;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(4),
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(4) {
+  grid-area: mission-small-a;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(5),
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(5) {
+  grid-area: mission-small-b;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(1) .missionWorldImage,
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(1) .missionWorldImage {
+  object-position: 52% 50%;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) .missionWorldImage,
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(2) .missionWorldImage {
+  object-position: 50% 44%;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(3) .missionWorldImage,
+.missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(3) .missionWorldImage {
+  object-position: 54% 50%;
+}
+
+.missionWorldSection[data-composition="agri-field"] {
+  min-height: auto;
+  align-items: flex-start;
+  padding-bottom: clamp(56px, 6vh, 72px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .container {
+  padding: 0 clamp(28px, 3.8vw, 60px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldLayout {
+  gap: clamp(54px, 6.4vh, 64px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldHeader {
+  grid-template-columns: minmax(0, 0.62fr) minmax(430px, 0.38fr);
+  gap: clamp(48px, 5vw, 80px);
+  align-items: start;
+}
+
+.missionWorldSection[data-composition="agri-field"] .eyebrow {
+  margin-bottom: 18px;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTitle {
+  font-size: clamp(3.55rem, 4.1vw, 4.7rem);
+  line-height: 0.98;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldIntro {
+  justify-items: start;
+  padding-top: 4px;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldIntro p:first-child {
+  max-width: 520px;
+  font-size: clamp(1rem, 1.05vw, 1.14rem);
+  line-height: 1.45;
+}
+
+.missionWorldSection[data-composition="agri-field"] .mediaStateNote {
+  max-width: 520px;
+  margin-top: 16px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldGrid {
+  grid-template-columns:
+    minmax(260px, 1.03fr)
+    minmax(0, 0.98fr)
+    minmax(0, 0.98fr)
+    minmax(260px, 1.06fr);
+  grid-template-areas:
+    "mission-left mission-hero mission-hero mission-right"
+    "mission-left mission-small-a mission-small-b mission-right";
+  grid-template-rows:
+    clamp(340px, 38vh, 378px)
+    clamp(286px, 32vh, 318px);
+  gap: 18px;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 8px;
+  background: #0f172a;
+  box-shadow:
+    0 16px 30px rgba(15, 23, 42, 0.16),
+    0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: box-shadow 220ms var(--ease-cinematic);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:where(a) {
+  cursor: pointer;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:where(a):focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.44);
+  outline-offset: 4px;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:hover,
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:focus-visible {
+  box-shadow:
+    0 18px 34px rgba(15, 23, 42, 0.18),
+    0 3px 8px rgba(15, 23, 42, 0.1);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionTileOverlay {
+  background:
+    linear-gradient(180deg, rgba(7, 15, 29, 0) 26%, rgba(7, 15, 29, 0.2) 54%, rgba(7, 15, 29, 0.9) 100%),
+    linear-gradient(90deg, rgba(7, 15, 29, 0.2), rgba(7, 15, 29, 0.02) 58%);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionTileCopy {
+  right: clamp(22px, 1.8vw, 28px);
+  bottom: clamp(28px, 2.45vw, 40px);
+  left: clamp(22px, 1.8vw, 28px);
+  gap: 8px;
+  max-width: min(88%, 600px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) .missionTileCopy {
+  bottom: clamp(22px, 1.8vw, 30px);
+  max-width: min(78%, 620px);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionTileCopy strong {
+  font-size: clamp(1.35rem, 1.7vw, 1.95rem);
+  font-weight: 760;
+  letter-spacing: 0;
+  line-height: 1.06;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionTileCopy span {
+  font-size: clamp(0.92rem, 1.02vw, 1.08rem);
+  line-height: 1.38;
+  -webkit-line-clamp: 3;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionTileCopy small {
+  font-size: clamp(0.76rem, 0.82vw, 0.86rem);
+  line-height: 1.18;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionTileDevice {
+  top: clamp(16px, 1.25vw, 18px);
+  right: auto;
+  left: clamp(16px, 1.25vw, 18px);
+  min-height: 27px;
+  max-width: min(62%, 260px);
+  background: rgba(15, 23, 42, 0.56);
+  font-size: 0.72rem;
+  padding: 7px 13px;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) .missionTileCopy strong {
+  font-size: clamp(1.55rem, 1.95vw, 2.15rem);
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(1) .missionWorldImage {
+  object-position: 49% 50%;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) .missionWorldImage {
+  object-position: 52% 45%;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(3) .missionWorldImage {
+  object-position: 55% 50%;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(4) .missionWorldImage {
+  object-position: 50% 52%;
+}
+
+.missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(5) .missionWorldImage {
+  object-position: 50% 48%;
+}
+
+.missionWorldImage {
+  object-fit: cover;
+  transform: translate3d(0, 0, 0) scale(var(--mission-image-reveal-scale, 1));
+  transition: transform 420ms var(--ease-cinematic);
+}
+
+.missionWorldTile:hover .missionWorldImage {
+  transform: translate3d(0, 0, 0) scale(calc(var(--mission-image-reveal-scale, 1) * 1.024));
+}
+
+.missionTileOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, transparent 26%, rgba(15, 23, 42, 0.72) 100%),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.24), transparent 64%);
+}
+
+.missionTileCopy {
+  position: absolute;
+  right: clamp(14px, 1.6vw, 24px);
+  bottom: clamp(16px, 1.8vw, 26px);
+  left: clamp(14px, 1.6vw, 24px);
+  z-index: 2;
+  display: grid;
+  max-width: min(86%, 560px);
+  gap: 6px;
+}
+
+.missionTileCopy strong {
+  color: #ffffff;
+  font-size: clamp(1.04rem, 1.35vw, 1.48rem);
+  font-weight: 760;
+  line-height: 1.08;
+}
+
+.missionTileCopy span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.78rem;
+  line-height: 1.38;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.missionTileCopy small {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.72rem;
+  font-weight: 720;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.missionTileDevice {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: inline-flex;
+  max-width: min(48%, 250px);
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.7rem;
+  font-weight: 720;
+  line-height: 1.1;
+  padding: 7px 11px;
+}
+
+.root[data-motion-state="active"] [data-mission-text-reveal],
+.root[data-motion-state="active"] [data-mission-image-reveal],
+.root[data-motion-state="active"] [data-mission-caption-reveal] {
+  will-change: transform, opacity, clip-path;
+}
+
+@media (max-width: 980px) {
+  .missionWorldSection {
+    min-height: auto;
+    padding: clamp(70px, 10vh, 104px) 0 clamp(76px, 10vh, 112px);
+  }
+
+  .missionWorldSection .container,
+  .missionWorldSection[data-composition="agri-field"] .container,
+  .missionWorldSection[data-composition="city-urban"] .container {
+    padding: 0 clamp(20px, 4vw, 40px);
+  }
+
+  .missionWorldLayout {
+    gap: clamp(28px, 4vh, 46px);
+  }
+
+  .missionWorldHeader {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldLayout {
+    gap: clamp(32px, 5vh, 44px);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldHeader {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    align-items: start;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTitle {
+    max-width: 12ch;
+    font-size: clamp(3rem, 7.8vw, 4.15rem);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldIntro {
+    padding-top: 0;
+  }
+
+  .missionWorldGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: clamp(18px, 2.4vw, 24px);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldGrid,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas: none;
+    grid-template-rows: none;
+    grid-auto-flow: dense;
+    grid-auto-rows: clamp(150px, 14vw, 190px);
+    gap: clamp(18px, 2.4vw, 24px);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(n),
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(n) {
+    grid-area: auto;
+    min-height: 300px;
+  }
+
+  .missionWorldTile,
+  .missionWorldTileHero,
+  .missionWorldTileWide,
+  .missionWorldTileTall,
+  .missionWorldTileStandard,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileHero,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileWide,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileTall,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileHero,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileWide,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileTall {
+    grid-column: span 3;
+    grid-row: span 2;
+  }
+
+  .missionWorldTileHero,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileHero,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileHero {
+    grid-column: 1 / -1;
+    min-height: 420px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(1) {
+    order: 2;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) {
+    order: 1;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(3) {
+    order: 3;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(4) {
+    order: 4;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(5) {
+    order: 5;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionTileCopy {
+    bottom: clamp(24px, 3.6vw, 32px);
+  }
+
+  .shelfHeroCopy {
+    left: clamp(24px, 4.6vw, 52px);
+    width: min(360px, 48%);
+  }
+
+  .productShelfGrid {
+    grid-auto-columns: minmax(214px, 39vw);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 12px;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .productShelfGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .productCard,
+  .guideCard {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .miniCarousel {
+    min-height: 126px;
+    padding: 12px 0 15px;
+  }
+
+  .miniCarouselViewport {
+    padding: 0;
+  }
+
+  .miniCarouselRail {
+    gap: 24px;
+    padding: 0 72px;
+    scroll-padding-inline: 72px;
+  }
+
+  .miniCarouselItem {
+    flex-basis: 86px;
+    gap: 12px;
+  }
+
+  .miniCarouselImageWell {
+    height: 54px;
+  }
+
+  .miniCarouselNext {
+    right: 10px;
+  }
+
+  .promoImageBand {
+    padding: 34px 0 46px;
+  }
+
+  .promoImageEyebrow {
+    margin-bottom: 14px;
+    font-size: clamp(1.6rem, 8vw, 2.2rem);
+  }
+
+  .promoImageCard {
+    min-height: 260px;
+  }
+
+  .promoImage {
+    object-position: 58% 50%;
+  }
+
+  .chapter {
+    padding: 42px 0;
+  }
+
+  .productShelfSection {
+    padding: 18px 0;
+  }
+
+  .productShelfSection+.missionWorldSection {
+    padding-top: clamp(36px, 7vh, 52px);
+  }
+
+  .productShelfHero {
+    height: clamp(210px, 48vw, 320px);
+  }
+
+  .missionWorldSection {
+    padding: clamp(64px, 12vh, 84px) 0 clamp(72px, 12vh, 92px);
+  }
+
+  .missionWorldSection .container,
+  .missionWorldSection[data-composition="agri-field"] .container,
+  .missionWorldSection[data-composition="city-urban"] .container {
+    padding: 0 clamp(18px, 5vw, 28px);
+  }
+
+  .missionWorldLayout {
+    gap: 30px;
+  }
+
+  .missionWorldHeader {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldHeader {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .missionWorldTitle {
+    font-size: clamp(2.45rem, 13vw, 3.9rem);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTitle {
+    max-width: 9ch;
+    font-size: clamp(2.6rem, 12.6vw, 3.75rem);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .eyebrow {
+    margin-bottom: 14px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldIntro p:first-child,
+  .missionWorldSection[data-composition="agri-field"] .mediaStateNote {
+    max-width: 100%;
+  }
+
+  .missionWorldGrid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    gap: 20px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldGrid,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldGrid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+    gap: 20px;
+  }
+
+  .missionWorldTile,
+  .missionWorldTileHero,
+  .missionWorldTileWide,
+  .missionWorldTileTall,
+  .missionWorldTileStandard,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileHero,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileWide,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTileTall,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileHero,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileWide,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTileTall {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 310px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(n),
+  .missionWorldSection[data-composition="city-urban"] .missionWorldTile:nth-child(n) {
+    min-height: 338px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) {
+    min-height: 380px;
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionTileCopy,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) .missionTileCopy {
+    right: 22px;
+    bottom: 26px;
+    left: 22px;
+    max-width: calc(100% - 44px);
+  }
+
+  .missionWorldSection[data-composition="agri-field"] .missionTileCopy strong,
+  .missionWorldSection[data-composition="agri-field"] .missionWorldTile:nth-child(2) .missionTileCopy strong {
+    font-size: clamp(1.45rem, 7vw, 1.85rem);
+  }
+
+  .missionTileCopy {
+    max-width: calc(100% - 30px);
+  }
+
+  .missionTileDevice {
+    top: 12px;
+    right: 12px;
+    bottom: auto;
+    max-width: 56%;
+  }
+
+  .productShelfHeader {
+    align-items: start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .shelfHeaderActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .shelfHeroCopy {
+    top: 46%;
+    left: 18px;
+    width: min(320px, calc(100% - 36px));
+  }
+
+  .shelfHeroCopy strong {
+    max-width: 13ch;
+  }
+
+  .productShelfGrid {
+    grid-auto-columns: minmax(224px, 72vw);
+  }
+
+  .productBody {
+    min-height: 158px;
+    padding: 16px 16px 18px;
+  }
+
+  .guideCard {
+    min-height: 360px;
+    padding: 24px 22px;
+  }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .miniCarouselItem,
+  .miniCarouselImage,
+  .miniCarouselBuyNow,
+  .miniCarouselNext,
+  .viewAllLink,
+  .productCard,
+  .productImageWell,
+  .productImage,
+  .productBody,
+  .productKicker,
+  .productName,
+  .productFooter,
+  .productBuyNow,
+  .productActionDot,
+  .shelfHeroCta,
+  .guideCard,
+  .guideArrow,
+  .guideImage,
+  .missionWorldImage {
+    transition: none;
+  }
+
+  .root [data-mission-text-reveal],
+  .root [data-mission-image-reveal],
+  .root [data-mission-caption-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    will-change: auto;
+  }
+
+  .root [data-mission-image-reveal] {
+    --mission-image-reveal-scale: 1;
+  }
+
+  .miniCarouselItem:hover .miniCarouselImage,
+  .miniCarouselItem:focus-visible .miniCarouselImage,
+  .miniCarouselItem:hover .miniCarouselBuyNow,
+  .miniCarouselItem:focus-visible .miniCarouselBuyNow,
+  .miniCarouselNext,
+  .productCard:hover .productImage,
+  .productCard:focus-visible .productImage,
+  .productCard:hover .productBody,
+  .productCard:focus-visible .productBody,
+  .productCard:hover .productBuyNow,
+  .productCard:focus-visible .productBuyNow,
+  .productCard:hover .productActionDot,
+  .productCard:focus-visible .productActionDot,
+  .guideCard:hover .guideArrow,
+  .guideCard:focus-visible .guideArrow,
+  .guideCard:hover .guideImage,
+  .guideCard:focus-visible .guideImage,
+  .missionWorldTile:hover .missionWorldImage {
+    transform: none;
+  }
+
+  .miniCarouselItem:hover .miniCarouselBuyNow,
+  .miniCarouselItem:focus-visible .miniCarouselBuyNow {
+    transform: translate3d(-50%, 22%, 0);
+  }
+}
+
+/* ==========================================
+   AGRI COMMUNITY WORLD REDESIGN
+   ========================================== */
+
+.agriSection {
+  background: var(--home-page);
+  padding: clamp(72px, 8vh, 120px) 0;
+}
+
+.agriContainer {
+  width: min(100%, 1740px);
+  margin: 0 auto;
+  padding: 0 clamp(24px, 4vw, 72px);
+}
+
+.agriGridLayout {
+  display: grid;
+  grid-template-columns: 35% 65%;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.agriLeftColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.agriTextHeader {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.agriEyebrowRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.agriEyebrow {
+  margin: 0;
+  color: var(--home-muted);
+  font-family: var(--type-technical);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.agriLeafIcon {
+  color: #15803d;
+  width: 14px;
+  height: 14px;
+}
+
+.agriHeadline {
+  margin: 0 0 16px 0;
+  color: var(--home-ink);
+  font-family: var(--type-mission-heading);
+  font-size: clamp(2.4rem, 3.6vw, 4.2rem);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+}
+
+.agriIntroBody {
+  margin: 0;
+}
+
+.agriIntroBody p {
+  margin: 0;
+  color: var(--home-muted);
+  font-family: var(--type-mission-body);
+  font-size: 0.98rem;
+  line-height: 1.5;
+  max-width: 480px;
+}
+
+.agriFallbackNote {
+  margin-top: 10px !important;
+  font-size: 0.74rem !important;
+  line-height: 1.4 !important;
+}
+
+.agriRightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.agriMiddleRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Card Styling */
+.agriCard {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: #0f172a;
+  box-shadow: 
+    0 16px 30px rgba(15, 23, 42, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+  text-decoration: none;
+  cursor: pointer;
+  isolation: isolate;
+  transition: 
+    box-shadow 320ms var(--ease-cinematic),
+    transform 320ms var(--ease-cinematic);
+}
+
+.agriCard:hover,
+.agriCard:focus-visible {
+  box-shadow: 
+    0 24px 38px rgba(15, 23, 42, 0.16),
+    0 4px 12px rgba(15, 23, 42, 0.08);
+  outline: none;
+}
+
+.agriSection .agriCard {
+  border: none;
+  background: #ffffff;
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.07),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+  transition:
+    box-shadow 420ms var(--ease-cinematic),
+    transform 420ms var(--ease-cinematic);
+}
+
+.agriSection .agriCard:hover,
+.agriSection .agriCard:focus-visible {
+  box-shadow:
+    0 22px 42px rgba(15, 23, 42, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.07);
+  transform: translateY(-3px);
+}
+
+.agriCard:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.44);
+  outline-offset: 4px;
+}
+
+.agriSection .agriCard:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.28);
+  outline-offset: 3px;
+}
+
+.agriCardImage {
+  object-fit: contain;
+  object-position: var(--agri-object-position, 50% 36%);
+  transform: translate3d(0, 0, 0) scale(var(--agri-image-scale, 1.14));
+  transform-origin: center 34%;
+  transition: transform 420ms var(--ease-cinematic);
+}
+
+.agriCardImageFrame {
+  background: #ffffff;
+}
+
+.agriSection .agriCardImageFrame {
+  inset: 0;
+  height: 100%;
+  background: #ffffff;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.88) 52%,
+    rgba(0, 0, 0, 0.48) 68%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.88) 52%,
+    rgba(0, 0, 0, 0.48) 68%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+}
+
+.agriSection .agriCard[data-tile-size="hero"] .agriCardImageFrame {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 36%,
+    rgba(0, 0, 0, 0.88) 50%,
+    rgba(0, 0, 0, 0.46) 66%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 36%,
+    rgba(0, 0, 0, 0.88) 50%,
+    rgba(0, 0, 0, 0.46) 66%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+}
+
+.agriSection .agriCard[data-tile-size="standard"] .agriCardImageFrame {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 40%,
+    rgba(0, 0, 0, 0.88) 54%,
+    rgba(0, 0, 0, 0.48) 68%,
+    rgba(0, 0, 0, 0.1) 84%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 40%,
+    rgba(0, 0, 0, 0.88) 54%,
+    rgba(0, 0, 0, 0.48) 68%,
+    rgba(0, 0, 0, 0.1) 84%,
+    transparent 96%
+  );
+}
+
+.agriSection .agriCard[data-tile-size="wide"] .agriCardImageFrame {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 34%,
+    rgba(0, 0, 0, 0.88) 48%,
+    rgba(0, 0, 0, 0.45) 64%,
+    rgba(0, 0, 0, 0.1) 80%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 34%,
+    rgba(0, 0, 0, 0.88) 48%,
+    rgba(0, 0, 0, 0.45) 64%,
+    rgba(0, 0, 0, 0.1) 80%,
+    transparent 96%
+  );
+}
+
+.agriSection :global(.mithron-responsive-image-frame) {
+  --mithron-image-blur: none;
+  background-color: transparent;
+}
+
+.agriSection .agriCardImage {
+  opacity: 1;
+  filter: none;
+}
+
+.agriSection .agriCard:hover .agriCardImage {
+  transform: translate3d(0, 0, 0) scale(calc(var(--agri-image-scale, 1.14) * 1.012));
+}
+
+.agriCard:hover .agriCardImage {
+  transform: translate3d(0, 0, 0) scale(calc(var(--agri-image-scale, 1.14) * 1.03));
+}
+
+.agriCardOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0) 0%,
+    rgba(15, 23, 42, 0) 48%,
+    rgba(15, 23, 42, 0.28) 68%,
+    rgba(15, 23, 42, 0.9) 100%
+  );
+}
+
+.agriSection .agriCardOverlay {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 42%,
+    rgba(255, 255, 255, 0.3) 58%,
+    rgba(255, 255, 255, 0.82) 72%,
+    rgba(255, 255, 255, 0.97) 84%,
+    #ffffff 92%
+  );
+  pointer-events: none;
+}
+
+.agriCardCopy {
+  position: absolute;
+  left: 24px;
+  right: 64px;
+  bottom: 24px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.agriSection .agriCardCopy {
+  left: 22px;
+  right: 58px;
+  bottom: 20px;
+  gap: 4px;
+}
+
+.agriSection .agriCard_tall .agriCardCopy {
+  bottom: 28px;
+}
+
+.agriSection .agriCard_hero .agriCardCopy {
+  bottom: 18px;
+  right: 60px;
+}
+
+.agriSection .agriCard_standard .agriCardCopy {
+  bottom: 16px;
+  right: 54px;
+}
+
+.agriSection .agriCard_wide .agriCardCopy {
+  bottom: 18px;
+  max-width: 52%;
+}
+
+.agriCardCopy strong {
+  color: #ffffff;
+  font-family: var(--type-mission-heading);
+  font-size: clamp(1.15rem, 1.35vw, 1.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.agriCardCopy span {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.86rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.agriCardCopy small {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+
+.agriSection .agriCardCopy strong {
+  color: var(--home-ink);
+}
+
+.agriSection .agriCardCopy span {
+  color: var(--home-muted);
+}
+
+.agriSection .agriCardCopy small {
+  color: color-mix(in srgb, var(--home-muted) 88%, var(--home-ink));
+}
+
+.agriCardDevice {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.62);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: var(--type-technical);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.agriSection .agriCardDevice {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--home-ink);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.agriCardArrow {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2;
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: 
+    background-color 260ms var(--ease-cinematic),
+    transform 260ms var(--ease-cinematic);
+}
+
+.agriSection .agriCardArrow {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: none;
+  transition:
+    background-color 260ms var(--ease-cinematic),
+    box-shadow 260ms var(--ease-cinematic),
+    transform 260ms var(--ease-cinematic);
+}
+
+.agriCard:hover .agriCardArrow {
+  background: #f1f5f9;
+  transform: scale(1.024);
+}
+
+.agriSection .agriCard:hover .agriCardArrow {
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  transform: scale(1.04);
+}
+
+/* Card sizes */
+.agriCard_tall {
+  flex-grow: 1;
+  min-height: 480px;
+}
+
+.agriCard_hero {
+  height: clamp(320px, 34vh, 380px);
+}
+
+.agriCard_standard {
+  height: clamp(250px, 28vh, 300px);
+}
+
+.agriCard_wide {
+  height: clamp(250px, 27vh, 290px);
+}
+
+/* City Drone World — bento grid (distinct from Agri side-column layout) */
+.citySection {
+  padding-bottom: clamp(28px, 4vh, 44px);
+}
+
+.citySection .agriCard {
+  background: #ffffff;
+  border: none;
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.07),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.citySection .agriCard:hover,
+.citySection .agriCard:focus-visible {
+  box-shadow:
+    0 22px 42px rgba(15, 23, 42, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.07);
+  transform: translateY(-3px);
+}
+
+.citySection :global(.mithron-responsive-image-frame) {
+  --mithron-image-blur: none;
+  background-color: transparent;
+}
+
+.cityCardImageFrame {
+  inset: 0;
+  height: 100%;
+  background: #ffffff;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.88) 52%,
+    rgba(0, 0, 0, 0.48) 68%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 38%,
+    rgba(0, 0, 0, 0.88) 52%,
+    rgba(0, 0, 0, 0.48) 68%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+}
+
+.citySection .agriCard[data-tile-size="hero"] .cityCardImageFrame {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 36%,
+    rgba(0, 0, 0, 0.88) 50%,
+    rgba(0, 0, 0, 0.46) 66%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 36%,
+    rgba(0, 0, 0, 0.88) 50%,
+    rgba(0, 0, 0, 0.46) 66%,
+    rgba(0, 0, 0, 0.1) 82%,
+    transparent 96%
+  );
+}
+
+.citySection .agriCardImage {
+  object-fit: contain;
+  object-position: var(--agri-object-position, 50% 40%);
+  transform: translate3d(0, 0, 0) scale(var(--city-image-scale, 1.12));
+  transform-origin: center 38%;
+  opacity: 1;
+  filter: none;
+}
+
+.citySection .agriCard:hover .agriCardImage {
+  transform: translate3d(0, 0, 0) scale(calc(var(--city-image-scale, 1.12) * 1.015));
+}
+
+.cityCardOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 42%,
+    rgba(255, 255, 255, 0.3) 58%,
+    rgba(255, 255, 255, 0.82) 72%,
+    rgba(255, 255, 255, 0.97) 84%,
+    #ffffff 92%
+  );
+  pointer-events: none;
+}
+
+.citySection .agriCardCopy strong {
+  color: var(--home-ink);
+}
+
+.citySection .agriCardCopy span {
+  color: var(--home-muted);
+}
+
+.citySection .agriCardCopy small {
+  color: color-mix(in srgb, var(--home-muted) 88%, var(--home-ink));
+}
+
+.citySection .agriCardCopy {
+  left: 22px;
+  right: 58px;
+  bottom: 20px;
+  gap: 4px;
+}
+
+.citySection .citySlotWide .agriCardCopy {
+  max-width: 58%;
+}
+
+.citySection .agriCardDevice {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--home-ink);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(6px);
+}
+
+.citySection .agriCardArrow {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: none;
+}
+
+.citySection .agriCard:hover .agriCardArrow {
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  transform: scale(1.04);
+}
+
+.cityBentoGrid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows:
+    clamp(300px, 32vh, 360px)
+    clamp(230px, 25vh, 270px)
+    clamp(250px, 27vh, 290px);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.cityTextHeader {
+  grid-column: 9 / -1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.cityTextHeader .agriEyebrowRow {
+  justify-content: flex-end;
+}
+
+.cityTextHeader .agriIntroBody p {
+  margin-left: auto;
+}
+
+.citySlotHero {
+  grid-column: 1 / span 8;
+  grid-row: 1;
+  height: 100%;
+  min-height: 0;
+}
+
+.citySlotTall {
+  grid-column: 1 / span 3;
+  grid-row: 2 / span 2;
+  height: 100%;
+  min-height: 0;
+}
+
+.citySlotStandardLeft {
+  grid-column: 4 / span 4;
+  grid-row: 2;
+  height: 100%;
+  min-height: 0;
+}
+
+.citySlotStandardRight {
+  grid-column: 8 / -1;
+  grid-row: 2;
+  height: 100%;
+  min-height: 0;
+}
+
+.citySlotWide {
+  grid-column: 4 / -1;
+  grid-row: 3;
+  height: 100%;
+  min-height: 0;
+}
+
+@media (min-width: 1025px) {
+  .cityBentoGrid .agriCard_tall,
+  .cityBentoGrid .agriCard_hero,
+  .cityBentoGrid .agriCard_standard,
+  .cityBentoGrid .agriCard_wide {
+    height: 100%;
+    min-height: 0;
+    flex-grow: 0;
+  }
+}
+
+/* Responsive Overrides */
+@media (max-width: 1024px) {
+  .agriGridLayout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .agriLeftColumn {
+    gap: 24px;
+  }
+  .agriCard_tall {
+    min-height: 380px;
+  }
+
+  .cityBentoGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .cityTextHeader,
+  .citySlotHero,
+  .citySlotTall,
+  .citySlotStandardLeft,
+  .citySlotStandardRight,
+  .citySlotWide {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    height: auto;
+  }
+
+  .cityTextHeader {
+    order: -1;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .cityTextHeader .agriEyebrowRow {
+    justify-content: flex-start;
+  }
+
+  .cityTextHeader .agriIntroBody p {
+    margin-left: 0;
+  }
+
+  .cityBentoGrid .agriCard_tall,
+  .cityBentoGrid .agriCard_hero,
+  .cityBentoGrid .agriCard_standard,
+  .cityBentoGrid .agriCard_wide {
+    width: 100%;
+    height: auto;
+    min-height: clamp(240px, 58vw, 320px);
+  }
+
+  .cityBentoGrid .agriCard_hero {
+    min-height: clamp(280px, 64vw, 360px);
+  }
+
+  .cityBentoGrid .agriCard_tall {
+    min-height: clamp(300px, 70vw, 420px);
+  }
+
+  .cityBentoGrid .agriCard_standard {
+    min-height: clamp(230px, 54vw, 280px);
+  }
+
+  .cityBentoGrid .agriCard_wide {
+    min-height: clamp(250px, 58vw, 300px);
+  }
+}
+
+@media (max-width: 768px) {
+  .agriMiddleRow {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .agriCard_tall {
+    min-height: 340px;
+  }
+}
+
+@media (max-width: 640px) {
+  .agriContainer {
+    padding: 0 clamp(18px, 5vw, 28px);
+  }
+  .agriHeadline {
+    font-size: clamp(2.2rem, 11vw, 3.2rem);
+  }
+  .agriFallbackNote {
+    display: none;
+  }
+  .agriCardCopy {
+    left: 20px;
+    right: 54px;
+    bottom: 20px;
+  }
+  .agriSection .agriCardCopy {
+    left: 18px;
+    right: 52px;
+    bottom: 18px;
+  }
+  .agriSection .agriCard_wide .agriCardCopy {
+    max-width: none;
+  }
+  .agriCardArrow {
+    right: 20px;
+    bottom: 20px;
+    width: 32px;
+    height: 32px;
+  }
+  .agriCardCopy strong {
+    font-size: 1.25rem;
+  }
+  .agriCardCopy span {
+    font-size: 0.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agriCard,
+  .agriCardImage,
+  .agriCardArrow {
+    transition: none;
+  }
+  .agriCard:hover .agriCardImage,
+  .agriCard:hover .agriCardArrow,
+  .agriSection .agriCard:hover,
+  .agriSection .agriCard:focus-visible {
+    transform: none;
+  }
+}
+
+/* Customer testimonials + about footer */
+
+.testimonialsSection {
+  padding: clamp(64px, 7vh, 96px) 0 clamp(52px, 6vh, 80px);
+  background:
+    linear-gradient(180deg, var(--home-page) 0%, color-mix(in srgb, var(--home-page) 82%, #ffffff) 100%);
+  border-top: 1px solid var(--home-border);
+}
+
+.testimonialsInner {
+  width: min(100%, 1740px);
+  margin: 0 auto;
+  padding: 0 clamp(24px, 4vw, 72px);
+}
+
+.testimonialsHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(24px, 4vw, 40px);
+  margin-bottom: clamp(32px, 4vh, 48px);
+}
+
+.testimonialsHeaderCopy {
+  max-width: min(100%, 760px);
+}
+
+.testimonialsEyebrowRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.testimonialsEyebrow {
+  margin: 0;
+  color: var(--home-muted);
+  font-family: var(--type-technical);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.testimonialsEyebrowMark {
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--home-accent), color-mix(in srgb, var(--home-accent) 42%, transparent));
+}
+
+.testimonialsTitle {
+  margin: 0;
+  color: var(--home-ink);
+  font-family: var(--type-display);
+  font-size: clamp(1.9rem, 2.8vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.testimonialsLead {
+  margin: 14px 0 0;
+  max-width: 58ch;
+  color: var(--home-muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.testimonialsLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--home-ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 220ms var(--ease-system);
+}
+
+.testimonialsLink:hover,
+.testimonialsLink:focus-visible {
+  opacity: 0.72;
+  outline: none;
+}
+
+.testimonialsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(18px, 2.2vw, 24px);
+}
+
+.testimonialCard {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: clamp(300px, 28vw, 340px);
+  padding: clamp(24px, 2.6vw, 30px);
+  border: 1px solid var(--home-border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, var(--home-well) 100%);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.testimonialProduct {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--home-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 220ms var(--ease-system), box-shadow 220ms var(--ease-system);
+}
+
+.testimonialProduct:hover,
+.testimonialProduct:focus-visible {
+  border-color: color-mix(in srgb, var(--home-accent) 36%, var(--home-border));
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  outline: none;
+}
+
+.testimonialProductImageWell {
+  position: relative;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--home-well);
+}
+
+.testimonialProductImage {
+  object-fit: contain;
+  padding: 6px;
+}
+
+.testimonialProductCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.testimonialProductLabel {
+  color: var(--home-muted);
+  font-family: var(--type-technical);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.testimonialProductName {
+  color: var(--home-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.testimonialStars {
+  display: flex;
+  gap: 4px;
+  color: var(--home-accent);
+}
+
+.testimonialQuote {
+  margin: 0;
+  flex: 1;
+  color: color-mix(in srgb, var(--home-ink) 84%, var(--home-muted));
+  font-size: 1rem;
+  line-height: 1.7;
+  font-style: italic;
+}
+
+.testimonialProfile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--home-border);
+}
+
+.testimonialAvatar {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f172a, #334155);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.testimonialName {
+  margin: 0;
+  color: var(--home-ink);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.testimonialRole {
+  margin: 2px 0 0;
+  color: var(--home-muted);
+  font-size: 0.82rem;
+}
+
+.aboutFooterWrap {
+  background: #0c0d10;
+}
+
+.aboutBand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.aboutBandInner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto;
+  gap: clamp(24px, 4vw, 48px);
+  align-items: end;
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: clamp(56px, 7vh, 88px) clamp(24px, 4vw, 64px) clamp(40px, 5vh, 56px);
+}
+
+.aboutEyebrow {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.52);
+  font-family: var(--type-technical);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.aboutTitle {
+  margin: 0 0 14px;
+  color: #ffffff;
+  font-family: var(--type-display);
+  font-size: clamp(1.9rem, 3vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 16ch;
+}
+
+.aboutBody {
+  margin: 0;
+  max-width: 56ch;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.aboutActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.aboutPrimaryAction,
+.aboutSecondaryAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color 220ms var(--ease-system),
+    border-color 220ms var(--ease-system),
+    color 220ms var(--ease-system);
+}
+
+.aboutPrimaryAction {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.aboutPrimaryAction:hover,
+.aboutPrimaryAction:focus-visible {
+  background: #f1f5f9;
+  outline: none;
+}
+
+.aboutSecondaryAction {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.aboutSecondaryAction:hover,
+.aboutSecondaryAction:focus-visible {
+  border-color: rgba(255, 255, 255, 0.34);
+  color: #ffffff;
+  outline: none;
+}
+
+.aboutFooterWrap .site-footer {
+  background: transparent;
+}
+
+@media (max-width: 980px) {
+  .testimonialsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .testimonialsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .testimonialCard {
+    min-height: auto;
+  }
+
+  .aboutBandInner {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .aboutActions {
+    justify-content: flex-start;
+  }
+}

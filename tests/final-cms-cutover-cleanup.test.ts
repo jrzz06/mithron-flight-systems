@@ -1,0 +1,174 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+function source(path: string) {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+const forbiddenStatusLabel = ["PAR", "TIAL"].join("");
+const oldDraftCollectionName = ["draft", "Testimonials"].join("");
+
+describe("final CMS cutover and real-data cleanup", () => {
+  it("keeps the homepage scoped to navigation, hero carousel, and one composite post-hero section", () => {
+    const page = source("app/(storefront)/page.tsx");
+    const heroCarousel = source("sections/home/hero-carousel.tsx");
+    const homeComposite = source("sections/home/home-landing-composite.tsx");
+    const homeCompositeCss = source("sections/home/home-landing-composite.module.css");
+    const storeShell = source("components/layout/store-shell.tsx");
+    const globals = source("app/globals.css");
+    const cms = source("services/cms.ts");
+    const cmsWorkspace = source("features/admin/cms/cms-visual-workspace.tsx");
+
+    for (const removed of ["CmsHomeSection", "EcosystemExperience", "EcosystemShowcaseSection", "droneShowcaseSections", "CinematicHomeSequence", "ProductIconRail", "CinematicMediaRail", "CommunitySection", "InterestSection", "sectionRenderers", "HeroBannerExtension", "DroneWorldEcosystemPanel"]) {
+      expect(page).not.toContain(removed);
+    }
+
+    expect(page).toContain("HeroCarousel");
+    expect(page).toContain("HomeLandingComposite");
+    expect(page).toContain("<HomeLandingComposite");
+    expect(page).toContain("products={products}");
+    expect(page).toContain("productReviews={cms.productSupport.reviews}");
+    expect(page).toContain("footer={cms.footer}");
+    expect(page).not.toContain("ProductEcosystemShowcase");
+    expect(page).not.toContain("PlatformIntelligenceChapter");
+    expect(page).not.toContain("HomeProductShelves");
+    expect(page).not.toContain("homeShelves");
+    expect(page).not.toContain("@/sections/home/product-ecosystem-showcase");
+    expect(page).not.toContain("@/sections/home/platform-intelligence-chapter");
+    expect(page).not.toContain("@/sections/home/home-product-shelves");
+    expect(page).not.toContain("PostHeroEcosystemSection");
+    expect(page).not.toContain("@/sections/home/post-hero-ecosystem");
+    expect(page).not.toContain("SolutionsWorldsSection");
+    expect(page).not.toContain("@/sections/home/solutions-worlds");
+    expect(page).not.toContain("buildEcosystemProductGroups");
+    expect(page).not.toContain("@/features/storefront/home/ecosystem-experience");
+    expect(page).not.toContain("@/features/storefront/home/cinematic-home-sequence");
+    expect(page).not.toContain("getProductShellItems");
+    expect(page).toContain("getHomepageProducts");
+    expect(page).toContain("cms.home.heroBanners");
+    expect(homeComposite).toContain('data-testid="home-landing-composite"');
+    expect(homeComposite).toContain('data-home-composite-root="true"');
+    expect(homeComposite).toContain('data-motion-state="reduced"');
+    expect(homeComposite).toContain('data-motion-engine="native-gsap-scrolltrigger"');
+    expect(homeComposite).toContain('type ProofState = "VERIFIED" | "FALLBACK"');
+    expect(homeComposite).not.toContain(forbiddenStatusLabel);
+    expect(homeComposite).not.toContain(oldDraftCollectionName);
+    expect(homeComposite).not.toContain('data-testimonial-state="fallback"');
+    expect(homeComposite).not.toContain("verifiedTestimonialsFromCms");
+    expect(homeComposite).not.toContain("VERIFIED CMS");
+    expect(homeComposite).toContain("/media/mithron/dynamic-scroll/night-surveillance.webp");
+    expect(homeComposite).toContain("Supabase-backed surveillance mission media");
+    expect(homeComposite).not.toMatch(/stars:\s*[1-5]|Rajan|Meera|James|customer says/i);
+    expect(homeComposite).toContain('data-testid="home-customer-testimonials"');
+    expect(homeComposite).toContain('data-testid="home-about-band"');
+    expect(homeComposite).toContain('data-testid="home-about-footer"');
+    expect(homeComposite).toContain("SiteFooter");
+    expect(homeComposite).toContain("ScrollTrigger.create");
+    expect(homeComposite).toContain("if (reducedMotion)");
+    expect(homeComposite).not.toContain("HomeDroneModelScene");
+    expect(homeComposite).not.toContain("enabled={!reducedMotion");
+    expect(homeComposite).not.toContain("lineup-solutions");
+    expect(homeComposite).not.toContain("draft-testimonials");
+    expect(homeComposite).not.toContain("creative-three");
+    expect(homeComposite).not.toContain("about-us");
+    expect(homeCompositeCss).toContain(".productCard:hover .productImage");
+    expect(homeCompositeCss).toContain("scale(1.024)");
+    expect(homeCompositeCss).not.toMatch(/text-shadow|rotateX|rotateY|backdrop-filter:\s*blur\(20px\)|glow/i);
+    expect(heroCarousel).toContain("data-cms-hero-empty-state");
+    expect(existsSync(join(process.cwd(), "sections/home/post-hero-ecosystem.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/post-hero-ecosystem.module.css"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/solutions-worlds.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/solutions-worlds.module.css"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/ecosystem-experience.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/ecosystem-product-data.ts"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/product-ecosystem-showcase.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/product-ecosystem-showcase-client.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/product-ecosystem-showcase.module.css"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/platform-intelligence-chapter.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/platform-intelligence-chapter-client.tsx"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "sections/home/platform-intelligence-chapter.module.css"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "features/storefront/home"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "public/media/mithron/shell/default-section-pencil-art.svg"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "public/media/mithron/optical-ecosystem"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "public/media/mithron/platform-worlds"))).toBe(false);
+    expect(storeShell).toContain("NAV_HERO_CAROUSEL_COMPOSITE");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_ONLY");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_ECOSYSTEM_PLATFORM_INTELLIGENCE");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_WITH_ECOSYSTEM_REVEAL");
+    expect(storeShell).not.toContain("NAV_HERO_PRODUCT_ECOSYSTEM");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_WITH_POST_HERO_ECOSYSTEM");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_WITH_SHOWCASE");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_OPTICAL_ECOSYSTEM");
+    expect(storeShell).not.toContain("NAV_HERO_CAROUSEL_ECOSYSTEM_EXPERIENCE");
+    expect(storeShell).toContain("isHome ? null : <SiteFooter");
+    expect(globals).not.toContain("@import \"./storefront-showcase.css\"");
+    expect(globals).not.toContain("hero-banner-extension");
+    expect(globals).not.toContain("drone-world-panel");
+    expect(globals).toContain(".hero-premium-field::before");
+    expect(globals).toContain("content: none");
+    expect(globals).not.toContain("rgba(248, 250, 251, 0.5)");
+    expect(globals).not.toContain("rgba(248, 250, 251, 0.25)");
+    expect(globals).toContain(".catalog-product-grid");
+    expect(globals).toContain("grid-auto-rows: 1fr");
+    expect(cms).not.toContain("from \"@/config/products\"");
+    expect(cms).not.toContain("marketing.testimonials");
+    expect(cms).not.toContain("mapHomepageSections");
+    expect(cms).toContain("fetchFooterLeadSettings");
+    expect(cms).toContain("mapInterestRows");
+    expect(cmsWorkspace).toContain("data-cms-section-visibility-toggle");
+    expect(cmsWorkspace).toContain("data-cms-drag-reorder");
+    expect(cmsWorkspace).toContain("archiveCmsWorkspaceRecordFormAction");
+    expect(cmsWorkspace).not.toContain("fallbackPages");
+  });
+
+  it("splits users and settings into separate real-data modules", () => {
+    const usersPage = source("app/admin/users/page.tsx");
+    const settingsPage = source("app/admin/settings/page.tsx");
+    const frame = source("components/admin/admin-frame.tsx");
+
+    expect(usersPage).toContain("getUserGovernanceSnapshot");
+    expect(usersPage).toContain("UserManagementPanel");
+    expect(usersPage).toContain("hiddenOperatorEmailPatterns");
+    expect(usersPage).toContain("createUserFormAction");
+    expect(usersPage).not.toContain('"demo"');
+    expect(usersPage).toContain("No team members yet");
+    expect(usersPage).not.toContain("redirect(\"/admin/settings");
+    expect(usersPage).not.toContain("getSupabasePublicConfig");
+    expect(usersPage).not.toContain("Global settings");
+
+    expect(settingsPage).toContain("data-admin-settings-route");
+    expect(settingsPage).toContain("saveAdminSettingsFormAction");
+    expect(settingsPage).toContain("Enable image compression");
+    expect(settingsPage).toContain("Allowed admin domains");
+    expect(settingsPage).not.toContain("UserManagementPanel");
+    expect(settingsPage).not.toContain("getUserGovernanceSnapshot");
+
+    expect(frame).toContain('href: "/admin/users"');
+    expect(frame).toContain('href: "/admin/settings"');
+    expect(frame).not.toContain('href: "/admin/settings#users"');
+  });
+
+  it("keeps orders and media operator-facing without raw internal storage or UUID forms", () => {
+    const ordersPage = source("app/admin/orders/page.tsx");
+    const ordersWorkspace = source("components/admin/admin-orders-workspace.tsx");
+    const mediaPage = source("app/admin/media/page.tsx");
+
+    expect(ordersPage).toContain("AdminOrdersWorkspace");
+    expect(ordersWorkspace).toContain("data-order-detail-panel");
+    expect(ordersWorkspace).toContain("data-shipment-actions");
+    expect(ordersWorkspace).toContain("data-inventory-allocation");
+    expect(ordersPage).not.toContain('placeholder="uuid"');
+    expect(ordersPage).not.toContain("Order item ID");
+    expect(ordersPage).not.toContain("Product slug");
+
+    expect(mediaPage).toContain("data-media-gallery-mode");
+    expect(mediaPage).toContain("data-media-compact-mode");
+    expect(mediaPage).toContain("Replace image");
+    expect(mediaPage).not.toContain("Storage buckets");
+    expect(mediaPage).not.toContain("storage_path");
+    expect(mediaPage).not.toContain("runtime fallback");
+    expect(mediaPage).not.toContain("mithron_assets");
+  });
+});
+

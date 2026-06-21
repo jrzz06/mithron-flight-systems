@@ -1,0 +1,362 @@
+export type HomepageShelfCms = {
+  eyebrow: string;
+  title: string;
+  href: string;
+  viewAllLabel: string;
+  guideLabel: string;
+  guideTitle: string;
+  guideHref: string;
+  heroSubtitle: string;
+  heroBody: string;
+  featureCta: string;
+  heroCtaHref: string;
+  heroImageSrc: string;
+  heroImageAlt: string;
+};
+
+export type HomepageMissionTileCms = {
+  label: string;
+  body: string;
+  operator: string;
+  model: string;
+  location: string;
+  imageSrc: string;
+  imageAlt: string;
+  href: string;
+};
+
+export type HomepageMissionCms = {
+  eyebrow: string;
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
+  mediaNote: string;
+  tiles: HomepageMissionTileCms[];
+};
+
+export type HomepageCmsContent = {
+  shelves: {
+    droneWorld: HomepageShelfCms;
+    droneCare: HomepageShelfCms;
+    globalProducts: HomepageShelfCms;
+  };
+  missions: {
+    agri: HomepageMissionCms;
+    city: HomepageMissionCms;
+  };
+  testimonials: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    linkLabel: string;
+    linkHref: string;
+  };
+  about: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    primaryLabel: string;
+    primaryHref: string;
+    secondaryLabel: string;
+    secondaryHref: string;
+  };
+};
+
+export const defaultHomepageCmsContent: HomepageCmsContent = {
+  shelves: {
+    droneWorld: {
+      eyebrow: "Featured Collection",
+      title: "Drone World",
+      href: "/products",
+      viewAllLabel: "View All",
+      guideLabel: "Buying Guides",
+      guideTitle: "Which Drone Fits Your Mission?",
+      guideHref: "/products",
+      heroSubtitle: "DRONE IS MITHRON",
+      heroBody: "Welcome to India's 1st & Leading Drone Ecosystem Aggregator",
+      featureCta: "Visit Mithron Smart",
+      heroCtaHref: "https://www.mithronsmart.com",
+      heroImageSrc: "/media/mithron/showcase/drone_world_hero.png",
+      heroImageAlt: "Mithron drone fleet operating across a rugged mountain valley at golden hour"
+    },
+    droneCare: {
+      eyebrow: "Essential Care",
+      title: "Drone Care",
+      href: "/accessories",
+      viewAllLabel: "View All",
+      guideLabel: "Care Guides",
+      guideTitle: "Build a Reliable Spares Kit",
+      guideHref: "/accessories",
+      heroSubtitle: "One Stop Drone Solution",
+      heroBody: "Sales / Rental Service / Troubleshooting / Aggregation / Academics / Import / Loan",
+      featureCta: "Visit Mithron Smart",
+      heroCtaHref: "https://www.mithronsmart.com",
+      heroImageSrc: "/media/mithron/showcase/drone_care_hero.png",
+      heroImageAlt: "Mithron Drone Care complete kit with aircraft, controller, batteries, propellers, and service case"
+    },
+    globalProducts: {
+      eyebrow: "Global Selection",
+      title: "Global Product",
+      href: "/products",
+      viewAllLabel: "View All",
+      guideLabel: "Catalog Guides",
+      guideTitle: "Compare Mission Systems",
+      guideHref: "/products",
+      heroSubtitle: "Global Drone Connect",
+      heroBody: "A marketplace to connect for Global products Import and Export / Live Price Bid",
+      featureCta: "Visit Mithron Smart",
+      heroCtaHref: "https://www.mithronsmart.com",
+      heroImageSrc: "/media/mithron/showcase/global_products_hero.png",
+      heroImageAlt: "Global Drone Connect industrial drone carrying a shipping container over a digital logistics hub at night"
+    }
+  },
+  missions: {
+    agri: {
+      eyebrow: "Solutions for Growth",
+      title: "Agri Community World",
+      body: "Join India's largest agricultural drone ecosystem. Register as a pilot, farmer, drone owner, or service provider and access training, financing, bookings, and support across the AGRONE network.",
+      href: "/agriculture",
+      cta: "Explore Agri Drones",
+      mediaNote: "",
+      tiles: [
+        {
+          label: "AGRONE Drone Owner Registration",
+          body: "Register your drone on AGRONE and connect with farmers, pilots, and service demand across India.",
+          operator: "AGRONE Network",
+          model: "DRONE OWNER NETWORK",
+          location: "Pan-India onboarding",
+          imageSrc: "/media/mithron/mission/agrone/agrone-drone-owner-registration.png",
+          imageAlt: "AGRONE drone owner registration",
+          href: "/agriculture"
+        },
+        {
+          label: "AGRONE Pilot Registration",
+          body: "Join the certified pilot network, access training pathways, and receive mission assignments through AGRONE.",
+          operator: "AGRONE Network",
+          model: "AGRONE PILOT NETWORK",
+          location: "Pilot onboarding",
+          imageSrc: "/media/mithron/mission/agrone/agrone-pilot-registration.png",
+          imageAlt: "AGRONE pilot registration",
+          href: "/agriculture"
+        },
+        {
+          label: "All India Farmer Drone Booking",
+          body: "Book drone spraying, mapping, and monitoring services anywhere in India through the AGRONE booking platform.",
+          operator: "AGRONE Network",
+          model: "NATIONWIDE BOOKING",
+          location: "Service booking desk",
+          imageSrc: "/media/mithron/mission/agrone/all-india-drone-farmer.png",
+          imageAlt: "All India farmer drone booking",
+          href: "/agriculture"
+        },
+        {
+          label: "Smart Farmer Registration",
+          body: "Register as a smart farmer to access AGRONE services, crop insights, and on-demand drone support.",
+          operator: "AGRONE Network",
+          model: "SMART FARMER PROGRAM",
+          location: "Farmer onboarding",
+          imageSrc: "/media/mithron/mission/agrone/smart-farmer-register.png",
+          imageAlt: "Smart farmer registration",
+          href: "/agriculture"
+        },
+        {
+          label: "Agri Drone Loan & EMI Check",
+          body: "Check agri-drone loan eligibility, compare EMI plans, and explore financing options backed by AGRONE partners.",
+          operator: "AGRONE Network",
+          model: "FINANCING SUPPORT",
+          location: "Loan eligibility check",
+          imageSrc: "/media/mithron/mission/agrone/agri-drone-loan.png",
+          imageAlt: "Agri drone loan and EMI check",
+          href: "/agriculture"
+        }
+      ]
+    },
+    city: {
+      eyebrow: "Solutions for Future Cities",
+      title: "City Drone World",
+      body: "Urban drone platforms for booking, pilot networks, training, service care, and technician support across modern city operations.",
+      href: "/surveillance",
+      cta: "Explore City Drones",
+      mediaNote: "",
+      tiles: [
+        {
+          label: "Dronelancer Model",
+          body: "Pilot-network and mission-marketplace model connecting city operators, route visibility, and on-demand jobs.",
+          operator: "Mithron City Network",
+          model: "DRONELANCER MODEL",
+          location: "Pilot network grid",
+          imageSrc: "/media/mithron/mission/city/dronelancer-model.png",
+          imageAlt: "Dronelancer Model",
+          href: "/surveillance"
+        },
+        {
+          label: "City Drone Rental Services App",
+          body: "Rental, booking, and operator-dispatch flow for city drone services, project requests, and earnings visibility.",
+          operator: "Mithron City Network",
+          model: "RENTAL SERVICES APP",
+          location: "Urban booking console",
+          imageSrc: "/media/mithron/mission/city/city-drone-rental-services-app.png",
+          imageAlt: "City Drone Rental Services App",
+          href: "/surveillance"
+        },
+        {
+          label: "All Drone Acadamic",
+          body: "Training ecosystem for city pilots, simulation labs, classroom workflows, and certified urban flight programs.",
+          operator: "Mithron Academy Network",
+          model: "ALL DRONE ACADAMIC",
+          location: "Training and simulation hub",
+          imageSrc: "/media/mithron/mission/city/all-drone-acadamic.png",
+          imageAlt: "All Drone Acadamic",
+          href: "/surveillance"
+        },
+        {
+          label: "Drone FranchiseCare Center",
+          body: "Service-center network for franchise operations, repair care, spare support, and local city maintenance coverage.",
+          operator: "Mithron Service Network",
+          model: "FRANCHISECARE CENTER",
+          location: "City care workshop",
+          imageSrc: "/media/mithron/mission/city/drone-franchisecare-center.png",
+          imageAlt: "Drone FranchiseCare Center",
+          href: "/surveillance"
+        },
+        {
+          label: "Drone Technician Aggregation",
+          body: "Distributed technician aggregation system for diagnostics, field support, tools, and maintenance coordination.",
+          operator: "Mithron Service Network",
+          model: "TECHNICIAN AGGREGATION",
+          location: "Field support network",
+          imageSrc: "/media/mithron/mission/city/drone-technician-aggregation.png",
+          imageAlt: "Drone Technician Aggregation",
+          href: "/surveillance"
+        }
+      ]
+    }
+  },
+  testimonials: {
+    eyebrow: "Customer voices",
+    title: "Trusted by pilots and field teams",
+    lead: "Real feedback from operators running agriculture, mapping, and surveillance missions with Mithron hardware.",
+    linkLabel: "Browse products",
+    linkHref: "/products"
+  },
+  about: {
+    eyebrow: "About us",
+    title: "Drone systems for operational teams.",
+    body: "Mithron builds and supplies agriculture, mapping, surveillance, industrial, and media drone systems with catalog, Drone Care, and field deployment support managed through one operating stack.",
+    primaryLabel: "About Mithron",
+    primaryHref: "/about",
+    secondaryLabel: "Contact team",
+    secondaryHref: "/contact"
+  }
+};
+
+function emptyMissionTile(): HomepageMissionTileCms {
+  return {
+    label: "",
+    body: "",
+    operator: "",
+    model: "",
+    location: "",
+    imageSrc: "",
+    imageAlt: "",
+    href: ""
+  };
+}
+
+function emptyShelf(): HomepageShelfCms {
+  return {
+    eyebrow: "",
+    title: "",
+    href: "",
+    viewAllLabel: "",
+    guideLabel: "",
+    guideTitle: "",
+    guideHref: "",
+    heroSubtitle: "",
+    heroBody: "",
+    featureCta: "",
+    heroCtaHref: "",
+    heroImageSrc: "",
+    heroImageAlt: ""
+  };
+}
+
+/** Storefront-safe empty payload used when strict CMS mode disallows silent defaults. */
+export const emptyHomepageCmsContent: HomepageCmsContent = {
+  shelves: {
+    droneWorld: emptyShelf(),
+    droneCare: emptyShelf(),
+    globalProducts: emptyShelf()
+  },
+  missions: {
+    agri: {
+      eyebrow: "",
+      title: "",
+      body: "",
+      href: "",
+      cta: "",
+      mediaNote: "",
+      tiles: defaultHomepageCmsContent.missions.agri.tiles.map(() => emptyMissionTile())
+    },
+    city: {
+      eyebrow: "",
+      title: "",
+      body: "",
+      href: "",
+      cta: "",
+      mediaNote: "",
+      tiles: defaultHomepageCmsContent.missions.city.tiles.map(() => emptyMissionTile())
+    }
+  },
+  testimonials: {
+    eyebrow: "",
+    title: "",
+    lead: "",
+    linkLabel: "",
+    linkHref: ""
+  },
+  about: {
+    eyebrow: "",
+    title: "",
+    body: "",
+    primaryLabel: "",
+    primaryHref: "",
+    secondaryLabel: "",
+    secondaryHref: ""
+  }
+};
+
+export type HomepageCmsSectionId =
+  | "hero"
+  | "shelf-drone-world"
+  | "shelf-drone-care"
+  | "shelf-global-products"
+  | "mission-agri"
+  | "mission-city"
+  | "testimonials"
+  | "about"
+  | "product-reviews"
+  | "footer";
+
+export type HomepageCmsWorkflow = "draft-publish" | "live";
+
+export const homepageCmsSections: Array<{
+  id: HomepageCmsSectionId;
+  label: string;
+  description: string;
+  previewAnchor: string;
+  workflow: HomepageCmsWorkflow;
+  workflowLabel: string;
+}> = [
+  { id: "hero", label: "Hero carousel", description: "Top homepage slides — headline, image, and primary button.", previewAnchor: "hero", workflow: "draft-publish", workflowLabel: "Draft → Publish" },
+  { id: "shelf-drone-world", label: "Drone World shelf", description: "Featured collection product rail and hero feature.", previewAnchor: "drone-world", workflow: "live", workflowLabel: "Live changes" },
+  { id: "shelf-drone-care", label: "Drone Care shelf", description: "Essential care accessories and spares section.", previewAnchor: "drone-care", workflow: "live", workflowLabel: "Live changes" },
+  { id: "shelf-global-products", label: "Global Products shelf", description: "Broader catalog comparison shelf.", previewAnchor: "global-products", workflow: "live", workflowLabel: "Live changes" },
+  { id: "mission-agri", label: "Agri Community World", description: "Agriculture mission bento grid and copy.", previewAnchor: "agri-drones", workflow: "live", workflowLabel: "Live changes" },
+  { id: "mission-city", label: "City Drone World", description: "Urban operations mission bento grid.", previewAnchor: "city-drones", workflow: "live", workflowLabel: "Live changes" },
+  { id: "testimonials", label: "Reviews header", description: "Section title, intro copy, and browse link above review cards.", previewAnchor: "home-customer-testimonials", workflow: "live", workflowLabel: "Live changes" },
+  { id: "product-reviews", label: "Product review cards", description: "Customer quotes linked to catalog products.", previewAnchor: "home-customer-testimonials", workflow: "draft-publish", workflowLabel: "Draft → Publish" },
+  { id: "about", label: "About band", description: "About Mithron call-to-action above the footer.", previewAnchor: "home-about-band", workflow: "live", workflowLabel: "Live changes" },
+  { id: "footer", label: "Footer & newsletter", description: "Footer lead copy and newsletter CTA.", previewAnchor: "home-about-footer", workflow: "live", workflowLabel: "Live changes" }
+];

@@ -1,0 +1,592 @@
+import type { CheckoutOrderInput, CheckoutOrderItemInput } from "@/services/orders";
+import type { DeploymentRequestInput, StaffTaskInput } from "@/services/operations-actions";
+
+type JsonRecord = Record<string, unknown>;
+type StockStatus = "available" | "low_stock" | "out_of_stock";
+
+export type ProductInventoryWorkflowInput = {
+  productSlug: string;
+  sku: string;
+  variantId: string | null;
+  stockStatus: StockStatus;
+  quantity: number;
+  reservedQuantity: number;
+  reorderThreshold: number;
+  warehouseCode: string;
+  availableQuantity: number;
+  committedQuantity: number;
+  changeSummary: string;
+};
+
+export type SimpleInventoryUpdateInput = {
+  productSlug: string;
+  sku: string;
+  variantId: string | null;
+  warehouseCode: string;
+  stockStatus: StockStatus;
+  quantity: number;
+  note: string | null;
+  changeSummary: string;
+};
+
+export type OrderCreateWorkflowInput = {
+  checkout: CheckoutOrderInput;
+  status: string;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  currency: string;
+  note: string | null;
+  changeSummary: string;
+};
+
+export type OrderLifecycleUpdateInput = {
+  orderId: string;
+  status: string | null;
+  paymentStatus: string | null;
+  fulfillmentStatus: string | null;
+  note: string | null;
+  shipmentTracking: JsonRecord | null;
+  changeSummary: string;
+};
+
+export type DeploymentRequestWorkflowInput = DeploymentRequestInput & {
+  orderId: string | null;
+  assignedTo: string | null;
+  changeSummary: string;
+};
+
+export const DEPLOYMENT_REQUEST_STATUSES = [
+  "pending",
+  "triaged",
+  "approved",
+  "rejected",
+  "scheduled",
+  "deployed",
+  "rolled_back",
+  "blocked",
+  "escalated",
+  "completed",
+  "cancelled"
+] as const;
+
+export type DeploymentRequestStatus = (typeof DEPLOYMENT_REQUEST_STATUSES)[number];
+
+export type DeploymentRequestLifecycleUpdateInput = {
+  requestId: string;
+  status: DeploymentRequestStatus;
+  assignedTo: string | null;
+  payload: JsonRecord;
+  note: string | null;
+  changeSummary: string;
+};
+
+export const STAFF_TASK_STATUSES = ["open", "in_progress", "blocked", "done"] as const;
+
+export type StaffTaskStatus = (typeof STAFF_TASK_STATUSES)[number];
+
+export type StaffTaskWorkflowInput = StaffTaskInput & {
+  status: StaffTaskStatus | null;
+  changeSummary: string;
+};
+
+export type NotificationWorkflowInput = {
+  recipientId: string | null;
+  channel: string;
+  title: string;
+  body: string | null;
+  priority: string;
+  entityTable: string | null;
+  entityId: string | null;
+  payload: JsonRecord;
+  changeSummary: string;
+};
+
+export const ORDER_FULFILLMENT_STATES = [
+  "pending",
+  "processing",
+  "picked",
+  "packed",
+  "ready_to_dispatch",
+  "shipped",
+  "delivered",
+  "returned",
+  "cancelled"
+] as const;
+
+export type OrderFulfillmentState = (typeof ORDER_FULFILLMENT_STATES)[number];
+
+const orderFulfillmentTransitions: Record<OrderFulfillmentState, OrderFulfillmentState[]> = {
+  pending: ["processing", "cancelled"],
+  processing: ["picked", "packed", "cancelled"],
+  picked: ["packed", "cancelled"],
+  packed: ["ready_to_dispatch", "shipped", "cancelled"],
+  ready_to_dispatch: ["shipped", "cancelled"],
+  shipped: ["delivered", "returned"],
+  delivered: ["returned"],
+  returned: [],
+  cancelled: []
+};
+
+export type ProductInventoryLinkageRecords = {
+  inventoryRecord: {
+    product_slug: string;
+    sku: string;
+    variant_id: string | null;
+    stock_status: StockStatus;
+    quantity: number;
+    reserved_quantity: number;
+    reorder_threshold: number;
+    updated_by: string | null;
+    updated_at: string;
+  };
+  warehouseStockRecord: {
+    warehouse_code: string;
+    product_slug: string;
+    sku: string;
+    variant_id: string | null;
+    available_quantity: number;
+    committed_quantity: number;
+    last_counted_at: string;
+    updated_by: string | null;
+    updated_at: string;
+  };
+  lowStock: boolean;
+};
+
+function readRequiredString(formData: FormData, key: string, label: string) {
+  const value = formData.get(key);
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${label} ${key} is required.`);
+  }
+  return value.trim();
+}
+
+function readOptionalString(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function readOptionalInteger(formData: FormData, key: string, label: string) {
+  const value = readOptionalString(formData, key);
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a non-negative integer.`);
+  }
+  return parsed;
+}
+
+function readOptionalBoolean(formData: FormData, key: string) {
+  const raw = formData.get(key);
+  if (raw === null || raw === undefined) return false;
+  if (typeof raw === "string") {
+    const normalized = raw.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "on" || normalized === "yes";
+  }
+  return false;
+}
+
+function readOptionalJsonObject(formData: FormData, key: string, label: string) {
+  const value = readOptionalString(formData, key);
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(`${label} ${key} must be a JSON object.`);
+    }
+    return parsed as JsonRecord;
+  } catch (error) {
+    if (error instanceof Error && /must be a JSON object/.test(error.message)) {
+      throw error;
+    }
+    throw new Error(`${label} ${key} must be valid JSON.`);
+  }
+}
+
+function readOrderItems(formData: FormData, key: string): CheckoutOrderItemInput[] {
+  const simpleProductSlug = readOptionalString(formData, "order_item_product_slug");
+  if (simpleProductSlug) {
+    const quantity = readOptionalInteger(formData, "order_item_quantity", "Order item quantity") ?? 1;
+    return [{
+      productSlug: simpleProductSlug,
+      quantity,
+      ...(readOptionalString(formData, "order_item_sku") ? { sku: readOptionalString(formData, "order_item_sku") } : {}),
+      ...(readOptionalString(formData, "order_item_bundle_id") ? { bundleId: readOptionalString(formData, "order_item_bundle_id") } : {})
+    }];
+  }
+
+  const value = readRequiredString(formData, key, "Order");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("Order items must be valid JSON.");
+  }
+
+  if (!Array.isArray(parsed) || !parsed.length) {
+    throw new Error("Order items must be a non-empty JSON array.");
+  }
+
+  return parsed.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(`Order item ${index + 1} must be an object.`);
+    }
+
+    const record = item as Record<string, unknown>;
+    const productSlug = typeof record.productSlug === "string" ? record.productSlug.trim() : "";
+    const quantity = Number(record.quantity);
+    const bundleId = typeof record.bundleId === "string" && record.bundleId.trim() ? record.bundleId.trim() : undefined;
+    const sku = typeof record.sku === "string" && record.sku.trim() ? record.sku.trim() : undefined;
+
+    if (!productSlug) {
+      throw new Error(`Order item ${index + 1} is missing productSlug.`);
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
+      throw new Error(`Order item ${index + 1} quantity must be between 1 and 99.`);
+    }
+
+    return {
+      productSlug,
+      quantity,
+      ...(sku ? { sku } : {}),
+      ...(bundleId ? { bundleId } : {})
+    };
+  });
+}
+
+function readShipmentTrackingFromSimpleFields(formData: FormData) {
+  const trackingNumber = readOptionalString(formData, "tracking_number");
+  const carrier = readOptionalString(formData, "carrier");
+  const trackingUrl = readOptionalString(formData, "tracking_url");
+  if (!trackingNumber && !carrier && !trackingUrl) return undefined;
+  return {
+    tracking_number: trackingNumber ?? null,
+    carrier: carrier ?? null,
+    tracking_url: trackingUrl ?? null
+  };
+}
+
+function readRequiredEnum<T extends string>(formData: FormData, key: string, values: readonly T[], label: string) {
+  const value = readRequiredString(formData, key, label);
+  if (!values.includes(value as T)) {
+    throw new Error(`${label} ${key} must be one of: ${values.join(", ")}.`);
+  }
+  return value as T;
+}
+
+function normalizeLegacyFulfillmentState(value: string | null | undefined): string {
+  const normalized = normalizeOrderStatusForStock(value, "pending");
+  if (normalized === "queued" || normalized === "draft") return "pending";
+  if (normalized === "fulfilled" || normalized === "completed") return "delivered";
+  return normalized;
+}
+
+export function assertOrderFulfillmentStatus(value: string | null | undefined, label = "Order lifecycle fulfillment_status"): OrderFulfillmentState {
+  const normalized = normalizeLegacyFulfillmentState(value);
+  if (!(ORDER_FULFILLMENT_STATES as readonly string[]).includes(normalized)) {
+    throw new Error(`${label} must be one of: ${ORDER_FULFILLMENT_STATES.join(", ")}.`);
+  }
+  return normalized as OrderFulfillmentState;
+}
+
+export function assertOrderFulfillmentTransition(current: string | null | undefined, next: string | null | undefined) {
+  const currentState = assertOrderFulfillmentStatus(current, "Current order fulfillment_status");
+  const nextState = assertOrderFulfillmentStatus(next);
+
+  if (currentState === nextState) {
+    throw new Error(`Duplicate order fulfillment transition ${currentState} -> ${nextState}.`);
+  }
+
+  if (!orderFulfillmentTransitions[currentState].includes(nextState)) {
+    throw new Error(`Invalid order fulfillment transition ${currentState} -> ${nextState}.`);
+  }
+
+  return nextState;
+}
+
+export function buildProductInventoryWorkflowFromFormData(formData: FormData): ProductInventoryWorkflowInput {
+  const productSlug = readRequiredString(formData, "product_slug", "Inventory");
+  const sku = readRequiredString(formData, "sku", "Inventory");
+  const warehouseCode = readRequiredString(formData, "warehouse_code", "Inventory");
+  const stockStatus = readRequiredEnum(formData, "stock_status", ["available", "low_stock", "out_of_stock"] as const, "Inventory");
+  const quantity = readOptionalInteger(formData, "quantity", "Inventory quantity") ?? 0;
+  const reservedQuantity = readOptionalInteger(formData, "reserved_quantity", "Inventory reserved quantity") ?? 0;
+  const reorderThreshold = readOptionalInteger(formData, "reorder_threshold", "Inventory reorder threshold") ?? 0;
+  const availableQuantity = readOptionalInteger(formData, "available_quantity", "Warehouse available quantity") ?? quantity;
+  const committedQuantity = readOptionalInteger(formData, "committed_quantity", "Warehouse committed quantity") ?? reservedQuantity;
+  const variantId = readOptionalString(formData, "variant_id") ?? null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Sync inventory for ${productSlug}:${sku}`;
+
+  return {
+    productSlug,
+    sku,
+    variantId,
+    stockStatus,
+    quantity,
+    reservedQuantity,
+    reorderThreshold,
+    warehouseCode,
+    availableQuantity,
+    committedQuantity,
+    changeSummary
+  };
+}
+
+export function buildSimpleInventoryUpdateFromFormData(formData: FormData): SimpleInventoryUpdateInput {
+  const productSlug = readRequiredString(formData, "product_slug", "Inventory");
+  const sku = readRequiredString(formData, "sku", "Inventory");
+  const stockStatus = readRequiredEnum(formData, "stock_status", ["available", "low_stock", "out_of_stock"] as const, "Inventory");
+  const quantity = readOptionalInteger(formData, "quantity", "Inventory quantity") ?? 0;
+  const variantId = readOptionalString(formData, "variant_id") ?? null;
+  const warehouseCode = readOptionalString(formData, "warehouse_code") ?? "IN-WEST-01";
+  const note = readOptionalString(formData, "note") ?? null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Update stock for ${productSlug}:${sku}`;
+
+  return {
+    productSlug,
+    sku,
+    variantId,
+    warehouseCode,
+    stockStatus,
+    quantity,
+    note,
+    changeSummary
+  };
+}
+
+function stockSeverity(status: StockStatus) {
+  if (status === "out_of_stock") return 2;
+  if (status === "low_stock") return 1;
+  return 0;
+}
+
+function stockStatusFromSeverity(severity: number): StockStatus {
+  if (severity >= 2) return "out_of_stock";
+  if (severity >= 1) return "low_stock";
+  return "available";
+}
+
+function deriveInventoryStockStatus(input: ProductInventoryWorkflowInput): StockStatus {
+  const sellableQuantity = input.quantity - input.reservedQuantity;
+  const quantityStatus: StockStatus = sellableQuantity <= 0
+    ? "out_of_stock"
+    : input.reorderThreshold > 0 && sellableQuantity <= input.reorderThreshold
+      ? "low_stock"
+      : "available";
+
+  return stockStatusFromSeverity(Math.max(stockSeverity(input.stockStatus), stockSeverity(quantityStatus)));
+}
+
+export function buildInventoryLinkageRecords(
+  input: ProductInventoryWorkflowInput,
+  options: { actorId: string | null; at: string }
+): ProductInventoryLinkageRecords {
+  if (input.reservedQuantity > input.quantity) {
+    throw new Error("Reserved quantity cannot exceed inventory quantity.");
+  }
+
+  if (input.committedQuantity > input.availableQuantity) {
+    throw new Error("Committed warehouse quantity cannot exceed available warehouse quantity.");
+  }
+
+  const stockStatus = deriveInventoryStockStatus(input);
+
+  return {
+    inventoryRecord: {
+      product_slug: input.productSlug,
+      sku: input.sku,
+      variant_id: input.variantId,
+      stock_status: stockStatus,
+      quantity: input.quantity,
+      reserved_quantity: input.reservedQuantity,
+      reorder_threshold: input.reorderThreshold,
+      updated_by: options.actorId,
+      updated_at: options.at
+    },
+    warehouseStockRecord: {
+      warehouse_code: input.warehouseCode,
+      product_slug: input.productSlug,
+      sku: input.sku,
+      variant_id: input.variantId,
+      available_quantity: input.availableQuantity,
+      committed_quantity: input.committedQuantity,
+      last_counted_at: options.at,
+      updated_by: options.actorId,
+      updated_at: options.at
+    },
+    lowStock: stockStatus === "low_stock" || stockStatus === "out_of_stock"
+  };
+}
+
+export function buildOrderCreateWorkflowFromFormData(formData: FormData): OrderCreateWorkflowInput {
+  const customerEmail = readRequiredString(formData, "customer_email", "Order");
+  const lineItems = readOrderItems(formData, "order_items");
+  const missionProfile = readOptionalString(formData, "mission_profile");
+  const region = readOptionalString(formData, "region");
+  const metadata = readOptionalJsonObject(formData, "metadata", "Order") ?? {
+    source: "admin_order_form",
+    customer_note: readOptionalString(formData, "customer_note") ?? null
+  };
+  const currency = readOptionalString(formData, "currency") ?? "INR";
+  const status = readOptionalString(formData, "status") ?? "draft";
+  const paymentStatus = readOptionalString(formData, "payment_status") ?? "not_required";
+  const fulfillmentStatus = assertOrderFulfillmentStatus(readOptionalString(formData, "fulfillment_status") ?? "pending", "Order fulfillment_status");
+  const note = readOptionalString(formData, "note") ?? null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Create order draft for ${customerEmail}`;
+
+  return {
+    checkout: {
+      customerEmail,
+      region,
+      missionProfile,
+      items: lineItems,
+      metadata
+    },
+    status,
+    paymentStatus,
+    fulfillmentStatus,
+    currency,
+    note,
+    changeSummary
+  };
+}
+
+export function buildOrderLifecycleUpdateFromFormData(formData: FormData): OrderLifecycleUpdateInput {
+  const orderId = readRequiredString(formData, "order_id", "Order lifecycle");
+  const status = readOptionalString(formData, "status") ?? null;
+  const paymentStatus = readOptionalString(formData, "payment_status") ?? null;
+  const rawFulfillmentStatus = readOptionalString(formData, "fulfillment_status") ?? null;
+  const fulfillmentStatus = rawFulfillmentStatus ? assertOrderFulfillmentStatus(rawFulfillmentStatus) : null;
+  const note = readOptionalString(formData, "note") ?? null;
+  const shipmentTracking = readShipmentTrackingFromSimpleFields(formData) ?? readOptionalJsonObject(formData, "shipment_tracking", "Order lifecycle") ?? null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Update order lifecycle ${orderId}`;
+
+  return {
+    orderId,
+    status,
+    paymentStatus,
+    fulfillmentStatus,
+    note,
+    shipmentTracking,
+    changeSummary
+  };
+}
+
+export function buildDeploymentRequestWorkflowFromFormData(formData: FormData): DeploymentRequestWorkflowInput {
+  const requesterEmail = readRequiredString(formData, "requester_email", "Deployment request");
+  const region = readOptionalString(formData, "region");
+  const missionProfile = readOptionalString(formData, "mission_profile");
+  const notes = readOptionalString(formData, "notes");
+  const priority = readRequiredEnum(formData, "priority", ["low", "normal", "high", "critical"] as const, "Deployment request");
+  const payload = readOptionalJsonObject(formData, "payload", "Deployment request");
+  const orderId = readOptionalString(formData, "order_id") ?? null;
+  const assignedTo = readOptionalString(formData, "assigned_to") ?? null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Create deployment request for ${requesterEmail}`;
+
+  return {
+    requesterEmail,
+    region,
+    missionProfile,
+    notes,
+    priority,
+    payload,
+    orderId,
+    assignedTo,
+    changeSummary
+  };
+}
+
+export function buildDeploymentRequestLifecycleUpdateFromFormData(formData: FormData): DeploymentRequestLifecycleUpdateInput {
+  const requestId = readRequiredString(formData, "request_id", "Deployment request lifecycle");
+  const status = readRequiredEnum(
+    formData,
+    "status",
+    DEPLOYMENT_REQUEST_STATUSES,
+    "Deployment request lifecycle"
+  );
+  const assignedTo = readOptionalString(formData, "assigned_to") ?? null;
+  const payload = readOptionalJsonObject(formData, "payload", "Deployment request lifecycle") ?? {};
+  const note = readOptionalString(formData, "note") ?? null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Update deployment request ${requestId} to ${status}`;
+
+  return {
+    requestId,
+    status,
+    assignedTo,
+    payload,
+    note,
+    changeSummary
+  };
+}
+
+export function buildStaffTaskWorkflowFromFormData(formData: FormData): StaffTaskWorkflowInput {
+  const title = readRequiredString(formData, "title", "Staff task");
+  const body = readOptionalString(formData, "body");
+  const priority = readRequiredEnum(formData, "priority", ["low", "normal", "high", "critical"] as const, "Staff task");
+  const assignedTo = readOptionalString(formData, "assigned_to");
+  const relatedRequestId = readOptionalString(formData, "related_request_id");
+  const dueAt = readOptionalString(formData, "due_at");
+  const rawStatus = readOptionalString(formData, "status") ?? null;
+  const status = rawStatus
+    ? readRequiredEnum(formData, "status", STAFF_TASK_STATUSES, "Staff task")
+    : null;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Create staff task ${title}`;
+
+  return {
+    title,
+    body,
+    priority,
+    assignedTo,
+    relatedRequestId,
+    dueAt,
+    status,
+    changeSummary
+  };
+}
+
+export function buildNotificationWorkflowFromFormData(formData: FormData): NotificationWorkflowInput {
+  const title = readRequiredString(formData, "title", "Notification");
+  const channel = readOptionalString(formData, "channel") ?? "admin";
+  const body = readOptionalString(formData, "body") ?? null;
+  const priority = readRequiredEnum(formData, "priority", ["low", "normal", "high", "critical"] as const, "Notification");
+  const recipientId = readOptionalString(formData, "recipient_id") ?? null;
+  const entityTable = readOptionalString(formData, "entity_table") ?? null;
+  const entityId = readOptionalString(formData, "entity_id") ?? null;
+  const payload = readOptionalJsonObject(formData, "payload", "Notification") ?? {};
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Create notification ${title}`;
+
+  return {
+    recipientId,
+    channel,
+    title,
+    body,
+    priority,
+    entityTable,
+    entityId,
+    payload,
+    changeSummary
+  };
+}
+
+export function normalizeTimelineEventNote(value: string | null | undefined) {
+  return value?.trim() ? value.trim() : null;
+}
+
+export function normalizeOrderStatusForStock(status: string | null | undefined, fallback = "draft") {
+  return status?.trim() ? status.trim().toLowerCase() : fallback;
+}
+
+export function isOrderFulfillmentStateDone(value: string | null | undefined) {
+  const normalized = normalizeOrderStatusForStock(value, "");
+  return normalized === "fulfilled" || normalized === "completed" || normalized === "delivered";
+}
+
+export function clampNonNegativeInteger(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.trunc(value));
+}
+
+export function parseBooleanFlag(formData: FormData, key: string) {
+  return readOptionalBoolean(formData, key);
+}

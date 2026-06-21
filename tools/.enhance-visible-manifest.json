@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-21T07:32:49.622Z",
+  "visibleCount": 26,
+  "items": [
+    {
+      "src": "/assets/hero/hero-slide-01.webp",
+      "maxEdge": 3840,
+      "group": "hero",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\assets\\hero\\hero-slide-01.webp"
+    },
+    {
+      "src": "/assets/hero/hero-slide-02.webp",
+      "maxEdge": 3840,
+      "group": "hero",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\assets\\hero\\hero-slide-02.webp"
+    },
+    {
+      "src": "/assets/hero/hero-slide-03.webp",
+      "maxEdge": 3840,
+      "group": "hero",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\assets\\hero\\hero-slide-03.webp"
+    },
+    {
+      "src": "/assets/hero/hero-slide-04.webp",
+      "maxEdge": 3840,
+      "group": "hero",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\assets\\hero\\hero-slide-04.webp"
+    },
+    {
+      "src": "/media/mithron/showcase/drone_world_hero.png",
+      "maxEdge": 2560,
+      "group": "shelf",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\showcase\\drone_world_hero.png"
+    },
+    {
+      "src": "/media/mithron/showcase/drone_care_hero.png",
+      "maxEdge": 2560,
+      "group": "shelf",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\showcase\\drone_care_hero.png"
+    },
+    {
+      "src": "/media/mithron/showcase/global_products_hero.png",
+      "maxEdge": 2560,
+      "group": "shelf",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\showcase\\global_products_hero.png"
+    },
+    {
+      "src": "/media/mithron/mission/agrone/agrone-drone-owner-registration.png",
+      "maxEdge": 2560,
+      "group": "mission-agri",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\agrone\\agrone-drone-owner-registration.png"
+    },
+    {
+      "src": "/media/mithron/mission/agrone/agrone-pilot-registration.png",
+      "maxEdge": 2560,
+      "group": "mission-agri",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\agrone\\agrone-pilot-registration.png"
+    },
+    {
+      "src": "/media/mithron/mission/agrone/all-india-drone-farmer.png",
+      "maxEdge": 2560,
+      "group": "mission-agri",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\agrone\\all-india-drone-farmer.png"
+    },
+    {
+      "src": "/media/mithron/mission/agrone/smart-farmer-register.png",
+      "maxEdge": 2560,
+      "group": "mission-agri",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\agrone\\smart-farmer-register.png"
+    },
+    {
+      "src": "/media/mithron/mission/agrone/agri-drone-loan.png",
+      "maxEdge": 2560,
+      "group": "mission-agri",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\agrone\\agri-drone-loan.png"
+    },
+    {
+      "src": "/media/mithron/mission/city/dronelancer-model.png",
+      "maxEdge": 2560,
+      "group": "mission-city",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\city\\dronelancer-model.png"
+    },
+    {
+      "src": "/media/mithron/mission/city/city-drone-rental-services-app.png",
+      "maxEdge": 2560,
+      "group": "mission-city",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\city\\city-drone-rental-services-app.png"
+    },
+    {
+      "src": "/media/mithron/mission/city/drone-franchisecare-center.png",
+      "maxEdge": 2560,
+      "group": "mission-city",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\city\\drone-franchisecare-center.png"
+    },
+    {
+      "src": "/media/mithron/mission/city/drone-technician-aggregation.png",
+      "maxEdge": 2560,
+      "group": "mission-city",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\city\\drone-technician-aggregation.png"
+    },
+    {
+      "src": "/media/mithron/mission/city/all-drone-acadamic.png",
+      "maxEdge": 2560,
+      "group": "mission-city",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\mission\\city\\all-drone-acadamic.png"
+    },
+    {
+      "src": "/media/mithron/catalog/agri-drone-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\agri-drone-category.png"
+    },
+    {
+      "src": "/media/mithron/catalog/video-drone-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\video-drone-category.png"
+    },
+    {
+      "src": "/media/mithron/catalog/creative-drone-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\creative-drone-category.png"
+    },
+    {
+      "src": "/media/mithron/catalog/mithron-drone-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\mithron-drone-category.png"
+    },
+    {
+      "src": "/media/mithron/catalog/survey-drone-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\survey-drone-category.png"
+    },
+    {
+      "src": "/media/mithron/catalog/surveillance-drone-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\surveillance-drone-category.png"
+    },
+    {
+      "src": "/media/mithron/catalog/global-products-category.png",
+      "maxEdge": 2560,
+      "group": "catalog",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\catalog\\global-products-category.png"
+    },
+    {
+      "src": "/media/mithron/shell/mithron-wordmark.png",
+      "maxEdge": 1600,
+      "group": "nav",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\shell\\mithron-wordmark.png"
+    },
+    {
+      "src": "/media/mithron/interests/components.webp",
+      "maxEdge": 1600,
+      "group": "nav",
+      "resolvedPath": "D:\\mithron (2)\\mithron\\mithron\\mith june\\mithron\\public\\media\\mithron\\interests\\components.webp"
+    }
+  ]
+}

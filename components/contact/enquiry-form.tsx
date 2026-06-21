@@ -1,0 +1,137 @@
+"use client";
+
+import { useState } from "react";
+import { isValidCustomerEmail, isValidCustomerPhone, CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
+import { Button } from "@/components/ui/button";
+
+type EnquiryFormProps = {
+  defaultEmail?: string;
+  defaultRegion?: string;
+};
+
+export function EnquiryForm({ defaultEmail = "", defaultRegion = "India" }: EnquiryFormProps) {
+  const [email, setEmail] = useState(defaultEmail);
+  const [phone, setPhone] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [region, setRegion] = useState(defaultRegion);
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [error, setError] = useState("");
+
+  function validateContact() {
+    if (!email.trim()) {
+      setError("Email is required.");
+      return false;
+    }
+    if (!isValidCustomerEmail(email.trim())) {
+      setError("Enter a valid email address.");
+      return false;
+    }
+    if (!phone.trim()) {
+      setError("Phone number is required.");
+      return false;
+    }
+    if (!isValidCustomerPhone(phone.trim())) {
+      setError("Enter a valid phone number (8–15 digits).");
+      return false;
+    }
+    return true;
+  }
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!validateContact()) {
+      setStatus("error");
+      return;
+    }
+
+    setStatus("loading");
+    setError("");
+    const response = await fetch("/api/enquiries", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), phone: phone.trim(), subject, message, region })
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      setError(typeof body.error === "string" ? body.error : "Failed to submit enquiry.");
+      setStatus("error");
+      return;
+    }
+    setStatus("success");
+    setSubject("");
+    setMessage("");
+  }
+
+  if (status === "success") {
+    return (
+      <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-6" data-enquiry-success>
+        <p className="text-base font-semibold text-emerald-700">Enquiry received.</p>
+        <p className="mt-2 text-sm text-emerald-800/80">Our team will respond to {email} or {phone} shortly.</p>
+        <Button type="button" variant="outline" className="mt-4" onClick={() => setStatus("idle")}>
+          Send another enquiry
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form data-enquiry-form onSubmit={onSubmit} className="grid gap-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6">
+      <p className="text-sm text-slate-500">{CUSTOMER_CONTACT_REQUIRED_MESSAGE}</p>
+      <label className="grid gap-2 text-sm">
+        <span className="font-medium text-slate-600">Email <span className="text-red-600">*</span></span>
+        <input
+          required
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          className="h-12 rounded-xl border border-slate-200 bg-white px-4 outline-none focus:border-slate-400"
+        />
+      </label>
+      <label className="grid gap-2 text-sm">
+        <span className="font-medium text-slate-600">Phone <span className="text-red-600">*</span></span>
+        <input
+          required
+          type="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
+          placeholder="+91 98765 43210"
+          className="h-12 rounded-xl border border-slate-200 bg-white px-4 outline-none focus:border-slate-400"
+        />
+      </label>
+      <label className="grid gap-2 text-sm">
+        <span className="font-medium text-slate-600">Subject <span className="text-red-600">*</span></span>
+        <input
+          required
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
+          className="h-12 rounded-xl border border-slate-200 bg-white px-4 outline-none focus:border-slate-400"
+        />
+      </label>
+      <label className="grid gap-2 text-sm">
+        <span className="font-medium text-slate-600">Region</span>
+        <input
+          value={region}
+          onChange={(event) => setRegion(event.target.value)}
+          className="h-12 rounded-xl border border-slate-200 bg-white px-4 outline-none focus:border-slate-400"
+        />
+      </label>
+      <label className="grid gap-2 text-sm">
+        <span className="font-medium text-slate-600">Message <span className="text-red-600">*</span></span>
+        <textarea
+          required
+          rows={5}
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-slate-400"
+        />
+      </label>
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      <Button type="submit" disabled={status === "loading"}>
+        {status === "loading" ? "Sending..." : "Submit enquiry"}
+      </Button>
+    </form>
+  );
+}

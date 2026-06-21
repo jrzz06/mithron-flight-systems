@@ -1,0 +1,117 @@
+﻿import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+function source(path: string) {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+describe("admin real workflow UX", () => {
+  it("uses Supabase row truth instead of id-only counts or capped product previews", () => {
+    const adminService = source("services/admin.ts");
+    const productsPage = source("app/admin/products/page.tsx");
+    const productGrid = source("app/admin/products/product-catalog-grid.tsx");
+
+    expect(adminService).toContain("select=id&limit=1");
+    expect(adminService).toContain("PRODUCT_MANAGER_LIMIT");
+    expect(adminService).not.toContain("limit=500");
+    expect(productsPage).not.toContain("slice(0, 16)");
+    expect(productsPage).toContain("ProductCatalogGrid");
+    expect(productGrid).toContain("data-product-card");
+    expect(productGrid).toContain("data-product-row-action=\"archive\"");
+    expect(productGrid).toContain("data-product-row-action=\"delete\"");
+    expect(productsPage).not.toContain("data-product-row-action=\"hard-delete\"");
+    expect(productsPage).not.toContain("hard-delete-product");
+  });
+
+  it("keeps product and order forms layman-readable without visible JSON fields", () => {
+    const productsPage = source("app/admin/products/page.tsx");
+    const ordersPage = source("app/admin/orders/page.tsx");
+    const ordersWorkspace = source("components/admin/admin-orders-workspace.tsx");
+    const ordersUi = `${ordersPage}\n${ordersWorkspace}`;
+    const productForms = source("services/product-admin-forms.ts");
+    const orderForms = source("services/enterprise-admin-forms.ts");
+
+    expect(productsPage).not.toContain("Image JSON");
+    expect(productsPage).not.toContain("Hero JSON");
+    expect(productsPage).not.toContain("Gallery JSON array");
+    expect(productsPage).not.toContain("Hero image URL");
+    expect(productsPage).not.toContain("Gallery image URLs");
+    expect(productsPage).not.toContain("Advanced structured fields");
+    expect(productsPage).toContain("Product name");
+    expect(productsPage).toContain("ProductCategoryField");
+    expect(productsPage).toContain("Image URL");
+    expect(productsPage).toContain("Upload image");
+    expect(productsPage).toContain("data-product-supabase-storage-note");
+    expect(productForms).toContain("image_src");
+    expect(productForms).toContain("gallery_urls");
+
+    expect(ordersUi).not.toContain("Order items JSON");
+    expect(ordersUi).not.toContain("Metadata JSON");
+    expect(ordersUi).not.toContain("Shipment tracking JSON");
+    expect(ordersUi).toContain("data-order-detail-panel");
+    expect(ordersUi).toContain("data-shipment-actions");
+    expect(ordersUi).toContain("data-inventory-allocation");
+    expect(orderForms).toContain("order_item_product_slug");
+    expect(orderForms).toContain("tracking_number");
+  });
+
+  it("makes CMS hero/banner/carousel media directly editable from Supabase media rows", () => {
+    const cmsWorkspace = source("features/admin/cms/cms-visual-workspace.tsx");
+    const cmsForms = source("services/cms-admin-forms.ts");
+    const cmsActions = source("app/admin/cms/actions.ts");
+    const mediaPage = source("app/admin/media/page.tsx");
+    const publicCms = source("services/cms.ts");
+
+    expect(cmsWorkspace).toContain("data-cms-media-picker");
+    expect(cmsWorkspace).toContain("data-cms-upload-image");
+    expect(cmsWorkspace).toContain("Select from media library");
+    expect(cmsWorkspace).toContain("Section image");
+    expect(cmsWorkspace).not.toContain("Hero image URL");
+    expect(cmsWorkspace).not.toContain("Poster image URL");
+    expect(cmsWorkspace).not.toContain("Hero video URL");
+    expect(cmsWorkspace).not.toContain("Carousel image URL");
+    expect(cmsWorkspace).not.toContain("Image JSON");
+    expect(cmsWorkspace).not.toContain("Video JSON");
+    expect(cmsActions).toContain("saveCmsMediaUploadFormAction");
+    expect(cmsForms).toContain("image_src");
+    expect(cmsForms).toContain("video_src");
+    expect(publicCms).toContain("mediaFromColumns");
+    expect(publicCms).not.toContain("slide.productSlug && slide.title");
+    expect(mediaPage).toContain("data-media-delete-form");
+    expect(mediaPage).toContain("deleteMediaAssetFormAction");
+    expect(mediaPage).not.toContain("FALLBACK ACTIVE");
+  });
+
+  it("switches the control plane to a minimal dark operational theme", () => {
+    const frame = source("components/admin/admin-frame.tsx");
+    const shell = source("components/admin/control-shell.tsx");
+    const globals = source("app/globals.css");
+
+    expect(frame).toContain('data-control-plane-theme="dark"');
+    expect(shell).toContain('data-control-plane-theme="dark"');
+    expect(frame).toContain("data-admin-performance-theme");
+    expect(globals).toContain("[data-control-plane-theme=\"dark\"]");
+    expect(globals).toContain("--admin-bg: #080b10");
+    expect(globals).toContain("--admin-text: #e7edf5");
+  });
+
+  it("keeps admin and warehouse startup payloads bounded for a responsive prototype", () => {
+    const adminPage = source("app/admin/page.tsx");
+    const adminService = source("services/admin.ts");
+    const realtimeHook = source("hooks/use-enterprise-realtime.ts");
+    const warehousePage = source("app/warehouse/page.tsx");
+
+    expect(adminPage).not.toContain("getEnterpriseCleanupSnapshot");
+    expect(warehousePage).not.toContain("EnterpriseRealtimePanel");
+    expect(realtimeHook).not.toContain("router.refresh");
+
+    const warehouseSnapshotStart = adminService.indexOf("export const getWarehouseSnapshot");
+    const operationsSnapshotStart = adminService.indexOf("export async function getOperationsSnapshot");
+    const warehouseSnapshotSource = adminService.slice(warehouseSnapshotStart, operationsSnapshotStart);
+    expect(warehouseSnapshotSource).not.toContain("limit=500");
+    expect(warehouseSnapshotSource).not.toContain("select=*");
+    expect(warehouseSnapshotSource).toContain("limit=80");
+  });
+});
+
