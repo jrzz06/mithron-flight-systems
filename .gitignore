@@ -42,3 +42,4 @@ tools/realesrgan-bin/
 
 # supabase
 supabase/.temp/
+.vercel

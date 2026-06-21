@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import os from "node:os";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 660;
+export const maxDuration = 300;
 
 const BASE = process.env.LOAD_TEST_BASE_URL ?? "http://127.0.0.1:3000";
 

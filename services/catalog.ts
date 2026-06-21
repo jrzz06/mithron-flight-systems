@@ -6,7 +6,8 @@ import {
   classifyProductShelf,
   filterDroneCareProducts,
   filterDroneWorldProducts,
-  isGlobalProductsCategory
+  isGlobalProductsCategory,
+  type ProductShelfInput
 } from "@/lib/product-shelf-classification";
 import {
   filterProductsForCategorySlug,
@@ -561,16 +562,24 @@ export const getProductShellItems = cache(async (limit = CATALOG_LIST_LIMIT): Pr
   return mapRowsWithPrimaryMedia(rows, mapProductShellRow);
 });
 
-export async function getRelatedProductShellItems(slug: string, limit = 4) {
+export async function getRelatedProductShellItems(slug: string, limit = 4): Promise<ProductShellItem[]> {
   const [products, currentRow] = await Promise.all([getProductShellItems(), getProductAffinityRowBySlug(slug)]);
   const currentProduct = products.find((product) => product.slug === slug);
   const fallback = products.filter((product) => product.slug !== slug);
 
   if (!currentRow || !currentProduct) return fallback.slice(0, limit);
 
-  const shelfProducts = classifyProductShelf(currentProduct) === "drone-care"
-    ? filterDroneCareProducts(products)
-    : filterDroneWorldProducts(products);
+  const shelfInputs = products as unknown as ProductShelfInput[];
+  const shelfProducts = classifyProductShelf({
+    slug: currentProduct.slug,
+    name: currentProduct.name,
+    tagline: currentProduct.tagline,
+    category: currentProduct.category,
+    interests: currentProduct.interests,
+    specs: {}
+  }) === "drone-care"
+    ? filterDroneCareProducts(shelfInputs)
+    : filterDroneWorldProducts(shelfInputs);
   const currentInterests = currentRow.interests ?? [];
 
   const related = shelfProducts.filter((product) => (
@@ -580,7 +589,7 @@ export async function getRelatedProductShellItems(slug: string, limit = 4) {
     )
   ));
 
-  return (related.length ? related : shelfProducts.filter((product) => product.slug !== slug)).slice(0, limit);
+  return (related.length ? related : shelfProducts.filter((product) => product.slug !== slug)).slice(0, limit) as unknown as ProductShellItem[];
 }
 
 function getCatalogConfig(useServiceRole = false) {

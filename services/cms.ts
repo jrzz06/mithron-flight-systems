@@ -187,7 +187,7 @@ function mergeCategoryMetadata(routeKey: string, cms?: CategoryMetadata): Catego
     ? {
         ...fallbackShowcase,
         ...cmsShowcase,
-        fit: cmsShowcase.fit ?? fallbackShowcase?.fit
+        fit: cmsShowcase.fit ?? (fallbackShowcase as { fit?: "cinematic" | "native" } | undefined)?.fit
       }
     : fallbackShowcase;
 

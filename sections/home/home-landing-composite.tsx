@@ -500,7 +500,7 @@ const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldCon
     body: "Join India's largest agricultural drone ecosystem. Register as a pilot, farmer, drone owner, or service provider and access training, financing, bookings, and support across the AGRONE network.",
     testId: "agri-community-world",
     composition: "agri-field",
-    mediaState: "",
+    mediaState: "VERIFIED",
     mediaNote: "",
     tiles: [
       {
@@ -1329,7 +1329,7 @@ export function HomeLandingComposite({
     if (miniCarouselItems.length <= 1) return;
 
     let cancelled = false;
-    let timer: ReturnType<typeof window.setTimeout> | undefined;
+    let timer: number | undefined;
 
     const scheduleNextAdvance = () => {
       timer = window.setTimeout(() => {
@@ -1857,8 +1857,8 @@ function CityDroneWorldSection({
           style={{
             objectPosition: imagePresentation.objectPosition,
             transformOrigin: imagePresentation.transformOrigin,
-            ["--city-image-scale" as "--city-image-scale"]: String(imagePresentation.scale)
-          }}
+            ["--city-image-scale"]: String(imagePresentation.scale)
+          } as CSSProperties}
         />
         <span className={styles.cityCardOverlay} aria-hidden="true" />
         <span className={styles.agriCardCopy}>

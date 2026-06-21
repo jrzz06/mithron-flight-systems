@@ -40,11 +40,11 @@ export function SpecsFaqReviews({
     ? scopedReviews
     : support.reviews.filter((review) => !review.productSlug);
 
-  const tabs: Array<{ id: SupportTab; label: string; visible: boolean }> = [
-    { id: "specs", label: "Specs", visible: specs.length > 0 },
-    { id: "faq", label: "FAQ", visible: support.faqs.length > 0 },
-    { id: "reviews", label: "Reviews", visible: reviews.length > 0 },
-    { id: "related", label: "Related", visible: relatedProducts.length > 0 }
+  const tabs = [
+    { id: "specs" as SupportTab, label: "Specs", visible: specs.length > 0 },
+    { id: "faq" as SupportTab, label: "FAQ", visible: support.faqs.length > 0 },
+    { id: "reviews" as SupportTab, label: "Reviews", visible: reviews.length > 0 },
+    { id: "related" as SupportTab, label: "Related", visible: relatedProducts.length > 0 }
   ].filter((tab) => tab.visible);
 
   const [activeTab, setActiveTab] = useState<SupportTab>(tabs[0]?.id ?? "faq");

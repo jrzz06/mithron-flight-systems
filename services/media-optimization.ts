@@ -111,7 +111,7 @@ export function findStoredOptimizedVariant(
   return variants.find((variant) => variant.label === label && (!format || variant.format === format)) ?? null;
 }
 
-export function findLargestStoredAvifVariant(variants: StoredOptimizedImageVariant[]) {
+export function findLargestStoredAvifVariant(_variants: StoredOptimizedImageVariant[]): StoredOptimizedImageVariant | null {
   return null;
 }
 

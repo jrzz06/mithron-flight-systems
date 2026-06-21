@@ -210,7 +210,7 @@ export function HeroCarousel({
     if (safeSlides.length <= 1) return;
 
     let cancelled = false;
-    let timer: ReturnType<typeof window.setTimeout> | undefined;
+    let timer: number | undefined;
 
     const scheduleNextAdvance = () => {
       timer = window.setTimeout(() => {
