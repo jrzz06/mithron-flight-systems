@@ -246,9 +246,9 @@ export function CheckoutPageClient() {
     if (!stubOrderId || stubFlag !== "1" || completed) return;
 
     let active = true;
-    setLoading("stub");
 
     (async () => {
+      setLoading("stub");
       const intentId = checkout.paymentIntentId ?? `stub_intent_${stubOrderId}`;
       const ok = await completeStubPayment(intentId, subtotal);
       if (!active) return;

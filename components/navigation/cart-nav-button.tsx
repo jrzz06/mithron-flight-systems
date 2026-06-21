@@ -1,17 +1,17 @@
 "use client";
 
 import { ShoppingBag } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useCartStore } from "@/store/cart";
 
 export function CartNavButton() {
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const count = useCartStore((state) => state.itemCount());
   const setCartOpen = useCartStore((state) => state.setCartOpen);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   const displayCount = hydrated ? count : 0;
 

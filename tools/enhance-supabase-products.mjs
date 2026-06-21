@@ -313,7 +313,7 @@ async function writeEnhancedMarker(resolvedPath, extra = {}) {
   );
 }
 
-async function applySharpFallbackForRejectedEnhancements(manifestPath) {
+async function applySharpFallbackForRejectedEnhancements() {
   const resultsPath = join(projectRoot, "tools", ".enhance-supabase-manifest.results.json");
   if (!existsSync(resultsPath)) return;
 

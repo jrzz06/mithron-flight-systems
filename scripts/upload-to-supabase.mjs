@@ -98,7 +98,7 @@ async function uploadImages(): Promise<UploadResult> {
 
         const fileData = fs.readFileSync(filePath);
 
-        const { data, error } = await supabase.storage
+        const { error } = await supabase.storage
           .from(STORAGE_BUCKET)
           .upload(remotePath, fileData, {
             contentType: "image/png",

@@ -41,7 +41,6 @@ function hasFlushStorefrontHero(pathname: string | null) {
 export function StoreShell({
   children,
   products,
-  interests,
   navigationItems,
   enterpriseMenuConfigs,
   footer

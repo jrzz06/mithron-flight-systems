@@ -34,7 +34,7 @@ import {
 } from "@/services/inventory-csv";
 import { buildValidatedOrderDraft, buildOrderTimelineEntry, appendOrderTimeline, syncOrderStatusFromFulfillment } from "@/services/orders";
 import { getProducts } from "@/services/catalog";
-import { getCurrentAuthContext, requirePermission } from "@/services/auth";
+import { requirePermission } from "@/services/auth";
 import {
   applyFulfillmentStockMovements,
   applyWarehouseStockMovement,

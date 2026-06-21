@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { safeBearerEquals } from "@/lib/auth/timing-safe-bearer";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { releaseCheckoutStock } from "@/services/checkout-stock";
-import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
+import { updateAdminRecord } from "@/services/admin-actions";
 
 const PENDING_MAX_MINUTES = 30;
 

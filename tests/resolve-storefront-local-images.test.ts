@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getResponsiveAssetForSrc } from "@/config/generated-assets";
-import { canonicalStorefrontPath, resolveHeroSlideSrc, resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
+import { canonicalStorefrontPath, resolveHeroSlideSrc } from "@/lib/media/resolve-storefront-src";
 
 describe("storefront local image resolution", () => {
   it("canonicalizes legacy hero png cms paths to enhanced webp masters", () => {

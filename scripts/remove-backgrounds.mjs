@@ -68,10 +68,7 @@ async function removeBackgroundViaAPI(
 async function removeBackgroundLocally(imagePath: string): Promise<Buffer> {
   try {
     // Try to import sharp dynamically
-    const sharp = await import("sharp").then((m) => m.default);
-
-    const image = sharp(imagePath);
-    const metadata = await image.metadata();
+    await import("sharp").then((m) => m.default);
 
     // This is a simplified approach - for better results, install @imgly/background-removal
     // or use rembg with Node.js binding
@@ -85,7 +82,7 @@ async function removeBackgroundLocally(imagePath: string): Promise<Buffer> {
 
     // Return original for now
     return fs.readFileSync(imagePath);
-  } catch (error) {
+  } catch {
     throw new Error(
       "Sharp not installed. Install with: npm install --save-dev sharp"
     );

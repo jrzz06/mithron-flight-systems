@@ -42,7 +42,6 @@ export function MithronResponsiveImage({
   priority = false,
   loading,
   sizes,
-  preferredFormat: _preferredFormat,
   useSourceImage = false,
   className,
   wrapperClassName,

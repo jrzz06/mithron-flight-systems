@@ -16,7 +16,7 @@ function warnInMemoryRateLimitFallback() {
   );
 }
 
-function useInMemoryFallback(key: string, maxRequests: number, windowMs: number): RateLimitResult {
+function applyInMemoryFallback(key: string, maxRequests: number, windowMs: number): RateLimitResult {
   warnInMemoryRateLimitFallback();
   return checkRateLimit(key, maxRequests, windowMs);
 }
@@ -32,7 +32,7 @@ export async function checkDistributedRateLimit(
     if (process.env.NODE_ENV === "production") {
       throw new Error("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production.");
     }
-    return useInMemoryFallback(key, maxRequests, windowMs);
+    return applyInMemoryFallback(key, maxRequests, windowMs);
   }
 
   const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
@@ -47,7 +47,7 @@ export async function checkDistributedRateLimit(
       if (process.env.NODE_ENV === "production") {
         throw new Error("Rate limit service unavailable.");
       }
-      return useInMemoryFallback(key, maxRequests, windowMs);
+      return applyInMemoryFallback(key, maxRequests, windowMs);
     }
     const count = Number(await incrResponse.text());
     if (count === 1) {
@@ -64,6 +64,6 @@ export async function checkDistributedRateLimit(
     if (process.env.NODE_ENV === "production") {
       throw error instanceof Error ? error : new Error("Rate limit service unavailable.");
     }
-    return useInMemoryFallback(key, maxRequests, windowMs);
+    return applyInMemoryFallback(key, maxRequests, windowMs);
   }
 }

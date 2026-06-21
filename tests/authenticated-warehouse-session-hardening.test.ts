@@ -2,10 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-function readWorkspaceFile(path: string) {
-  return readFileSync(join(process.cwd(), path), "utf8");
-}
-
 describe("authenticated warehouse operational hardening verifier", () => {
   it("keeps the authenticated warehouse-session verifier real but reversible by default", () => {
     const scriptPath = join(process.cwd(), "tools", "verify-authenticated-warehouse-session.mjs");

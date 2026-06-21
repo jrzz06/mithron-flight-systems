@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { ArrowRight, Star } from "lucide-react";
 import type { Product, MediaAsset } from "@/config/types";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -1137,10 +1137,8 @@ export function HomeLandingComposite({
   const rootRef = useRef<HTMLElement | null>(null);
   const miniCarouselRailRef = useRef<HTMLDivElement | null>(null);
   const reducedMotion = useReducedMotionPreference();
-  const cms = homepageCms ?? (isCmsStrictMode() ? null : defaultHomepageCmsContent);
-  if (!cms) {
-    return null;
-  }
+  const strictWithoutCms = isCmsStrictMode() && !homepageCms;
+  const cms = homepageCms ?? defaultHomepageCmsContent;
   const shelfConfigs = useMemo(
     () => ({
       "drone-world": {
@@ -1306,7 +1304,7 @@ export function HomeLandingComposite({
     );
   }, [products]);
 
-  const scrollMiniCarousel = () => {
+  const scrollMiniCarousel = useCallback(() => {
     const rail = miniCarouselRailRef.current;
     if (!rail) return;
     const step = Math.max(320, rail.clientWidth * 0.72);
@@ -1323,7 +1321,7 @@ export function HomeLandingComposite({
       left: step,
       behavior: reducedMotion ? "auto" : "smooth"
     });
-  };
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (miniCarouselItems.length <= 1) return;
@@ -1347,7 +1345,7 @@ export function HomeLandingComposite({
       cancelled = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [miniCarouselItems.length]);
+  }, [miniCarouselItems.length, scrollMiniCarousel]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -1505,6 +1503,10 @@ export function HomeLandingComposite({
       cleanupMotionRuntime?.();
     };
   }, [reducedMotion, products.length]);
+
+  if (strictWithoutCms) {
+    return null;
+  }
 
   return (
     <section

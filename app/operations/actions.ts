@@ -25,7 +25,7 @@ import {
   type DeploymentRequestStatus,
   type StaffTaskStatus
 } from "@/services/enterprise-admin-forms";
-import { getCurrentAuthContext, requirePermission } from "@/services/auth";
+import { requirePermission } from "@/services/auth";
 
 type JsonRecord = Record<string, unknown>;
 

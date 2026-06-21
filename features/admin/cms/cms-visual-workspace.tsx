@@ -254,23 +254,6 @@ function parsePayloadJson(value: string) {
   }
 }
 
-function homepagePayloadValue(fields: CmsWorkspaceSection["fields"]) {
-  const payload = parsePayloadJson(fields.payloadJson);
-  const label = fields.label || fields.title;
-  if (label) payload.title = label;
-  if (fields.body) payload.body = fields.body;
-  if (fields.ctaLabel) payload.cta_label = fields.ctaLabel;
-  if (fields.href) payload.href = fields.href;
-  if (fields.imageSrc) {
-    payload.image = {
-      ...plainRecord(payload.image),
-      src: fields.imageSrc,
-      alt: fields.imageAlt || label || "Section image"
-    };
-  }
-  return JSON.stringify(payload);
-}
-
 function VisibilityToggle({ section }: { section: CmsWorkspaceSection }) {
   return (
     <label data-cms-section-visibility-toggle className="flex items-start justify-between gap-3 rounded-lg border border-slate-800 bg-[#10151d] px-3 py-2">

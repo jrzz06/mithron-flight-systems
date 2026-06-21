@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -146,7 +146,6 @@ function restoreAllFromBackups(manifestItems) {
   for (const item of manifestItems) {
     if (!item.resolvedPath) continue;
     const sourcePath = item.resolvedPath;
-    const backupPath = `${sourcePath}.bak`.replace(/(\.[a-z0-9]+)\.bak$/i, "$1.bak");
     const actualBackup = sourcePath.replace(/(\.[a-z0-9]+)$/i, "$1.bak");
     if (!existsSync(actualBackup)) continue;
     if (dryRun) {

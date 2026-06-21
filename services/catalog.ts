@@ -6,12 +6,10 @@ import {
   classifyProductShelf,
   filterDroneCareProducts,
   filterDroneWorldProducts,
-  isGlobalProductsCategory,
   type ProductShelfInput
 } from "@/lib/product-shelf-classification";
 import {
   filterProductsForCategorySlug,
-  getCatalogCategoryDefinition,
   isCatalogCategorySlug
 } from "@/lib/catalog-categories";
 import { formatAvailability, isSpecLikeBlob, parseInlineSpecPairs } from "@/lib/product-spec-text";

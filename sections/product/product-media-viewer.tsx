@@ -46,7 +46,10 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
     () => slides.filter((slide) => !failedSrcs.has(slide.src)),
     [failedSrcs, slides]
   );
-  const activeMedia = visibleSlides[activeIndex] ?? visibleSlides[0] ?? product.hero ?? product.image;
+  const safeActiveIndex =
+    visibleSlides.length === 0 ? 0 : Math.min(activeIndex, visibleSlides.length - 1);
+  const activeMedia =
+    visibleSlides[safeActiveIndex] ?? visibleSlides[0] ?? product.hero ?? product.image;
   const selectedHotspot = product.hotspots?.find((hotspot) => hotspot.id === activeHotspot);
   const hasMultipleSlides = visibleSlides.length > 1;
 
@@ -65,23 +68,17 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
       return next;
     });
     setActiveIndex(0);
-  }, [activeMedia?.src]);
-
-  useEffect(() => {
-    if (activeIndex >= visibleSlides.length) {
-      setActiveIndex(0);
-    }
-  }, [activeIndex, visibleSlides.length]);
+  }, [activeMedia.src]);
 
   useEffect(() => {
     if (!hasMultipleSlides) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") goTo(activeIndex - 1);
-      if (event.key === "ArrowRight") goTo(activeIndex + 1);
+      if (event.key === "ArrowLeft") goTo(safeActiveIndex - 1);
+      if (event.key === "ArrowRight") goTo(safeActiveIndex + 1);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeIndex, goTo, hasMultipleSlides]);
+  }, [safeActiveIndex, goTo, hasMultipleSlides]);
 
   return (
     <div
@@ -105,12 +102,12 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                 key={slide.src}
                 type="button"
                 role="tab"
-                aria-selected={activeIndex === index}
+                aria-selected={safeActiveIndex === index}
                 aria-label={`View image ${index + 1} of ${visibleSlides.length}`}
                 onClick={() => setActiveIndex(index)}
                 className={cn(
                   "relative size-[72px] shrink-0 overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow] duration-200 md:size-[88px]",
-                  activeIndex === index
+                  safeActiveIndex === index
                     ? "border-[#0f172a] shadow-[0_0_0_1px_#0f172a]"
                     : "border-slate-200 hover:border-slate-400"
                 )}
@@ -170,7 +167,7 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                 <button
                   type="button"
                   aria-label="Previous image"
-                  onClick={() => goTo(activeIndex - 1)}
+                  onClick={() => goTo(safeActiveIndex - 1)}
                   className="absolute left-3 top-1/2 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 md:left-5"
                 >
                   <ChevronLeft className="size-5" />
@@ -178,13 +175,13 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                 <button
                   type="button"
                   aria-label="Next image"
-                  onClick={() => goTo(activeIndex + 1)}
+                  onClick={() => goTo(safeActiveIndex + 1)}
                   className="absolute right-3 top-1/2 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 md:right-5"
                 >
                   <ChevronRight className="size-5" />
                 </button>
                 <p className="type-meta absolute right-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs text-slate-600 shadow-sm">
-                  {activeIndex + 1} / {visibleSlides.length}
+                  {safeActiveIndex + 1} / {visibleSlides.length}
                 </p>
               </>
             ) : null}

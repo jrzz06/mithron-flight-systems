@@ -31,24 +31,24 @@ describe("checkout request schema", () => {
 
 describe("checkout stock service contract", () => {
   it("exports atomic reservation helpers", async () => {
-    const module = await import("@/services/checkout-stock");
-    expect(typeof module.reserveCheckoutStock).toBe("function");
-    expect(typeof module.releaseCheckoutStock).toBe("function");
-    expect(typeof module.resolveCheckoutStockSkus).toBe("function");
+    const checkoutStock = await import("@/services/checkout-stock");
+    expect(typeof checkoutStock.reserveCheckoutStock).toBe("function");
+    expect(typeof checkoutStock.releaseCheckoutStock).toBe("function");
+    expect(typeof checkoutStock.resolveCheckoutStockSkus).toBe("function");
   });
 });
 
 describe("product publish service contract", () => {
   it("exports unified publish helpers", async () => {
-    const module = await import("@/services/product-publish");
-    expect(typeof module.publishProductToStorefront).toBe("function");
-    expect(typeof module.assertProductCanPublish).toBe("function");
+    const productPublish = await import("@/services/product-publish");
+    expect(typeof productPublish.publishProductToStorefront).toBe("function");
+    expect(typeof productPublish.assertProductCanPublish).toBe("function");
   });
 });
 
 describe("inventory manager rename", () => {
   it("uses Supabase inventory naming instead of Wix UI labels", async () => {
-    const module = await import("@/components/admin/inventory-manager");
-    expect(typeof module.InventoryManager).toBe("function");
+    const inventoryManager = await import("@/components/admin/inventory-manager");
+    expect(typeof inventoryManager.InventoryManager).toBe("function");
   });
 });

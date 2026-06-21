@@ -18,14 +18,6 @@ function resolveLocal(src) {
   return LOCAL_PATH_ALIASES[trimmed] ?? trimmed;
 }
 
-function readJsonSafe(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
 function extractSrcStrings(text) {
   const matches = [];
   const re = /(?:src|imageSrc|heroImageSrc|image_src):\s*["'`]([^"'`]+)["'`]/g;
