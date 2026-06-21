@@ -1755,13 +1755,11 @@ function AgriCommunityWorldSection({
             {/* Top Row: AGRONE Pilot Registration */}
             {renderAgriCard(config.tiles[1], "hero")}
 
-            {/* Middle Row: Plantation Monitoring and Irrigation Analysis */}
             <div className={styles.agriMiddleRow}>
               {renderAgriCard(config.tiles[3], "standard")}
               {renderAgriCard(config.tiles[4], "standard")}
             </div>
 
-            {/* Bottom Row: Precision Spraying */}
             {renderAgriCard(config.tiles[2], "wide")}
           </div>
         </div>

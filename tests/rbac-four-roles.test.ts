@@ -25,7 +25,7 @@ describe("four-role RBAC route guards", () => {
 
   it("ships supplier portal and proxy guard surfaces", () => {
     expect(existsSync(join(root, "app/supplier/layout.tsx"))).toBe(true);
-    expect(readFileSync(join(root, "proxy.ts"), "utf8")).toContain('pathname.startsWith("/supplier/")');
+    expect(readFileSync(join(root, "proxy.ts"), "utf8")).toContain("canAccessProtectedPath(role, pathname)");
     expect(roleHasPermission("supplier", "products.submit")).toBe(true);
   });
 });

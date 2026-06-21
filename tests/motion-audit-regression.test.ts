@@ -140,7 +140,7 @@ describe("storefront motion audit regressions", () => {
     expect(globals).toMatch(/\.catalog-page-shell\s+\.premium-product-card-shell\s*{[^}]*contain-intrinsic-size:\s*1px 520px/s);
     expect(globals).toMatch(/\.catalog-page-shell\s+\.premium-product-card\s*{[^}]*min-height:\s*520px/s);
     expect(globals).toContain("@media (max-width: 640px)");
-    expect(globals).toContain(".catalog-page-shell .premium-product-card {\n    min-height: 520px;");
+    expect(globals).toMatch(/@media \(max-width: 640px\)[\s\S]*\.catalog-page-shell \.premium-product-card\s*\{[^}]*min-height:\s*520px/s);
   });
 
   it("keeps public storefront chrome free of heavy live backdrop blur", () => {

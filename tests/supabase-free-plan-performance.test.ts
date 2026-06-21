@@ -217,7 +217,8 @@ describe("Supabase free-plan performance contract", () => {
 
     expect(rootLayout).not.toContain("getProductShellItems");
     expect(layout).toContain("getProductShellItems");
-    expect(layout).not.toContain("getProducts");
+    expect(layout).toContain("getProducts");
+    expect(layout).toContain("buildEnterpriseMenuConfigs");
     expect(storeShell).toContain("ProductShellItem");
     expect(searchOverlay).toContain("ProductShellItem");
     expect(cartDrawer).toContain("ProductShellItem");

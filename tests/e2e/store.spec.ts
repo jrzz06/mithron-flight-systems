@@ -92,6 +92,7 @@ test.describe("Mithron cinematic storefront", () => {
       { tagName: "SECTION", testId: "home-landing-composite", hidden: false }
     ]);
 
+    const heroCtaState = await main.getByTestId("hero-primary-cta").boundingBox();
     expect(heroCtaState?.height ?? 0).toBeGreaterThanOrEqual(40);
     expect(heroCtaState?.height ?? 0).toBeLessThanOrEqual(44);
 

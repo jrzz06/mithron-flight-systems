@@ -226,7 +226,7 @@ export function buildCustomerCheckoutDraft(
         payment_scope: "gateway",
         created_by_user_id: userId ?? null,
         is_guest: !userId
-      }
+      } satisfies JsonRecord
     }
   };
 }
@@ -264,7 +264,7 @@ export function buildCustomerEnquiryOrderDraft(
         enquiry_message: input.enquiryMessage,
         created_by_user_id: userId ?? null,
         is_guest: !userId
-      }
+      } satisfies JsonRecord
     }
   };
 }

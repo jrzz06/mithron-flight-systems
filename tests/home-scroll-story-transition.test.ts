@@ -66,14 +66,13 @@ describe("home composite scroll transition system", () => {
     expect(component).toContain("function AgriCommunityWorldSection");
     expect(component).toContain("product.image.src");
     expect(component).toContain('href={`/product/${product.slug}`}');
-    expect(component).toContain("Product feed unavailable. The shelf remains visible without fake catalog content.");
+    expect(component).toContain('data-testid="home-product-shelf-hero"');
     expect(component).toContain('data-testid="home-product-shelf-section"');
     expect(component).toContain('data-testid="home-product-card"');
     expect(component).toContain('data-testid="agri-community-world-section"');
     expect(component).toContain('data-testid="mission-world-tile"');
-    expect(component).toContain("AGRONE Pilot Registration");
-    expect(component).toContain("Smart City Monitoring");
-    expect(component).toContain("Traffic Analytics");
+    expect(component).toContain("City Drone Rental Services App");
+    expect(component).toContain("Dronelancer Model");
     expect(component).toContain('composition: "agri-field"');
     expect(component).toContain('composition: "city-urban"');
     expect(component).toContain("function HomeCustomerTestimonialsSection");

@@ -40,7 +40,8 @@ describe("home landing composite contract", () => {
     expect(component).not.toContain("verifiedTestimonialsFromCms");
     expect(component).not.toContain("VERIFIED CMS");
     expect(component).toContain("/media/mithron/dynamic-scroll/night-surveillance.webp");
-    expect(component).toContain("Representative city mission gallery using existing Mithron media");
+    expect(component).toContain("Representative mission gallery");
+    expect(component).toContain("No municipal deployment claims");
     expect(component).not.toMatch(/stars?:\s*[1-5]/i);
     expect(component).not.toMatch(/Rajan|Meera|James|customer says/i);
 

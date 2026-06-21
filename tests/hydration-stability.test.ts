@@ -21,7 +21,7 @@ describe("hydration stability", () => {
   it("defers persisted cart badge until after client hydration", () => {
     const cartNavButton = source("components/navigation/cart-nav-button.tsx");
 
-    expect(cartNavButton).toContain("const [hydrated, setHydrated] = useState(false)");
+    expect(cartNavButton).toContain("useSyncExternalStore");
     expect(cartNavButton).toContain("const displayCount = hydrated ? count : 0");
     expect(cartNavButton).not.toContain("typeof window");
   });

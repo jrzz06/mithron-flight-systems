@@ -8,6 +8,11 @@ import {
 } from "@/lib/catalog-categories";
 import { getProducts, getProductsForCategorySlug } from "@/services/catalog";
 
+const hasLiveCatalog =
+  process.env.RUN_LIVE_CATALOG_TESTS === "1" &&
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) &&
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim());
+
 describe("catalog categories", () => {
   it("defines the seven storefront category slugs and routes", () => {
     expect(CATALOG_CATEGORY_SLUGS).toEqual([
@@ -32,7 +37,7 @@ describe("catalog categories", () => {
     expect(interestSlugToCategorySlug.components).toBe("accessories");
   });
 
-  it("loads published products for each category slug from the live catalog", async () => {
+  it.skipIf(!hasLiveCatalog)("loads published products for each category slug from the live catalog", async () => {
     const products = await getProducts();
 
     for (const slug of CATALOG_CATEGORY_SLUGS) {
@@ -43,7 +48,7 @@ describe("catalog categories", () => {
     }
   });
 
-  it("includes Global Products in the global-products category", async () => {
+  it.skipIf(!hasLiveCatalog)("includes Global Products in the global-products category", async () => {
     const globalProducts = await getProductsForCategorySlug("global-products");
     expect(globalProducts.map((product) => product.slug)).toEqual(
       expect.arrayContaining(["zio", "pixy-mr", "pixy-lr"])

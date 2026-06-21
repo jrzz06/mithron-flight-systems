@@ -6,8 +6,8 @@ describe("session revocation enforcement", () => {
   it("redirects disabled and revoked sessions through proxy logout flow", () => {
     const proxy = readFileSync(join(process.cwd(), "proxy.ts"), "utf8");
     expect(proxy).toContain("session_revoked_at");
-    expect(proxy).toContain('reason", "session_revoked"');
-    expect(proxy).toContain('reason", "disabled"');
+    expect(proxy).toContain('redirectAfterSystemLogout(request, "session_revoked")');
+    expect(proxy).toContain('redirectAfterSystemLogout(request, "disabled")');
     expect(proxy).toContain("session_idle");
     expect(proxy).toContain("SESSION_TIMEOUT_MINUTES");
   });

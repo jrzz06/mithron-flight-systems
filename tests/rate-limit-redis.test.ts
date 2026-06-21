@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -14,14 +14,13 @@ describe("distributed rate limiting", () => {
   });
 
   it("throws in production when Upstash is not configured", async () => {
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     try {
       await expect(checkDistributedRateLimit("prod-missing-upstash", 1, 60_000)).rejects.toThrow(
         "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production."
       );
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      vi.unstubAllEnvs();
     }
   });
 

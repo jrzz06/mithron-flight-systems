@@ -18,7 +18,7 @@ describe("customer checkout workflow", () => {
     );
     expect(draft.order.status).toBe("pending_payment");
     expect(draft.order.payment_status).toBe("requires_payment");
-    expect(draft.order.metadata.customer_phone).toBe("+919876543210");
+    expect((draft.order.metadata as Record<string, unknown>).customer_phone).toBe("+919876543210");
   });
 
   it("builds admin-review enquiry orders for the admin orders queue", () => {
@@ -37,7 +37,7 @@ describe("customer checkout workflow", () => {
     expect(draft.order.payment_status).toBe("not_required");
     expect(draft.order.channel).toBe("enquiry");
     expect(Array.isArray(draft.order.timeline)).toBe(true);
-    expect(draft.order.metadata.customer_phone).toBe("+919876543210");
+    expect((draft.order.metadata as Record<string, unknown>).customer_phone).toBe("+919876543210");
   });
 
   it("supports guest checkout metadata when no user id is provided", () => {

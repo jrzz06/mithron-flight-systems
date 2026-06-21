@@ -28,6 +28,6 @@ describe("disabled user gate", () => {
     expect(auth).toContain("disabled: true");
     expect(proxy).toContain("governance_status");
     expect(proxy).toContain("session_revoked_at");
-    expect(proxy).toContain('reason", "disabled"');
+    expect(proxy).toContain('redirectAfterSystemLogout(request, "disabled")');
   });
 });
