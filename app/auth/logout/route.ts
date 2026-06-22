@@ -13,10 +13,17 @@ function loginRedirectUrl(request: NextRequest, params?: Record<string, string>)
   return loginUrl;
 }
 
+function resolvePublishableKey() {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )!;
+}
+
 function createLogoutClient(request: NextRequest, response: NextResponse) {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    resolvePublishableKey(),
     {
       cookies: {
         getAll() {
@@ -52,11 +59,11 @@ async function performLogout(request: NextRequest, response: NextResponse) {
 
 export async function POST(request: NextRequest) {
   const reason = request.nextUrl.searchParams.get("reason");
-  const loginUrl = loginRedirectUrl(request, {
-    logout_status: "signed_out",
-    ...(reason ? { logout_reason: reason } : {})
-  });
-  const response = NextResponse.redirect(loginUrl, { status: 303 });
+  const redirectUrl = new URL("/", request.url);
+  if (reason) {
+    redirectUrl.searchParams.set("logout_reason", reason);
+  }
+  const response = NextResponse.redirect(redirectUrl, { status: 303 });
   await performLogout(request, response);
   return response;
 }

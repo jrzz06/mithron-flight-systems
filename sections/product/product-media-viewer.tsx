@@ -6,6 +6,7 @@ import type { MediaAsset, ProductHotspot } from "@/config/types";
 import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
 import { glassPillClassName } from "@/lib/glass-ui";
 import { cn } from "@/lib/utils";
+import styles from "./product-detail.module.css";
 
 export type ProductMediaViewerModel = {
   image: MediaAsset;
@@ -81,22 +82,15 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
   }, [safeActiveIndex, goTo, hasMultipleSlides]);
 
   return (
-    <div
-      className="product-media-viewer bg-[var(--surface-muted)] md:sticky md:top-[104px] md:max-h-[calc(100dvh-104px)] md:min-h-[620px]"
-      data-media-viewer="mithron-native-assets"
-    >
+    <div className={cn("product-media-viewer", styles.mediaViewer)} data-media-viewer="mithron-native-assets">
       <div
         className={cn(
-          "mx-auto flex max-w-[920px] flex-col gap-4 p-4 md:max-w-none md:p-8",
-          hasMultipleSlides && "md:grid md:grid-cols-[88px_minmax(0,1fr)] md:gap-5 lg:grid-cols-[96px_minmax(0,1fr)]"
+          styles.mediaViewerInner,
+          hasMultipleSlides && styles.mediaViewerInnerWithThumbs
         )}
       >
         {hasMultipleSlides ? (
-          <div
-            className="order-2 flex gap-2 overflow-x-auto pb-1 md:order-1 md:flex-col md:overflow-visible md:pb-0"
-            role="tablist"
-            aria-label="Product images"
-          >
+          <div className={styles.thumbRail} role="tablist" aria-label="Product images">
             {visibleSlides.map((slide, index) => (
               <button
                 key={slide.src}
@@ -106,10 +100,8 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                 aria-label={`View image ${index + 1} of ${visibleSlides.length}`}
                 onClick={() => setActiveIndex(index)}
                 className={cn(
-                  "relative size-[72px] shrink-0 overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow] duration-200 md:size-[88px]",
-                  safeActiveIndex === index
-                    ? "border-[#0f172a] shadow-[0_0_0_1px_#0f172a]"
-                    : "border-slate-200 hover:border-slate-400"
+                  styles.mediaThumb,
+                  safeActiveIndex === index && styles.mediaThumbActive
                 )}
               >
                 <MithronResponsiveImage
@@ -124,16 +116,19 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
           </div>
         ) : null}
 
-        <div className={cn("relative min-h-0", hasMultipleSlides ? "order-1 md:order-2" : "")}>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[var(--surface-shadow-soft)]">
-            <MithronResponsiveImage
-              src={activeMedia.src}
-              alt={activeMedia.alt}
-              fill
-              onError={handleImageError}
-              className="object-contain p-6 md:p-10"
-              sizes="(min-width: 1024px) 55vw, 100vw"
-            />
+        <div className={styles.mediaStageWrap}>
+          <div className={styles.mediaStage}>
+            <div className={styles.mediaGroundShadow} aria-hidden="true" />
+            <div className={styles.mediaImageFrame}>
+              <MithronResponsiveImage
+                src={activeMedia.src}
+                alt={activeMedia.alt}
+                fill
+                onError={handleImageError}
+                className={styles.mediaImage}
+                sizes="(min-width: 1024px) 55vw, 100vw"
+              />
+            </div>
 
             {product.hotspots?.map((hotspot) => (
               <button
@@ -147,7 +142,7 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                   "type-button absolute z-30 hidden min-h-11 -translate-x-1/2 -translate-y-1/2 rounded-full border px-4 py-2 text-xs shadow-md transition-colors md:inline-flex",
                   activeHotspot === hotspot.id
                     ? glassPillClassName("border-white/40 shadow-lg")
-                    : "border-white/70 bg-[#0f172a]/85 text-white"
+                    : "border-white/70 bg-[var(--brand-accent)]/90 text-white"
                 )}
                 style={{ left: `${hotspot.x}%`, top: `${hotspot.y}%` }}
               >
@@ -156,8 +151,8 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
             ))}
 
             {selectedHotspot ? (
-              <div className="absolute inset-x-4 bottom-4 z-20 max-w-xs rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:bottom-6 md:left-6">
-                <p className="type-card-title text-sm text-[#0f172a]">{selectedHotspot.label}</p>
+              <div className={styles.hotspotDetail}>
+                <p className="type-card-title text-sm text-[var(--text-primary,#0f172a)]">{selectedHotspot.label}</p>
                 <p className="type-body mt-1 line-clamp-3 text-xs leading-relaxed text-slate-600">{selectedHotspot.detail}</p>
               </div>
             ) : null}
@@ -168,7 +163,7 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                   type="button"
                   aria-label="Previous image"
                   onClick={() => goTo(safeActiveIndex - 1)}
-                  className="absolute left-3 top-1/2 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 md:left-5"
+                  className={cn(styles.galleryNav, styles.galleryNavPrev)}
                 >
                   <ChevronLeft className="size-5" />
                 </button>
@@ -176,11 +171,11 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                   type="button"
                   aria-label="Next image"
                   onClick={() => goTo(safeActiveIndex + 1)}
-                  className="absolute right-3 top-1/2 z-20 grid size-11 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 md:right-5"
+                  className={cn(styles.galleryNav, styles.galleryNavNext)}
                 >
                   <ChevronRight className="size-5" />
                 </button>
-                <p className="type-meta absolute right-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs text-slate-600 shadow-sm">
+                <p className={cn("type-meta", styles.galleryCounter)}>
                   {safeActiveIndex + 1} / {visibleSlides.length}
                 </p>
               </>

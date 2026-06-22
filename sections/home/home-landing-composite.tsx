@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, Star } from "lucide-react";
 import type { Product, MediaAsset } from "@/config/types";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -492,6 +492,12 @@ const productShelfConfigs: Record<"drone-world" | "drone-care" | "global-product
   }
 };
 
+const AGRONE_REGISTRATION_LINKS = {
+  pilot: "https://drone.mithronsmart.com/register",
+  droneOwner: "https://drone.mithronsmart.com/droneowner_reg",
+  smartFarmer: "https://drone.mithronsmart.com/farmer"
+} as const;
+
 const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldConfig> = {
   "agri-drones": {
     id: "agri-drones",
@@ -506,6 +512,7 @@ const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldCon
       {
         label: "AGRONE Drone Owner Registration",
         body: "Register your drone on AGRONE and connect with farmers, pilots, and service demand across India.",
+        href: AGRONE_REGISTRATION_LINKS.droneOwner,
         media: localMedia.agroneDroneOwnerRegistration,
         operator: "AGRONE Network",
         model: "DRONE OWNER NETWORK",
@@ -515,6 +522,7 @@ const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldCon
       {
         label: "AGRONE Pilot Registration",
         body: "Join the certified pilot network, access training pathways, and receive mission assignments through AGRONE.",
+        href: AGRONE_REGISTRATION_LINKS.pilot,
         media: localMedia.agronePilotRegistration,
         operator: "AGRONE Network",
         model: "AGRONE PILOT NETWORK",
@@ -533,6 +541,7 @@ const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldCon
       {
         label: "Smart Farmer Registration",
         body: "Register as a smart farmer to access AGRONE services, crop insights, and on-demand drone support.",
+        href: AGRONE_REGISTRATION_LINKS.smartFarmer,
         media: localMedia.agroneSmartFarmerRegistration,
         operator: "AGRONE Network",
         model: "SMART FARMER PROGRAM",
@@ -1201,7 +1210,7 @@ export function HomeLandingComposite({
           operator: cmsTile.operator,
           model: cmsTile.model,
           location: cmsTile.location,
-          href: cmsTile.href,
+          href: cmsTile.href?.trim() || tile.href,
           media: { src: cmsTile.imageSrc, alt: cmsTile.imageAlt }
         };
       });
@@ -1639,6 +1648,41 @@ function getAgriImagePresentation(src: string, cardType: "tall" | "hero" | "stan
   return { objectPosition: "50% 36%", scale: fallbackScale, transformOrigin: "50% 34%" };
 }
 
+function renderMissionWorldTile(
+  tile: MissionWorldTile,
+  tileKey: string,
+  tileProps: Record<string, unknown>,
+  tileContent: ReactNode
+) {
+  const href = tile.href?.trim();
+  if (!href) {
+    return (
+      <div
+        key={tileKey}
+        {...tileProps}
+        className={`${String(tileProps.className ?? "")} ${styles.agriCardShowcase}`}
+        data-showcase-link="false"
+      >
+        {tileContent}
+      </div>
+    );
+  }
+
+  const isExternal = /^https?:\/\//i.test(href);
+  return (
+    <Link
+      href={href}
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
+      aria-label={`${tile.label}: ${tile.body}`}
+      key={tileKey}
+      {...tileProps}
+    >
+      {tileContent}
+    </Link>
+  );
+}
+
 function AgriCommunityWorldSection({
   chapter,
   config
@@ -1702,16 +1746,7 @@ function AgriCommunityWorldSection({
       </>
     );
 
-    return (
-      <Link
-        href={tile.href || chapter.href || "/agriculture"}
-        aria-label={`${tile.label}: ${tile.body}`}
-        key={`agri-${tile.label}`}
-        {...tileProps}
-      >
-        {tileContent}
-      </Link>
-    );
+    return renderMissionWorldTile(tile, `agri-${tile.label}`, tileProps, tileContent);
   };
 
   return (
@@ -1873,16 +1908,7 @@ function CityDroneWorldSection({
       </>
     );
 
-    return (
-      <Link
-        href={tile.href || chapter.href || "/surveillance"}
-        aria-label={`${tile.label}: ${tile.body}`}
-        key={`city-${tile.label}`}
-        {...tileProps}
-      >
-        {tileContent}
-      </Link>
-    );
+    return renderMissionWorldTile(tile, `city-${tile.label}`, tileProps, tileContent);
   };
 
   return (

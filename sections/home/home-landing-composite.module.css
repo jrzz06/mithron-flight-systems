@@ -1791,6 +1791,14 @@
     transform 320ms var(--ease-cinematic);
 }
 
+.agriCardShowcase {
+  cursor: default;
+}
+
+.agriCardShowcase .agriCardArrow {
+  display: none;
+}
+
 .agriCard:hover,
 .agriCard:focus-visible {
   box-shadow: 

@@ -67,7 +67,12 @@ async function fetchPendingProducts(): Promise<PendingProduct[]> {
   });
 }
 
-export default async function AdminSupplierProductsPage() {
+export default async function AdminSupplierProductsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ approval_status?: string; approval_message?: string }>;
+}) {
+  const params = await searchParams;
   const [products, pendingCount] = await Promise.all([fetchPendingProducts(), countPendingSupplierProducts()]);
 
   return (
@@ -84,19 +89,45 @@ export default async function AdminSupplierProductsPage() {
         </div>
       </div>
 
+      {params.approval_message ? (
+        <p
+          role="alert"
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            params.approval_status === "success"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+              : "border-rose-500/30 bg-rose-500/10 text-rose-100"
+          }`}
+        >
+          {params.approval_message}
+        </p>
+      ) : null}
+
       <div className="grid gap-3">
-        {products.length ? products.map((product) => (
+        {products.length ? products.map((product) => {
+          const missingSupplier = !product.supplier_id;
+          return (
           <article key={product.slug} className="rounded-xl border border-slate-800 bg-[#10151d] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-slate-100">{product.name}</h2>
                 <p className="mt-1 text-sm text-slate-400">{product.category} · INR {product.price}</p>
                 <p className="mt-1 text-xs text-slate-500">Supplier: {product.supplier_label}</p>
+                {missingSupplier ? (
+                  <p className="mt-2 text-xs font-medium text-amber-300">
+                    Missing supplier owner — reject this submission or fix supplier_id before approval.
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <form action={approveProductSubmissionFormAction}>
                   <input type="hidden" name="slug" value={product.slug} />
-                  <button type="submit" className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white">Approve</button>
+                  <button
+                    type="submit"
+                    disabled={missingSupplier}
+                    className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Approve
+                  </button>
                 </form>
                 <form action={rejectProductSubmissionFormAction} className="flex items-center gap-2">
                   <input type="hidden" name="slug" value={product.slug} />
@@ -106,7 +137,8 @@ export default async function AdminSupplierProductsPage() {
               </div>
             </div>
           </article>
-        )) : (
+        );
+        }) : (
           <p className="rounded-xl border border-slate-800 bg-[#10151d] p-6 text-sm text-slate-500">No products waiting for approval.</p>
         )}
       </div>

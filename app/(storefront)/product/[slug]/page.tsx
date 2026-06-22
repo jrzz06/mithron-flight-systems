@@ -4,11 +4,15 @@ import type { Product } from "@/config/types";
 import { getProductBySlug, getProductStaticSlugs, getRelatedProductShellItems } from "@/services/catalog";
 import { ProductConfigurator, type ProductConfiguratorModel } from "@/sections/product/product-configurator";
 import { ProductDetailHeader } from "@/sections/product/product-detail-header";
+import { ProductHighlights } from "@/sections/product/product-highlights";
 import { ProductMediaViewer, type ProductMediaViewerModel } from "@/sections/product/product-media-viewer";
+import { ProductOverview } from "@/sections/product/product-overview";
 import { ProductStory } from "@/sections/product/product-story";
 import { SpecsFaqReviews } from "@/sections/product/specs-faq-reviews";
+import { getProductOverviewText } from "@/lib/product-detail-content";
 import { getPublicCmsSnapshot } from "@/services/cms";
 import { buildProductMetadata } from "@/services/product-metadata";
+import styles from "@/sections/product/product-detail.module.css";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -56,15 +60,25 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
   const [relatedProducts, cms] = await Promise.all([getRelatedProductShellItems(slug), getPublicCmsSnapshot()]);
+  const overviewText = getProductOverviewText(product);
+  const showOverview = overviewText.length > 80;
 
   return (
-    <article className="product-detail-page bg-[var(--surface-page)]">
+    <article className={`product-detail-page ${styles.page}`}>
       <ProductDetailHeader product={product} />
-      <section className="grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,480px)] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,520px)]">
-        <ProductMediaViewer product={buildProductMediaViewerModel(product)} />
-        <ProductConfigurator product={buildProductConfiguratorModel(product)} />
+      <section className={styles.heroSection}>
+        <div className={styles.heroGrid}>
+          <div className={styles.heroMediaCol}>
+            <ProductMediaViewer product={buildProductMediaViewerModel(product)} />
+          </div>
+          <div className={styles.heroBuyCol}>
+            <ProductConfigurator product={buildProductConfiguratorModel(product)} />
+          </div>
+        </div>
       </section>
-      <ProductStory product={product} />
+      <ProductHighlights product={product} />
+      {showOverview ? <ProductOverview product={product} /> : null}
+      <ProductStory product={product} includeFallback={!showOverview} />
       <SpecsFaqReviews product={product} relatedProducts={relatedProducts} support={cms.productSupport} />
     </article>
   );

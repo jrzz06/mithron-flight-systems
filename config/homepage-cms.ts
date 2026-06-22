@@ -128,7 +128,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Pan-India onboarding",
           imageSrc: "/media/mithron/mission/agrone/agrone-drone-owner-registration.png",
           imageAlt: "AGRONE drone owner registration",
-          href: "/agriculture"
+          href: "https://drone.mithronsmart.com/droneowner_reg"
         },
         {
           label: "AGRONE Pilot Registration",
@@ -138,7 +138,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Pilot onboarding",
           imageSrc: "/media/mithron/mission/agrone/agrone-pilot-registration.png",
           imageAlt: "AGRONE pilot registration",
-          href: "/agriculture"
+          href: "https://drone.mithronsmart.com/register"
         },
         {
           label: "All India Farmer Drone Booking",
@@ -148,7 +148,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Service booking desk",
           imageSrc: "/media/mithron/mission/agrone/all-india-drone-farmer.png",
           imageAlt: "All India farmer drone booking",
-          href: "/agriculture"
+          href: ""
         },
         {
           label: "Smart Farmer Registration",
@@ -158,7 +158,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Farmer onboarding",
           imageSrc: "/media/mithron/mission/agrone/smart-farmer-register.png",
           imageAlt: "Smart farmer registration",
-          href: "/agriculture"
+          href: "https://drone.mithronsmart.com/farmer"
         },
         {
           label: "Agri Drone Loan & EMI Check",
@@ -168,7 +168,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Loan eligibility check",
           imageSrc: "/media/mithron/mission/agrone/agri-drone-loan.png",
           imageAlt: "Agri drone loan and EMI check",
-          href: "/agriculture"
+          href: ""
         }
       ]
     },
@@ -188,7 +188,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Pilot network grid",
           imageSrc: "/media/mithron/mission/city/dronelancer-model.png",
           imageAlt: "Dronelancer Model",
-          href: "/surveillance"
+          href: ""
         },
         {
           label: "City Drone Rental Services App",
@@ -198,7 +198,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Urban booking console",
           imageSrc: "/media/mithron/mission/city/city-drone-rental-services-app.png",
           imageAlt: "City Drone Rental Services App",
-          href: "/surveillance"
+          href: ""
         },
         {
           label: "All Drone Acadamic",
@@ -208,7 +208,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Training and simulation hub",
           imageSrc: "/media/mithron/mission/city/all-drone-acadamic.png",
           imageAlt: "All Drone Acadamic",
-          href: "/surveillance"
+          href: ""
         },
         {
           label: "Drone FranchiseCare Center",
@@ -218,7 +218,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "City care workshop",
           imageSrc: "/media/mithron/mission/city/drone-franchisecare-center.png",
           imageAlt: "Drone FranchiseCare Center",
-          href: "/surveillance"
+          href: ""
         },
         {
           label: "Drone Technician Aggregation",
@@ -228,7 +228,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           location: "Field support network",
           imageSrc: "/media/mithron/mission/city/drone-technician-aggregation.png",
           imageAlt: "Drone Technician Aggregation",
-          href: "/surveillance"
+          href: ""
         }
       ]
     }

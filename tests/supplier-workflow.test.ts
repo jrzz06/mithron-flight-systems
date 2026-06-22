@@ -53,5 +53,7 @@ describe("supplier workflow guards", () => {
     const approvalActions = readFileSync(join(root, "app/admin/suppliers/products/actions.ts"), "utf8");
     expect(approvalActions).toContain("approveProductSubmissionFormAction");
     expect(approvalActions).toContain("rejectProductSubmissionFormAction");
+    expect(approvalActions).toContain("runSupplierApprovalAction");
+    expect(approvalActions).toContain("approval_status");
   });
 });

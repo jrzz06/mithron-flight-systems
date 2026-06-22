@@ -429,7 +429,7 @@ function normalizeStory(row: MithronProductRow, marketingTagline: string, hero: 
     return row.story.map((section) => ({
       ...section,
       title: cleanText(section.title),
-      body: clipProductPreviewText(cleanText(section.body), 320),
+      body: clipProductPreviewText(cleanText(section.body), 1200),
       media: section.media ?? hero
     }));
   }

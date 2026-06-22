@@ -136,7 +136,8 @@ describe("home landing composite contract", () => {
     expect(component).toContain('data-testid="agri-community-world-section"');
     expect(component).toContain('data-testid="city-drone-world-section"');
     expect(component).not.toContain('data-media-kind={tile.mediaKind}');
-    expect(component).toContain("tile.href || chapter.href");
+    expect(component).toContain("renderMissionWorldTile");
+    expect(component).toContain("AGRONE_REGISTRATION_LINKS");
     expect(component).not.toContain("<Link href={config.href} className={styles.missionWorldLink}>");
     expect(component).toContain("product.image.src");
     expect(component).toContain("function pickFeatureProduct");
@@ -249,10 +250,12 @@ describe("home landing composite contract", () => {
       component.indexOf("function productShelfSearchText")
     );
 
-    expect(missionTypes).not.toMatch(/\bhref:/);
+    expect(missionTypes).toMatch(/\bhref\?:/);
     expect(missionTypes).not.toMatch(/\bcta:/);
     expect(missionTypes).not.toMatch(/\bmediaKind:/);
-    expect(agriMissionConfig).not.toMatch(/\bhref:/);
+    expect(agriMissionConfig).toContain("AGRONE_REGISTRATION_LINKS.droneOwner");
+    expect(agriMissionConfig).toContain("AGRONE_REGISTRATION_LINKS.pilot");
+    expect(agriMissionConfig).toContain("AGRONE_REGISTRATION_LINKS.smartFarmer");
     expect(cityMissionConfig).not.toMatch(/\bhref:/);
     expect(agriMissionConfig).not.toMatch(/\bcta:/);
     expect(cityMissionConfig).not.toMatch(/\bcta:/);
@@ -260,14 +263,14 @@ describe("home landing composite contract", () => {
     expect(cityMissionConfig).not.toMatch(/\bmediaKind:/);
     expect(agriSection).toContain('"data-showcase-kind": "mission-image"');
     expect(citySection).toContain('"data-showcase-kind": "mission-image"');
-    expect(agriSection).toContain('data-mission-motion="skip"');
-    expect(citySection).toContain('data-mission-motion="skip"');
-    expect(agriSection).not.toContain("data-mission-image-reveal");
-    expect(citySection).not.toContain("data-mission-image-reveal");
-    expect(agriSection).toContain("<Link");
-    expect(citySection).toContain("<Link");
-    expect(agriSection).toContain('href={tile.href || chapter.href || "/agriculture"}');
-    expect(citySection).toContain('href={tile.href || chapter.href || "/surveillance"}');
+    expect(agriSection).toContain("renderMissionWorldTile");
+    expect(citySection).toContain("renderMissionWorldTile");
+    expect(component).toContain('data-showcase-link="false"');
+    expect(component).toContain("https://drone.mithronsmart.com/register");
+    expect(component).toContain("https://drone.mithronsmart.com/droneowner_reg");
+    expect(component).toContain("https://drone.mithronsmart.com/farmer");
+    expect(agriSection).not.toContain('href={tile.href || chapter.href || "/agriculture"}');
+    expect(citySection).not.toContain('href={tile.href || chapter.href || "/surveillance"}');
     expect(component).not.toContain("<Play");
   });
 

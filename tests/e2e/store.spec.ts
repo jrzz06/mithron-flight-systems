@@ -275,20 +275,24 @@ test.describe("Mithron cinematic storefront", () => {
         tagName: node.tagName,
         cursor: getComputedStyle(node).cursor,
         href: node instanceof HTMLAnchorElement ? node.href : "",
+        showcaseOnly: node.getAttribute("data-showcase-link") === "false",
         tabIndex: node.getAttribute("tabindex"),
         playCount: node.querySelectorAll("[class*='missionTilePlay']").length
       }))
     ));
     expect(missionShowcaseState).toHaveLength(10);
-    expect(missionShowcaseState.every((tile) => tile.tagName === "A")).toBe(true);
-    expect(missionShowcaseState.every((tile) => tile.href.length > 0)).toBe(true);
+    expect(missionShowcaseState.filter((tile) => tile.href.length > 0)).toHaveLength(3);
+    expect(missionShowcaseState.filter((tile) => tile.showcaseOnly)).toHaveLength(7);
     expect(missionShowcaseState.every((tile) => tile.tabIndex === null)).toBe(true);
     expect(missionShowcaseState.every((tile) => tile.playCount === 0)).toBe(true);
 
-    const firstMissionTile = composite.getByTestId("mission-world-tile").first();
-    await firstMissionTile.scrollIntoViewIfNeeded();
-    await firstMissionTile.hover();
-    await expect(firstMissionTile).toHaveAttribute("href", /\/(agriculture|surveillance)/);
+    const linkedMissionTiles = composite.locator("[data-testid='mission-world-tile']").filter({
+      hasNot: composite.locator("[data-showcase-link='false']")
+    });
+    await expect(linkedMissionTiles).toHaveCount(3);
+    await expect(linkedMissionTiles.nth(0)).toHaveAttribute("href", "https://drone.mithronsmart.com/droneowner_reg");
+    await expect(linkedMissionTiles.nth(1)).toHaveAttribute("href", "https://drone.mithronsmart.com/register");
+    await expect(linkedMissionTiles.nth(2)).toHaveAttribute("href", "https://drone.mithronsmart.com/farmer");
     await expect(composite.locator("[data-testid='agri-community-world-section'] [data-tile-size='hero']")).toHaveCount(1);
     await expect(composite.locator("[data-testid='city-drone-world-section'] [data-tile-size='hero']")).toHaveCount(1);
     for (const missionLabel of [
