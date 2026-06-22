@@ -3,9 +3,9 @@ import {
   normalizeCatalogName,
   normalizeUrl,
   slugify
-} from "../wix/catalog-normalize";
-import type { WixProductSnapshot } from "../wix/catalog-client";
-import type { DbProductRow } from "./score-canonical";
+} from "../wix/catalog-normalize.ts";
+import type { WixProductSnapshot } from "../wix/catalog-client.ts";
+import type { DbProductRow } from "./score-canonical.ts";
 
 export type ProductReconcileReport = {
   version: 1;
