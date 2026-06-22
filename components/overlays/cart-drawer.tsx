@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Minus, Plus, ShieldCheck, ShoppingBag, Truck, Wrench, X } from "lucide-react";
 import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
 import { Button } from "@/components/ui/button";
@@ -20,9 +21,20 @@ export function CartDrawer({ products }: { products: ProductShellItem[] }) {
     .filter((product) => product.interests.includes("agriculture") || product.interests.includes("components"))
     .slice(0, 3);
 
+  useEffect(() => {
+    if (!isCartOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isCartOpen]);
+
   return (
     <div
-      className={`cart-drawer-root fixed inset-0 z-50 ${isCartOpen ? "is-open" : ""}`}
+      className={`cart-drawer-root fixed inset-0 z-[1002] ${isCartOpen ? "is-open" : ""}`}
       aria-hidden={isCartOpen ? "false" : "true"}
       aria-label="Mission cart"
       aria-modal={isCartOpen ? "true" : undefined}
@@ -35,8 +47,8 @@ export function CartDrawer({ products }: { products: ProductShellItem[] }) {
         aria-label="Close cart"
         onClick={() => setCartOpen(false)}
       />
-      <aside className="cart-drawer-panel ambient-surface ambient-dark absolute right-0 top-0 flex h-full w-full max-w-[440px] flex-col text-white shadow-[0_20px_60px_rgba(15,23,42,.24)]">
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
+      <aside className="cart-drawer-panel ambient-surface ambient-dark absolute inset-y-0 right-0 flex w-full max-w-[440px] flex-col overflow-hidden text-white shadow-[0_20px_60px_rgba(15,23,42,.24)]">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-5">
           <div>
             <p className="type-meta text-white/40">Mission cart</p>
             <h2 className="type-card-title text-2xl">{items.length ? "Mission ready" : "No drone system selected"}</h2>
@@ -47,7 +59,7 @@ export function CartDrawer({ products }: { products: ProductShellItem[] }) {
         </div>
         {items.length ? (
           <>
-            <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               {items.map((item) => (
                 <div key={`${item.productSlug}-${item.bundleId}`} className="grid grid-cols-[82px_1fr] gap-4 border-b border-[var(--surface-border)] py-5">
                   <div className="relative size-20 rounded-xl bg-[#0c0c0c]">
@@ -84,27 +96,29 @@ export function CartDrawer({ products }: { products: ProductShellItem[] }) {
                 ))}
               </div>
             </div>
-            <button
-              type="button"
-              aria-label="Configure deployment"
-              tabIndex={isCartOpen ? 0 : -1}
-              className="block w-full border-t border-white/10 p-6 text-left"
-              onClick={() => {
-                setCartOpen(false);
-                router.push("/checkout");
-              }}
-            >
-              <span className="type-price mb-4 flex items-center justify-between text-lg font-medium">
-                <span>Subtotal</span>
-                <span>{formatUsd(subtotal)}</span>
-              </span>
-              <span className={glassButtonClassName({ className: "type-button block h-14 w-full rounded-full text-center text-base leading-[3.5rem]" })}>
-                Configure deployment
-              </span>
-            </button>
+            <div className="shrink-0 border-t border-white/10 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                aria-label="Configure deployment"
+                tabIndex={isCartOpen ? 0 : -1}
+                className="block w-full text-left"
+                onClick={() => {
+                  setCartOpen(false);
+                  router.push("/checkout");
+                }}
+              >
+                <span className="type-price mb-4 flex items-center justify-between text-lg font-medium">
+                  <span>Subtotal</span>
+                  <span>{formatUsd(subtotal)}</span>
+                </span>
+                <span className={glassButtonClassName({ className: "type-button block h-14 w-full rounded-full text-center text-base leading-[3.5rem]" })}>
+                  Configure deployment
+                </span>
+              </button>
+            </div>
           </>
         ) : (
-          <div className="flex-1 overflow-y-auto px-6 py-8 text-center">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 text-center">
             <div className="ambient-surface ambient-muted rounded-[28px] border border-[var(--surface-border)] p-7">
               <ShoppingBag className="mx-auto mb-5 size-14 text-white/30" />
               <p className="type-card-title text-xl">Build a mission-ready drone stack</p>

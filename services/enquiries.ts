@@ -5,11 +5,63 @@ import { buildValidatedOrderDraft, type CheckoutOrderInput, type OrderCatalogPro
 type JsonRecord = Record<string, unknown>;
 type EnvSource = Record<string, string | undefined>;
 
+export type AdminEnquiryRow = JsonRecord & {
+  id: string;
+  customer_email: string;
+  subject: string;
+  body: string;
+  status: string;
+  source: "contact" | "checkout";
+  queue_kind: "enquiry" | "checkout_order";
+  order_number?: string;
+};
+
 function headers(serviceRoleKey: string) {
   return {
     apikey: serviceRoleKey,
     Authorization: `Bearer ${serviceRoleKey}`,
     "Content-Type": "application/json"
+  };
+}
+
+function isPlainRecord(value: unknown): value is JsonRecord {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function text(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function mapCheckoutOrderToEnquiryRow(order: JsonRecord): AdminEnquiryRow {
+  const metadata = isPlainRecord(order.metadata) ? order.metadata : {};
+  const items = Array.isArray(order.items) ? order.items.filter(isPlainRecord) : [];
+  const firstItem = items[0];
+  const itemSummary = items
+    .map((item) => `${text(item.product_name, text(item.product_slug, "Item"))} x ${String(item.quantity ?? 1)}`)
+    .join(", ");
+  const enquiryMessage = text(metadata.enquiry_message);
+  const orderNumber = text(order.order_number, text(order.id));
+
+  return {
+    id: text(order.id),
+    customer_email: text(order.customer_email),
+    subject: `Product enquiry · ${orderNumber}`,
+    body: enquiryMessage || (itemSummary ? `Checkout enquiry for ${itemSummary}.` : "Checkout product enquiry."),
+    status: text(order.status, "admin_review") === "admin_review" ? "new" : "contacted",
+    related_product_slug: text(firstItem?.product_slug) || null,
+    assigned_to: null,
+    converted_order_id: text(order.id) || null,
+    created_at: text(order.created_at),
+    updated_at: text(order.updated_at),
+    payload: {
+      source: "checkout",
+      order_number: orderNumber,
+      customer_phone: text(metadata.customer_phone),
+      item_summary: itemSummary
+    },
+    source: "checkout",
+    order_number: orderNumber,
+    queue_kind: "checkout_order"
   };
 }
 
@@ -21,6 +73,18 @@ export type EnquiryInput = {
   body: string;
   relatedProductSlug?: string | null;
   region?: string | null;
+};
+
+export type CheckoutProductEnquiryInput = {
+  customerUserId?: string | null;
+  customerEmail: string;
+  customerPhone: string;
+  enquiryMessage: string;
+  orderId: string;
+  orderNumber: string;
+  region?: string | null;
+  relatedProductSlug?: string | null;
+  productSummary: string;
 };
 
 export async function submitEnquiry(input: EnquiryInput, actorId: string | null, env: EnvSource = process.env) {
@@ -42,6 +106,38 @@ export async function submitEnquiry(input: EnquiryInput, actorId: string | null,
   );
 }
 
+export async function submitCheckoutProductEnquiry(
+  input: CheckoutProductEnquiryInput,
+  actorId: string | null,
+  env: EnvSource = process.env
+) {
+  const message = input.enquiryMessage.trim();
+  const summary = input.productSummary.trim();
+
+  return createAdminRecord(
+    "enquiries",
+    {
+      customer_user_id: input.customerUserId ?? null,
+      customer_email: input.customerEmail.trim(),
+      subject: `Product enquiry · ${input.orderNumber.trim()}`,
+      body: summary ? `${message}\n\nCart: ${summary}` : message,
+      related_product_slug: input.relatedProductSlug ?? null,
+      region: input.region ?? null,
+      status: "new",
+      converted_order_id: input.orderId,
+      payload: {
+        customer_phone: input.customerPhone.trim(),
+        source: "checkout",
+        order_number: input.orderNumber.trim(),
+        order_id: input.orderId
+      }
+    },
+    actorId,
+    env,
+    { allowGuest: !actorId }
+  );
+}
+
 export async function listOwnEnquiries(userId: string, env: EnvSource = process.env) {
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(
@@ -52,14 +148,48 @@ export async function listOwnEnquiries(userId: string, env: EnvSource = process.
   return (await response.json()) as JsonRecord[];
 }
 
-export async function listAdminEnquiries(env: EnvSource = process.env) {
+export async function listAdminEnquiries(env: EnvSource = process.env): Promise<AdminEnquiryRow[]> {
   const config = assertSupabaseAdminConfig(env);
-  const response = await fetch(
-    `${config.url}/rest/v1/enquiries?select=id,customer_email,subject,body,status,related_product_slug,assigned_to,converted_order_id,created_at,updated_at&order=created_at.desc&limit=100`,
-    { headers: headers(config.serviceRoleKey), cache: "no-store" }
+  const [enquiriesResponse, ordersResponse] = await Promise.all([
+    fetch(
+      `${config.url}/rest/v1/enquiries?select=id,customer_email,subject,body,status,related_product_slug,assigned_to,converted_order_id,payload,created_at,updated_at&order=created_at.desc&limit=100`,
+      { headers: headers(config.serviceRoleKey), cache: "no-store" }
+    ),
+    fetch(
+      `${config.url}/rest/v1/orders?select=id,order_number,customer_email,status,metadata,items,created_at,updated_at&channel=eq.enquiry&order=created_at.desc&limit=100`,
+      { headers: headers(config.serviceRoleKey), cache: "no-store" }
+    )
+  ]);
+
+  const enquiries = enquiriesResponse.ok ? ((await enquiriesResponse.json()) as JsonRecord[]) : [];
+  const checkoutOrders = ordersResponse.ok ? ((await ordersResponse.json()) as JsonRecord[]) : [];
+  const linkedOrderIds = new Set(
+    enquiries
+      .map((enquiry) => text(enquiry.converted_order_id))
+      .filter(Boolean)
   );
-  if (!response.ok) return [];
-  return (await response.json()) as JsonRecord[];
+
+  const normalizedEnquiries: AdminEnquiryRow[] = enquiries.map((enquiry) => ({
+    ...enquiry,
+    id: text(enquiry.id),
+    customer_email: text(enquiry.customer_email),
+    subject: text(enquiry.subject),
+    body: text(enquiry.body),
+    status: text(enquiry.status, "new"),
+    source: text(isPlainRecord(enquiry.payload) ? enquiry.payload.source : "") === "checkout" ? "checkout" : "contact",
+    order_number: text(isPlainRecord(enquiry.payload) ? enquiry.payload.order_number : ""),
+    queue_kind: "enquiry"
+  }));
+
+  const backfilledCheckoutEnquiries = checkoutOrders
+    .filter((order) => !linkedOrderIds.has(text(order.id)))
+    .map(mapCheckoutOrderToEnquiryRow);
+
+  return [...normalizedEnquiries, ...backfilledCheckoutEnquiries].sort((left, right) => {
+    const leftTime = Date.parse(text(left.created_at)) || 0;
+    const rightTime = Date.parse(text(right.created_at)) || 0;
+    return rightTime - leftTime;
+  });
 }
 
 export async function assignEnquiry(enquiryId: string, assignedTo: string, actorId: string, env: EnvSource = process.env) {

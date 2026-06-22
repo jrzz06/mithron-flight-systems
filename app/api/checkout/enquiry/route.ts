@@ -10,6 +10,7 @@ import {
 } from "@/services/admin-actions";
 import { getProducts } from "@/services/catalog";
 import { buildCustomerEnquiryOrderDraft } from "@/services/orders";
+import { submitCheckoutProductEnquiry } from "@/services/enquiries";
 import { resolveCheckoutStockSkus } from "@/services/checkout-stock";
 
 export async function POST(request: Request) {
@@ -96,6 +97,25 @@ export async function POST(request: Request) {
   for (const item of draft.orderItems) {
     await createCustomerCheckoutOrderItemRecord({ ...item, order_id: orderId }, userId);
   }
+
+  const productSummary = draft.orderItems
+    .map((item) => `${item.product_name} x ${item.quantity}`)
+    .join(", ");
+
+  await submitCheckoutProductEnquiry(
+    {
+      customerUserId: userId,
+      customerEmail: body.email,
+      customerPhone: body.phone,
+      enquiryMessage: body.message,
+      orderId,
+      orderNumber: String(order.order_number ?? orderNumber),
+      region: body.region,
+      relatedProductSlug: draft.orderItems[0]?.product_slug ?? null,
+      productSummary
+    },
+    userId
+  ).catch(() => undefined);
 
   if (userId) {
     await createNotificationRecord(

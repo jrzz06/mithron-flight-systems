@@ -1,6 +1,6 @@
 import type { Product } from "@/config/types";
 import { sanitizeProductPreviewText } from "@/lib/product-preview-text";
-import { isSpecLikeBlob, sortSpecEntries } from "@/lib/product-spec-text";
+import { isSpecLikeBlob, sortSpecEntries, expandSpecEntries, isHighlightSpecValue } from "@/lib/product-spec-text";
 
 const HIDDEN_SPEC_KEYS = new Set(["Product ID", "Source", "Currency", "Category", "Availability"]);
 
@@ -16,6 +16,9 @@ const HIGHLIGHT_SPEC_KEYS = [
   "Wind Resistance",
   "Maximum Speed",
   "Battery Capacity",
+  "Battery",
+  "Storage",
+  "Warranty",
   "Operating Altitude",
   "Maximum Operating Altitude",
   "UAV Type",
@@ -31,16 +34,16 @@ function cleanCopy(value: string | null | undefined) {
 }
 
 export function getCustomerFacingSpecs(product: Product) {
-  return sortSpecEntries(
-    Object.entries(product.specs).filter(([key, value]) => {
-      if (HIDDEN_SPEC_KEYS.has(key)) return false;
-      return Boolean(value.trim());
-    })
-  );
+  const raw = Object.entries(product.specs).filter(([key, value]) => {
+    if (HIDDEN_SPEC_KEYS.has(key)) return false;
+    return Boolean(value.trim());
+  });
+
+  return sortSpecEntries(expandSpecEntries(raw));
 }
 
 export function getHighlightSpecs(product: Product, limit = 6) {
-  const specs = getCustomerFacingSpecs(product);
+  const specs = getCustomerFacingSpecs(product).filter(([, value]) => isHighlightSpecValue(value));
   const ranked = specs.sort(([left], [right]) => {
     const leftRank = HIGHLIGHT_SPEC_KEYS.findIndex((key) => key.toLowerCase() === left.toLowerCase());
     const rightRank = HIGHLIGHT_SPEC_KEYS.findIndex((key) => key.toLowerCase() === right.toLowerCase());

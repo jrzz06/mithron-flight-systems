@@ -1130,7 +1130,9 @@ dd {
 }
 
 .cart-drawer-panel {
+  opacity: 0;
   transform: translate3d(12px, 0, 0);
+  max-height: 100dvh;
 }
 
 .search-overlay-root.is-open .search-overlay-backdrop,

@@ -108,6 +108,8 @@ describe("customer checkout workflow", () => {
     expect(checkoutPage).toContain("Pay & place order");
     expect(checkoutPage).toContain("Send product enquiry");
     expect(checkoutPage).toContain("Checkout with or without an account");
+    const enquiryRoute = readFileSync(join(process.cwd(), "app/api/checkout/enquiry/route.ts"), "utf8");
+    expect(enquiryRoute).toContain("submitCheckoutProductEnquiry");
     expect(checkoutPage).toContain("CUSTOMER_CONTACT_REQUIRED_MESSAGE");
     expect(checkoutPage).toContain("isValidCheckoutEmail");
     expect(checkoutPage).not.toContain("Sign in to continue");
