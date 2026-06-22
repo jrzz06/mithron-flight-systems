@@ -26,7 +26,7 @@ describe("store navigation mega menu", () => {
     expect(nav).toContain('aria-haspopup={menu ? "true" : undefined}');
     expect(nav).toContain("aria-expanded={menu ? isMenuActive : undefined}");
     expect(nav).toContain("onMouseLeave={scheduleEnterpriseMenuClose}");
-    expect(nav).toContain('loading="lazy"');
+    expect(nav).toContain("MithronCardImage");
     expect(nav).toContain("tabIndex={interactive ? undefined : -1}");
     expect(nav).toContain("setFeaturedByMenu");
     expect(nav).toContain("onPointerEnter={() => {");
@@ -37,8 +37,8 @@ describe("store navigation mega menu", () => {
 
     expect(globals).toContain("--mega-menu-ease: cubic-bezier(0.16, 1, 0.3, 1)");
     expect(globals).toContain("width: min(1200px, calc(100vw - 48px))");
-    expect(globals).toContain("opacity 250ms var(--mega-menu-ease)");
-    expect(globals).toContain("transform 250ms var(--mega-menu-ease)");
+    expect(globals).toContain("opacity 175ms var(--mega-menu-ease)");
+    expect(globals).toContain("transform 175ms var(--mega-menu-ease)");
     expect(globals).toContain("transform: translate3d(-50%, -12px, 0) scale(0.98)");
     expect(globals).toContain("transform: translate3d(-50%, 0, 0) scale(1)");
     expect(globals).toContain("border: 1px solid rgba(0, 0, 0, 0.06)");

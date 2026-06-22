@@ -1,5 +1,7 @@
 /** Canonical storefront masters referenced by the frontend. */
 
+import pathAliases from "../config/storefront-path-aliases.json" with { type: "json" };
+
 export const BUCKET_BY_GROUP = {
   hero: "mithron-hero",
   shelf: "mithron-story",
@@ -40,7 +42,8 @@ export const STOREFRONT_IMAGE_INVENTORY = [
   { src: "/media/mithron/catalog/survey-drone-category.png", maxEdge: 2560, group: "catalog", alt: "Survey drone category" },
   { src: "/media/mithron/catalog/surveillance-drone-category.png", maxEdge: 2560, group: "catalog", alt: "Surveillance drone category" },
   { src: "/media/mithron/catalog/global-products-category.png", maxEdge: 2560, group: "catalog", alt: "Global products category" },
-  { src: "/media/mithron/shell/mithron-wordmark.png", maxEdge: 1600, group: "nav", alt: "Mithron wordmark" },
+  // Nav wordmark uses tools/upload-wordmark-to-supabase.mjs — never Real-ESRGAN (destroys alpha mask).
+  { src: "/media/mithron/shell/mithron-wordmark.png", maxEdge: 1600, group: "nav", alt: "Mithron wordmark", skipAiEnhance: true },
   { src: "/media/mithron/interests/components.webp", maxEdge: 1600, group: "interest", alt: "Components interest" },
   { src: "/media/mithron/interests/agriculture.webp", maxEdge: 2560, group: "interest", alt: "Agriculture interest" },
   { src: "/media/mithron/interests/video-drones.webp", maxEdge: 2560, group: "interest", alt: "Video drones interest" },
@@ -71,17 +74,15 @@ export const STOREFRONT_IMAGE_INVENTORY = [
   { src: "/media/mithron/operations/map-banner.png", maxEdge: 2560, group: "operations", alt: "Map operations banner" }
 ];
 
-export const LOCAL_PATH_ALIASES_TO_CANONICAL = {
-  "/media/mithron/hero/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/hero/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/hero/security-grid.webp": "/assets/hero/hero-slide-04.webp",
-  "/media/mithron/banners/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/banners/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/banners/security-grid.webp": "/assets/hero/hero-slide-04.webp",
-  "/media/mithron/carousel/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/carousel/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/carousel/security-grid.webp": "/assets/hero/hero-slide-04.webp"
-};
+export const AI_ENHANCEMENT_EXCLUDED_SRCS = new Set([
+  "/media/mithron/shell/mithron-wordmark.png"
+]);
+
+export function isAiEnhancementExcluded(src) {
+  return AI_ENHANCEMENT_EXCLUDED_SRCS.has(src);
+}
+
+export const LOCAL_PATH_ALIASES_TO_CANONICAL = pathAliases;
 
 export function canonicalStorefrontSrc(src) {
   const trimmed = src?.trim() ?? "";

@@ -7,30 +7,12 @@
   --home-border: rgba(15, 23, 42, 0.08);
   --home-border-strong: rgba(15, 23, 42, 0.16);
   --home-accent: var(--brand-accent);
-  --home-composite-progress: 0;
   position: relative;
   overflow-x: clip;
   background:
     linear-gradient(180deg, #ffffff 0%, var(--home-page) 16%, #ffffff 38%, var(--home-page) 72%, #ffffff 100%);
   color: var(--home-ink);
   font-family: var(--type-ui);
-}
-
-.progressTrack {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  height: 3px;
-  background: rgba(15, 23, 42, 0.06);
-}
-
-.progressFill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: #0f172a;
-  transform: scaleX(var(--home-composite-progress));
-  transform-origin: 0 50%;
 }
 
 .container {
@@ -613,7 +595,6 @@
   height: 38px;
   border-radius: 999px;
   background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0) 72%);
-  filter: blur(16px);
   transform: translateX(-50%);
 }
 
@@ -624,7 +605,6 @@
   height: 12px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.24);
-  filter: blur(8px);
   opacity: 0.88;
   transform: translateX(-50%);
 }
@@ -1264,12 +1244,6 @@
   padding: 7px 11px;
 }
 
-.root[data-motion-state="active"] [data-mission-text-reveal],
-.root[data-motion-state="active"] [data-mission-image-reveal],
-.root[data-motion-state="active"] [data-mission-caption-reveal] {
-  will-change: transform, opacity, clip-path;
-}
-
 @media (max-width: 980px) {
   .missionWorldSection {
     min-height: auto;
@@ -1632,19 +1606,6 @@
     transition: none;
   }
 
-  .root [data-mission-text-reveal],
-  .root [data-mission-image-reveal],
-  .root [data-mission-caption-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-    clip-path: none !important;
-    will-change: auto;
-  }
-
-  .root [data-mission-image-reveal] {
-    --mission-image-reveal-scale: 1;
-  }
-
   .miniCarouselItem:hover .miniCarouselImage,
   .miniCarouselItem:focus-visible .miniCarouselImage,
   .miniCarouselItem:hover .miniCarouselBuyNow,
@@ -1679,6 +1640,8 @@
 .agriSection {
   background: var(--home-page);
   padding: clamp(72px, 8vh, 120px) 0;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 .agriContainer {
@@ -1780,13 +1743,12 @@
   border-radius: 12px;
   border: 1px solid rgba(15, 23, 42, 0.06);
   background: #0f172a;
-  box-shadow: 
-    0 16px 30px rgba(15, 23, 42, 0.08),
-    0 2px 6px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--elevation-card-hover);
   text-decoration: none;
   cursor: pointer;
   isolation: isolate;
-  transition: 
+  contain: layout paint;
+  transition:
     box-shadow 320ms var(--ease-cinematic),
     transform 320ms var(--ease-cinematic);
 }
@@ -1810,9 +1772,7 @@
 .agriSection .agriCard {
   border: none;
   background: #ffffff;
-  box-shadow:
-    0 6px 18px rgba(15, 23, 42, 0.07),
-    0 2px 6px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--elevation-card-rest);
   transition:
     box-shadow 420ms var(--ease-cinematic),
     transform 420ms var(--ease-cinematic);
@@ -1820,10 +1780,8 @@
 
 .agriSection .agriCard:hover,
 .agriSection .agriCard:focus-visible {
-  box-shadow:
-    0 22px 42px rgba(15, 23, 42, 0.12),
-    0 8px 18px rgba(15, 23, 42, 0.07);
-  transform: translateY(-3px);
+  box-shadow: var(--elevation-card-hover);
+  transform: translateY(var(--elevation-card-lift));
 }
 
 .agriCard:focus-visible {
@@ -1841,6 +1799,7 @@
   object-position: var(--agri-object-position, 50% 36%);
   transform: translate3d(0, 0, 0) scale(var(--agri-image-scale, 1.14));
   transform-origin: center 34%;
+  backface-visibility: hidden;
   transition: transform 420ms var(--ease-cinematic);
 }
 
@@ -1852,87 +1811,6 @@
   inset: 0;
   height: 100%;
   background: #ffffff;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 38%,
-    rgba(0, 0, 0, 0.88) 52%,
-    rgba(0, 0, 0, 0.48) 68%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 38%,
-    rgba(0, 0, 0, 0.88) 52%,
-    rgba(0, 0, 0, 0.48) 68%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-}
-
-.agriSection .agriCard[data-tile-size="hero"] .agriCardImageFrame {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 36%,
-    rgba(0, 0, 0, 0.88) 50%,
-    rgba(0, 0, 0, 0.46) 66%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 36%,
-    rgba(0, 0, 0, 0.88) 50%,
-    rgba(0, 0, 0, 0.46) 66%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-}
-
-.agriSection .agriCard[data-tile-size="standard"] .agriCardImageFrame {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 40%,
-    rgba(0, 0, 0, 0.88) 54%,
-    rgba(0, 0, 0, 0.48) 68%,
-    rgba(0, 0, 0, 0.1) 84%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 40%,
-    rgba(0, 0, 0, 0.88) 54%,
-    rgba(0, 0, 0, 0.48) 68%,
-    rgba(0, 0, 0, 0.1) 84%,
-    transparent 96%
-  );
-}
-
-.agriSection .agriCard[data-tile-size="wide"] .agriCardImageFrame {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 34%,
-    rgba(0, 0, 0, 0.88) 48%,
-    rgba(0, 0, 0, 0.45) 64%,
-    rgba(0, 0, 0, 0.1) 80%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 34%,
-    rgba(0, 0, 0, 0.88) 48%,
-    rgba(0, 0, 0, 0.45) 64%,
-    rgba(0, 0, 0, 0.1) 80%,
-    transparent 96%
-  );
 }
 
 .agriSection :global(.mithron-responsive-image-frame) {
@@ -2142,6 +2020,8 @@
 /* City Drone World — bento grid (distinct from Agri side-column layout) */
 .citySection {
   padding-bottom: clamp(28px, 4vh, 44px);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 .citySection .agriCard {
@@ -2169,45 +2049,6 @@
   inset: 0;
   height: 100%;
   background: #ffffff;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 38%,
-    rgba(0, 0, 0, 0.88) 52%,
-    rgba(0, 0, 0, 0.48) 68%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 38%,
-    rgba(0, 0, 0, 0.88) 52%,
-    rgba(0, 0, 0, 0.48) 68%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-}
-
-.citySection .agriCard[data-tile-size="hero"] .cityCardImageFrame {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 36%,
-    rgba(0, 0, 0, 0.88) 50%,
-    rgba(0, 0, 0, 0.46) 66%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 36%,
-    rgba(0, 0, 0, 0.88) 50%,
-    rgba(0, 0, 0, 0.46) 66%,
-    rgba(0, 0, 0, 0.1) 82%,
-    transparent 96%
-  );
 }
 
 .citySection .agriCardImage {

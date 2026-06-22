@@ -10,7 +10,7 @@ import {
   saveProductHardDeleteFormAction,
   saveProductPublishStateFormAction
 } from "./actions";
-import { ProductDetailEditDialog } from "./product-detail-edit-dialog";
+import { ProductDetailEditDialog } from "./product-detail-edit-dialog-loader";
 
 export type ProductCatalogGridRow = {
   id: string;
@@ -35,6 +35,7 @@ export type ProductCatalogGridRow = {
   stockStatus: string;
   sourceAvailability: string;
   isVisible: boolean;
+  updatedAt?: string | null;
 };
 
 function statusClass(status: string) {

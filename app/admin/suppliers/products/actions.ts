@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { operationalFeedbackFromActionError, readExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
 import { requirePermission } from "@/services/auth";
 import { revalidateCatalogSurfaces } from "@/lib/catalog-cache";
 import {
+  AdminRecordConflictError,
   createNotificationRecord,
   fetchAdminRecordsByColumn,
   updateAdminRecord
@@ -13,18 +15,22 @@ import { ensureInventoryForPublishedProduct } from "@/services/product-inventory
 import { assertProductCanPublish } from "@/services/product-publish";
 
 function supplierApprovalErrorMessage(error: unknown) {
+  if (error instanceof AdminRecordConflictError) {
+    return `${error.message} Reload the approval queue and retry.`;
+  }
   return error instanceof Error ? error.message : String(error);
 }
 
 async function runSupplierApprovalAction(successMessage: string, action: () => Promise<void>) {
-  let status: "success" | "error" = "success";
+  let status: "success" | "error" | "conflict" = "success";
   let message = successMessage;
 
   try {
     await action();
   } catch (error) {
-    status = "error";
-    message = supplierApprovalErrorMessage(error);
+    const feedback = operationalFeedbackFromActionError(error);
+    status = feedback.status === "warning" ? "conflict" : "error";
+    message = feedback.message;
   }
 
   const params = new URLSearchParams({
@@ -52,6 +58,7 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
     }
 
     await assertProductCanPublish(slug, { requireSupplier: true });
+    const expectedUpdatedAt = readExpectedUpdatedAt(formData, String(product.updated_at ?? ""));
     await updateAdminRecord(
       "mithron_products",
       "slug",
@@ -65,7 +72,9 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
         published_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
-      context.userId
+      context.userId,
+      process.env,
+      { expectedUpdatedAt }
     );
 
     await ensureInventoryForPublishedProduct(slug, context.userId);
@@ -107,6 +116,7 @@ export async function rejectProductSubmissionFormAction(formData: FormData) {
       throw new Error("Only pending_review products can be rejected.");
     }
 
+    const expectedUpdatedAt = readExpectedUpdatedAt(formData, String(product.updated_at ?? ""));
     await updateAdminRecord(
       "mithron_products",
       "slug",
@@ -117,7 +127,9 @@ export async function rejectProductSubmissionFormAction(formData: FormData) {
         rejection_reason: reason,
         updated_at: new Date().toISOString()
       },
-      context.userId
+      context.userId,
+      process.env,
+      { expectedUpdatedAt }
     );
 
     const supplierId = String(product.supplier_id ?? "");

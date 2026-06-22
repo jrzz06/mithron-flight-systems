@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronCardImage } from "@/components/media/mithron-card-image";
 import type { Product } from "@/config/types";
 import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import { cn, formatUsd } from "@/lib/utils";
@@ -60,10 +60,11 @@ export function ProductHoverCard({
             <div className={styles.groundShadow} aria-hidden />
             <div className={styles.productShadow} aria-hidden />
             <div className={styles.imageFrame}>
-              <MithronResponsiveImage
+              <MithronCardImage
                 src={product.image.src}
                 alt={product.image.alt}
                 fill
+                responsive={product.image.responsive}
                 className={styles.image}
                 sizes={imageSizes.catalog}
               />
@@ -94,11 +95,11 @@ export function ProductHoverCard({
     <article
       data-testid={`premium-product-card-${product.slug}`}
       data-card-variant={variant}
-      className={cn("premium-product-card-shell h-full", className)}
+      className={cn("premium-product-card-shell flex h-full flex-col", className)}
     >
       <Link
         href={`/product/${product.slug}`}
-        className="premium-product-card group flex h-full min-w-0 flex-col overflow-hidden rounded-[18px] border-0 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.05)] outline-none transition-[box-shadow] duration-[420ms] hover:shadow-[0_8px_20px_rgba(15,23,42,0.08),0_24px_48px_rgba(15,23,42,0.1)] focus-visible:ring-2 focus-visible:ring-[#1f6b46]/30 focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-page)]"
+        className="premium-product-card group flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-[18px] border-0 bg-white outline-none focus-visible:ring-2 focus-visible:ring-[#1f6b46]/30 focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-page)]"
       >
         <div
           className={cn("premium-product-card__media relative overflow-hidden", imageHeights[variant])}
@@ -108,10 +109,11 @@ export function ProductHoverCard({
           <div
             className="premium-product-card__image absolute inset-0"
           >
-            <MithronResponsiveImage
+            <MithronCardImage
               src={product.image.src}
               alt={product.image.alt}
               fill
+              responsive={product.image.responsive}
               className="premium-product-card__image-asset object-contain"
               sizes={imageSizes[variant]}
             />

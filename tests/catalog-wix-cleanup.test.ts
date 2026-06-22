@@ -23,4 +23,10 @@ describe("catalog wix cleanup", () => {
     expect(catalog).toContain("publishedCatalogFilter");
     expect(catalog).toContain("category=neq.");
   });
+
+  it("ships product merge audit migration for duplicate reconciliation", () => {
+    const migration = source("supabase/migrations/20260623100000_product_merge_audit.sql");
+    expect(migration).toContain("product_merge_audit");
+    expect(migration).toContain("merge_product_into_canonical");
+  });
 });

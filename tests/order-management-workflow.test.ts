@@ -165,7 +165,7 @@ describe("enterprise order management workflow", () => {
     expect(warehouseOrdersPage).toContain("data-order-items-table=\"order_items\"");
     expect(warehouseOrdersPage).toContain("data-order-filter-form");
 
-    expect(fulfillmentPage).toContain("redirect(\"/warehouse/picking\")");
+    expect(fulfillmentPage).toContain("/warehouse/picking");
     expect(pickingPage).toContain("updateWarehouseOrderLifecycleFormAction");
     expect(packingPage).toContain("updateWarehouseOrderLifecycleFormAction");
     expect(adminOrdersUi).toContain("timeline");

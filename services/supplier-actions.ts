@@ -93,7 +93,8 @@ export async function updateSupplierOwnedProduct(
   slug: string,
   payload: JsonRecord,
   actorId: string,
-  env: EnvSource = process.env
+  env: EnvSource = process.env,
+  options: { expectedUpdatedAt?: string | null } = {}
 ) {
   await ensureSupplierProfile(supplierId, env);
   const existing = await fetchAdminRecordsByColumn("mithron_products", "slug", slug, env);
@@ -102,11 +103,14 @@ export async function updateSupplierOwnedProduct(
     throw new Error("Supplier cannot modify products they do not own.");
   }
   const status = String(product.workflow_status ?? "draft");
-  if (!["draft", "pending_review", "rejected"].includes(status)) {
-    throw new Error("Supplier can only edit draft, pending review, or rejected products.");
+  if (!["draft", "rejected"].includes(status)) {
+    throw new Error("Supplier can only edit draft or rejected products.");
   }
   try {
-    return await updateAdminRecord("mithron_products", "slug", slug, payload, actorId, env, supplierProductMutationOptions);
+    return await updateAdminRecord("mithron_products", "slug", slug, payload, actorId, env, {
+      ...supplierProductMutationOptions,
+      expectedUpdatedAt: options.expectedUpdatedAt ?? null
+    });
   } catch (error) {
     throw mapSupplierProductError(error);
   }

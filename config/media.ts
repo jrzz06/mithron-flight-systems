@@ -1,9 +1,10 @@
 import type { CinematicMediaAsset } from "@/config/types";
+import { storefrontMediaPaths } from "@/config/storefront-media-paths";
 
 export const localMedia = {
   heroAg10Poster: {
     id: "hero-ag10-poster",
-    src: "/media/mithron/hero/ag10-command.webp",
+    src: storefrontMediaPaths.hero.ag10Command,
     alt: "Mithron AG10 sprayer drone floating over a cinematic smart-farming field",
     kind: "image",
     local: true,
@@ -13,18 +14,18 @@ export const localMedia = {
   },
   heroAg10Loop: {
     id: "hero-ag10-loop",
-    src: "/media/mithron/hero/ag10-command.webp",
+    src: storefrontMediaPaths.hero.ag10Command,
     alt: "Mithron AG10 cinematic smart-farming hero scene",
     kind: "image",
     local: true,
     role: "hero",
     width: 1600,
     height: 900,
-    poster: "/media/mithron/hero/ag10-command.webp"
+    poster: storefrontMediaPaths.hero.ag10Command
   },
   storyPrecisionSpray: {
     id: "story-precision-spray",
-    src: "/media/mithron/story/precision-spray.webp",
+    src: storefrontMediaPaths.story.precisionSpray,
     alt: "Mithron precision spraying over crop rows",
     kind: "image",
     local: true,
@@ -34,7 +35,7 @@ export const localMedia = {
   },
   storyTerrainRadar: {
     id: "story-terrain-radar",
-    src: "/media/mithron/story/terrain-radar.webp",
+    src: storefrontMediaPaths.story.terrainRadar,
     alt: "Mithron terrain radar and obstacle avoidance visualization",
     kind: "image",
     local: true,
@@ -44,7 +45,7 @@ export const localMedia = {
   },
   storyMissionPlanning: {
     id: "story-mission-planning",
-    src: "/media/mithron/story/mission-planning.webp",
+    src: storefrontMediaPaths.story.missionPlanning,
     alt: "Mithron autonomous mission planning and mapping workflow",
     kind: "image",
     local: true,

@@ -47,6 +47,6 @@ describe("production stabilization readiness", () => {
     expect(adminPage).not.toContain("data-cleanup-remote-counts");
     expect(adminPage).not.toContain("Fallback removal");
     expect(adminPage).not.toContain("Table counts");
-    expect(adminPage).toContain("Quick actions");
+    expect(adminPage).toContain("Quick links");
   });
 });

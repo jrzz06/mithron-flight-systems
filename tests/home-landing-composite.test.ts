@@ -32,14 +32,14 @@ describe("home landing composite contract", () => {
     expect(component).toContain('data-testid="home-landing-composite"');
     expect(component).toContain('data-home-composite-root="true"');
     expect(component).toContain('data-motion-state="reduced"');
-    expect(component).toContain('data-motion-engine="native-gsap-scrolltrigger"');
+    expect(component).toContain('data-motion-engine="static"');
     expect(component).toContain('type ProofState = "VERIFIED" | "FALLBACK"');
     expect(component).not.toContain(forbiddenStatusLabel);
     expect(component).not.toContain(oldDraftCollectionName);
     expect(component).not.toContain('data-testimonial-state="fallback"');
     expect(component).not.toContain("verifiedTestimonialsFromCms");
     expect(component).not.toContain("VERIFIED CMS");
-    expect(component).toContain("/media/mithron/dynamic-scroll/night-surveillance.webp");
+    expect(component).toContain("homepageMediaFallbacks as localMedia");
     expect(component).toContain("Representative mission gallery");
     expect(component).toContain("No municipal deployment claims");
     expect(component).not.toMatch(/stars?:\s*[1-5]/i);
@@ -69,27 +69,15 @@ describe("home landing composite contract", () => {
     }
   });
 
-  it("uses reduced-motion guards, GSAP ScrollTrigger, and restrained product hover selectors", () => {
+  it("uses reduced-motion guards and restrained product hover selectors", () => {
     const component = source("sections/home/home-landing-composite.tsx");
     const css = source("sections/home/home-landing-composite.module.css");
 
     expect(component).not.toContain('import gsap from "gsap"');
-    expect(component).not.toContain('import { ScrollTrigger } from "gsap/ScrollTrigger"');
-    expect(component).toContain('import("gsap")');
-    expect(component).toContain('import("gsap/ScrollTrigger")');
-    expect(component).toContain("gsap.registerPlugin(ScrollTrigger)");
+    expect(component).not.toContain('import("gsap")');
+    expect(component).not.toContain("ScrollTrigger.create");
     expect(component).toContain("useReducedMotionPreference");
     expect(component).toContain("if (reducedMotion)");
-    expect(component).toContain("ScrollTrigger.create");
-    expect(component).toContain("scrub: true");
-    expect(component).toContain("[data-mission-text-reveal]");
-    expect(component).toContain("[data-mission-image-reveal]");
-    expect(component).toContain("[data-mission-caption-reveal]");
-    expect(component).toContain("missionTextNodes");
-    expect(component).toContain("missionTileNodes");
-    expect(component).toContain("missionImageNodes");
-    expect(component).toContain("clipPath");
-    expect(component).toContain('toggleActions: "play none none reverse"');
 
     expect(css).toContain(".productCard:hover .productImage");
     expect(css).toContain("scale(1.024)");
@@ -153,7 +141,6 @@ describe("home landing composite contract", () => {
     expect(component).not.toContain("Mithron mission stack");
     expect(component).not.toContain("Aircraft, spares, and field support in one path.");
     expect(component).toContain("pickMiniCarouselItems");
-    expect(component).toContain("rail.scrollBy");
     expect(component).toContain("miniCarouselProductPriority");
     expect(component).toContain("itemKey:");
     expect(component).toContain("key={item.itemKey}");
@@ -327,11 +314,11 @@ describe("home landing composite contract", () => {
     expect(component).toContain("Agri Drone Loan & EMI Check");
     expect(component).toContain("All India Farmer Drone Booking");
     expect(component).toContain("formatMissionHeadline(config.title)");
-    expect(component).toContain("agrone-drone-owner-registration.png");
-    expect(component).toContain("agrone-pilot-registration.png");
-    expect(component).toContain("all-india-drone-farmer.png");
-    expect(component).toContain("smart-farmer-register.png");
-    expect(component).toContain("agri-drone-loan.png");
+    expect(component).toContain("localMedia.agroneDroneOwnerRegistration");
+    expect(component).toContain("localMedia.agronePilotRegistration");
+    expect(component).toContain("localMedia.agroneFarmerDroneBooking");
+    expect(component).toContain("localMedia.agroneSmartFarmerRegistration");
+    expect(component).toContain("localMedia.agroneAgriDroneLoanEmi");
     expect(component).not.toContain("Precision Spraying");
     expect(component).not.toContain("Field Mapping Pass");
     expect(component).not.toContain("Crop Health Review");
@@ -342,16 +329,11 @@ describe("home landing composite contract", () => {
     expect(component).toContain("Drone FranchiseCare Center");
     expect(component).toContain("All Drone Acadamic");
     expect(component).toContain("Drone Technician Aggregation");
-    expect(component).toContain("city-drone-rental-services-app.png");
-    expect(component).toContain("dronelancer-model.png");
-    expect(component).toContain("drone-franchisecare-center.png");
-    expect(component).toContain("all-drone-acadamic.png");
-    expect(component).toContain("drone-technician-aggregation.png");
-    expect(component).not.toContain("Smart City Monitoring");
-    expect(component).not.toContain("Traffic Analytics");
-    expect(component).not.toContain("Infrastructure Inspection");
-    expect(component).not.toContain("Emergency Response");
-    expect(component).not.toContain("Crowd Monitoring");
+    expect(component).toContain("localMedia.cityTrafficAnalytics");
+    expect(component).toContain("localMedia.citySmartMonitoring");
+    expect(component).toContain("localMedia.cityEmergencyResponse");
+    expect(component).toContain("localMedia.cityInfrastructureInspection");
+    expect(component).toContain("localMedia.cityCrowdMonitoring");
     expect(component).not.toContain("Yield Monitoring");
     expect(component).not.toContain("RTK Survey Operations");
     expect(component).not.toContain("Smart Agriculture Insights");
@@ -364,12 +346,14 @@ describe("home landing composite contract", () => {
     expect(component).not.toContain("Representative agriculture mission gallery");
   });
 
-  it("keeps hero autoplay resilient across visibility and reduced-motion preferences", () => {
+  it("keeps hero navigation manual without autoplay timers", () => {
     const hero = source("sections/home/hero-carousel.tsx");
 
     expect(hero).toContain("function resolveHeroCarouselSlides");
-    expect(hero).toContain("document.visibilityState === \"visible\"");
-    expect(hero).toContain("scheduleNextAdvance");
+    expect(hero).toContain("goToSlide");
+    expect(hero).not.toContain("scheduleNextAdvance");
+    expect(hero).not.toContain("autoplayMs");
+    expect(hero).not.toContain("document.visibilityState === \"visible\"");
     expect(hero).not.toContain("if (liveReducedMotion) return");
   });
 

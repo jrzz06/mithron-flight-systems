@@ -4,9 +4,13 @@ import { useMemo, useState, type CSSProperties, type ImgHTMLAttributes, type Syn
 import {
   createSrcSet,
   getBestVariant,
+  getBestVariantUpToWidth,
   getFormatVariants,
-  getResponsiveAssetForSrc
+  getResponsiveAssetForSrc,
+  getVariantsUpToWidth
 } from "@/config/generated-assets";
+import { getMediaDeliveryProfile, type MediaDeliveryRole } from "@/config/media-delivery-profiles";
+import type { ResponsiveMediaAsset } from "@/config/types";
 import { reportImageRenderMetrics } from "@/lib/media/debug-image-metrics";
 import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
 import { cn } from "@/lib/utils";
@@ -18,7 +22,11 @@ type MithronResponsiveImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "sr
   priority?: boolean;
   loading?: "eager" | "lazy";
   sizes?: string;
+  imageRole?: MediaDeliveryRole;
   preferredFormat?: "avif" | "webp" | "png";
+  maxVariantWidth?: number;
+  webpOnly?: boolean;
+  responsive?: ResponsiveMediaAsset;
   useSourceImage?: boolean;
   wrapperClassName?: string;
   imageClassName?: string;
@@ -35,6 +43,18 @@ function pickResponsiveWidth(width?: number | string, fill?: boolean) {
   return 768;
 }
 
+function resolveFormatVariants(
+  responsive: ResponsiveMediaAsset | undefined,
+  format: "avif" | "webp" | "png",
+  maxVariantWidth: number | undefined,
+  useSourceImage: boolean
+) {
+  if (useSourceImage || !responsive) return [];
+  return maxVariantWidth
+    ? getVariantsUpToWidth(responsive, format, maxVariantWidth)
+    : getFormatVariants(responsive, format);
+}
+
 export function MithronResponsiveImage({
   src,
   alt,
@@ -42,6 +62,11 @@ export function MithronResponsiveImage({
   priority = false,
   loading,
   sizes,
+  imageRole,
+  preferredFormat: preferredFormatProp,
+  maxVariantWidth: maxVariantWidthProp,
+  webpOnly: webpOnlyProp,
+  responsive: responsiveOverride,
   useSourceImage = false,
   className,
   wrapperClassName,
@@ -51,14 +76,35 @@ export function MithronResponsiveImage({
   height: heightProp,
   ...props
 }: MithronResponsiveImageProps) {
+  const profile = imageRole ? getMediaDeliveryProfile(imageRole) : undefined;
+  const maxVariantWidth = maxVariantWidthProp ?? profile?.maxVariantWidth;
+  const preferredFormat = preferredFormatProp ?? profile?.preferredFormat ?? "webp";
+  const webpOnly = webpOnlyProp ?? profile?.webpOnly ?? false;
+
   const resolvedSrc = resolveStorefrontSrc(src);
-  const responsive = useMemo(() => getResponsiveAssetForSrc(src), [src]);
-  const bestVariant = useSourceImage ? undefined : getBestVariant(responsive, "webp");
-  const webpSrcSet = useSourceImage ? "" : createSrcSet(getFormatVariants(responsive, "webp"));
-  const pngSrcSet = useSourceImage ? "" : createSrcSet(getFormatVariants(responsive, "png"));
+  const responsive = useMemo(
+    () => responsiveOverride ?? getResponsiveAssetForSrc(src),
+    [responsiveOverride, src]
+  );
+  const avifVariants = useMemo(
+    () => (webpOnly ? [] : resolveFormatVariants(responsive, "avif", maxVariantWidth, useSourceImage)),
+    [useSourceImage, responsive, maxVariantWidth, webpOnly]
+  );
+  const webpVariants = useMemo(
+    () => resolveFormatVariants(responsive, preferredFormat === "png" ? "png" : "webp", maxVariantWidth, useSourceImage),
+    [useSourceImage, responsive, preferredFormat, maxVariantWidth]
+  );
+  const bestVariant = useSourceImage
+    ? undefined
+    : maxVariantWidth
+      ? getBestVariantUpToWidth(responsive, maxVariantWidth, preferredFormat === "png" ? "png" : "webp")
+      : getBestVariant(responsive, preferredFormat === "png" ? "png" : "webp");
+  const avifSrcSet = useSourceImage || webpOnly ? "" : createSrcSet(avifVariants);
+  const webpSrcSet = useSourceImage ? "" : createSrcSet(webpVariants);
+  const pngSrcSet = useSourceImage || webpOnly ? "" : createSrcSet(getFormatVariants(responsive, "png"));
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const hasResponsiveVariants = !useSourceImage && Boolean(webpSrcSet || pngSrcSet);
-  const useNativeRemoteImage = isRemoteSrc(resolvedSrc) && !hasResponsiveVariants;
+  const hasResponsiveVariants = !useSourceImage && Boolean(avifSrcSet || webpSrcSet || pngSrcSet);
+  const useNativeRemoteImage = isRemoteSrc(resolvedSrc) && !hasResponsiveVariants && !responsiveOverride;
   const optimizedSrc = useSourceImage ? resolvedSrc : (bestVariant?.src ?? resolvedSrc);
   const imageSrc = useSourceImage
     ? resolvedSrc
@@ -75,10 +121,7 @@ export function MithronResponsiveImage({
     "--mithron-image-blur": responsive?.blurDataUrl ? `url(${responsive.blurDataUrl})` : "none"
   } as CSSProperties;
   const resolvedSizes = sizes ?? (fill ? "100vw" : undefined);
-  const maxVariantWidth = Math.max(
-    0,
-    ...getFormatVariants(responsive, "webp").map((variant) => variant.width)
-  );
+  const deliveredMaxVariantWidth = Math.max(0, ...webpVariants.map((variant) => variant.width), ...avifVariants.map((variant) => variant.width));
 
   const handleImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
     const img = event.currentTarget;
@@ -88,10 +131,10 @@ export function MithronResponsiveImage({
       requestedSrc: src,
       deliveredSrc: imageSrc,
       sizes: resolvedSizes,
-      srcSet: webpSrcSet || pngSrcSet,
+      srcSet: avifSrcSet || webpSrcSet || pngSrcSet,
       assetStatus: responsive?.status,
       assetId: responsive?.assetId,
-      maxVariantWidth: maxVariantWidth || undefined
+      maxVariantWidth: deliveredMaxVariantWidth || undefined
     });
   };
 
@@ -150,6 +193,7 @@ export function MithronResponsiveImage({
       className={cn("mithron-responsive-image-frame", fill ? "absolute inset-0 block" : "block", wrapperClassName)}
       style={backgroundStyle}
     >
+      {avifSrcSet ? <source type="image/avif" srcSet={avifSrcSet} sizes={resolvedSizes} /> : null}
       {webpSrcSet ? <source type="image/webp" srcSet={webpSrcSet} sizes={resolvedSizes} /> : null}
       {pngSrcSet ? <source type="image/png" srcSet={pngSrcSet} sizes={resolvedSizes} /> : null}
       <img

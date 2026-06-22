@@ -3,7 +3,8 @@ import { ArrowRight } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductHoverCard } from "@/components/cards/product-hover-card";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronCardImage } from "@/components/media/mithron-card-image";
+import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
 import type { Product } from "@/config/types";
 import { getCatalogShowcaseMedia } from "@/lib/catalog-showcase-media";
 import { clipProductPreviewText } from "@/lib/product-preview-text";
@@ -78,7 +79,7 @@ export function CatalogPage({
         </section>
       ) : shouldRenderFallbackHero ? (
         <section className="catalog-hero-section ambient-section ambient-dark relative -mt-16 overflow-hidden bg-black px-6 pb-12 pt-32 text-white md:min-h-[560px] md:px-16 md:pb-16" data-navbar-ink="light">
-          <MithronResponsiveImage src={heroImage} alt={title} fill className="catalog-hero__bg object-cover opacity-28 blur-[1px] saturate-[.86]" sizes="(min-width: 1440px) 1440px, 100vw" />
+          <MithronPageHeroImage src={heroImage} alt={title} fill className="catalog-hero__bg object-cover opacity-28 blur-[1px] saturate-[.86]" sizes="(min-width: 1440px) 1440px, 100vw" />
           <div className="catalog-hero__shade absolute inset-0" />
           <div className="catalog-hero__floor absolute inset-x-0 bottom-0 h-32" />
           <div className="catalog-hero__layout relative z-10 mx-auto grid max-w-[1440px] items-center gap-10 md:grid-cols-[minmax(0,.9fr)]">
@@ -152,10 +153,11 @@ export function CatalogPage({
               </span>
             </div>
             <div className={isShowroom ? styles.editorialMedia : "catalog-editorial-band__media"} aria-hidden>
-              <MithronResponsiveImage
+              <MithronCardImage
                 src={featuredProduct.image.src}
                 alt={featuredProduct.image.alt}
                 fill
+                responsive={featuredProduct.image.responsive}
                 className={cn(isShowroom ? styles.editorialImage : "catalog-editorial-band__image", !isShowroom && "object-contain")}
                 sizes="(min-width: 1024px) 420px, 72vw"
               />

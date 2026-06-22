@@ -1,4 +1,4 @@
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
 import { getStoryChapters } from "@/lib/product-detail-content";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/config/types";
@@ -39,7 +39,7 @@ export function ProductStory({
               </div>
 
               <div className={styles.storyMediaStage}>
-                <MithronResponsiveImage
+                <MithronPageHeroImage
                   src={chapter.media.src}
                   alt={chapter.media.alt}
                   fill

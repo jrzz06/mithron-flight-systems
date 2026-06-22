@@ -57,7 +57,6 @@ const visibleMasters = [
   { src: "/media/mithron/catalog/survey-drone-category.png", maxEdge: 2560, group: "catalog" },
   { src: "/media/mithron/catalog/surveillance-drone-category.png", maxEdge: 2560, group: "catalog" },
   { src: "/media/mithron/catalog/global-products-category.png", maxEdge: 2560, group: "catalog" },
-  { src: "/media/mithron/shell/mithron-wordmark.png", maxEdge: 1600, group: "nav" },
   { src: "/media/mithron/interests/components.webp", maxEdge: 1600, group: "nav" }
 ];
 

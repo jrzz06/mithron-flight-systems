@@ -11,7 +11,27 @@ export type AdminMutationOptions = {
   allowGuest?: boolean;
   /** Trusted server callbacks (e.g. verified payment webhooks) without a user actor. */
   allowSystemActor?: boolean;
+  /** Compare-and-swap guard for parallel edits. */
+  expectedUpdatedAt?: string | null;
 };
+
+export class AdminRecordConflictError extends Error {
+  readonly currentRow?: JsonRecord;
+
+  constructor(message: string, currentRow?: JsonRecord) {
+    super(message);
+    this.name = "AdminRecordConflictError";
+    this.currentRow = currentRow;
+  }
+}
+
+const optimisticLockTables = new Set([
+  "mithron_products",
+  "inventory",
+  "warehouse_stock",
+  "orders",
+  "shipments"
+]);
 
 const mutableTables = new Set([
   "hero_banners",
@@ -826,9 +846,12 @@ export async function updateAdminRecord(
   const config = assertSupabaseAdminConfig(env);
   const target = identityFromMutationTarget(idColumn, idValue);
   const beforeData = await fetchExistingAdminRecord(table, target.identity, idColumn, env);
-  const response = await fetch(`${config.url}/rest/v1/${table}?${target.query}`, {
+  const optimisticQuery = options.expectedUpdatedAt && optimisticLockTables.has(table)
+    ? `&updated_at=eq.${encodeURIComponent(options.expectedUpdatedAt)}`
+    : "";
+  const response = await fetch(`${config.url}/rest/v1/${table}?${target.query}${optimisticQuery}`, {
     method: "PATCH",
-    headers: headers(config.serviceRoleKey),
+    headers: headers(config.serviceRoleKey, "return=representation"),
     body: JSON.stringify(payload)
   });
 
@@ -836,16 +859,26 @@ export async function updateAdminRecord(
     throw new Error(await mutationErrorMessage(response, table, "update"));
   }
 
-  let record: JsonRecord | undefined;
   const responseText = await response.text();
+  let parsedRecords: JsonRecord[] = [];
   if (responseText) {
     try {
       const parsed = JSON.parse(responseText) as JsonRecord | JsonRecord[];
-      record = Array.isArray(parsed) ? parsed[0] : parsed;
+      parsedRecords = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
     } catch {
-      record = undefined;
+      parsedRecords = [];
     }
   }
+
+  if (options.expectedUpdatedAt && optimisticLockTables.has(table) && parsedRecords.length === 0) {
+    const currentRow = await fetchExistingAdminRecord(table, target.identity, idColumn, env);
+    throw new AdminRecordConflictError(
+      `Concurrent update detected on ${table}. Reload the latest version and retry.`,
+      currentRow ?? undefined
+    );
+  }
+
+  let record: JsonRecord | undefined = parsedRecords[0];
 
   if (!record) {
     const fallback = beforeData ? { ...beforeData, ...payload } : await fetchExistingAdminRecord(table, target.identity, idColumn, env);
@@ -1058,6 +1091,82 @@ export function createNotificationRecord(payload: JsonRecord, actorId: string | 
 
 export function createActivityLogRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
   return insertActivityLogRecord(payload, actorId, env);
+}
+
+export async function appendOrderTimelineViaRpc(
+  orderId: string,
+  entry: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: { expectedUpdatedAt?: string | null } = {}
+) {
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/rpc/append_order_timeline_entry`, {
+    method: "POST",
+    headers: headers(config.serviceRoleKey),
+    cache: "no-store",
+    body: JSON.stringify({
+      p_order_id: orderId,
+      p_entry: entry,
+      p_expected_updated_at: options.expectedUpdatedAt ?? null
+    })
+  });
+
+  const text = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new Error(`Failed to append order timeline: ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 300)}` : ""}`);
+  }
+
+  const result = normalizeMutationRecord(text ? JSON.parse(text) : {});
+  if (result.conflict === true) {
+    throw new AdminRecordConflictError(
+      "Concurrent order update detected. Reload the latest order state and retry.",
+      isPlainRecord(result.current_row) ? result.current_row : undefined
+    );
+  }
+
+  if (result.ok !== true) {
+    throw new Error("Failed to append order timeline entry.");
+  }
+
+  await insertAuditLog("update", "orders", orderId, normalizeMutationRecord(result.row), actorId, env);
+  return normalizeMutationRecord(result.row);
+}
+
+export async function setProductMediaPrimaryViaRpc(
+  productSlug: string,
+  mediaAssetId: string,
+  usage = "primary",
+  actorId: string | null = null,
+  env: EnvSource = process.env
+) {
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/rpc/set_product_media_primary`, {
+    method: "POST",
+    headers: headers(config.serviceRoleKey),
+    cache: "no-store",
+    body: JSON.stringify({
+      p_product_slug: productSlug,
+      p_media_asset_id: mediaAssetId,
+      p_usage: usage
+    })
+  });
+
+  const text = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new Error(`Failed to set primary product media: ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 300)}` : ""}`);
+  }
+
+  const result = normalizeMutationRecord(text ? JSON.parse(text) : {});
+  await insertAuditLog(
+    "upsert",
+    "product_media_assets",
+    `${productSlug}:${mediaAssetId}:${usage}`,
+    result,
+    actorId,
+    env
+  );
+  return result;
 }
 
 export function upsertProfileRecord(

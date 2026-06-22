@@ -97,7 +97,8 @@ describe("enterprise realtime reliability", () => {
     expect(hook).not.toContain("router.refresh");
     expect(hook).toContain("refreshOnEvent");
     expect(warehousePage).not.toContain("EnterpriseRealtimePanel");
-    expect(operationsPage).toContain('scope="operations"');
+    expect(operationsPage).not.toContain("EnterpriseRealtimePanel");
+    expect(operationsPage).toContain("data-operations-route");
     expect(cmsPage).not.toContain("EnterpriseRealtimePanel");
     expect(storefrontPage).not.toContain("EnterpriseRealtimePanel");
     expect(storefrontPage).not.toContain("useEnterpriseRealtime");

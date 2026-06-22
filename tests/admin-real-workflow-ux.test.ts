@@ -38,7 +38,7 @@ describe("admin real workflow UX", () => {
     expect(productsPage).not.toContain("Hero image URL");
     expect(productsPage).not.toContain("Gallery image URLs");
     expect(productsPage).not.toContain("Advanced structured fields");
-    expect(productsPage).toContain("Product name");
+    expect(productsPage).toContain("ProductCreateDetailFields");
     expect(productsPage).toContain("ProductCategoryField");
     expect(productsPage).toContain("Image URL");
     expect(productsPage).toContain("Upload image");
@@ -83,17 +83,17 @@ describe("admin real workflow UX", () => {
     expect(mediaPage).not.toContain("FALLBACK ACTIVE");
   });
 
-  it("switches the control plane to a minimal dark operational theme", () => {
+  it("switches the control plane to a minimal light operational theme", () => {
     const frame = source("components/admin/admin-frame.tsx");
-    const shell = source("components/admin/control-shell.tsx");
+    const shell = source("components/platform/platform-shell.tsx");
     const globals = source("app/globals.css");
 
-    expect(frame).toContain('data-control-plane-theme="dark"');
-    expect(shell).toContain('data-control-plane-theme="dark"');
-    expect(frame).toContain("data-admin-performance-theme");
-    expect(globals).toContain("[data-control-plane-theme=\"dark\"]");
-    expect(globals).toContain("--admin-bg: #080b10");
-    expect(globals).toContain("--admin-text: #e7edf5");
+    expect(shell).toContain('data-control-plane-theme="light"');
+    expect(frame).toContain("PlatformShell");
+    expect(shell).toContain("data-admin-performance-theme");
+    expect(globals).toContain("[data-control-plane-theme=\"light\"]");
+    expect(globals).toContain("--platform-bg: #f5f7fa");
+    expect(globals).toContain("--platform-text-primary: #0f172a");
   });
 
   it("keeps admin and warehouse startup payloads bounded for a responsive prototype", () => {

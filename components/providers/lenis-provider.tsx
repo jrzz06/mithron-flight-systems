@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 const reducedMotionMediaQuery = "(prefers-reduced-motion: reduce)";
 
 type LenisInstance = {
-  raf: (time: number) => void;
   destroy: () => void;
   resize: () => void;
-  on: (event: "scroll", callback: () => void) => () => void;
 };
 
 import { shouldUseNativeScroll } from "@/lib/ui/shell-routes";
@@ -41,25 +39,26 @@ export function LenisProvider({ children }: { children: ReactNode }) {
 
     let disposed = false;
     let lenis: LenisInstance | null = null;
-    let frameId: number | null = null;
-    let unsubscribeScrollTrigger: (() => void) | null = null;
     const root = document.documentElement;
 
     root.dataset.smoothScroll = "initializing";
 
     const teardown = () => {
       disposed = true;
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId);
-        frameId = null;
-      }
-      unsubscribeScrollTrigger?.();
-      unsubscribeScrollTrigger = null;
-      if (lenis) {
-        lenis.destroy();
-      }
+      const activeLenis = lenis;
       lenis = null;
       clearLenisDocumentState(root);
+      if (!activeLenis) return;
+
+      window.requestAnimationFrame(() => {
+        try {
+          activeLenis.destroy();
+        } catch (error) {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("Lenis smooth scroll teardown skipped", error);
+          }
+        }
+      });
     };
 
     const handleReducedMotionChange = () => {
@@ -75,44 +74,22 @@ export function LenisProvider({ children }: { children: ReactNode }) {
         if (disposed) return;
 
         lenis = new Lenis({
-          autoRaf: false,
+          autoRaf: true,
           anchors: true,
           autoResize: true,
           gestureOrientation: "vertical",
-          lerp: 0.1,
+          lerp: 0.08,
           smoothWheel: true,
           syncTouch: false,
           touchMultiplier: 1,
-          wheelMultiplier: 1,
+          wheelMultiplier: 0.95,
           overscroll: true,
           stopInertiaOnNavigate: true,
           prevent: (node) => Boolean(node.closest("[data-lenis-prevent]"))
         });
+        root.classList.add("lenis", "lenis-smooth");
         root.dataset.smoothScroll = "lenis";
         lenis.resize();
-
-        const raf = (time: number) => {
-          if (disposed || !lenis) return;
-          lenis.raf(time);
-          frameId = requestAnimationFrame(raf);
-        };
-        frameId = requestAnimationFrame(raf);
-
-        void import("gsap/ScrollTrigger")
-          .then(({ ScrollTrigger }) => {
-            if (disposed || !lenis) return;
-
-        unsubscribeScrollTrigger = lenis.on("scroll", () => {
-          ScrollTrigger.update();
-          window.dispatchEvent(new Event("mithron:viewport-scroll"));
-        });
-            ScrollTrigger.refresh();
-          })
-          .catch((error: unknown) => {
-            if (process.env.NODE_ENV !== "production") {
-              console.error("Lenis ScrollTrigger bridge failed", error);
-            }
-          });
       })
       .catch((error: unknown) => {
         clearLenisDocumentState(root);

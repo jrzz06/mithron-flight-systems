@@ -9,7 +9,9 @@ import { ProductMediaViewer, type ProductMediaViewerModel } from "@/sections/pro
 import { ProductOverview } from "@/sections/product/product-overview";
 import { ProductStory } from "@/sections/product/product-story";
 import { SpecsFaqReviews } from "@/sections/product/specs-faq-reviews";
+import { JsonLd } from "@/components/seo/json-ld";
 import { getProductOverviewText } from "@/lib/product-detail-content";
+import { buildProductStructuredData } from "@/lib/structured-data";
 import { getPublicCmsSnapshot } from "@/services/cms";
 import { buildProductMetadata } from "@/services/product-metadata";
 import styles from "@/sections/product/product-detail.module.css";
@@ -66,9 +68,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const [relatedProducts, cms] = await Promise.all([getRelatedProductShellItems(slug), getPublicCmsSnapshot()]);
   const overviewText = getProductOverviewText(product);
   const showOverview = overviewText.length > 80;
+  const structuredData = buildProductStructuredData(product);
 
   return (
     <article className={`product-detail-page ${styles.page}`}>
+      <JsonLd data={structuredData} />
       <ProductDetailHeader product={product} />
       <section className={styles.heroSection}>
         <div className={styles.heroGrid}>

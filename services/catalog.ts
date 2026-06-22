@@ -15,6 +15,7 @@ import {
 import { formatAvailability, isSpecLikeBlob, parseInlineSpecPairs } from "@/lib/product-spec-text";
 import { customerFacingAvailability } from "@/services/inventory-csv";
 import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
+import { buildProductResponsiveAsset } from "@/lib/media/product-responsive";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -86,6 +87,8 @@ type ProductMediaLinkRow = {
 
 type MediaAssetRow = {
   id: string | null;
+  bucket?: string | null;
+  storage_path?: string | null;
   public_url: string | null;
   mime_type: string | null;
   width: number | string | null;
@@ -93,7 +96,15 @@ type MediaAssetRow = {
   alt: string | null;
   alt_text: string | null;
   caption: string | null;
+  thumbnail_path?: string | null;
+  webp_path?: string | null;
+  variants?: unknown;
+  responsive_variants?: unknown;
 };
+
+const MEDIA_ASSET_SELECT =
+  "id,bucket,storage_path,public_url,mime_type,width,height,alt,alt_text,caption,responsive_variants,variants";
+const MEDIA_ASSET_CHUNK_SIZE = 20;
 
 export type ProductShellItem = {
   slug: string;
@@ -319,21 +330,42 @@ function mediaFromSourceImage(image: SourceImageRecord | undefined, alt: string)
   };
 }
 
+function enrichImageWithLinkedResponsive(image: MediaAsset, linked?: MediaAsset): MediaAsset {
+  if (!linked?.responsive || image.responsive) return image;
+  const normalizedImageSrc = image.src.split("?")[0];
+  const normalizedLinkedSrc = linked.src.split("?")[0];
+  if (normalizedImageSrc === normalizedLinkedSrc) {
+    return { ...image, responsive: linked.responsive };
+  }
+  return image;
+}
+
+function normalizeMediaAssetRow(row: MediaAssetRow): MediaAssetRow {
+  return {
+    ...row,
+    responsive_variants: row.responsive_variants ?? row.variants
+  };
+}
+
 function mediaFromMediaAssetRow(row: MediaAssetRow | undefined, fallbackAlt: string): MediaAsset | null {
-  const src = typeof row?.public_url === "string" ? row.public_url.trim() : "";
+  if (!row) return null;
+  const normalizedRow = normalizeMediaAssetRow(row);
+  const src = typeof normalizedRow.public_url === "string" ? normalizedRow.public_url.trim() : "";
   if (!src) return null;
-  const dimensions = trustedCatalogDimensions(src, row?.width, row?.height);
+  const dimensions = trustedCatalogDimensions(src, normalizedRow.width, normalizedRow.height);
   if (!dimensions.width || !dimensions.height) return null;
-  const kind = row?.mime_type?.startsWith("video/") ? "video" : "image";
+  const kind = normalizedRow.mime_type?.startsWith("video/") ? "video" : "image";
+  const responsive = buildProductResponsiveAsset(normalizedRow, fallbackAlt, process.env.NEXT_PUBLIC_SUPABASE_URL);
 
   return {
-    id: typeof row?.id === "string" ? row.id : undefined,
+    id: typeof normalizedRow.id === "string" ? normalizedRow.id : undefined,
     src,
-    alt: cleanText(row?.alt_text ?? row?.alt ?? row?.caption, fallbackAlt),
+    alt: cleanText(normalizedRow.alt_text ?? normalizedRow.alt ?? normalizedRow.caption, fallbackAlt),
     kind,
     width: dimensions.width,
     height: dimensions.height,
-    local: false
+    local: false,
+    responsive
   };
 }
 
@@ -473,13 +505,34 @@ function isCatalogCutoutSrc(src: string) {
 function resolveProductImage(
   row: Pick<MithronProductRow, "image" | "hero" | "gallery" | "source_images">,
   name: string,
-  linkedMedia?: MediaAsset
+  linkedMedia?: MediaAsset,
+  slug?: string
 ) {
-  const rowImage = selectPrimaryProductImage(row, name);
   if (linkedMedia && isCatalogCutoutSrc(linkedMedia.src)) return linkedMedia;
-  if (rowImage) return rowImage;
   if (linkedMedia) return linkedMedia;
+
+  const rowImage = selectPrimaryProductImage(row, name);
+  if (rowImage) {
+    if (slug) {
+      console.warn(`[catalog] product ${slug} is using inline JSON image fallback; link a primary media_assets row.`);
+    }
+    return rowImage;
+  }
+
   return null;
+}
+
+function resolveHydratedProductImage(
+  row: Pick<MithronProductRow, "image" | "hero" | "gallery" | "source_images">,
+  name: string,
+  linkedPrimaryImage?: MediaAsset,
+  slug?: string
+): MediaAsset {
+  const image = resolveProductImage(row, name, linkedPrimaryImage, slug);
+  if (!image) {
+    throw new Error(`Missing source image for Mithron product ${slug ?? "unknown"}.`);
+  }
+  return enrichImageWithLinkedResponsive(image, linkedPrimaryImage);
 }
 
 function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset): Product {
@@ -491,11 +544,7 @@ function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset):
     sourceDescription: row.source_description
   });
   const sourceImages = row.source_images ?? [];
-  const image = resolveProductImage(row, name, linkedPrimaryImage);
-
-  if (!image) {
-    throw new Error(`Missing source image for Mithron product ${row.slug}.`);
-  }
+  const image = resolveHydratedProductImage(row, name, linkedPrimaryImage, row.slug);
 
   const hero = mediaFromJson(row.hero, name) ?? image;
   const gallery = [
@@ -555,11 +604,7 @@ function mapProductShellRow(row: MithronProductShellRow, linkedPrimaryImage?: Me
     tagline: row.tagline,
     sourceDescription: row.source_description
   });
-  const image = resolveProductImage(row, name, linkedPrimaryImage);
-
-  if (!image) {
-    throw new Error(`Missing source image for Mithron product ${row.slug}.`);
-  }
+  const image = resolveHydratedProductImage(row, name, linkedPrimaryImage, row.slug);
 
   const interestsValue = row.interests ?? [];
   return {
@@ -684,66 +729,120 @@ async function fetchCatalogRows<T>(query: string): Promise<T[]> {
   return fetchSupabaseRows<T>("mithron_products", query);
 }
 
-async function fetchMediaAssetsById(mediaIds: string[]) {
-  const chunks = chunkItems(mediaIds, 40);
-  const chunkResults = await Promise.all(
-    chunks.map((chunk) => fetchSupabaseRows<MediaAssetRow>(
-      "media_assets",
-      `select=id,public_url,mime_type,width,height,alt,alt_text,caption&id=${encodeURIComponent(postgrestIn(chunk))}&limit=${chunk.length}`,
-      true
-    ))
-  );
+async function fetchMediaAssetChunk(chunk: string[]) {
+  if (!chunk.length) return [] as MediaAssetRow[];
 
-  const mediaRows = chunkResults.flat();
-  return new Map(mediaRows.map((row) => [row.id, row]));
+  try {
+    return await fetchSupabaseRows<MediaAssetRow>(
+      "media_assets",
+      `select=${MEDIA_ASSET_SELECT}&id=${encodeURIComponent(postgrestIn(chunk))}&limit=${chunk.length}`,
+      true
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] media_assets batch lookup failed (${chunk.length} ids): ${message}`);
+  }
+
+  const recovered: MediaAssetRow[] = [];
+  for (const id of chunk) {
+    try {
+      const rows = await fetchSupabaseRows<MediaAssetRow>(
+        "media_assets",
+        `select=${MEDIA_ASSET_SELECT}&id=eq.${encodeURIComponent(id)}&limit=1`,
+        true
+      );
+      recovered.push(...rows);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[catalog] skipped media asset ${id}: ${message}`);
+    }
+  }
+
+  return recovered;
+}
+
+async function fetchMediaAssetsById(mediaIds: string[]) {
+  const uniqueIds = [...new Set(mediaIds.map((id) => id?.trim()).filter((id): id is string => Boolean(id)))];
+  if (!uniqueIds.length) return new Map<string, MediaAssetRow>();
+
+  const chunks = chunkItems(uniqueIds, MEDIA_ASSET_CHUNK_SIZE);
+  const mediaRows = (await Promise.all(chunks.map((chunk) => fetchMediaAssetChunk(chunk)))).flat();
+  return new Map(
+    mediaRows
+      .filter((row): row is MediaAssetRow & { id: string } => typeof row.id === "string" && row.id.length > 0)
+      .map((row) => [row.id, normalizeMediaAssetRow(row)])
+  );
+}
+
+async function fetchProductMediaLinks(query: string) {
+  try {
+    return await fetchSupabaseRows<ProductMediaLinkRow>("product_media_assets", query, true);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] product_media_assets lookup failed; retrying with base columns: ${message}`);
+    const baseQuery = query
+      .replace(/,?alt_text/g, "")
+      .replace(/,?caption/g, "")
+      .replace(/,?variant_id/g, "")
+      .replace(/&variant_id=eq\.[^&]+/g, "");
+    return fetchSupabaseRows<ProductMediaLinkRow>("product_media_assets", baseQuery, true);
+  }
 }
 
 const getPrimaryProductMediaLookup = cache(async (): Promise<Map<string, MediaAsset>> => {
   const { hasServiceRoleKey } = getCatalogConfig(true);
   if (!hasServiceRoleKey) return new Map();
 
-  const links = await fetchSupabaseRows<ProductMediaLinkRow>(
-    "product_media_assets",
-    `select=product_slug,media_asset_id,usage,is_primary,sort_order,alt_text,caption&usage=eq.primary&is_primary=eq.true&limit=${PRODUCT_MEDIA_LIMIT}`,
-    true
-  );
-  const mediaIds = [...new Set(links.map((link) => link.media_asset_id).filter((id): id is string => Boolean(id)))];
-  if (!mediaIds.length) return new Map();
+  try {
+    const links = await fetchProductMediaLinks(
+      `select=product_slug,media_asset_id,usage,is_primary,sort_order,alt_text,caption&usage=eq.primary&is_primary=eq.true&limit=${PRODUCT_MEDIA_LIMIT}`
+    );
+    const mediaIds = [...new Set(links.map((link) => link.media_asset_id).filter((id): id is string => Boolean(id)))];
+    if (!mediaIds.length) return new Map();
 
-  const mediaById = await fetchMediaAssetsById(mediaIds);
-  const lookup = new Map<string, MediaAsset>();
+    const mediaById = await fetchMediaAssetsById(mediaIds);
+    const lookup = new Map<string, MediaAsset>();
 
-  for (const link of links.sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))) {
-    if (!link.product_slug || !link.media_asset_id || lookup.has(link.product_slug)) continue;
-    const media = mediaFromMediaAssetRow(mediaById.get(link.media_asset_id), link.alt_text ?? link.caption ?? link.product_slug);
-    if (media) lookup.set(link.product_slug, media);
+    for (const link of links.sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))) {
+      if (!link.product_slug || !link.media_asset_id || lookup.has(link.product_slug)) continue;
+      const media = mediaFromMediaAssetRow(mediaById.get(link.media_asset_id), link.alt_text ?? link.caption ?? link.product_slug);
+      if (media) lookup.set(link.product_slug, media);
+    }
+
+    return lookup;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] primary product media lookup failed; using inline JSON image fallback: ${message}`);
+    return new Map();
   }
-
-  return lookup;
 });
 
 const getCatalogCutoutMediaLookup = cache(async (): Promise<Map<string, MediaAsset>> => {
   const { hasServiceRoleKey } = getCatalogConfig(true);
   if (!hasServiceRoleKey) return new Map();
 
-  const links = await fetchSupabaseRows<ProductMediaLinkRow>(
-    "product_media_assets",
-    `select=product_slug,media_asset_id,usage,variant_id,is_primary,sort_order,alt_text,caption&usage=eq.cms&variant_id=eq.catalog-cutout-v1&limit=${PRODUCT_MEDIA_LIMIT}`,
-    true
-  );
-  const mediaIds = [...new Set(links.map((link) => link.media_asset_id).filter((id): id is string => Boolean(id)))];
-  if (!mediaIds.length) return new Map();
+  try {
+    const links = await fetchProductMediaLinks(
+      `select=product_slug,media_asset_id,usage,variant_id,is_primary,sort_order,alt_text,caption&usage=eq.cms&variant_id=eq.catalog-cutout-v1&limit=${PRODUCT_MEDIA_LIMIT}`
+    );
+    const mediaIds = [...new Set(links.map((link) => link.media_asset_id).filter((id): id is string => Boolean(id)))];
+    if (!mediaIds.length) return new Map();
 
-  const mediaById = await fetchMediaAssetsById(mediaIds);
-  const lookup = new Map<string, MediaAsset>();
+    const mediaById = await fetchMediaAssetsById(mediaIds);
+    const lookup = new Map<string, MediaAsset>();
 
-  for (const link of links.sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))) {
-    if (!link.product_slug || !link.media_asset_id || lookup.has(link.product_slug)) continue;
-    const media = mediaFromMediaAssetRow(mediaById.get(link.media_asset_id), link.alt_text ?? link.caption ?? link.product_slug);
-    if (media) lookup.set(link.product_slug, media);
+    for (const link of links.sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))) {
+      if (!link.product_slug || !link.media_asset_id || lookup.has(link.product_slug)) continue;
+      const media = mediaFromMediaAssetRow(mediaById.get(link.media_asset_id), link.alt_text ?? link.caption ?? link.product_slug);
+      if (media) lookup.set(link.product_slug, media);
+    }
+
+    return lookup;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
+    return new Map();
   }
-
-  return lookup;
 });
 
 async function mapRowsWithPrimaryMedia<T extends Pick<MithronProductRow, "slug">, R>(
@@ -857,6 +956,49 @@ export async function getProductStaticSlugs() {
     `select=slug&${publishedCatalogFilter}&order=sort_order.asc&limit=${CATALOG_LIST_LIMIT}`
   );
   return rows.map((product) => product.slug).filter(Boolean);
+}
+
+export type ProductSitemapEntry = {
+  slug: string;
+  productUrl: string | null;
+  updatedAt: string | null;
+};
+
+export async function getPublishedProductSitemapEntries(): Promise<ProductSitemapEntry[]> {
+  const rows = await fetchCatalogRows<{ slug: string; product_url: string | null; updated_at: string | null }>(
+    `select=slug,product_url,updated_at&${publishedCatalogFilter}&order=sort_order.asc&limit=${CATALOG_LIST_LIMIT}`
+  );
+
+  return rows.map((row) => ({
+    slug: row.slug,
+    productUrl: row.product_url,
+    updatedAt: row.updated_at
+  }));
+}
+
+export async function countPublishedProductsWithoutPrimaryLink(): Promise<{
+  publishedCount: number;
+  linkedCount: number;
+  missingCount: number;
+}> {
+  const [productRows, links] = await Promise.all([
+    fetchCatalogRows<{ slug: string }>(`select=slug&${publishedCatalogFilter}&limit=${CATALOG_LIST_LIMIT}`),
+    fetchSupabaseRows<{ product_slug: string }>(
+      "product_media_assets",
+      `select=product_slug&usage=eq.primary&is_primary=eq.true&limit=${PRODUCT_MEDIA_LIMIT}`,
+      true
+    )
+  ]);
+
+  const linkedSlugs = new Set(links.map((link) => link.product_slug).filter(Boolean));
+  const publishedCount = productRows.length;
+  const linkedCount = productRows.filter((row) => linkedSlugs.has(row.slug)).length;
+
+  return {
+    publishedCount,
+    linkedCount,
+    missingCount: Math.max(0, publishedCount - linkedCount)
+  };
 }
 
 export async function getFeaturedProducts() {

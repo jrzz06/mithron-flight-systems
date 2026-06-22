@@ -73,6 +73,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/favicon.ico", destination: "/favicon.svg", permanent: true },
       { source: "/agriculture", destination: "/category/agri-drones", permanent: true },
       { source: "/video-drones", destination: "/category/video-drones", permanent: true },
       { source: "/creative-drones", destination: "/category/creative-drones", permanent: true },

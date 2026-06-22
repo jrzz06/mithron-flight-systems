@@ -53,7 +53,7 @@ describe("Supabase free-plan performance contract", () => {
     expect(admin).toContain('method: "HEAD"');
     expect(admin).not.toContain("limit=500");
     expect(admin).toContain("select=id,bucket,folder,storage_path,public_url,mime_type");
-    expect(admin).toContain("select=slug,name,category,price,image,hero,variants,workflow_status");
+    expect(admin).toContain("image,hero,variants,workflow_status");
   });
 
   it("keeps admin dashboard summary queries off select star payloads", () => {

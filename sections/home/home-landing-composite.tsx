@@ -5,12 +5,15 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, type CSSProperties, 
 import { ArrowRight, Star } from "lucide-react";
 import type { Product, MediaAsset } from "@/config/types";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronCardImage } from "@/components/media/mithron-card-image";
+import { MithronMissionTileImage } from "@/components/media/mithron-mission-tile-image";
 import { MithronShelfHeroImage } from "@/components/media/mithron-shelf-hero-image";
+import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { footerContent, type FooterContent } from "@/config/storefront-content";
 import { isCmsStrictMode } from "@/lib/cms/strict-mode";
 import type { HomepageCmsContent } from "@/config/homepage-cms";
 import { defaultHomepageCmsContent } from "@/config/homepage-cms";
+import { homepageMediaFallbacks as localMedia } from "@/config/homepage-media-fallbacks";
 import {
   filterDroneCareProducts,
   filterDroneWorldProducts,
@@ -23,63 +26,6 @@ import { useReducedMotionPreference } from "@/hooks/use-reduced-motion";
 import { formatUsd } from "@/lib/utils";
 import type { ProductReviewContent } from "@/config/storefront-content";
 import styles from "./home-landing-composite.module.css";
-
-type CompositeMotionRuntime = {
-  gsap: typeof import("gsap")["gsap"];
-  ScrollTrigger: typeof import("gsap/ScrollTrigger")["ScrollTrigger"];
-};
-
-let compositeMotionRuntimePromise: Promise<CompositeMotionRuntime> | null = null;
-
-type IdleCallbackDeadlineLike = {
-  didTimeout: boolean;
-  timeRemaining: () => number;
-};
-
-type WindowWithIdleCallback = Window & {
-  requestIdleCallback?: (
-    callback: (deadline: IdleCallbackDeadlineLike) => void,
-    options?: { timeout: number }
-  ) => number;
-  cancelIdleCallback?: (handle: number) => void;
-};
-
-async function loadCompositeMotionRuntime(): Promise<CompositeMotionRuntime> {
-  const [{ gsap }, { ScrollTrigger }] = await Promise.all([
-    import("gsap"),
-    import("gsap/ScrollTrigger")
-  ]);
-
-  gsap.registerPlugin(ScrollTrigger);
-
-  return { gsap, ScrollTrigger };
-}
-
-function getCompositeMotionRuntime() {
-  compositeMotionRuntimePromise ??= loadCompositeMotionRuntime();
-  return compositeMotionRuntimePromise;
-}
-
-function scheduleCompositeMotion(callback: () => void) {
-  const idleWindow = window as WindowWithIdleCallback;
-  let idleHandle: number | null = null;
-  let fallbackHandle: number | null = null;
-
-  const bootHandle = window.setTimeout(() => {
-    if (typeof idleWindow.requestIdleCallback === "function") {
-      idleHandle = idleWindow.requestIdleCallback(callback, { timeout: 1400 });
-      return;
-    }
-
-    fallbackHandle = window.setTimeout(callback, 650);
-  }, 1600);
-
-  return () => {
-    window.clearTimeout(bootHandle);
-    if (idleHandle !== null) idleWindow.cancelIdleCallback?.(idleHandle);
-    if (fallbackHandle !== null) window.clearTimeout(fallbackHandle);
-  };
-}
 
 type ProofState = "VERIFIED" | "FALLBACK";
 type MediaState = "VERIFIED" | "FALLBACK";
@@ -159,195 +105,6 @@ type MiniCarouselItem = {
   media: Pick<MediaAsset, "src" | "alt">;
   sourceState: ProofState;
 };
-
-const localMedia = {
-  droneWorld: {
-    src: "/media/mithron/showcase/drone_world_hero.png",
-    alt: "Mithron drone fleet operating across a rugged mountain valley at golden hour",
-    caption: "Aircraft, payload, pilot, and route context",
-    sourceState: "VERIFIED"
-  },
-  droneCare: {
-    src: "/media/mithron/showcase/drone_care_hero.png",
-    alt: "Mithron Drone Care complete kit with aircraft, controller, batteries, propellers, and service case",
-    caption: "Spares, care paths, and operating continuity",
-    sourceState: "VERIFIED"
-  },
-  globalProducts: {
-    src: "/media/mithron/showcase/global_products_hero.png",
-    alt: "Global Drone Connect industrial drone carrying a shipping container over a digital logistics hub at night",
-    caption: "Mission-ready products from the catalog",
-    sourceState: "VERIFIED"
-  },
-  agri: {
-    src: "/media/mithron/dynamic-scroll/agriculture-flight.webp",
-    alt: "Mithron agriculture drone over field rows",
-    caption: "Crop spraying, mapping, and precision farming",
-    sourceState: "VERIFIED"
-  },
-  agriField: {
-    src: "/media/mithron/interests/agriculture.webp",
-    alt: "Agriculture drone operating above farmland",
-    caption: "Agriculture mission media",
-    sourceState: "VERIFIED"
-  },
-  smartFarming: {
-    src: "/media/mithron/interests/smart-farming.webp",
-    alt: "Smart farming drone deployment over crop rows",
-    caption: "Smart farming mission media",
-    sourceState: "VERIFIED"
-  },
-  precisionSpray: {
-    src: "/media/mithron/mission/precision-spray.webp",
-    alt: "Agriculture spraying mission over cultivated field rows",
-    caption: "Precision spray mission media",
-    sourceState: "VERIFIED"
-  },
-  cropHealth: {
-    src: "/media/mithron/mission/crop-health.webp",
-    alt: "Agriculture drone crop health monitoring mission",
-    caption: "Crop health monitoring media",
-    sourceState: "VERIFIED"
-  },
-  missionPlanning: {
-    src: "/media/mithron/mission/mission-planning.webp",
-    alt: "Drone mission planning route over mixed terrain",
-    caption: "Mission planning media",
-    sourceState: "VERIFIED"
-  },
-  terrainRadar: {
-    src: "/media/mithron/mission/terrain-radar.webp",
-    alt: "Drone mapping terrain and route intelligence view",
-    caption: "Terrain mapping media",
-    sourceState: "VERIFIED"
-  },
-  agriCategory: {
-    src: "/media/mithron/catalog/agri-drone-category.png",
-    alt: "Mithron agriculture drone category showcase",
-    caption: "Agri drone category media",
-    sourceState: "VERIFIED"
-  },
-  city: {
-    src: "/media/mithron/dynamic-scroll/night-surveillance.webp",
-    alt: "Mithron surveillance mission media for city operations",
-    caption: "Supabase-backed surveillance mission media",
-    sourceState: "VERIFIED"
-  },
-  industrialInspection: {
-    src: "/media/mithron/categories/industrial-inspection.webp",
-    alt: "Industrial inspection drone mission environment",
-    caption: "Industrial inspection media",
-    sourceState: "VERIFIED"
-  },
-  defenseSecurity: {
-    src: "/media/mithron/categories/defense-security.webp",
-    alt: "Security drone mission environment",
-    caption: "Security and emergency mission media",
-    sourceState: "VERIFIED"
-  },
-  surveillance: {
-    src: "/media/mithron/categories/surveillance.webp",
-    alt: "Surveillance drone city operations mission",
-    caption: "Surveillance mission media",
-    sourceState: "VERIFIED"
-  },
-  mapping: {
-    src: "/media/mithron/catalog/survey-drone-category.png",
-    alt: "Mithron survey drone mapping category",
-    caption: "Survey and mapping category media",
-    sourceState: "VERIFIED"
-  },
-  mappingFlight: {
-    src: "/media/mithron/hero/mapping-flight.webp",
-    alt: "Survey drone flight over mapped terrain",
-    caption: "Mapping flight mission media",
-    sourceState: "VERIFIED"
-  },
-  securityGrid: {
-    src: "/media/mithron/hero/security-grid.webp",
-    alt: "Security drone mission over an operational landscape",
-    caption: "Security mission media",
-    sourceState: "VERIFIED"
-  },
-  operationsInfrastructure: {
-    src: "/media/mithron/operations/operational-ecosystem-infrastructure-source.png",
-    alt: "Drone operations infrastructure and field support visual",
-    caption: "Infrastructure operations media",
-    sourceState: "VERIFIED"
-  },
-  mapBanner: {
-    src: "/media/mithron/operations/map-banner.png",
-    alt: "Drone mapping operations banner",
-    caption: "Urban mapping operations media",
-    sourceState: "VERIFIED"
-  },
-  globalMission: {
-    src: "/media/mithron/dynamic-scroll/global-mission.webp",
-    alt: "Mithron drone mission over city and field context",
-    caption: "Mission media fallback",
-    sourceState: "VERIFIED"
-  },
-  citySmartMonitoring: {
-    src: "/media/mithron/mission/city/city-drone-rental-services-app.png",
-    alt: "City Drone Rental Services App showing drone booking and operator workflow",
-    caption: "City Drone Rental Services App",
-    sourceState: "VERIFIED"
-  },
-  cityTrafficAnalytics: {
-    src: "/media/mithron/mission/city/dronelancer-model.png",
-    alt: "Dronelancer Model ecosystem with pilot mobile app and city coordination interface",
-    caption: "Dronelancer Model",
-    sourceState: "VERIFIED"
-  },
-  cityInfrastructureInspection: {
-    src: "/media/mithron/mission/city/drone-franchisecare-center.png",
-    alt: "Drone FranchiseCare Center with repair bench, service hub, and connected city nodes",
-    caption: "Drone FranchiseCare Center",
-    sourceState: "VERIFIED"
-  },
-  cityCrowdMonitoring: {
-    src: "/media/mithron/mission/city/drone-technician-aggregation.png",
-    alt: "Drone Technician Aggregation network with service tools, operators, and city support systems",
-    caption: "Drone Technician Aggregation",
-    sourceState: "VERIFIED"
-  },
-  cityEmergencyResponse: {
-    src: "/media/mithron/mission/city/all-drone-acadamic.png",
-    alt: "All Drone Acadamic ecosystem showing training, simulation, devices, and flight systems",
-    caption: "All Drone Acadamic",
-    sourceState: "VERIFIED"
-  },
-  agronePilotRegistration: {
-    src: "/media/mithron/mission/agrone/agrone-pilot-registration.png",
-    alt: "AGRONE pilot standing confidently beside an agricultural drone",
-    caption: "AGRONE pilot registration",
-    sourceState: "VERIFIED"
-  },
-  agroneDroneOwnerRegistration: {
-    src: "/media/mithron/mission/agrone/agrone-drone-owner-registration.png",
-    alt: "AGRONE drone owner standing beside a newly registered agricultural drone",
-    caption: "AGRONE drone owner registration",
-    sourceState: "VERIFIED"
-  },
-  agroneSmartFarmerRegistration: {
-    src: "/media/mithron/mission/agrone/smart-farmer-register.png",
-    alt: "Smart farmer using a tablet with an agricultural drone operating above the crop field",
-    caption: "Smart farmer registration",
-    sourceState: "VERIFIED"
-  },
-  agroneAgriDroneLoanEmi: {
-    src: "/media/mithron/mission/agrone/agri-drone-loan.png",
-    alt: "Farmer evaluating agri-drone loan and EMI options on a tablet beside a drone",
-    caption: "Agri drone loan and EMI check",
-    sourceState: "VERIFIED"
-  },
-  agroneFarmerDroneBooking: {
-    src: "/media/mithron/mission/agrone/all-india-drone-farmer.png",
-    alt: "AGRONE operator using a tablet at a drone service facility and deployment area",
-    caption: "All India farmer drone booking",
-    sourceState: "VERIFIED"
-  }
-} satisfies Record<string, ChapterMedia>;
 
 function hasAny(product: Product, values: string[]) {
   const haystack = [
@@ -767,12 +524,13 @@ function ProductShelfSection({
                         <span className={styles.productCutoutShadowGround} aria-hidden />
                         <span className={styles.productCutoutShadowContact} aria-hidden />
                         {/* Product thumbnail is decorative because the adjacent link text names the product. */}
-                        <MithronResponsiveImage
+                        <MithronCardImage
                           src={product.image.src}
                           alt=""
                           aria-hidden={true}
                           fill
                           priority={productIndex < 2}
+                          responsive={product.image.responsive}
                           sizes="(max-width: 640px) 72vw, (max-width: 1024px) 36vw, 270px"
                           className={styles.productImage}
                         />
@@ -805,7 +563,7 @@ function ProductShelfSection({
                   <ArrowRight size={14} />
                 </span>
                 {guideMedia ? (
-                  <MithronResponsiveImage
+                  <MithronCardImage
                     src={guideMedia.src}
                     alt=""
                     aria-hidden={true}
@@ -1038,10 +796,11 @@ function TestimonialReviewCard({ item }: { item: HomeProductReview }) {
       </footer>
       <Link href={`/product/${item.productSlug}`} className={styles.testimonialProduct}>
         <span className={styles.testimonialProductImageWell}>
-          <MithronResponsiveImage
+          <MithronThumbImage
             src={item.productImage.src}
             alt={item.productImage.alt}
             fill
+            responsive={item.productImage.responsive}
             sizes="(max-width: 640px) 64px, 72px"
             className={styles.testimonialProductImage}
           />
@@ -1146,6 +905,11 @@ export function HomeLandingComposite({
   const rootRef = useRef<HTMLElement | null>(null);
   const miniCarouselRailRef = useRef<HTMLDivElement | null>(null);
   const reducedMotion = useReducedMotionPreference();
+  const scrollMiniCarousel = useCallback(() => {
+    const rail = miniCarouselRailRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: rail.clientWidth * 0.8, behavior: reducedMotion ? "auto" : "smooth" });
+  }, [reducedMotion]);
   const strictWithoutCms = isCmsStrictMode() && !homepageCms;
   const cms = homepageCms ?? defaultHomepageCmsContent;
   const shelfConfigs = useMemo(
@@ -1302,216 +1066,16 @@ export function HomeLandingComposite({
   const resolvedFooter = footer ?? (isCmsStrictMode() ? null : footerContent);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-
-    console.table(
-      products.map((product) => ({
-        "Product Name": product.name,
-        "Product Category": product.category,
-        "Shelf Assigned": resolveHomepageShelf(product)
-      }))
-    );
-  }, [products]);
-
-  const scrollMiniCarousel = useCallback(() => {
-    const rail = miniCarouselRailRef.current;
-    if (!rail) return;
-    const step = Math.max(320, rail.clientWidth * 0.72);
-    const maxScroll = rail.scrollWidth - rail.clientWidth;
-    if (maxScroll <= 0) return;
-
-    const nextLeft = rail.scrollLeft + step;
-    if (nextLeft >= maxScroll - 8) {
-      rail.scrollTo({ left: 0, behavior: reducedMotion ? "auto" : "smooth" });
-      return;
-    }
-
-    rail.scrollBy({
-      left: step,
-      behavior: reducedMotion ? "auto" : "smooth"
-    });
-  }, [reducedMotion]);
-
-  useEffect(() => {
-    if (miniCarouselItems.length <= 1) return;
-
-    let cancelled = false;
-    let timer: number | undefined;
-
-    const scheduleNextAdvance = () => {
-      timer = window.setTimeout(() => {
-        if (cancelled) return;
-        if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          scrollMiniCarousel();
-        }
-        scheduleNextAdvance();
-      }, 4500);
-    };
-
-    scheduleNextAdvance();
-
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [miniCarouselItems.length, scrollMiniCarousel]);
-
-  useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
 
     if (reducedMotion) {
       root.setAttribute("data-motion-state", "reduced");
-      root.style.setProperty("--home-composite-progress", "0");
       return;
     }
 
-    root.setAttribute("data-motion-state", "pending");
-    let cancelled = false;
-    let cleanupMotionRuntime: (() => void) | null = null;
-    let cancelScheduledMotion: (() => void) | null = null;
-
-    cancelScheduledMotion = scheduleCompositeMotion(() => {
-      if (cancelled) return;
-
-      root.setAttribute("data-motion-state", "active");
-
-      void getCompositeMotionRuntime()
-        .then(({ gsap, ScrollTrigger }) => {
-          if (cancelled) return;
-
-          const ctx = gsap.context(() => {
-            ScrollTrigger.create({
-              trigger: root,
-              start: "top bottom",
-              end: "bottom bottom",
-              scrub: true,
-              onUpdate: (self) => {
-                root.style.setProperty("--home-composite-progress", self.progress.toFixed(3));
-              }
-            });
-
-            const chapterNodes = gsap.utils.toArray<HTMLElement>("[data-home-composite-chapter]");
-            chapterNodes.forEach((chapter) => {
-              const revealNodes = chapter.querySelectorAll<HTMLElement>("[data-home-composite-reveal]");
-              if (revealNodes.length > 0) {
-                gsap.fromTo(
-                  revealNodes,
-                  { autoAlpha: 0.86, y: 22 },
-                  {
-                    autoAlpha: 1,
-                    y: 0,
-                    ease: "power3.out",
-                    stagger: 0.06,
-                    scrollTrigger: {
-                      trigger: chapter,
-                      start: "top 84%",
-                      end: "top 46%",
-                      scrub: true
-                    }
-                  }
-                );
-              }
-
-              if (chapter.dataset.missionMotion === "skip") {
-                return;
-              }
-
-              const missionTextNodes = Array.from(chapter.querySelectorAll<HTMLElement>("[data-mission-text-reveal]"));
-              const missionTileNodes = Array.from(chapter.querySelectorAll<HTMLElement>("[data-mission-image-reveal]"));
-              const missionImageNodes = missionTileNodes;
-              const missionCaptionNodes = Array.from(chapter.querySelectorAll<HTMLElement>("[data-mission-caption-reveal]"));
-
-              if (missionTextNodes.length > 0 || missionTileNodes.length > 0) {
-                const missionTimeline = gsap.timeline({
-                  defaults: { ease: "power3.out" },
-                  scrollTrigger: {
-                    trigger: chapter,
-                    start: "top 76%",
-                    toggleActions: "play none none reverse"
-                  }
-                });
-
-                if (missionTextNodes.length > 0) {
-                  missionTimeline.fromTo(
-                    missionTextNodes,
-                    { autoAlpha: 0, y: 28, clipPath: "inset(0 0 18% 0)" },
-                    {
-                      autoAlpha: 1,
-                      y: 0,
-                      clipPath: "inset(0 0 0% 0)",
-                      duration: 0.64,
-                      stagger: 0.08
-                    },
-                    0
-                  );
-                }
-
-                if (missionTileNodes.length > 0) {
-                  missionTimeline.fromTo(
-                    missionTileNodes,
-                    { autoAlpha: 0, y: 36, scale: 0.985, clipPath: "inset(10% 0 10% 0 round 8px)" },
-                    {
-                      autoAlpha: 1,
-                      y: 0,
-                      scale: 1,
-                      clipPath: "inset(0% 0 0% 0 round 8px)",
-                      duration: 0.72,
-                      stagger: 0.08
-                    },
-                    0.12
-                  );
-                }
-
-                if (missionImageNodes.length > 0) {
-                  missionTimeline.fromTo(
-                    missionImageNodes,
-                    { "--mission-image-reveal-scale": 1.02 },
-                    {
-                      "--mission-image-reveal-scale": 1,
-                      duration: 0.86,
-                      stagger: 0.08
-                    },
-                    0.12
-                  );
-                }
-
-                if (missionCaptionNodes.length > 0) {
-                  missionTimeline.fromTo(
-                    missionCaptionNodes,
-                    { autoAlpha: 0, y: 18 },
-                    {
-                      autoAlpha: 1,
-                      y: 0,
-                      duration: 0.52,
-                      stagger: 0.06
-                    },
-                    0.34
-                  );
-                }
-              }
-            });
-          }, root);
-
-          ScrollTrigger.refresh();
-
-          cleanupMotionRuntime = () => {
-            ctx.revert();
-          };
-        })
-        .catch((error: unknown) => {
-          if (cancelled) return;
-          root.setAttribute("data-motion-state", "fallback");
-          console.warn("[home-landing-composite] Motion runtime failed to load; keeping static storefront layout.", error);
-        });
-    });
-
-    return () => {
-      cancelled = true;
-      cancelScheduledMotion?.();
-      cleanupMotionRuntime?.();
-    };
-  }, [reducedMotion, products.length]);
+    root.setAttribute("data-motion-state", "static");
+  }, [reducedMotion]);
 
   if (strictWithoutCms) {
     return null;
@@ -1524,12 +1088,9 @@ export function HomeLandingComposite({
       data-testid="home-landing-composite"
       data-home-composite-root="true"
       data-motion-state="reduced"
-      data-motion-engine="native-gsap-scrolltrigger"
+      data-motion-engine="static"
       aria-label="Mithron home landing composite"
     >
-      <div className={styles.progressTrack} aria-hidden="true">
-        <span className={styles.progressFill} />
-      </div>
       <div
         className={styles.miniCarousel}
         data-testid="home-mini-carousel"
@@ -1552,7 +1113,7 @@ export function HomeLandingComposite({
                 key={item.itemKey}
               >
                 <span className={styles.miniCarouselImageWell}>
-                  <MithronResponsiveImage
+                  <MithronThumbImage
                     src={item.media.src}
                     alt=""
                     aria-hidden={true}
@@ -1713,10 +1274,10 @@ function AgriCommunityWorldSection({
 
     const tileContent = (
       <>
-        <MithronResponsiveImage
+        <MithronMissionTileImage
           src={tile.media.src}
           alt={tile.media.alt || tile.label}
-          fill
+          cardType={cardType}
           wrapperClassName={styles.agriCardImageFrame}
           sizes={
             cardType === "hero"
@@ -1874,10 +1435,10 @@ function CityDroneWorldSection({
 
     const tileContent = (
       <>
-        <MithronResponsiveImage
+        <MithronMissionTileImage
           src={tile.media.src}
           alt={tile.media.alt}
-          fill
+          cardType={cardType}
           wrapperClassName={styles.cityCardImageFrame}
           sizes={
             cardType === "hero"

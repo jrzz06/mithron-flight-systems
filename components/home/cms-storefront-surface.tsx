@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronCardImage } from "@/components/media/mithron-card-image";
 import type { PromotionalCampaignContent, TrustCardContent } from "@/services/cms";
 
 type CmsStorefrontSurfaceProps = {
@@ -48,12 +48,14 @@ export function CmsStorefrontSurface({ promotionalCampaigns, trustCards }: CmsSt
               key={card.id}
               className={`rounded-[24px] border border-white/10 bg-[#080b0f]/[0.04] p-5 ${card.isFeature ? "md:col-span-2" : ""}`}
             >
-              <MithronResponsiveImage
+              <MithronCardImage
                 src={card.imageSrc}
                 alt={card.imageAlt}
+                fill={false}
                 width={640}
                 height={360}
                 className={card.imageClassName}
+                sizes="(max-width: 768px) 100vw, 640px"
               />
               <h3 className="mt-4 text-lg font-semibold text-white">{card.title}</h3>
               <p className="mt-2 text-sm leading-7 text-white/60">{card.body}</p>

@@ -37,6 +37,8 @@ export type UploadMithronAssetsOptions = {
   dryRun?: boolean;
   limit?: number;
   mastersDir?: string;
+  /** When true, do not write data/mithron-supabase-assets.generated.json */
+  skipManifestWrite?: boolean;
 };
 
 export type UploadMithronAssetsResult = {
@@ -330,7 +332,7 @@ export async function uploadMithronAssets(options: UploadMithronAssetsOptions = 
   }
 
   await upsertRows(supabase, metadataRows, dryRun);
-  if (!dryRun) {
+  if (!dryRun && !options.skipManifestWrite) {
     mkdirSync(dirname(outputManifestPath), { recursive: true });
     writeFileSync(outputManifestPath, `${JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), assets: manifestAssets }, null, 2)}\n`);
   }

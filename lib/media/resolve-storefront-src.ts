@@ -1,22 +1,15 @@
+import pathAliases from "@/config/storefront-path-aliases.json";
+import { getBestVariantUpToWidth, getResponsiveAssetForSrc } from "@/config/generated-assets";
 import remoteMapData from "@/data/mithron-storefront-remote-map.generated.json";
+import { storefrontMediaPaths } from "@/config/storefront-media-paths";
 
-const LOCAL_PATH_ALIASES: Record<string, string> = {
-  "/media/mithron/hero/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/hero/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/hero/security-grid.webp": "/assets/hero/hero-slide-04.webp",
-  "/media/mithron/banners/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/banners/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/banners/security-grid.webp": "/assets/hero/hero-slide-04.webp",
-  "/media/mithron/carousel/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/carousel/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/carousel/security-grid.webp": "/assets/hero/hero-slide-04.webp"
-};
+const LOCAL_PATH_ALIASES = pathAliases as Record<string, string>;
 
 const HERO_FALLBACK_BY_ID: Record<string, string> = {
-  "ag10-arrival": "/assets/hero/hero-slide-01.webp",
-  "mapping-flight": "/assets/hero/hero-slide-02.webp",
-  "drone-ecosystem": "/assets/hero/hero-slide-03.webp",
-  "surveillance-grid": "/assets/hero/hero-slide-04.webp"
+  "ag10-arrival": storefrontMediaPaths.hero.slide01,
+  "mapping-flight": storefrontMediaPaths.hero.slide02,
+  "drone-ecosystem": storefrontMediaPaths.hero.slide03,
+  "surveillance-grid": storefrontMediaPaths.hero.slide04
 };
 
 type RemoteMapEntry = {
@@ -51,11 +44,23 @@ function remotePrimaryForPath(path: string) {
   return remoteByPath.get(path)?.primarySrc ?? remoteByPath.get(canonicalStorefrontPath(path))?.primarySrc;
 }
 
+const STOREFRONT_PRIMARY_MAX_WIDTH = 1920;
+
+function generatedPrimaryForPath(path: string) {
+  const responsive = getResponsiveAssetForSrc(path);
+  if (responsive?.status !== "generated") return undefined;
+  return getBestVariantUpToWidth(responsive, STOREFRONT_PRIMARY_MAX_WIDTH, "webp")?.src;
+}
+
 export function resolveStorefrontSrc(src: string, options?: { heroSlideId?: string }) {
   const trimmed = src?.trim();
   if (!trimmed) {
     const fallbackPath = options?.heroSlideId ? HERO_FALLBACK_BY_ID[options.heroSlideId] ?? "" : "";
-    return remotePrimaryForPath(fallbackPath) ?? fallbackPath;
+    return (
+      remotePrimaryForPath(fallbackPath) ??
+      generatedPrimaryForPath(fallbackPath) ??
+      fallbackPath
+    );
   }
 
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
@@ -63,7 +68,11 @@ export function resolveStorefrontSrc(src: string, options?: { heroSlideId?: stri
   }
 
   const canonical = canonicalStorefrontPath(trimmed);
-  const remote = remotePrimaryForPath(canonical) ?? remotePrimaryForPath(trimmed);
+  const remote =
+    remotePrimaryForPath(canonical) ??
+    remotePrimaryForPath(trimmed) ??
+    generatedPrimaryForPath(canonical) ??
+    generatedPrimaryForPath(trimmed);
   if (remote) return remote;
 
   if (canonical.startsWith("/")) return canonical;

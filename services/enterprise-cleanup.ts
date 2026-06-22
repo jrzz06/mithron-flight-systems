@@ -195,6 +195,29 @@ export const ENTERPRISE_CLEANUP_DEPENDENCIES: CleanupDependencyDefinition[] = [
     ]
   },
   {
+    id: "upload-api-legacy-route",
+    label: "Legacy token upload API route",
+    path: "app/api/upload/route.ts",
+    surface: "tooling",
+    status: "ACTIVE",
+    removalGate: "mediaParity",
+    safeLaterCandidate: true,
+    runtimeConsumers: ["lib/media/canonical-batch-upload.ts", "tools/regenerate-editorial-manifest.mjs"],
+    dependencyReason: "token-gated batch media upload bypassing admin RBAC",
+    blockers: [
+      "Canonical media parity is not verified with durable media rows.",
+      "Batch upload must be retired after manifest regeneration from media_assets."
+    ],
+    evidence: [
+      "app/api/upload/route.ts accepts MITHRON_ASSET_UPLOAD_TOKEN bearer requests.",
+      "Canonical batch upload now writes media_assets only; manifest regen is CLI-driven."
+    ],
+    rollbackPlan: [
+      "Re-enable POST /api/upload only during staged migration with upload token rotation.",
+      "Use tools/regenerate-editorial-manifest.mjs if canonical rows regress."
+    ]
+  },
+  {
     id: "mithron-assets-source-rows",
     label: "Mithron source asset parity rows",
     path: "mithron_assets",
@@ -202,15 +225,15 @@ export const ENTERPRISE_CLEANUP_DEPENDENCIES: CleanupDependencyDefinition[] = [
     status: "FALLBACK_ONLY",
     removalGate: "mediaParity",
     safeLaterCandidate: true,
-    runtimeConsumers: ["lib/mithron-assets/upload-service.ts", "app/api/upload/route.ts"],
-    dependencyReason: "legacy upload pipeline and static manifest source",
+    runtimeConsumers: ["tools/backfill-canonical-media.mjs", "tools/audit-media-bandwidth.mjs"],
+    dependencyReason: "read-only legacy asset registry for migration tooling",
     blockers: [
       "Storefront images are served from the static manifest, not live mithron_assets reads.",
       "Full decommission requires regenerating the manifest from media_assets."
     ],
     evidence: [
       "Admin media library no longer fetches mithron_assets rows at runtime.",
-      "Upload pipeline still writes mithron_assets for legacy manifest compatibility."
+      "Runtime upload pipeline writes media_assets; mithron_assets is read-only legacy data."
     ],
     rollbackPlan: [
       "Keep mithron_assets until manifest migration is complete and verified.",
@@ -232,7 +255,7 @@ export const ENTERPRISE_CLEANUP_DEPENDENCIES: CleanupDependencyDefinition[] = [
       "Removing media diagnostics would hide cleanup regressions."
     ],
     evidence: [
-      "Admin media page displays media_assets, product_media_assets, mithron_assets, buckets, and fallback manifest state.",
+      "Admin media page displays media_assets, product_media_assets, primary link coverage, buckets, and fallback manifest state.",
       "User requested cleanup-safe diagnostics before decommissioning."
     ],
     rollbackPlan: [

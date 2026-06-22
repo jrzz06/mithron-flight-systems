@@ -2,18 +2,16 @@
 
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { ReactNode } from "react";
 import type { HeroSlide } from "@/config/types";
 import { heroSlides as defaultHeroSlides } from "@/config/products";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
 import { resolveHeroSlideSrc } from "@/lib/media/resolve-storefront-src";
-import { usePremiumPointerField } from "@/hooks/use-premium-pointer-field";
 import { useReducedMotionPreference } from "@/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils";
 
-const autoplayMs = 6800;
 const HERO_EXTERNAL_CTA = {
   href: "https://www.mithronsmart.com",
   label: "Visit Mithron Smart"
@@ -198,43 +196,12 @@ export function HeroCarousel({
   const contentInk = slide ? getHeroContentInk(slide, activeIndex) : "light";
   const navbarInk = slide ? getHeroNavbarInk(slide, activeIndex) : "light";
   const tone = getSlideTone(contentInk);
-  const heroPointerField = usePremiumPointerField<HTMLElement>({ disabled: reducedMotion, intensity: 1.05 });
 
   const getSlideState = (itemIndex: number) => {
     if (itemIndex === activeIndex) return "active";
     if (itemIndex === (activeIndex - 1 + safeSlides.length) % safeSlides.length) return "previous";
     return "inactive";
   };
-
-  useEffect(() => {
-    if (safeSlides.length <= 1) return;
-
-    let cancelled = false;
-    let timer: number | undefined;
-
-    const scheduleNextAdvance = () => {
-      timer = window.setTimeout(() => {
-        if (cancelled) return;
-
-        if (document.visibilityState === "visible") {
-          setIndex((current) => (current + 1) % safeSlides.length);
-        }
-
-        scheduleNextAdvance();
-      }, autoplayMs);
-    };
-
-    scheduleNextAdvance();
-
-    return () => {
-      cancelled = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [safeSlides.length]);
-
-  useEffect(() => {
-    window.dispatchEvent(new Event("mithron:viewport-scroll"));
-  }, [activeIndex]);
 
   const goToSlide = (nextIndex: number) => {
     if (!safeSlides.length) return;
@@ -276,11 +243,8 @@ export function HeroCarousel({
       data-active-hero-theme={slide.theme}
       data-hero-content-ink={contentInk}
       data-navbar-ink={navbarInk}
-      onPointerEnter={heroPointerField.onPointerEnter}
-      onPointerLeave={heroPointerField.onPointerLeave}
-      onPointerMove={heroPointerField.onPointerMove}
       className={cn(
-        "hero-premium-field premium-hover-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden",
+        "hero-premium-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden",
         tone.section
       )}
     >
@@ -289,7 +253,7 @@ export function HeroCarousel({
           key={item.id}
           data-testid={`hero-slide-${item.id}`}
           data-hero-slide-state={getSlideState(itemIndex)} // test-placeholder: data-hero-slide-state="active"
-          data-hero-motion={reducedMotion ? "static" : "css-fade"}
+          data-hero-motion="static"
           className="absolute inset-0 hero-slide-frame"
           aria-hidden={itemIndex !== activeIndex}
         >
@@ -405,23 +369,18 @@ function HeroBackdrop({
               <source src={slide.video.src} type={videoType} />
             </video>
           ) : (
-            <MithronResponsiveImage
+            <MithronPageHeroImage
               src={heroImageSrc}
               alt={slide.image.alt}
               fill
               priority={Boolean(slide.image.priority)}
-              preferredFormat="webp"
               sizes="100vw"
-              crossOrigin="anonymous"
-              data-focal-point={composition.focalPoint}
               className="[filter:var(--hero-image-mobile-filter)] [object-position:var(--hero-image-mobile-object-position)] [transform:var(--hero-image-mobile-transform)] md:[filter:var(--hero-image-filter)] md:[object-position:var(--hero-image-object-position)] md:[transform:var(--hero-image-transform)]"
               style={imageStyle}
             />
           )}
         </div>
       </Link>
-      <span className="hero-premium-light-layer" data-hero-material-layer="cursor-light" aria-hidden="true" />
-      <span className="hero-premium-atmosphere-layer" data-hero-material-layer="atmosphere" aria-hidden="true" />
     </div>
   );
 }

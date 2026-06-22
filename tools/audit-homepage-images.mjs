@@ -2,15 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
+import pathAliases from "../config/storefront-path-aliases.json" with { type: "json" };
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const PUBLIC = path.join(ROOT, "public");
 
-const LOCAL_PATH_ALIASES = {
-  "/media/mithron/hero/ag10-command.webp": "/assets/hero/hero-slide-01.webp",
-  "/media/mithron/hero/mapping-flight.webp": "/assets/hero/hero-slide-02.webp",
-  "/media/mithron/hero/security-grid.webp": "/assets/hero/hero-slide-04.webp"
-};
+const LOCAL_PATH_ALIASES = pathAliases;
 
 function resolveLocal(src) {
   const trimmed = (src ?? "").trim();
@@ -33,10 +30,9 @@ function collectFromHomepageCmsDefaults() {
 }
 
 function collectFromLocalMedia() {
-  const file = path.join(ROOT, "sections", "home", "home-landing-composite.tsx");
+  const file = path.join(ROOT, "config", "homepage-media-fallbacks.ts");
   const text = fs.readFileSync(file, "utf8");
-  const block = text.match(/const localMedia = \{([\s\S]*?)\} satisfies/)?.[1] ?? "";
-  return extractSrcStrings(block).map((src) => ({ source: "localMedia-fallback", section: "composite", src }));
+  return extractSrcStrings(text).map((src) => ({ source: "localMedia-fallback", section: "composite", src }));
 }
 
 const HERO_DB = [

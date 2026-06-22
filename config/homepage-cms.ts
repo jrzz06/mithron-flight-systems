@@ -1,3 +1,5 @@
+import { storefrontMediaPaths } from "@/config/storefront-media-paths";
+
 export type HomepageShelfCms = {
   eyebrow: string;
   title: string;
@@ -77,7 +79,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       heroBody: "Welcome to India's 1st & Leading Drone Ecosystem Aggregator",
       featureCta: "Visit Mithron Smart",
       heroCtaHref: "https://www.mithronsmart.com",
-      heroImageSrc: "/media/mithron/showcase/drone_world_hero.png",
+      heroImageSrc: storefrontMediaPaths.showcase.droneWorld,
       heroImageAlt: "Mithron drone fleet operating across a rugged mountain valley at golden hour"
     },
     droneCare: {
@@ -92,7 +94,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       heroBody: "Sales / Rental Service / Troubleshooting / Aggregation / Academics / Import / Loan",
       featureCta: "Visit Mithron Smart",
       heroCtaHref: "https://www.mithronsmart.com",
-      heroImageSrc: "/media/mithron/showcase/drone_care_hero.png",
+      heroImageSrc: storefrontMediaPaths.showcase.droneCare,
       heroImageAlt: "Mithron Drone Care complete kit with aircraft, controller, batteries, propellers, and service case"
     },
     globalProducts: {
@@ -107,7 +109,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       heroBody: "A marketplace to connect for Global products Import and Export / Live Price Bid",
       featureCta: "Visit Mithron Smart",
       heroCtaHref: "https://www.mithronsmart.com",
-      heroImageSrc: "/media/mithron/showcase/global_products_hero.png",
+      heroImageSrc: storefrontMediaPaths.showcase.globalProducts,
       heroImageAlt: "Global Drone Connect industrial drone carrying a shipping container over a digital logistics hub at night"
     }
   },
@@ -126,7 +128,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "AGRONE Network",
           model: "DRONE OWNER NETWORK",
           location: "Pan-India onboarding",
-          imageSrc: "/media/mithron/mission/agrone/agrone-drone-owner-registration.png",
+          imageSrc: storefrontMediaPaths.missionAgrone.droneOwnerRegistration,
           imageAlt: "AGRONE drone owner registration",
           href: "https://drone.mithronsmart.com/droneowner_reg"
         },
@@ -136,7 +138,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "AGRONE Network",
           model: "AGRONE PILOT NETWORK",
           location: "Pilot onboarding",
-          imageSrc: "/media/mithron/mission/agrone/agrone-pilot-registration.png",
+          imageSrc: storefrontMediaPaths.missionAgrone.pilotRegistration,
           imageAlt: "AGRONE pilot registration",
           href: "https://drone.mithronsmart.com/register"
         },
@@ -146,7 +148,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "AGRONE Network",
           model: "NATIONWIDE BOOKING",
           location: "Service booking desk",
-          imageSrc: "/media/mithron/mission/agrone/all-india-drone-farmer.png",
+          imageSrc: storefrontMediaPaths.missionAgrone.allIndiaDroneFarmer,
           imageAlt: "All India farmer drone booking",
           href: ""
         },
@@ -156,7 +158,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "AGRONE Network",
           model: "SMART FARMER PROGRAM",
           location: "Farmer onboarding",
-          imageSrc: "/media/mithron/mission/agrone/smart-farmer-register.png",
+          imageSrc: storefrontMediaPaths.missionAgrone.smartFarmerRegister,
           imageAlt: "Smart farmer registration",
           href: "https://drone.mithronsmart.com/farmer"
         },
@@ -166,7 +168,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "AGRONE Network",
           model: "FINANCING SUPPORT",
           location: "Loan eligibility check",
-          imageSrc: "/media/mithron/mission/agrone/agri-drone-loan.png",
+          imageSrc: storefrontMediaPaths.missionAgrone.agriDroneLoan,
           imageAlt: "Agri drone loan and EMI check",
           href: ""
         }
@@ -186,7 +188,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "Mithron City Network",
           model: "DRONELANCER MODEL",
           location: "Pilot network grid",
-          imageSrc: "/media/mithron/mission/city/dronelancer-model.png",
+          imageSrc: storefrontMediaPaths.missionCity.dronelancerModel,
           imageAlt: "Dronelancer Model",
           href: ""
         },
@@ -196,7 +198,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "Mithron City Network",
           model: "RENTAL SERVICES APP",
           location: "Urban booking console",
-          imageSrc: "/media/mithron/mission/city/city-drone-rental-services-app.png",
+          imageSrc: storefrontMediaPaths.missionCity.rentalServicesApp,
           imageAlt: "City Drone Rental Services App",
           href: ""
         },
@@ -206,7 +208,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "Mithron Academy Network",
           model: "ALL DRONE ACADAMIC",
           location: "Training and simulation hub",
-          imageSrc: "/media/mithron/mission/city/all-drone-acadamic.png",
+          imageSrc: storefrontMediaPaths.missionCity.allDroneAcademic,
           imageAlt: "All Drone Acadamic",
           href: ""
         },
@@ -216,7 +218,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "Mithron Service Network",
           model: "FRANCHISECARE CENTER",
           location: "City care workshop",
-          imageSrc: "/media/mithron/mission/city/drone-franchisecare-center.png",
+          imageSrc: storefrontMediaPaths.missionCity.franchiseCareCenter,
           imageAlt: "Drone FranchiseCare Center",
           href: ""
         },
@@ -226,7 +228,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           operator: "Mithron Service Network",
           model: "TECHNICIAN AGGREGATION",
           location: "Field support network",
-          imageSrc: "/media/mithron/mission/city/drone-technician-aggregation.png",
+          imageSrc: storefrontMediaPaths.missionCity.technicianAggregation,
           imageAlt: "Drone Technician Aggregation",
           href: ""
         }

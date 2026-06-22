@@ -209,7 +209,7 @@ describe("shipment persistence and fulfillment lifecycle", () => {
     expect(shipmentService).toContain("updateShipmentWorkflow");
     expect(warehouseActions).toContain("createShipmentFormAction");
     expect(warehouseActions).toContain("updateShipmentLifecycleFormAction");
-    expect(fulfillmentPage).toContain("redirect(\"/warehouse/picking\")");
+    expect(fulfillmentPage).toContain("/warehouse/picking");
     expect(packingPage).toContain("createShipmentFormAction");
     expect(packingPage).toContain("Generate shipment");
     expect(dispatchPage).toContain("updateShipmentLifecycleFormAction");

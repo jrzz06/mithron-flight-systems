@@ -80,12 +80,12 @@ describe("CMS visual workspace rebuild", () => {
   it("routes admin quick links through the CMS workspace registry anchors", () => {
     const registry = source("config/cms-workspace.ts");
     const dashboard = source("app/admin/page.tsx");
-    const topbar = source("components/admin/admin-topbar.tsx");
+    const topbar = source("components/platform/platform-topbar.tsx");
     const workspace = source("features/admin/cms/cms-visual-workspace.tsx");
 
     expect(registry).toContain("cms-section-hero-banners");
     expect(registry).toContain("cms-page-category-banners");
-    expect(dashboard).toContain("CMS_WORKSPACE_LINKS.root");
+    expect(dashboard).toContain("/admin/cms");
     expect(topbar).toContain("CMS_WORKSPACE_LINKS.hero");
     expect(topbar).toContain("CMS_WORKSPACE_LINKS.categoryBanners");
     expect(workspace).toContain("window.location.hash");

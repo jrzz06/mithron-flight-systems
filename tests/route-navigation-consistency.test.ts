@@ -25,7 +25,7 @@ describe("admin warehouse operations route and navigation consistency", () => {
   });
 
   it("uses canonical navigation targets and keeps legacy routes as redirects only", () => {
-    const adminFrame = source("components/admin/admin-frame.tsx");
+    const adminNav = source("components/platform/nav-config.ts");
     const controlShell = source("components/admin/control-shell.tsx");
     const actionNav = source("components/admin/control-shell-action-nav.tsx");
     const warehousePages = [
@@ -42,7 +42,7 @@ describe("admin warehouse operations route and navigation consistency", () => {
       "app/operations/tasks/page.tsx"
     ].map(source).join("\n");
 
-    expect(adminFrame).toContain('href: "/admin/inventory"');
+    expect(adminNav).toContain('href: "/admin/inventory"');
     expect(controlShell).toContain("ControlShellActionNav");
     expect(actionNav).toContain("usePathname");
     expect(actionNav).toContain("aria-current");

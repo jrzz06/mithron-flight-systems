@@ -1,3 +1,4 @@
+// LEGACY PIPELINE ONLY — not used at runtime. Output: data/mithron-products-crawled.generated.json
 /* eslint-disable @typescript-eslint/no-require-imports */
 const { createHash } = require("node:crypto");
 const { existsSync, mkdirSync, readFileSync, writeFileSync } = require("node:fs");

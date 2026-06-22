@@ -20,13 +20,12 @@ describe("hero carousel premium composition", () => {
     expect(hero).toContain('"drone-ecosystem": "light"');
     expect(hero).toContain('.filter((slide) => slide.id !== "surveillance-grid")');
     expect(hero).toContain(".slice(0, 3)");
-    expect(hero).toContain("usePremiumPointerField");
     expect(hero).toContain("useReducedMotionPreference");
-    expect(hero).toContain("const autoplayMs = 6800");
     expect(hero).toContain('data-hero-system="mithron-native-fullscreen-carousel"');
     expect(hero).toContain('sizes="100vw"');
-    expect(hero).toContain('preferredFormat="webp"');
+    expect(hero).toContain("MithronPageHeroImage");
     expect(hero).not.toContain("will-change-transform");
+    expect(hero).not.toContain("usePremiumPointerField");
     expect(hero).toContain("HeroControl");
     expect(hero).toContain("HeroCta");
     expect(hero).toContain("heroSlideCopyById");
@@ -40,13 +39,12 @@ describe("hero carousel premium composition", () => {
     expect(globals).toContain("letter-spacing: -0.025em");
     expect(globals).toContain("letter-spacing: -0.35px");
     expect(globals).toContain("margin-top: clamp(64px, 6vw, 72px)");
-    expect(globals).toContain("@keyframes heroMediaFloat");
     expect(globals).toContain("animation: none");
     expect(globals).toContain(".hero-banner-product-image :is(img, video)");
     expect(globals).toContain("object-position: var(--hero-image-object-position, center center)");
   });
 
-  it("uses a CSS mounted crossfade carousel contract", () => {
+  it("uses a CSS opacity crossfade carousel contract", () => {
     const hero = source("sections/home/hero-carousel.tsx");
     const globals = source("app/globals.css");
 
@@ -55,8 +53,9 @@ describe("hero carousel premium composition", () => {
     expect(hero).not.toContain("<motion.div");
     expect(hero).toContain("key={item.id}");
     expect(hero).toContain('className="absolute inset-0 hero-slide-frame"');
-    expect(hero).toContain('data-hero-motion={reducedMotion ? "static" : "css-fade"}');
-    expect(hero).toContain("scheduleNextAdvance");
+    expect(hero).toContain('data-hero-motion="static"');
+    expect(hero).not.toContain("scheduleNextAdvance");
+    expect(hero).not.toContain("autoplayMs");
     expect(hero).toContain("goToSlide");
     expect(hero).toContain("safeSlides.map");
     expect(hero).toContain('label="Previous hero"');
@@ -65,11 +64,10 @@ describe("hero carousel premium composition", () => {
     expect(hero).not.toContain("previousIndex");
     expect(hero).not.toContain("stagger: 0.085");
 
-    expect(globals).toContain("--font-display: var(--font-manrope)");
+    expect(globals).toContain("--font-display: var(--font-dji)");
     expect(globals).toContain("--font-body: var(--font-manrope)");
     expect(globals).toContain(".hero-banner-product-image :is(img, video)");
-    expect(globals).toContain("@keyframes heroSlideCrossfade");
-    expect(globals).toContain("animation: heroSlideCrossfade 720ms");
+    expect(globals).not.toContain("@keyframes heroSlideCrossfade");
     expect(globals).toContain("object-fit: cover");
     expect(globals).toContain("object-position: var(--hero-image-object-position, center center)");
   });
@@ -83,7 +81,7 @@ describe("hero carousel premium composition", () => {
     expect(existsSync(join(process.cwd(), "app/storefront-showcase.css"))).toBe(false);
     expect(existsSync(join(process.cwd(), "app/ecosystem-showcase.css"))).toBe(false);
 
-    expect(hero).toContain("hero-premium-field premium-hover-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden");
+    expect(hero).toContain("hero-premium-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden");
     expect(hero).toContain("hero-dji-layout");
     expect(hero).toContain("hero-dji-title");
     expect(hero).toContain("hero-dji-subtitle");

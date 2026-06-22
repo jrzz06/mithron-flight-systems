@@ -506,7 +506,7 @@ function readProductCommerceFields(formData: FormData): ProductCommerceFields {
       const taxGroup = readOptionalString(formData, "tax_group");
       if (taxGroup !== undefined) {
         if (!isProductTaxGroupId(taxGroup)) {
-          throw new Error("Product tax group must be a supported Wix tax group.");
+          throw new Error("Product tax group must be a supported GST catalog group.");
         }
         fields.tax_group = taxGroup;
         fields.tax_rate = getProductTaxGroup(taxGroup).rate;

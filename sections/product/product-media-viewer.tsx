@@ -3,7 +3,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MediaAsset, ProductHotspot } from "@/config/types";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
+import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { glassPillClassName } from "@/lib/glass-ui";
 import { cn } from "@/lib/utils";
 import styles from "./product-detail.module.css";
@@ -104,10 +105,11 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
                   safeActiveIndex === index && styles.mediaThumbActive
                 )}
               >
-                <MithronResponsiveImage
+                <MithronThumbImage
                   src={slide.src}
                   alt=""
                   fill
+                  responsive={slide.responsive}
                   className="object-contain p-1.5"
                   sizes="88px"
                 />
@@ -120,10 +122,11 @@ export function ProductMediaViewer({ product }: { product: ProductMediaViewerMod
           <div className={styles.mediaStage}>
             <div className={styles.mediaGroundShadow} aria-hidden="true" />
             <div className={styles.mediaImageFrame}>
-              <MithronResponsiveImage
+              <MithronPageHeroImage
                 src={activeMedia.src}
                 alt={activeMedia.alt}
                 fill
+                responsive={activeMedia.responsive}
                 onError={handleImageError}
                 className={styles.mediaImage}
                 sizes="(min-width: 1024px) 55vw, 100vw"

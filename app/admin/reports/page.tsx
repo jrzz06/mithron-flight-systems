@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { AdminSection } from "@/components/admin/module-panel";
+import { MetricGrid } from "@/components/platform";
 import { getInventoryReportSummary, getSalesReportSummary, getSupplierReportSummary } from "@/services/reports";
 
 export default async function AdminReportsPage() {
@@ -17,35 +19,28 @@ export default async function AdminReportsPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#070b12] px-6 py-10 text-slate-100">
-      <div className="mx-auto max-w-[1180px]">
-        <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Reports</p>
-        <h1 className="mt-2 text-3xl font-semibold">Procurement overview</h1>
-        <div className="mt-6 flex flex-wrap gap-2">
+    <div className="grid gap-5">
+      <MetricGrid
+        metrics={[
+          { label: "Orders", value: String(sales.totalOrders), detail: `Revenue ₹${sales.revenue.toFixed(0)}` },
+          { label: "Supplier products", value: String(suppliers.total), detail: `${suppliers.pending} awaiting review` },
+          { label: "Low stock", value: String(inventory.lowStock), detail: `${inventory.outOfStock} out of stock` }
+        ]}
+      />
+
+      <AdminSection title="Report views" description="Explore detailed analytics by area.">
+        <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
-            <Link key={tab.href} href={tab.href} className="rounded-lg border border-slate-800 px-3 py-2 text-sm text-slate-200">
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className="rounded-[10px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-3 py-2 text-sm font-medium text-[var(--platform-text-primary)] transition hover:bg-[var(--platform-surface)]"
+            >
               {tab.label}
             </Link>
           ))}
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <article className="rounded-xl border border-slate-800 bg-[#10151d] p-5">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Orders</p>
-            <p className="mt-2 text-3xl font-semibold">{sales.totalOrders}</p>
-            <p className="mt-1 text-sm text-emerald-400">Revenue {sales.revenue.toFixed(0)} INR</p>
-          </article>
-          <article className="rounded-xl border border-slate-800 bg-[#10151d] p-5">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Supplier products</p>
-            <p className="mt-2 text-3xl font-semibold">{suppliers.total}</p>
-            <p className="mt-1 text-sm text-amber-300">{suppliers.pending} pending review</p>
-          </article>
-          <article className="rounded-xl border border-slate-800 bg-[#10151d] p-5">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Inventory alerts</p>
-            <p className="mt-2 text-3xl font-semibold">{inventory.lowStock}</p>
-            <p className="mt-1 text-sm text-red-300">{inventory.outOfStock} out of stock</p>
-          </article>
-        </div>
-      </div>
-    </main>
+      </AdminSection>
+    </div>
   );
 }

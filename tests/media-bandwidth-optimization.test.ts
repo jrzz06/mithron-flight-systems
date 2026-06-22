@@ -13,9 +13,9 @@ describe("safe media bandwidth optimization contract", () => {
     const catalogPage = readWorkspaceFile("sections/catalog/catalog-page.tsx");
 
     expect(heroCarousel).toContain("priority={Boolean(slide.image.priority)}");
-    expect(productViewer).not.toMatch(/<MithronResponsiveImage[\s\S]*?\spriority[\s\S]*?\/>/);
+    expect(productViewer).not.toMatch(/<MithronPageHeroImage[\s\S]*?\spriority[\s\S]*?\/>/);
     expect(catalogPage).not.toContain('fetchPriority="high"');
-    expect(catalogPage).not.toMatch(/<MithronResponsiveImage[\s\S]*?\spriority[\s\S]*?\/>/);
+    expect(catalogPage).not.toMatch(/<MithronPageHeroImage[\s\S]*?\spriority[\s\S]*?\/>/);
     expect(catalogPage).not.toContain('sizes="100vw"');
     expect(catalogPage.match(/sizes="\(min-width: 1440px\) 1440px, 100vw"/g)?.length).toBeGreaterThanOrEqual(2);
     expect(catalogPage).toContain('type="image/avif"');
@@ -103,5 +103,11 @@ describe("safe media bandwidth optimization contract", () => {
     expect(optimizer).toContain("webp");
     expect(optimizer).not.toContain("/media/mithron/showcase/");
     expect(heroOptimizer).toContain("HERO_WEBP_QUALITY = 96");
+  });
+
+  it("provides a repeatable delivered image width audit tool", () => {
+    const auditPath = join(process.cwd(), "tools/audit-delivered-image-widths.mjs");
+    expect(existsSync(auditPath)).toBe(true);
+    expect(readFileSync(auditPath, "utf8")).toContain("MithronThumbImage");
   });
 });

@@ -3,9 +3,9 @@
 
 @theme {
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-subheading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-subheading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --color-background: #f1f4f7;
   --color-foreground: #0f172a;
@@ -27,16 +27,11 @@
 }
 
 [data-route-transition="route-entry"] {
-  animation: mithronRouteEntry 380ms var(--ease-cinematic) both;
-  will-change: opacity, transform;
+  animation: mithronRouteEntry 220ms var(--ease-cinematic) both;
 }
 
 [data-route-transition="initial-paint"] {
   animation: none;
-}
-
-.hero-slide-frame[data-hero-motion="css-fade"] {
-  animation: heroSlideCrossfade 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes mithronRouteEntry {
@@ -51,35 +46,21 @@
   }
 }
 
-@keyframes heroSlideCrossfade {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   [data-route-transition="route-entry"] {
     animation: none;
     transform: none;
     will-change: auto;
   }
-
-  .hero-slide-frame[data-hero-motion="css-fade"] {
-    animation: none;
-  }
 }
 
 :root {
-  --font-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-subheading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-subheading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-body: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --type-ui: var(--font-body);
   --type-display: var(--font-display);
-  --type-mission-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --type-mission-heading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --type-mission-body: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --type-subheading: var(--font-subheading);
   --type-technical: var(--font-body);
@@ -123,6 +104,15 @@
     0 20px 60px rgba(10, 20, 40, 0.04);
   --surface-shadow-hover:
     0 40px 120px rgba(0, 0, 0, 0.08);
+  --elevation-card-rest:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 2px 10px rgba(15, 23, 42, 0.04);
+  --elevation-card-hover:
+    0 4px 12px rgba(15, 23, 42, 0.07),
+    0 14px 32px rgba(15, 23, 42, 0.06);
+  --elevation-card-lift: -2px;
+  --elevation-product-rest: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --elevation-product-hover: 0 6px 20px rgba(15, 23, 42, 0.08);
   --surface-gradient-card: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
   --surface-gradient-cool: linear-gradient(180deg, #fcfcfd 0%, #f8fafc 54%, #f4f7fa 100%);
   --surface-aurora-layer:
@@ -164,13 +154,28 @@
 }
 
 [data-control-plane-theme="light"] {
-  --admin-bg: #f6f7f9;
-  --admin-text: #171717;
+  --admin-bg: #f5f7fa;
+  --admin-text: #0f172a;
   --admin-surface: #ffffff;
+  --admin-surface-muted: #fbfbfc;
   --admin-muted: #f1f5f9;
-  --admin-border: #e2e8f0;
+  --admin-border: rgba(15, 23, 42, 0.06);
   --admin-subtle: #64748b;
   --admin-accent: #0f766e;
+  --platform-bg: #f5f7fa;
+  --platform-surface: #ffffff;
+  --platform-surface-muted: #fbfbfc;
+  --platform-border: rgba(15, 23, 42, 0.06);
+  --platform-text-primary: #0f172a;
+  --platform-text-secondary: #334155;
+  --platform-text-muted: #64748b;
+  --platform-accent: #0f766e;
+  --platform-shadow-sm: var(--elevation-card-rest);
+  --platform-shadow-hover: var(--elevation-card-hover);
+  --platform-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --platform-radius: 12px;
+  background-color: var(--platform-bg);
+  color: var(--platform-text-primary);
 }
 
 [data-control-plane-theme="light"] [class*="text-white"] {
@@ -262,6 +267,47 @@
   box-shadow: none !important;
 }
 
+.mithron-elevated-card {
+  box-shadow: var(--elevation-card-rest);
+  transition:
+    box-shadow var(--motion-hover) var(--ease-system),
+    transform var(--motion-hover) var(--ease-system);
+}
+
+.mithron-elevated-card--interactive:is(:hover, :focus-within, :focus-visible) {
+  box-shadow: var(--elevation-card-hover);
+  transform: translateY(var(--elevation-card-lift));
+}
+
+.premium-product-card {
+  box-shadow: none;
+}
+
+.premium-product-card-shell {
+  border-radius: 18px;
+  box-shadow: var(--elevation-product-rest);
+  transition: box-shadow var(--motion-hover) var(--ease-system);
+}
+
+.premium-product-card-shell:is(:hover, :focus-within, :focus-visible) {
+  box-shadow: var(--elevation-product-hover);
+}
+
+.premium-product-card.mithron-elevated-card--interactive:is(:hover, :focus-within, :focus-visible),
+.premium-product-card:is(:hover, :focus-visible, :focus-within) {
+  box-shadow: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mithron-elevated-card--interactive:is(:hover, :focus-within, :focus-visible),
+  .premium-product-card.mithron-elevated-card--interactive:is(:hover, :focus-within, :focus-visible),
+  .premium-product-card:is(:hover, :focus-visible, :focus-within),
+  .premium-product-card-shell:is(:hover, :focus-within, :focus-visible) {
+    transform: none;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -323,9 +369,7 @@ samp {
   font-family: var(--type-mono);
 }
 
-/* Mithron type system — single-family Manrope (Gilroy-adjacent, non-template)
- * One cohesive voice: weight + size only, no Inter/Montserrat pairing.
- */
+/* Mithron type system — DJI Bold display + Manrope UI body */
 h1,
 h2,
 h3,
@@ -333,8 +377,8 @@ h4,
 h5,
 h6,
 .tech-headline {
-  font-family: var(--font-manrope), sans-serif;
-  font-weight: 600;
+  font-family: var(--type-display);
+  font-weight: 700;
   line-height: 1.14;
   letter-spacing: -0.015em;
   text-wrap: balance;
@@ -357,8 +401,8 @@ h1,
 .type-meta,
 .type-campaign-overline,
 .catalog-intro__eyebrow {
-  font-family: var(--font-manrope), sans-serif;
-  font-weight: 600;
+  font-family: var(--font-dji), var(--font-manrope), sans-serif;
+  font-weight: 700;
   font-size: 0.75rem;
   line-height: 1.25;
   letter-spacing: 0.08em;
@@ -464,7 +508,7 @@ dd {
 .type-card-title {
   font-family: var(--type-display);
   font-size: var(--type-card);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.22;
   letter-spacing: -0.01em;
 }
@@ -685,7 +729,7 @@ dd {
 }
 
 .mithron-brand-mark img {
-  transition: opacity 220ms var(--ease-system);
+  transition: opacity 155ms var(--ease-system);
 }
 
 .adaptive-navbar[data-nav-ink="light"] .adaptive-navbar__bar .adaptive-navbar__brand,
@@ -714,11 +758,10 @@ dd {
   transform: translate3d(-50%, -12px, 0) scale(0.98);
   transform-origin: top center;
   transition:
-    opacity 250ms var(--mega-menu-ease),
-    transform 250ms var(--mega-menu-ease),
-    visibility 0s linear 250ms;
+    opacity 175ms var(--mega-menu-ease),
+    transform 175ms var(--mega-menu-ease),
+    visibility 0s linear 175ms;
   visibility: hidden;
-  will-change: opacity, transform;
 }
 
 .enterprise-mega-menu-shell.is-open {
@@ -985,11 +1028,11 @@ dd {
   transform: translate3d(0, -2px, 0);
   pointer-events: none;
   transition:
-    color 220ms var(--ease-system),
-    opacity 220ms var(--ease-system),
-    transform 220ms var(--ease-system),
-    background-color 220ms var(--ease-system),
-    border-color 220ms var(--ease-system);
+    color 155ms var(--ease-system),
+    opacity 155ms var(--ease-system),
+    transform 155ms var(--ease-system),
+    background-color 155ms var(--ease-system),
+    border-color 155ms var(--ease-system);
 }
 
 .adaptive-mobile-menu.is-open {
@@ -1001,7 +1044,7 @@ dd {
 .adaptive-mobile-menu__backdrop {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 220ms var(--ease-system);
+  transition: opacity 155ms var(--ease-system);
 }
 
 .adaptive-mobile-menu__backdrop.is-open {
@@ -1119,14 +1162,14 @@ dd {
 .search-overlay-backdrop,
 .cart-drawer-backdrop {
   opacity: 0;
-  transition: opacity 220ms var(--ease-system);
+  transition: opacity 155ms var(--ease-system);
 }
 
 .search-overlay-panel,
 .cart-drawer-panel {
   opacity: 0;
   transform: translate3d(0, -2px, 0);
-  transition: opacity 220ms var(--ease-system), transform 220ms var(--ease-system);
+  transition: opacity 155ms var(--ease-system), transform 155ms var(--ease-system);
 }
 
 .cart-drawer-panel {
@@ -1233,16 +1276,6 @@ canvas {
   }
 }
 
-@keyframes heroMediaFloat {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-
-  to {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-}
-
 .hero-premium-field::before {
   content: none;
   pointer-events: none;
@@ -1272,9 +1305,8 @@ canvas {
   transform-origin: center center;
   pointer-events: none;
   transition-property: opacity;
-  transition-duration: 1600ms;
+  transition-duration: 800ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: opacity;
 }
 
 .hero-slide-frame[data-hero-slide-state="active"] {
@@ -1425,6 +1457,8 @@ canvas {
 }
 
 .hero-dji-title {
+  font-family: var(--font-dji), var(--font-manrope), sans-serif;
+  font-weight: 700;
   font-size: clamp(34px, 8vw, 40px);
   text-wrap: balance;
   text-shadow: none;
@@ -1716,7 +1750,7 @@ canvas {
   border: none;
   border-radius: 18px;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--elevation-card-rest);
 }
 
 .catalog-intro__eyebrow {
@@ -1771,7 +1805,7 @@ canvas {
   background: #ffffff;
   color: #374151;
   padding: 0 1rem;
-  box-shadow: 0 6px 18px rgba(10, 10, 10, 0.05);
+  box-shadow: var(--elevation-card-rest);
 }
 
 .catalog-product-grid {
@@ -1833,29 +1867,41 @@ canvas {
 }
 
 .catalog-page-shell .premium-product-card-shell {
+  display: flex;
   min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  border-radius: 18px;
+  box-shadow: var(--elevation-product-rest);
+  transition: box-shadow var(--motion-hover) var(--ease-system);
   content-visibility: auto;
   contain-intrinsic-size: 1px 520px;
 }
 
+.catalog-page-shell .premium-product-card-shell:is(:hover, :focus-within, :focus-visible) {
+  box-shadow: var(--elevation-product-hover);
+}
+
 .catalog-page-shell .premium-product-card {
   position: relative;
+  display: flex;
   min-height: 520px;
   min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 18px;
   background: var(--insta-card);
   color: var(--insta-ink);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
-  transition: box-shadow 420ms var(--ease-cinematic);
+  box-shadow: none;
+  transform: none;
 }
 
 .catalog-page-shell .premium-product-card:is(:hover, :focus-visible, :focus-within) {
   border-color: transparent;
-  box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.08),
-    0 24px 48px rgba(15, 23, 42, 0.1);
+  box-shadow: none;
+  transform: none;
 }
 
 .catalog-page-shell .premium-product-card::before {
@@ -1880,8 +1926,11 @@ canvas {
 .catalog-page-shell .premium-product-card__body {
   position: relative;
   z-index: 1;
+  display: flex;
   min-height: 224px;
   min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   padding: 1.25rem 1.125rem 1.125rem;
   background: var(--insta-card);
 }
@@ -2017,7 +2066,8 @@ canvas {
 
 .catalog-page-shell .premium-product-card__description {
   display: -webkit-box;
-  min-height: 3.9em;
+  flex: 1 1 auto;
+  min-height: 4.5em;
   margin: 0;
   overflow: hidden;
   color: var(--insta-muted);
@@ -2347,14 +2397,20 @@ canvas {
   background: var(--home-shelf-card);
   color: var(--home-shelf-strong-ink);
   text-decoration: none;
+  box-shadow: var(--elevation-card-rest);
   transition:
     border-color 260ms var(--ease-cinematic),
-    background-color 260ms var(--ease-cinematic);
+    background-color 260ms var(--ease-cinematic),
+    box-shadow var(--motion-hover) var(--ease-system),
+    transform var(--motion-hover) var(--ease-system);
 }
 
-.home-shelf-card-link:hover {
+.home-shelf-card-link:hover,
+.home-shelf-card-link:focus-visible {
   border-color: var(--home-shelf-border-strong);
   background: var(--home-shelf-card);
+  box-shadow: var(--elevation-card-hover);
+  transform: translateY(var(--elevation-card-lift));
 }
 
 .home-shelf-image-well {
@@ -2497,7 +2553,9 @@ canvas {
     transition-duration: 1ms;
   }
 
-  .home-shelf-card-link:hover .home-shelf-image {
+  .home-shelf-card-link:hover .home-shelf-image,
+  .home-shelf-card-link:hover,
+  .home-shelf-card-link:focus-visible {
     transform: none;
   }
 }

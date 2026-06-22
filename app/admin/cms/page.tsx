@@ -1,11 +1,11 @@
 import { CmsVisualWorkspaceLoader } from "@/components/admin/cms-visual-workspace-loader";
 import type { CmsRestoreRevision, CmsWorkspaceMedia, CmsWorkspacePage, CmsWorkspaceSection } from "@/features/admin/cms/cms-visual-workspace";
-import { HomepageCmsEditor } from "@/features/admin/cms/homepage-cms-editor";
+import { HomepageCmsEditor } from "@/components/admin/homepage-cms-editor-loader";
 import { CMS_WORKSPACE_ANCHORS, CMS_WORKSPACE_PAGES } from "@/config/cms-workspace";
 import { homepageCmsSections as homepageSectionDefinitions, type HomepageCmsSectionId } from "@/config/homepage-cms";
 import { footerContent } from "@/config/storefront-content";
 import { ModulePanel, OperationalFeedback } from "@/components/admin/module-panel";
-import { getAdminSettingsSnapshot, getCmsAdvancedWorkspaceSnapshot, getCmsCoreSnapshot } from "@/services/admin";
+import { getCmsAdvancedWorkspaceSnapshot, getCmsCoreSnapshot } from "@/services/admin";
 import { getHomepageCmsContent } from "@/services/homepage-cms";
 
 export const dynamic = "force-dynamic";
@@ -233,19 +233,16 @@ function latestRestoreRevision(rows: ContentRevisionRow[]): CmsRestoreRevision {
 export default async function CmsPage({ searchParams }: CmsPageProps) {
   const params = await searchParams;
   const advancedView = params?.view === "advanced";
-  const [coreSnapshot, advancedSnapshot, settingsSnapshot, homepageContent] = await Promise.all([
+  const [coreSnapshot, advancedSnapshot, homepageContent] = await Promise.all([
     getCmsCoreSnapshot(),
     advancedView ? getCmsAdvancedWorkspaceSnapshot() : Promise.resolve(null),
-    getAdminSettingsSnapshot(),
     getHomepageCmsContent()
   ]);
   const snapshot = mergeCmsSnapshots(coreSnapshot, advancedSnapshot);
   const cmsStatus = params?.cms_status === "error" ? "error" : params?.cms_status === "success" ? "success" : null;
   const cmsMessage = params?.cms_message ? decodeURIComponent(params.cms_message) : "";
-  const cmsTable = params?.cms_table ? decodeURIComponent(params.cms_table) : "CMS";
+  const cmsTable = params?.cms_table ? decodeURIComponent(params.cms_table) : "Website";
   const initialSection = params?.section as HomepageCmsSectionId | undefined;
-  const settingsPayload = record(settingsSnapshot.data.settings);
-  const footerSettings = record(settingsPayload.footer);
 
   const heroRows = tableRows(snapshot, "hero_banners");
   const productReviewRows = tableRows(snapshot, "product_reviews");
@@ -504,11 +501,11 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
   }));
 
   const footerLead = {
-    leadTitle: text(footerSettings.leadTitle, footerContent.leadTitle),
-    leadBody: text(footerSettings.leadBody, footerContent.leadBody),
-    emailPlaceholder: text(footerSettings.emailPlaceholder, footerContent.emailPlaceholder),
-    ctaLabel: text(footerSettings.ctaLabel, footerContent.ctaLabel),
-    legalText: text(footerSettings.legalText, footerContent.legalText)
+    leadTitle: footerContent.leadTitle,
+    leadBody: footerContent.leadBody,
+    emailPlaceholder: footerContent.emailPlaceholder,
+    ctaLabel: footerContent.ctaLabel,
+    legalText: footerContent.legalText
   };
 
   return (

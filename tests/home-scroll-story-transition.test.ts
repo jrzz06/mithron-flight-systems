@@ -9,7 +9,7 @@ function source(path: string) {
 const oldDraftCityOperatorId = ["draft", "city", "operators"].join("-");
 
 describe("home composite scroll transition system", () => {
-  it("uses one synchronized GSAP ScrollTrigger timeline for the composite section", () => {
+  it("uses a static composite section without scroll-scrubbed reveals", () => {
     const component = source("sections/home/home-landing-composite.tsx");
     const css = source("sections/home/home-landing-composite.module.css");
     const globals = source("app/globals.css");
@@ -17,12 +17,11 @@ describe("home composite scroll transition system", () => {
     expect(component).toContain("export function HomeLandingComposite");
     expect(component).toContain('data-testid="home-landing-composite"');
     expect(component).toContain('data-home-composite-root="true"');
-    expect(component).toContain('data-motion-engine="native-gsap-scrolltrigger"');
-    expect(component).toContain("ScrollTrigger.create");
-    expect(component).toContain("scrub: true");
-    expect(component).toContain("onUpdate: (self)");
-    expect(component).toContain("--home-composite-progress");
-    expect(component).toContain("ScrollTrigger.refresh()");
+    expect(component).toContain('data-motion-engine="static"');
+    expect(component).not.toContain("ScrollTrigger.create");
+    expect(component).not.toContain("scrub: true");
+    expect(component).not.toContain("--home-composite-progress");
+    expect(component).not.toContain("ScrollTrigger.refresh()");
     expect(component).not.toContain("mithron:ensure-lenis");
     expect(component).not.toContain("mithron:lenis-ready");
     expect(component).not.toContain('window.addEventListener("scroll"');
@@ -33,10 +32,8 @@ describe("home composite scroll transition system", () => {
     expect(component).not.toContain('data-testimonial-state="fallback"');
     expect(component).not.toContain(oldDraftCityOperatorId);
 
-    expect(css).toContain(".progressTrack");
-    expect(css).toContain(".progressFill");
-    expect(css).toContain("transform: scaleX(var(--home-composite-progress))");
-    expect(css).toContain("position: sticky");
+    expect(css).not.toContain(".progressTrack");
+    expect(css).not.toContain(".progressFill");
     expect(css).not.toMatch(/pin:\s*true|position:\s*fixed/);
     expect(globals).not.toContain("@import \"./storefront-showcase.css\"");
   });

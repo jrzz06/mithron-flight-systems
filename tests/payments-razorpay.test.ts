@@ -50,10 +50,16 @@ describe("Razorpay payment gateway", () => {
 });
 
 describe("commerce lifecycle hardening", () => {
-  it("uses fulfill_reserved_stock RPC instead of double available deduction", () => {
+  it("uses fulfill_reserved_stock RPC instead of double available deduction in warehouse fulfillment helper", () => {
     const movements = source("services/warehouse-movements.ts");
     expect(movements).toContain("fulfillReservedStock");
     expect(movements).not.toContain("quantityDelta: -quantity");
+  });
+
+  it("routes shipment creation through reservation fulfillment when checkout reserved stock exists", () => {
+    const shipments = source("services/shipments.ts");
+    expect(shipments).toContain("orderHasCheckoutReservations");
+    expect(shipments).toContain("fulfillReservedStock");
   });
 
   it("releases stock on payment webhook failure", () => {

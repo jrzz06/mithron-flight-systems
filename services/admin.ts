@@ -3,6 +3,7 @@ import { createClient as createSupabaseServiceClient } from "@supabase/supabase-
 import { normalizeCmsRole } from "@/lib/auth/permissions";
 import { getSupabaseAdminConfig, type SupabaseAdminConfig } from "@/lib/env";
 import { buildEnterpriseCleanupReadiness } from "@/services/enterprise-cleanup";
+import { countPublishedProductsWithoutPrimaryLink } from "@/services/catalog";
 
 type EnvSource = Record<string, string | undefined>;
 type AdminSnapshotStatus = "LIVE" | "PARTIAL" | "BLOCKED";
@@ -457,12 +458,20 @@ export const getEnterpriseCleanupSnapshot = cache(async (env: EnvSource = proces
     && live("shipments")
     && live("shipment_timeline");
 
+  const canonicalMediaRows = count("media_assets");
+  const productMediaLinks = count("product_media_assets");
+  const primaryLinkCoverage = await countPublishedProductsWithoutPrimaryLink();
+  const mediaParityVerified = canonicalMediaRows > 0
+    && productMediaLinks > 0
+    && primaryLinkCoverage.publishedCount > 0
+    && primaryLinkCoverage.missingCount === 0;
+
   const readiness = buildEnterpriseCleanupReadiness({
     cmsCutoverReady,
     cmsParityVerified: false,
-    mediaParityVerified: false,
-    canonicalMediaRows: count("media_assets"),
-    productMediaLinks: count("product_media_assets"),
+    mediaParityVerified,
+    canonicalMediaRows,
+    productMediaLinks,
     realtimeStabilized,
     warehouseAuthenticatedVerified: false,
     rollbackRecoveryVerified: false
@@ -553,7 +562,7 @@ export const getUserGovernanceSnapshot = cache(async (env: EnvSource = process.e
   };
 });
 
-export async function getCmsCoreSnapshot(env: EnvSource = process.env) {
+export const getCmsCoreSnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
   const emptyData = { tables: [] as Array<{ table: string; status: string; rows: AdminRow[] }> };
   if (!config.configured) return blockedSnapshot(config.message, emptyData);
@@ -572,9 +581,9 @@ export async function getCmsCoreSnapshot(env: EnvSource = process.env) {
     blockedReason: undefined,
     data: { tables }
   };
-}
+});
 
-export async function getCmsAdvancedWorkspaceSnapshot(env: EnvSource = process.env) {
+export const getCmsAdvancedWorkspaceSnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
   const emptyData = { tables: [] as Array<{ table: string; status: string; rows: AdminRow[] }> };
   if (!config.configured) return blockedSnapshot(config.message, emptyData);
@@ -596,7 +605,7 @@ export async function getCmsAdvancedWorkspaceSnapshot(env: EnvSource = process.e
     blockedReason: undefined,
     data: { tables }
   };
-}
+});
 
 function mergeCmsWorkspaceSnapshots(
   core: Awaited<ReturnType<typeof getCmsCoreSnapshot>>,
@@ -631,18 +640,21 @@ export async function getCmsWorkspaceSnapshot(env: EnvSource = process.env) {
   return mergeCmsWorkspaceSnapshots(core, advanced);
 }
 
-export async function getMediaLibrarySnapshot(env: EnvSource = process.env) {
+export const getMediaLibrarySnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
   const emptyData = {
     assets: [] as AdminRow[],
     sourceRows: [] as AdminRow[],
     productLinks: [] as AdminRow[],
     buckets: [] as AdminRow[],
-    mediaCounts: [] as CountMetric[]
+    mediaCounts: [] as CountMetric[],
+    publishedProductsWithoutPrimaryLink: 0,
+    publishedProductCount: 0,
+    primaryLinkCoverage: 0
   };
   if (!config.configured) return blockedSnapshot(config.message, emptyData);
 
-  const [mediaCounts, assets, productLinks, buckets] = await Promise.all([
+  const [mediaCounts, assets, productLinks, buckets, primaryLinkCoverage] = await Promise.all([
     Promise.all([
       countTable(config, "media_assets"),
       countTable(config, "mithron_assets"),
@@ -650,16 +662,32 @@ export async function getMediaLibrarySnapshot(env: EnvSource = process.env) {
     ]),
     fetchAdminRows(config, "media_assets", `select=id,bucket,folder,storage_path,public_url,mime_type,file_size_bytes,size_bytes,width,height,visibility,status,caption,alt,alt_text,tags,variants,responsive_variants,updated_at&order=updated_at.desc&limit=${MEDIA_LIBRARY_LIMIT}`),
     fetchAdminRows(config, "product_media_assets", `select=product_slug,media_asset_id,usage,variant_id,is_primary,sort_order,alt_text,caption,metadata,updated_at&order=updated_at.desc&limit=${PRODUCT_RELATION_LIMIT}`),
-    fetchStorageBuckets(config)
+    fetchStorageBuckets(config),
+    countPublishedProductsWithoutPrimaryLink()
   ]);
+
+  const publishedProductCount = primaryLinkCoverage.publishedCount;
+  const publishedProductsWithoutPrimaryLink = primaryLinkCoverage.missingCount;
+  const primaryLinkCoverageRatio = publishedProductCount > 0
+    ? Math.round((primaryLinkCoverage.linkedCount / publishedProductCount) * 100)
+    : 0;
 
   return {
     status: mediaCounts.every((metric) => metric.status === "LIVE") && [assets, productLinks, buckets].every((table) => table.status === "LIVE") ? "LIVE" as const : "PARTIAL" as const,
     source: "supabase-admin" as const,
     blockedReason: undefined,
-    data: { assets: assets.rows, sourceRows: [] as AdminRow[], productLinks: productLinks.rows, buckets: buckets.rows, mediaCounts }
+    data: {
+      assets: assets.rows,
+      sourceRows: [] as AdminRow[],
+      productLinks: productLinks.rows,
+      buckets: buckets.rows,
+      mediaCounts,
+      publishedProductsWithoutPrimaryLink,
+      publishedProductCount,
+      primaryLinkCoverage: primaryLinkCoverageRatio
+    }
   };
-}
+});
 
 export async function getAdminSettingsSnapshot(env: EnvSource = process.env) {
   const config = getSupabaseAdminConfig(env);
@@ -707,7 +735,7 @@ export async function getAdminSettingsSnapshot(env: EnvSource = process.env) {
   };
 }
 
-export async function getProductManagerSnapshot(env: EnvSource = process.env) {
+export const getProductManagerSnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
   const emptyData = {
     products: [] as AdminRow[],
@@ -754,7 +782,7 @@ export async function getProductManagerSnapshot(env: EnvSource = process.env) {
     blockedReason: undefined,
     data: { products: products.rows, mediaLinks: mediaLinks.rows, inventory: inventory.rows, stock: stock.rows, movements: movements.rows, categories: categories.rows, productCounts, mediaCounts, stockCoverage }
   };
-}
+});
 
 export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput = process.env) => {
   const { env: resolvedEnv, tables } = resolveWarehouseSnapshotInput(input);

@@ -35,20 +35,18 @@ describe("admin Supabase-only workflow recovery", () => {
     expect(adminService).not.toContain("limit=500");
   });
 
-  it("uses a minimal dark admin chrome across control-plane shells", () => {
+  it("uses a minimal light admin chrome across control-plane shells", () => {
     const frame = source("components/admin/admin-frame.tsx");
-    const shell = source("components/admin/control-shell.tsx");
+    const shell = source("components/platform/platform-shell.tsx");
     const primitives = source("components/admin/module-panel.tsx");
-    const topbar = source("components/admin/admin-topbar.tsx");
+    const topbar = source("components/platform/platform-topbar.tsx");
 
-    expect(frame).toContain("bg-[#070B14] text-slate-100");
-    expect(shell).toContain('scope === "warehouse"');
-    expect(shell).toContain("bg-[#070B14] px-4 py-4 text-slate-100");
-    expect(shell).toContain("bg-[#080b10] px-4 py-4 text-slate-100");
-    expect(primitives).toContain("border-slate-800 bg-[#0f141b]");
-    expect(topbar).toContain("bg-[#0b1017]");
-    expect(frame).not.toContain("bg-slate-50 text-slate-950");
-    expect(shell).not.toContain("bg-slate-50 text-slate-950");
+    expect(shell).toContain('data-control-plane-theme="light"');
+    expect(shell).toContain("bg-[var(--platform-bg)]");
+    expect(frame).toContain("PlatformShell");
+    expect(primitives).toContain("var(--platform-border)");
+    expect(topbar).toContain("data-admin-topbar");
+    expect(frame).not.toContain("bg-[#070B14]");
   });
 
   it("turns product and CMS forms into layman-editable structured media workflows", () => {
@@ -56,7 +54,7 @@ describe("admin Supabase-only workflow recovery", () => {
     const cmsWorkspace = source("features/admin/cms/cms-visual-workspace.tsx");
 
     expect(productsPage).toContain("data-product-media-picker");
-    expect(productsPage).toContain("Product name");
+    expect(productsPage).toContain("ProductCreateDetailFields");
     expect(productsPage).toContain("ProductCategoryField");
     expect(productsPage).toContain("Image URL");
     expect(productsPage).toContain("Upload image");

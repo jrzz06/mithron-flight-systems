@@ -75,7 +75,7 @@ export function ProductTaxFields({
           <section data-product-tax-advanced className={advancedShellClass}>
             <h4 className={sectionTitleClass}>Advanced</h4>
             <label className="grid gap-1.5 text-sm">
-              <ProductFieldLabel tooltip="Matches Wix Studio tax groups. The GST rate is applied from the selected group.">
+              <ProductFieldLabel tooltip="Indian GST catalog group. The GST rate is applied from the selected group.">
                 Product tax group
               </ProductFieldLabel>
               <select

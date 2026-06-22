@@ -17,6 +17,7 @@ export type SupplierProductEditDefaults = {
   tagline: string;
   imageSrc?: string;
   imageAlt?: string;
+  updatedAt?: string | null;
 };
 
 export function SupplierEditProductForm({
@@ -42,6 +43,7 @@ export function SupplierEditProductForm({
       >
         <SupplierFormStatusOverlay pending={pending} label="Saving changes" />
         <input type="hidden" name="slug" value={defaults.slug} />
+        {defaults.updatedAt ? <input type="hidden" name="expected_updated_at" value={defaults.updatedAt} /> : null}
         <label className="grid gap-1 text-sm">
           <span className="text-slate-300">Product name</span>
           <input

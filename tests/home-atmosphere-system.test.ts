@@ -18,8 +18,8 @@ describe("home landing composite visual system", () => {
     expect(component).not.toContain("Mithron operating ecosystem");
     expect(component).not.toContain("one guided journey");
     expect(component).toContain("localMedia");
-    expect(component).toContain("/media/mithron/dynamic-scroll/night-surveillance.webp");
-    expect(component).toContain("Supabase-backed surveillance mission media");
+    expect(source("config/storefront-media-paths.ts")).toContain("night-surveillance.webp");
+    expect(source("config/homepage-media-fallbacks.ts")).toContain("Supabase-backed surveillance mission media");
     expect(css).toContain("--home-page: var(--surface-page)");
     expect(css).toContain("--home-card: #ffffff");
     expect(css).toContain("linear-gradient(180deg, #ffffff 0%, var(--home-page)");

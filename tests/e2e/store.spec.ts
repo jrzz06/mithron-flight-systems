@@ -12,7 +12,7 @@ test.describe("Mithron cinematic storefront", () => {
     await expect(hero).toBeVisible();
     await expect(composite).toBeVisible();
     await expect(composite).toHaveAttribute("data-home-composite-root", "true");
-    await expect(composite).toHaveAttribute("data-motion-engine", "native-gsap-scrolltrigger");
+    await expect(composite).toHaveAttribute("data-motion-engine", "static");
     await expect(main.getByTestId("product-ecosystem-showcase")).toHaveCount(0);
     await expect(main.getByTestId("platform-intelligence-chapter")).toHaveCount(0);
     await expect(main.getByTestId("platform-world-architecture")).toHaveCount(0);

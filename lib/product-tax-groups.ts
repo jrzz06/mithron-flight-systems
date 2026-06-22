@@ -20,31 +20,31 @@ export const PRODUCT_TAX_GROUPS: ProductTaxGroupDefinition[] = [
     id: "products-default",
     label: "Products (default rate)",
     rate: 18,
-    description: "Standard GST rate for general catalog products."
+    description: "Standard 18% Indian GST for general catalog products."
   },
   {
     id: "agri-accessories",
     label: "Agri accessories",
     rate: 12,
-    description: "Agricultural accessories, spare parts, and field support components."
+    description: "12% Indian GST for agricultural accessories, spare parts, and field support components."
   },
   {
     id: "non-agri-drones",
     label: "Non Agri Drones",
     rate: 18,
-    description: "Video, surveillance, creative, and industrial drone platforms."
+    description: "18% Indian GST for video, surveillance, creative, and industrial drone platforms."
   },
   {
     id: "non-agri-accessories",
     label: "Non Agri accessories",
     rate: 18,
-    description: "General accessories that are not classified as agricultural equipment."
+    description: "18% Indian GST for general accessories that are not classified as agricultural equipment."
   },
   {
     id: "agri-drones",
     label: "Agri Drones",
     rate: 5,
-    description: "Agricultural drone platforms eligible for reduced GST."
+    description: "5% Indian GST for agricultural drone platforms."
   }
 ];
 

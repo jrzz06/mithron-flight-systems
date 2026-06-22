@@ -1,6 +1,7 @@
 import generatedManifest from "@/data/mithron-supabase-assets.generated.json";
 import { canonicalStorefrontPath } from "@/lib/media/resolve-storefront-src";
 import { heroAssets, interestAssets } from "@/config/assets";
+import { storefrontMediaPaths } from "@/config/storefront-media-paths";
 import type {
   HeroSlide,
   Interest,
@@ -35,11 +36,11 @@ const generatedAssets = [...((generatedManifest as GeneratedManifest).assets ?? 
 const generatedByAssetId = new Map(generatedAssets.map((asset) => [asset.assetId, asset]));
 
 const storyAssets = {
-  precisionSpray: "/media/mithron/story/precision-spray.webp",
-  terrainRadar: "/media/mithron/story/terrain-radar.webp",
-  missionPlanning: "/media/mithron/story/mission-planning.webp",
-  droneEcosystem: "/media/mithron/story/drone-ecosystem.webp",
-  cropHealth: "/media/mithron/story/crop-health.webp"
+  precisionSpray: storefrontMediaPaths.story.precisionSpray,
+  terrainRadar: storefrontMediaPaths.story.terrainRadar,
+  missionPlanning: storefrontMediaPaths.story.missionPlanning,
+  droneEcosystem: storefrontMediaPaths.story.droneEcosystem,
+  cropHealth: storefrontMediaPaths.story.cropHealth
 };
 
 function assetIdFromPath(prefix: string, src: string) {
@@ -157,6 +158,29 @@ export function getBestVariant(
   }
 
   return undefined;
+}
+
+export function getVariantsUpToWidth(
+  asset: ResponsiveMediaAsset | undefined,
+  format: "avif" | "webp" | "png",
+  maxWidth: number
+) {
+  const variants = getFormatVariants(asset, format);
+  const capped = variants.filter((variant) => variant.width <= maxWidth);
+  return capped.length > 0 ? capped : variants.slice(0, 1);
+}
+
+export function getBestVariantUpToWidth(
+  asset: ResponsiveMediaAsset | undefined,
+  maxWidth: number,
+  preferredFormat: "avif" | "webp" | "png" = "webp"
+) {
+  const capped = getVariantsUpToWidth(asset, preferredFormat, maxWidth);
+  if (capped.length > 0) {
+    return capped.at(-1);
+  }
+
+  return getBestVariant(asset, preferredFormat);
 }
 
 export function withResponsiveMediaAsset(asset: MediaAsset): MediaAsset {

@@ -161,6 +161,26 @@ export async function fulfillReservedStock(
   return response.json();
 }
 
+export async function orderHasCheckoutReservations(
+  orderId: string,
+  env: EnvSource = process.env
+) {
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/rpc/order_has_checkout_reservations`, {
+    method: "POST",
+    headers: headers(config.serviceRoleKey),
+    body: JSON.stringify({ p_order_id: orderId }),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Unable to verify checkout reservations (${response.status})${body ? `: ${body.slice(0, 200)}` : ""}`);
+  }
+
+  return Boolean(await response.json());
+}
+
 export async function releaseCheckoutStock(
   orderId: string,
   env: EnvSource = process.env,

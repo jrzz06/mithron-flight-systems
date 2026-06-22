@@ -11,8 +11,9 @@ describe("warehouse operational UX maturity", () => {
     const rootPage = source("app/warehouse/page.tsx");
     const page = source("app/warehouse/dashboard/page.tsx");
     const shell = source("components/admin/control-shell.tsx");
+    const platformShell = source("components/platform/platform-shell.tsx");
 
-    expect(shell).toContain("data-control-plane");
+    expect(platformShell).toContain("data-control-plane");
     expect(shell).toContain("AdminMetricGrid");
     expect(shell).toContain("data-control-shell-header");
     expect(rootPage).toContain('redirect("/warehouse/dashboard")');
@@ -30,7 +31,7 @@ describe("warehouse operational UX maturity", () => {
     const page = source("app/warehouse/inventory/page.tsx");
     const inventoryManager = source("components/admin/inventory-manager.tsx");
 
-    expect(page).toContain("InventoryManager");
+    expect(page).toContain("inventory-manager-loader");
     expect(page).toContain("saveWarehouseInventoryWithFeedback");
     expect(inventoryManager).toContain("data-inventory-system");
     expect(inventoryManager).toContain("data-inventory-table");

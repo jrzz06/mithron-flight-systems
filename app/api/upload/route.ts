@@ -1,8 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
-// @deprecated mithron_assets — read-only legacy; canonical writes go to media_assets.
 import { NextResponse } from "next/server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
-import { uploadMithronAssets } from "@/lib/mithron-assets/upload-service";
+import { isUploadApiRetired, runCanonicalBatchUpload } from "@/lib/media/canonical-batch-upload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,8 +11,8 @@ type UploadRequestBody = {
   limit?: unknown;
 };
 
-function json(status: number, payload: Record<string, unknown>) {
-  return NextResponse.json(payload, { status });
+function json(status: number, payload: Record<string, unknown>, extraHeaders?: HeadersInit) {
+  return NextResponse.json(payload, { status, headers: extraHeaders });
 }
 
 function safeTokenEquals(candidate: string, expected: string) {
@@ -52,6 +51,19 @@ function sanitizeLimit(limit: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (isUploadApiRetired()) {
+    return json(410, {
+      status: "RETIRED",
+      code: "UPLOAD_API_RETIRED",
+      message: "POST /api/upload is retired. Use the admin media library or tools/regenerate-editorial-manifest.mjs after canonical backfill.",
+      alternatives: [
+        "/admin/media",
+        "tools/regenerate-editorial-manifest.mjs",
+        "tools/backfill-canonical-media.mjs"
+      ]
+    });
+  }
+
   const expectedToken = process.env.MITHRON_ASSET_UPLOAD_TOKEN;
   if (!expectedToken) {
     return json(503, {
@@ -110,14 +122,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const limit = sanitizeLimit(body.limit);
-    const result = await uploadMithronAssets({ dryRun, limit });
-    return json(200, result);
+    const uploadLimit = sanitizeLimit(body.limit);
+    const result = await runCanonicalBatchUpload({ dryRun, limit: uploadLimit });
+    return json(200, {
+      ...result,
+      deprecated: true,
+      note: "Manifest regeneration is deferred to tools/regenerate-editorial-manifest.mjs."
+    }, {
+      "X-Mithron-Upload-Deprecated": "true"
+    });
   } catch (error) {
     return json(500, {
       status: "FAILED",
       code: "UPLOAD_FAILED",
-      message: error instanceof Error ? error.message : "Mithron asset upload failed."
+      message: error instanceof Error ? error.message : "Canonical media upload failed."
     });
   }
 }

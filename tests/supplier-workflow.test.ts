@@ -17,11 +17,12 @@ describe("supplier workflow guards", () => {
     expect(supplierActions).toContain("ensureSupplierProfile");
   });
 
-  it("limits supplier edits to owned draft, rejected, or pending review products", () => {
+  it("limits supplier edits to owned draft or rejected products", () => {
     const supplierActions = readFileSync(join(root, "services/supplier-actions.ts"), "utf8");
 
     expect(supplierActions).toContain("Supplier cannot modify products they do not own.");
-    expect(supplierActions).toContain('["draft", "pending_review", "rejected"]');
+    expect(supplierActions).toContain('["draft", "rejected"]');
+    expect(supplierActions).not.toContain('["draft", "pending_review", "rejected"]');
     expect(supplierActions).toContain("submitSupplierProductForReview");
     expect(supplierActions).toContain('workflow_status: "pending_review"');
   });
@@ -32,6 +33,13 @@ describe("supplier workflow guards", () => {
     expect(readFileSync(join(root, "app/supplier/products/actions.ts"), "utf8")).toContain("isActionNavigationError");
     expect(readFileSync(join(root, "services/supplier-actions.ts"), "utf8")).toContain("getSupplierOwnedProduct");
     expect(readFileSync(join(root, "services/supplier-actions.ts"), "utf8")).not.toContain("7692/ingest");
+  });
+
+  it("locks supplier edit UI while products are pending review", () => {
+    const editPage = readFileSync(join(root, "app/supplier/products/[slug]/edit/page.tsx"), "utf8");
+    expect(editPage).toContain('const canEdit = ["draft", "rejected"]');
+    expect(editPage).not.toContain('["draft", "pending_review", "rejected"]');
+    expect(editPage).toContain("cannot be edited until approval completes");
   });
 
   it("redirects supplier product actions with product_status feedback", () => {

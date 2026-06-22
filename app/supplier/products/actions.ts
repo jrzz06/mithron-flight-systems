@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isActionNavigationError } from "@/lib/server-action-errors";
+import { readExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
 import { parseSupplierProductForm } from "@/lib/supplier/product-form";
 import { logSupplierProductFormDebug } from "@/lib/supplier/product-form-debug";
 import type { SupplierProductFormState } from "@/components/supplier/supplier-new-product-form";
@@ -255,7 +256,9 @@ export async function updateSupplierProductFormStateAction(
         gallery,
         updated_at: new Date().toISOString()
       },
-      context.userId
+      context.userId,
+      process.env,
+      { expectedUpdatedAt: readExpectedUpdatedAt(formData, String(existingRows[0]?.updated_at ?? "")) }
     );
 
     if (uploadedImage) {

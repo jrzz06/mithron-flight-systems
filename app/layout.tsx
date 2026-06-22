@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
+import { JsonLd } from "@/components/seo/json-ld";
 import { ObservabilityProvider } from "@/components/providers/observability-provider";
+import { buildSiteStructuredData } from "@/lib/structured-data";
+import { getSiteUrl } from "@/lib/site-url";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -10,17 +14,16 @@ const manrope = Manrope({
   adjustFontFallback: true
 });
 
-function getSiteUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mithron.com";
-
-  try {
-    return new URL(configuredUrl);
-  } catch {
-    return new URL("https://mithron.com");
-  }
-}
+const djiBold = localFont({
+  src: "../public/fonts/dji-bold.ttf",
+  variable: "--font-dji",
+  display: "swap",
+  weight: "700",
+  style: "normal"
+});
 
 const siteUrl = getSiteUrl();
+const siteStructuredData = buildSiteStructuredData();
 
 export const metadata: Metadata = {
   applicationName: "Mithron Flight Systems",
@@ -42,7 +45,8 @@ export const metadata: Metadata = {
     follow: true
   },
   icons: {
-    icon: "/favicon.svg"
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }]
   }
 };
 
@@ -57,9 +61,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       suppressHydrationWarning
-      className={manrope.variable}
+      className={`${manrope.variable} ${djiBold.variable}`}
     >
       <body suppressHydrationWarning>
+        <JsonLd data={siteStructuredData} />
         <ObservabilityProvider>{children}</ObservabilityProvider>
       </body>
     </html>

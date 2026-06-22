@@ -6,7 +6,11 @@ import { deleteProductCategoryFormAction, saveProductCategoryFormAction, savePro
 import { resolveNextImageSrc } from "@/lib/media/next-image-src";
 import { ProductCatalogGrid, type ProductCatalogGridRow } from "./product-catalog-grid";
 import { ProductCategoryField, type ProductCategoryOption } from "./product-category-field";
+import { connectivityMessage, emptyMessage } from "@/lib/platform/copy";
 import { ProductCreateDetailFields } from "./product-create-detail-fields";
+
+const platformFieldClass =
+  "h-10 w-full rounded-[10px] border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)] focus:border-teal-600/30 focus:ring-2 focus:ring-teal-600/10";
 
 export const dynamic = "force-dynamic";
 
@@ -110,10 +114,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     const reorder = Number(row.reorder_threshold ?? 0);
     return Number.isFinite(quantity) && Number.isFinite(reorder) && reorder > 0 && quantity <= reorder;
   }).length;
+  const inventoryBySlug = new Map(snapshot.data.inventory.map((row) => [String(row.product_slug ?? ""), row]));
+  const stockBySlug = new Map(snapshot.data.stock.map((row) => [String(row.product_slug ?? ""), row]));
   const productRows: ProductCatalogGridRow[] = filteredProducts.map((product) => {
     const slug = String(product.slug ?? "");
-    const inventory = snapshot.data.inventory.find((row) => String(row.product_slug ?? "") === slug);
-    const stock = snapshot.data.stock.find((row) => String(row.product_slug ?? "") === slug);
+    const inventory = inventoryBySlug.get(slug);
+    const stock = stockBySlug.get(slug);
     const status = String(product.workflow_status ?? "published");
     const stockStatus = String(inventory?.stock_status ?? "unlinked");
     return {
@@ -142,7 +148,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       stockQuantity: String(stock?.available_quantity ?? inventory?.quantity ?? "0"),
       stockStatus,
       sourceAvailability: String(product.source_availability ?? "catalog"),
-      isVisible: Boolean(product.is_visible ?? true)
+      isVisible: Boolean(product.is_visible ?? true),
+      updatedAt: product.updated_at ? String(product.updated_at) : null
     };
   });
   const mediaRows = snapshot.data.mediaLinks.slice(0, 12).map((link) => ({
@@ -184,7 +191,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <ModulePanel
         eyebrow="Product command"
         title="Catalog management."
-        description={snapshot.blockedReason ?? "Search products, make quick edits, and open advanced tools only when needed."}
+        description={connectivityMessage(snapshot.blockedReason) || "Search products, make quick edits, and open advanced tools only when needed."}
         metrics={[
           { label: "Products", value: String(snapshot.data.products.length) },
           { label: "Media", value: String(snapshot.data.mediaLinks.length) },
@@ -333,12 +340,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         title="Variants"
         description="Update color, SKU, and image options for the selected product."
       >
-        <DataList rows={variantRows.length ? variantRows : [{ label: "mithron_products.variants", value: "BLOCKED", detail: snapshot.blockedReason }]} />
+        <DataList rows={variantRows.length ? variantRows : [{ label: "Product variants", value: "Unavailable", detail: connectivityMessage(snapshot.blockedReason) || emptyMessage("products") }]} />
         <form id="product-variants" action={saveProductVariantsFormAction} data-product-variants-table="mithron_products" className="mt-8 scroll-mt-24 grid gap-5">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Product slug</span>
-              <input name="product_slug" defaultValue={activeProductSlug} placeholder="source-agri-kisan-drone-small-8-liter" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="product_slug" defaultValue={activeProductSlug} placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
             </label>
             <div data-product-variant-rows className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
               {[1, 2, 3, 4].map((row) => (
@@ -354,7 +361,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
 
           <label className="grid gap-2 text-sm">
             <span className="text-white/70">Change summary</span>
-            <input name="change_summary" defaultValue="" placeholder="Update product variants" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+            <input name="change_summary" defaultValue="" placeholder="Update product variants" className={platformFieldClass} />
           </label>
 
           <OperationalSubmitButton pendingLabel="Saving variants">Save product variants</OperationalSubmitButton>
@@ -368,38 +375,38 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         title="Search preview"
         description="Edit the title, description, and social preview used for this product."
       >
-        <DataList rows={seoRows.length ? seoRows : [{ label: "mithron_products.seo", value: "BLOCKED", detail: snapshot.blockedReason }]} />
+        <DataList rows={seoRows.length ? seoRows : [{ label: "SEO metadata", value: "Unavailable", detail: connectivityMessage(snapshot.blockedReason) || emptyMessage("products") }]} />
         <form id="product-seo" action={saveProductSeoFormAction} data-product-seo-table="mithron_products" className="mt-8 scroll-mt-24 grid gap-5">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Product slug</span>
-              <input name="product_slug" defaultValue={activeProductSlug} placeholder="source-agri-kisan-drone-small-8-liter" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="product_slug" defaultValue={activeProductSlug} placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">SEO title</span>
-              <input name="seo_title" defaultValue="" placeholder="Agri Kisan Drone Small | Mithron Flight Systems" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="seo_title" defaultValue="" placeholder="Agri Kisan Drone Small | Mithron Flight Systems" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm md:col-span-2">
               <span className="text-white/70">SEO description</span>
-              <textarea name="seo_description" defaultValue="" rows={3} placeholder="Premium agricultural drone with modular payload delivery." className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <textarea name="seo_description" defaultValue="" rows={3} placeholder="Premium agricultural drone with modular payload delivery." className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">OG title</span>
-              <input name="og_title" defaultValue="" placeholder="Agri Kisan Drone Small | Mithron" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="og_title" defaultValue="" placeholder="Agri Kisan Drone Small | Mithron" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">OG description</span>
-              <input name="og_description" defaultValue="" placeholder="Cinematic product preview for social sharing." className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="og_description" defaultValue="" placeholder="Cinematic product preview for social sharing." className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm md:col-span-2">
               <span className="text-white/70">Social image URL</span>
-              <input name="og_image_src" defaultValue="" placeholder="https://.../social-preview.webp" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="og_image_src" defaultValue="" placeholder="https://.../social-preview.webp" className={platformFieldClass} />
             </label>
           </div>
 
           <label className="grid gap-2 text-sm">
             <span className="text-white/70">Change summary</span>
-            <input name="change_summary" defaultValue="" placeholder="Update product SEO metadata" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+            <input name="change_summary" defaultValue="" placeholder="Update product SEO metadata" className={platformFieldClass} />
           </label>
 
           <OperationalSubmitButton pendingLabel="Saving SEO">Save product SEO</OperationalSubmitButton>
@@ -413,9 +420,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         title="Publish state."
         description="Publish, hide, archive, or restore the selected product."
       >
-        <DataList rows={publishRows.length ? publishRows : [{ label: "mithron_products.workflow_status", value: "BLOCKED", detail: snapshot.blockedReason }]} />
+        <DataList rows={publishRows.length ? publishRows : [{ label: "Publication status", value: "Unavailable", detail: connectivityMessage(snapshot.blockedReason) || emptyMessage("products") }]} />
         <div id="archive-product" className="mt-8 scroll-mt-24 grid gap-4">
-          <form id="publish-product" action={saveProductPublishStateFormAction} data-product-publish-table="mithron_products" className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+          <form id="publish-product" action={saveProductPublishStateFormAction} data-product-publish-table="mithron_products" className="grid gap-5 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/42">Archive / restore / publish</p>
@@ -426,11 +433,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             <div className="grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-sm">
                 <span className="text-white/70">Product slug</span>
-                <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+                <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
               </label>
               <label className="grid gap-2 text-sm">
                 <span className="text-white/70">Workflow status</span>
-                <select name="workflow_status" defaultValue="published" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none">
+                <select name="workflow_status" defaultValue="published" className={platformFieldClass}>
                   <option value="draft">draft</option>
                   <option value="published">published</option>
                   <option value="archived">archived</option>
@@ -439,13 +446,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             </div>
 
             <label className="flex items-center gap-3 text-sm">
-              <input name="is_visible" type="checkbox" defaultChecked className="h-4 w-4 rounded border-white/20 bg-white/[0.055] text-[#7ce7c9]" />
+              <input name="is_visible" type="checkbox" defaultChecked className="h-4 w-4 rounded border-[var(--platform-border)] text-teal-700" />
               <span className="text-white/70">Visible in storefront catalog</span>
             </label>
 
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Change summary</span>
-              <input name="change_summary" defaultValue="" placeholder="Set product publication state" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="change_summary" defaultValue="" placeholder="Set product publication state" className={platformFieldClass} />
             </label>
 
             <OperationalSubmitButton
@@ -470,23 +477,23 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Product slug</span>
-              <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">SKU</span>
-              <input name="sku" defaultValue="" placeholder="AGRI-8L-BASIC" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="sku" defaultValue="" placeholder="AGRI-8L-BASIC" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Variant ID</span>
-              <input name="variant_id" defaultValue="" placeholder="basic-green" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="variant_id" defaultValue="" placeholder="basic-green" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Warehouse code</span>
-              <input name="warehouse_code" defaultValue="IN-WEST-01" placeholder="IN-WEST-01" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="warehouse_code" defaultValue="IN-WEST-01" placeholder="IN-WEST-01" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Stock status</span>
-              <select name="stock_status" defaultValue="available" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none">
+              <select name="stock_status" defaultValue="available" className={platformFieldClass}>
                 <option value="available">available</option>
                 <option value="low_stock">low_stock</option>
                 <option value="out_of_stock">out_of_stock</option>
@@ -494,29 +501,29 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Quantity</span>
-              <input name="quantity" defaultValue="0" inputMode="numeric" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none" />
+              <input name="quantity" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Reserved quantity</span>
-              <input name="reserved_quantity" defaultValue="0" inputMode="numeric" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none" />
+              <input name="reserved_quantity" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Reorder threshold</span>
-              <input name="reorder_threshold" defaultValue="0" inputMode="numeric" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none" />
+              <input name="reorder_threshold" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Warehouse available</span>
-              <input name="available_quantity" defaultValue="0" inputMode="numeric" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none" />
+              <input name="available_quantity" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Warehouse committed</span>
-              <input name="committed_quantity" defaultValue="0" inputMode="numeric" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none" />
+              <input name="committed_quantity" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
             </label>
           </div>
 
           <label className="grid gap-2 text-sm">
             <span className="text-white/70">Change summary</span>
-            <input name="change_summary" defaultValue="" placeholder="Sync product inventory linkage" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+            <input name="change_summary" defaultValue="" placeholder="Sync product inventory linkage" className={platformFieldClass} />
           </label>
 
           <OperationalSubmitButton pendingLabel="Saving inventory">Save inventory linkage</OperationalSubmitButton>
@@ -530,47 +537,47 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         title="Media"
         description="Connect existing media assets to the selected product."
       >
-        <DataList rows={mediaRows.length ? mediaRows : [{ label: "product_media_assets", value: "BLOCKED", detail: snapshot.blockedReason }]} />
+        <DataList rows={mediaRows.length ? mediaRows : [{ label: "Product images", value: "Unavailable", detail: connectivityMessage(snapshot.blockedReason) || emptyMessage("media") }]} />
         <form id="product-media" action={saveProductMediaLinkFormAction} data-product-media-table="product_media_assets" className="mt-8 scroll-mt-24 grid gap-5">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Product slug</span>
-              <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Media asset ID</span>
-              <input name="media_asset_id" defaultValue="" placeholder="media-atlas" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="media_asset_id" defaultValue="" placeholder="media-atlas" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Usage</span>
-              <input name="usage" defaultValue="gallery" placeholder="gallery" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="usage" defaultValue="gallery" placeholder="gallery" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Variant ID</span>
-              <input name="variant_id" defaultValue="" placeholder="8-liter-green" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="variant_id" defaultValue="" placeholder="8-liter-green" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Sort order</span>
-              <input name="sort_order" defaultValue="0" inputMode="numeric" placeholder="0" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="sort_order" defaultValue="0" inputMode="numeric" placeholder="0" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Alt text</span>
-              <input name="alt_text" defaultValue="" placeholder="Variant-specific product media alt text" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="alt_text" defaultValue="" placeholder="Variant-specific product media alt text" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className="text-white/70">Caption</span>
-              <input name="caption" defaultValue="" placeholder="Canonical product gallery caption" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+              <input name="caption" defaultValue="" placeholder="Canonical product gallery caption" className={platformFieldClass} />
             </label>
           </div>
 
           <label className="flex items-center gap-3 text-sm">
-            <input name="is_primary" type="checkbox" className="h-4 w-4 rounded border-white/20 bg-white/[0.055] text-[#7ce7c9]" />
+            <input name="is_primary" type="checkbox" className="h-4 w-4 rounded border-[var(--platform-border)] text-teal-700" />
             <span className="text-white/70">Primary media asset</span>
           </label>
 
           <label className="grid gap-2 text-sm">
             <span className="text-white/70">Change summary</span>
-            <input name="change_summary" defaultValue="" placeholder="Link product media row" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-sm normal-case tracking-normal text-white outline-none placeholder:text-white/30" />
+            <input name="change_summary" defaultValue="" placeholder="Link product media row" className={platformFieldClass} />
           </label>
 
           <OperationalSubmitButton pendingLabel="Saving media link">Save product media link</OperationalSubmitButton>

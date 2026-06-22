@@ -50,21 +50,20 @@ describe("final CMS cutover and real-data cleanup", () => {
     expect(homeComposite).toContain('data-testid="home-landing-composite"');
     expect(homeComposite).toContain('data-home-composite-root="true"');
     expect(homeComposite).toContain('data-motion-state="reduced"');
-    expect(homeComposite).toContain('data-motion-engine="native-gsap-scrolltrigger"');
+    expect(homeComposite).toContain('data-motion-engine="static"');
     expect(homeComposite).toContain('type ProofState = "VERIFIED" | "FALLBACK"');
     expect(homeComposite).not.toContain(forbiddenStatusLabel);
     expect(homeComposite).not.toContain(oldDraftCollectionName);
     expect(homeComposite).not.toContain('data-testimonial-state="fallback"');
     expect(homeComposite).not.toContain("verifiedTestimonialsFromCms");
     expect(homeComposite).not.toContain("VERIFIED CMS");
-    expect(homeComposite).toContain("/media/mithron/dynamic-scroll/night-surveillance.webp");
-    expect(homeComposite).toContain("Supabase-backed surveillance mission media");
+    expect(homeComposite).toContain("homepageMediaFallbacks as localMedia");
+    expect(source("config/homepage-media-fallbacks.ts")).toContain("Supabase-backed surveillance mission media");
     expect(homeComposite).not.toMatch(/stars:\s*[1-5]|Rajan|Meera|James|customer says/i);
     expect(homeComposite).toContain('data-testid="home-customer-testimonials"');
     expect(homeComposite).toContain('data-testid="home-about-band"');
     expect(homeComposite).toContain('data-testid="home-about-footer"');
     expect(homeComposite).toContain("SiteFooter");
-    expect(homeComposite).toContain("ScrollTrigger.create");
     expect(homeComposite).toContain("if (reducedMotion)");
     expect(homeComposite).not.toContain("HomeDroneModelScene");
     expect(homeComposite).not.toContain("enabled={!reducedMotion");
@@ -144,9 +143,11 @@ describe("final CMS cutover and real-data cleanup", () => {
     expect(settingsPage).not.toContain("UserManagementPanel");
     expect(settingsPage).not.toContain("getUserGovernanceSnapshot");
 
-    expect(frame).toContain('href: "/admin/users"');
-    expect(frame).toContain('href: "/admin/settings"');
-    expect(frame).not.toContain('href: "/admin/settings#users"');
+    const navConfig = source("components/platform/nav-config.ts");
+
+    expect(navConfig).toContain('href: "/admin/users"');
+    expect(navConfig).toContain('href: "/admin/settings"');
+    expect(navConfig).not.toContain('href: "/admin/settings#users"');
   });
 
   it("keeps orders and media operator-facing without raw internal storage or UUID forms", () => {

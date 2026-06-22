@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { OperationalFeedback } from "@/components/admin/module-panel";
-import { InventoryManager } from "@/components/admin/inventory-manager";
+import { InventoryManager } from "@/components/admin/inventory-manager-loader";
+import { inventoryFeedbackQueryParams } from "@/lib/admin/conflict-handling";
 import { CSV_INVENTORY_PAGE_SIZE, getCsvInventoryRows } from "@/services/csv-inventory-source";
 import {
   deleteInventoryProductFormAction,
@@ -27,7 +28,8 @@ async function saveAdminInventoryWithFeedback(formData: FormData) {
   try {
     await saveInventoryQuickEditFormAction(formData);
   } catch (error) {
-    redirect(`/admin/inventory?inventory_status=error&inventory_message=${encodeURIComponent(inventoryActionMessage(error).slice(0, 240))}`);
+    const params = inventoryFeedbackQueryParams(error);
+    redirect(`/admin/inventory?${params.toString()}`);
   }
   redirect("/admin/inventory?inventory_status=success&inventory_message=Inventory%20updated.");
 }

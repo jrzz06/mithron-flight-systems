@@ -1,4 +1,5 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
+import { AdminRecordConflictError } from "@/services/admin-actions";
 import { fulfillReservedStock } from "@/services/checkout-stock";
 import {
   createActivityLogRecord,
@@ -61,6 +62,7 @@ export type WarehouseMovementFormInput = {
   relatedOrderId: string | null;
   relatedShipmentId: string | null;
   changeSummary: string;
+  expectedUpdatedAt?: string | null;
 };
 
 export type InventoryMovementRecord = {
@@ -306,7 +308,8 @@ export function buildWarehouseMovementFormFromFormData(formData: FormData): Ware
     notes: readOptionalString(formData, "notes"),
     relatedOrderId: readOptionalString(formData, "related_order_id"),
     relatedShipmentId: readOptionalString(formData, "related_shipment_id"),
-    changeSummary: readOptionalString(formData, "change_summary") ?? `Record ${movementType} movement`
+    changeSummary: readOptionalString(formData, "change_summary") ?? `Record ${movementType} movement`,
+    expectedUpdatedAt: readOptionalString(formData, "expected_updated_at")
   };
 }
 
@@ -349,6 +352,56 @@ export async function recordInventoryMovementForStockChange(
   return movement;
 }
 
+async function applyInventoryAdjustmentRpc(
+  input: {
+    productSlug: string;
+    sku: string;
+    warehouseCode: string;
+    quantityDelta: number;
+    reasonCode: string;
+    notes?: string | null;
+    expectedUpdatedAt?: string | null;
+  },
+  actorId: string | null,
+  env: EnvSource
+) {
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/rpc/apply_inventory_adjustment`, {
+    method: "POST",
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      "Content-Type": "application/json"
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      p_product_slug: input.productSlug,
+      p_sku: input.sku,
+      p_warehouse_code: input.warehouseCode,
+      p_quantity_delta: input.quantityDelta,
+      p_reason_code: input.reasonCode,
+      p_notes: input.notes ?? null,
+      p_actor_id: actorId,
+      p_expected_updated_at: input.expectedUpdatedAt ?? null
+    })
+  });
+
+  const text = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new Error(`Inventory adjustment failed (${response.status})${text ? `: ${text.slice(0, 300)}` : ""}`);
+  }
+
+  const result = JSON.parse(text || "{}") as Record<string, unknown>;
+  if (result.conflict === true) {
+    throw new AdminRecordConflictError(
+      "Concurrent inventory update detected. Reload stock levels and retry.",
+      typeof result.current_row === "object" && result.current_row ? result.current_row as Record<string, unknown> : undefined
+    );
+  }
+
+  return result;
+}
+
 export async function applyWarehouseStockMovement(
   input: WarehouseMovementFormInput,
   options: {
@@ -361,11 +414,45 @@ export async function applyWarehouseStockMovement(
 ) {
   const env = options.env ?? process.env;
   const existingStock = await fetchWarehouseStockBySku(input.productSlug, input.sku, input.warehouseCode, env);
-  const existingInventory = await fetchInventoryBySku(input.productSlug, input.sku, env);
   const quantityBefore = numberField(existingStock, "available_quantity");
   const quantityDelta = input.targetQuantity !== null
     ? input.targetQuantity - quantityBefore
     : input.quantityDelta ?? 0;
+
+  const canUseAdjustmentRpc = input.targetQuantity === null
+    && quantityDelta !== 0
+    && !input.relatedOrderId
+    && !input.relatedShipmentId
+    && (input.movementType === "adjustment" || input.movementType === "stock_in" || input.movementType === "stock_out" || input.movementType === "correction");
+
+  if (canUseAdjustmentRpc) {
+    const rpcResult = await applyInventoryAdjustmentRpc(
+      {
+        productSlug: input.productSlug,
+        sku: input.sku,
+        warehouseCode: input.warehouseCode,
+        quantityDelta,
+        reasonCode: input.reasonCode,
+        notes: input.notes,
+        expectedUpdatedAt:
+          input.expectedUpdatedAt
+          ?? (typeof existingStock?.updated_at === "string" ? existingStock.updated_at : null)
+      },
+      options.actorId,
+      env
+    );
+
+    return {
+      inventoryRecord: await fetchInventoryBySku(input.productSlug, input.sku, env),
+      stockRecord: await fetchWarehouseStockBySku(input.productSlug, input.sku, input.warehouseCode, env),
+      movement: rpcResult,
+      quantityBefore: Number(rpcResult.quantity_before ?? quantityBefore),
+      quantityAfter: Number(rpcResult.quantity_after ?? quantityBefore + quantityDelta),
+      quantityDelta
+    };
+  }
+
+  const existingInventory = await fetchInventoryBySku(input.productSlug, input.sku, env);
   const quantityAfter = quantityBefore + quantityDelta;
 
   if (quantityAfter < 0) {

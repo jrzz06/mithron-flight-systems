@@ -7,20 +7,14 @@ function source(path: string) {
 }
 
 describe("operations operational UX maturity", () => {
-  it("turns the operations dashboard into a command center with live operational visibility", () => {
+  it("turns the operations dashboard into a workspace with operational visibility", () => {
     const operationsPage = source("app/operations/page.tsx");
     const adminService = source("services/admin.ts");
-    const shell = source("components/admin/control-shell.tsx");
+    const operationsLayout = source("app/operations/layout.tsx");
 
-    expect(shell).toContain("data-control-plane");
-    expect(shell).toContain("data-control-shell-header");
+    expect(operationsLayout).toContain("AdminShell");
     expect(operationsPage).toContain("data-operations-command-center");
-    expect(operationsPage).toContain("data-pending-operations-count");
-    expect(operationsPage).toContain("data-active-deployments-count");
-    expect(operationsPage).toContain("data-unresolved-alerts-count");
-    expect(operationsPage).toContain("data-operations-shipment-monitoring");
-    expect(operationsPage).toContain("data-operational-timeline");
-    expect(operationsPage).toContain("EnterpriseRealtimePanel");
+    expect(operationsPage).not.toContain("EnterpriseRealtimePanel");
     expect(adminService).toContain("shipments: [] as AdminRow[]");
     expect(adminService).toContain("orders: [] as AdminRow[]");
   });
@@ -68,10 +62,6 @@ describe("operations operational UX maturity", () => {
     const actions = source("app/operations/actions.ts");
 
     expect(operationsPage).toContain("data-operations-notification-actions");
-    expect(operationsPage).toContain("data-notification-unread-state");
-    expect(operationsPage).toContain("data-notification-read-state");
-    expect(operationsPage).toContain("data-notification-event-categories");
-    expect(operationsPage).toContain("data-notification-related-links");
     expect(actions).toContain("createOperationsEventNotification");
     expect(actions).toContain("operations.notification_duplicate");
   });

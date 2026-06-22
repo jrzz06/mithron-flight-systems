@@ -37,25 +37,22 @@ describe("warehouse panel implementation", () => {
     }
 
     const frame = source("components/warehouse/warehouse-frame.tsx");
+    const navConfig = source("components/platform/nav-config.ts");
     for (const label of [
-      "Dashboard",
+      "Today",
       "Orders",
-      "Picking Queue",
-      "Packing Station",
-      "Dispatch",
+      "Fulfillment",
       "Shipments",
-      "Movements",
-      "Inventory",
+      "Stock",
       "Returns",
-      "Stock Transfers",
-      "Activity",
-      "Settings",
-      "Logout"
+      "History",
+      "Settings"
     ]) {
-      expect(frame).toContain(label);
+      expect(navConfig).toContain(label);
     }
-    expect(frame).toContain("/warehouse/shipments");
-    expect(frame).toContain("/warehouse/movements");
+    expect(frame).toContain("PlatformShell");
+    expect(navConfig).toContain("/warehouse/shipments");
+    expect(navConfig).toContain("/warehouse/inventory");
     expect(frame).not.toContain("/admin/media");
     expect(frame).not.toContain("/admin/users");
     expect(frame).not.toContain("/admin/settings");

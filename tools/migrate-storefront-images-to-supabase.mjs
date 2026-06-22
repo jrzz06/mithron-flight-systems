@@ -11,7 +11,8 @@ import {
   BUCKET_BY_GROUP,
   STOREFRONT_IMAGE_INVENTORY,
   canonicalStorefrontSrc,
-  dedupeInventory
+  dedupeInventory,
+  isAiEnhancementExcluded
 } from "./storefront-image-inventory.mjs";
 import { ensureRealEsrganBinary } from "./realesrgan-binary.mjs";
 
@@ -126,6 +127,7 @@ async function runEnhancement(inventory) {
   if (!python) throw new Error("Python not found for enhancement.");
 
   const manifestItems = inventory
+    .filter((item) => !isAiEnhancementExcluded(item.src))
     .filter((item) => existsSync(localPathForSrc(item.src)))
     .filter((item) => forceEnhance || !isEnhanced(item.src))
     .map((item) => ({
@@ -357,6 +359,10 @@ async function main() {
     console.log("Skipping Supabase upload (--skip-upload).");
   } else {
     for (const item of inventory) {
+      if (isAiEnhancementExcluded(item.src)) {
+        console.log(`skip ${item.src}: use tools/upload-wordmark-to-supabase.mjs`);
+        continue;
+      }
       const result = await uploadInventoryAsset(supabase, item);
       uploaded.push(result);
       if (result.status === "uploaded") {

@@ -32,8 +32,22 @@ describe("glass interactive ui system", () => {
   it("does not modify the Mithron logo markup or styling", () => {
     const nav = source("components/navigation/store-nav.tsx");
 
-    expect(nav).toContain('resolveStorefrontSrc("/media/mithron/shell/mithron-wordmark.png")');
+    expect(nav).toContain("resolveBrandMarkSrc");
+    expect(nav).not.toContain('src = "/media/mithron/shell/mithron-wordmark.png"');
     expect(nav).not.toContain("glass-button");
     expect(nav).toContain("mithron-brand-mark");
+    expect(nav).toContain("unoptimized");
+  });
+
+  it("keeps the nav wordmark off Real-ESRGAN enhancement pipelines", () => {
+    const inventory = source("tools/storefront-image-inventory.mjs");
+    const enhance = source("tools/enhance-visible-storefront.mjs");
+    const migrate = source("tools/migrate-storefront-images-to-supabase.mjs");
+
+    expect(inventory).toContain("AI_ENHANCEMENT_EXCLUDED_SRCS");
+    expect(inventory).toContain('"/media/mithron/shell/mithron-wordmark.png"');
+    expect(enhance).not.toContain("mithron-wordmark.png");
+    expect(migrate).toContain("isAiEnhancementExcluded");
+    expect(migrate).toContain("upload-wordmark-to-supabase.mjs");
   });
 });

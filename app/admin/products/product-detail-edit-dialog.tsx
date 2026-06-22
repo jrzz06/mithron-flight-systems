@@ -49,6 +49,7 @@ export function ProductDetailEditDialog({
       >
         <input type="hidden" name="product_slug" value={product.id} />
         <input type="hidden" name="change_summary" value={`Edit product details ${product.id}`} />
+        {product.updatedAt ? <input type="hidden" name="expected_updated_at" value={product.updatedAt} /> : null}
 
         <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
           <div>

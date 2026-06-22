@@ -11,6 +11,7 @@ import {
 } from "@/services/admin-actions";
 import { appendOrderTimeline, buildOrderTimelineEntry } from "@/services/orders";
 import { applyWarehouseStockMovement } from "@/services/warehouse-movements";
+import { fulfillReservedStock, orderHasCheckoutReservations } from "@/services/checkout-stock";
 
 type EnvSource = Record<string, string | undefined>;
 type JsonRecord = Record<string, unknown>;
@@ -515,6 +516,8 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
 
   const orderItemMap = new Map(orderItems.map((item) => [String(item.id ?? ""), item]));
   const createdItems = [];
+  const hasCheckoutReservation = await orderHasCheckoutReservations(input.orderId, env);
+
   for (const item of input.items) {
     const orderItem = orderItemMap.get(item.orderItemId);
     if (!orderItem) throw new Error(`Order item ${item.orderItemId} was not found.`);
@@ -536,27 +539,33 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
     );
     createdItems.push(shipmentItem);
 
-    await applyWarehouseStockMovement(
-      {
-        productSlug: item.productId,
-        sku,
-        variantId: item.variantId,
-        warehouseCode: input.warehouseId,
-        movementType: "fulfillment",
-        quantityDelta: -item.quantity,
-        targetQuantity: null,
-        reasonCode: "shipment_created",
-        notes: `Shipment ${shipmentNumber} created for order ${input.orderId}.`,
-        relatedOrderId: input.orderId,
-        relatedShipmentId: shipmentId,
-        changeSummary: `Deduct shipment ${shipmentNumber} stock`
-      },
-      {
-        actorId: options.actorId,
-        at,
-        env
-      }
-    );
+    if (!hasCheckoutReservation) {
+      await applyWarehouseStockMovement(
+        {
+          productSlug: item.productId,
+          sku,
+          variantId: item.variantId,
+          warehouseCode: input.warehouseId,
+          movementType: "fulfillment",
+          quantityDelta: -item.quantity,
+          targetQuantity: null,
+          reasonCode: "shipment_created",
+          notes: `Shipment ${shipmentNumber} created for order ${input.orderId}.`,
+          relatedOrderId: input.orderId,
+          relatedShipmentId: shipmentId,
+          changeSummary: `Deduct shipment ${shipmentNumber} stock`
+        },
+        {
+          actorId: options.actorId,
+          at,
+          env
+        }
+      );
+    }
+  }
+
+  if (hasCheckoutReservation) {
+    await fulfillReservedStock(input.orderId, options.actorId, env, input.warehouseId);
   }
 
   const timeline = await createShipmentTimelineRecord(

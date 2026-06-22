@@ -110,6 +110,6 @@ describe("enterprise operations workflow", () => {
     expect(deploymentsPage).toContain("data-deployment-requests-table=\"deployment_requests\"");
     expect(tasksPage).toContain("data-staff-tasks-table=\"staff_tasks\"");
     expect(notificationsPage).toContain("data-notifications-table=\"notifications\"");
-    expect(operationsPage).toContain("activity_logs");
+    expect(operationsPage).toContain("Activity");
   });
 });

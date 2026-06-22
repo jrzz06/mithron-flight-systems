@@ -16,7 +16,7 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
 
   const workflowStatus = String(product.workflow_status ?? "draft");
   const rejectionReason = typeof product.rejection_reason === "string" ? product.rejection_reason : null;
-  const canEdit = ["draft", "pending_review", "rejected"].includes(workflowStatus);
+  const canEdit = ["draft", "rejected"].includes(workflowStatus);
   const canSubmit = ["draft", "rejected"].includes(workflowStatus);
 
   return (
@@ -35,7 +35,7 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
 
       {workflowStatus === "pending_review" ? (
         <p className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100">
-          This product is awaiting admin review. You can still edit details below until it is approved.
+          This product is awaiting admin review and cannot be edited until approval completes or it is rejected.
         </p>
       ) : null}
 
@@ -50,7 +50,8 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
               price: Number(product.price ?? 0),
               tagline: String(product.tagline ?? ""),
               imageSrc: readProductImageSrc(product.image) || readProductImageSrc(product.hero),
-              imageAlt: String(product.name ?? "")
+              imageAlt: String(product.name ?? ""),
+              updatedAt: typeof product.updated_at === "string" ? product.updated_at : null
             }}
           />
           {canSubmit ? (

@@ -2,8 +2,11 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
+import { MithronMissionTileImage } from "@/components/media/mithron-mission-tile-image";
+import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
+import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
-import { getGeneratedAssetCoverage } from "@/config/generated-assets";
+import { getBestVariantUpToWidth, getGeneratedAssetCoverage, getResponsiveAssetForSrc } from "@/config/generated-assets";
 import { getCriticalMediaManifest } from "@/config/media";
 import { heroSlides, interests } from "@/config/products";
 import { getProductBySlug, getProducts } from "@/services/catalog";
@@ -40,7 +43,7 @@ describe("cinematic media contract", () => {
     );
     expect(manifest.some((asset) => asset.role === "product")).toBe(false);
     expect(manifest.some((asset) => asset.src.includes("/media/mithron/products/"))).toBe(false);
-    expect(manifest.every((asset) => asset.src.startsWith("/media/mithron/"))).toBe(true);
+    expect(manifest.every((asset) => asset.src.startsWith("/media/mithron/") || asset.src.startsWith("/assets/hero/"))).toBe(true);
   });
 
   it("describes source PDP media with real Mithron product imagery", async () => {
@@ -134,7 +137,7 @@ describe("cinematic media contract", () => {
     expect(picture?.querySelector('source[srcset*="wixstatic"]')).toBeNull();
   });
 
-  it("serves shelf hero assets from Supabase enhanced webp variants", async () => {
+  it("serves shelf hero assets from capped Supabase webp variants", async () => {
     const { MithronShelfHeroImage } = await import("@/components/media/mithron-shelf-hero-image");
     render(createElement(MithronShelfHeroImage, {
       src: "/media/mithron/showcase/drone_world_hero.png",
@@ -144,12 +147,79 @@ describe("cinematic media contract", () => {
 
     const image = screen.getByRole("img", { name: "Mithron Drone World hardware" });
     const picture = image.closest("picture");
+    const webpSource = picture?.querySelector('source[type="image/webp"]');
 
     expect(picture?.getAttribute("data-mithron-asset-status")).toBe("generated");
     expect(image.getAttribute("src")).toContain("supabase.co/storage");
-    expect(image.getAttribute("src")).toContain("drone_world_hero");
     expect(image.getAttribute("src")).toMatch(/\.webp$/);
-    expect(picture?.querySelector('source[type="image/webp"]')?.getAttribute("srcset")).toContain("w");
+    expect(webpSource?.getAttribute("srcset")).toContain("w");
+    expect(webpSource?.getAttribute("srcset")).not.toContain("2560w");
+    expect(image).toHaveAttribute("loading", "lazy");
+  });
+
+  it("serves homepage heroes with avif and capped webp delivery", () => {
+    const src = "/media/mithron/hero/ag10-command.webp";
+    const responsive = getResponsiveAssetForSrc(src);
+
+    render(createElement(MithronPageHeroImage, {
+      src,
+      alt: "Agri drone deployment",
+      sizes: "100vw",
+      priority: true
+    }));
+
+    const image = screen.getByRole("img", { name: "Agri drone deployment" });
+    const picture = image.closest("picture");
+
+    expect(responsive?.variants.avif?.length).toBeGreaterThan(0);
+    expect(picture?.querySelector('source[type="image/avif"]')).not.toBeNull();
+    expect(picture?.querySelector('source[type="image/webp"]')).not.toBeNull();
+    expect(image.getAttribute("src")).not.toContain("2560w");
+    expect(image).toHaveAttribute("loading", "eager");
+  });
+
+  it("caps thumb images to layout-sized webp variants", () => {
+    const src = "/media/mithron/mission/agrone/agrone-drone-owner-registration.png";
+
+    render(createElement(MithronThumbImage, {
+      src,
+      alt: "AGRONE drone owner registration",
+      sizes: "80px"
+    }));
+
+    const image = screen.getByRole("img", { name: "AGRONE drone owner registration" });
+    const picture = image.closest("picture");
+    const webpSource = picture?.querySelector('source[type="image/webp"]');
+
+    expect(image.getAttribute("src")).toMatch(/(384w|480w|768w)/);
+    expect(webpSource?.getAttribute("srcset")).not.toContain("2560w");
+    expect(webpSource?.getAttribute("srcset")).not.toContain("1920w");
+    expect(webpSource?.getAttribute("srcset")).not.toContain("1280w");
+  });
+
+  it("caps mission-world tiles to lossless-quality webp variants sized for the layout", () => {
+    const src = "/media/mithron/mission/agrone/agrone-drone-owner-registration.png";
+    const responsive = getResponsiveAssetForSrc(src);
+    const capped = getBestVariantUpToWidth(responsive, 1280, "webp");
+
+    expect(capped?.width).toBe(1280);
+    expect(capped?.src).toMatch(/1280w.*\.webp$/);
+
+    render(createElement(MithronMissionTileImage, {
+      src,
+      alt: "AGRONE drone owner registration",
+      cardType: "hero",
+      sizes: "(max-width: 980px) 100vw, 65vw",
+      className: "agri-card-image"
+    }));
+
+    const image = screen.getByRole("img", { name: "AGRONE drone owner registration" });
+    const picture = image.closest("picture");
+    const webpSource = picture?.querySelector('source[type="image/webp"]');
+
+    expect(image.getAttribute("src")).toContain("1280w");
+    expect(webpSource?.getAttribute("srcset")).not.toContain("2560w");
+    expect(picture?.querySelector('source[type="image/png"]')).toBeNull();
     expect(image).toHaveAttribute("loading", "lazy");
   });
 

@@ -99,6 +99,8 @@ function HiddenInventoryFields({
       <input type="hidden" name="category" value={row.category} />
       <input type="hidden" name="price" value={row.price} />
       {includeStatus ? <input type="hidden" name="stock_status" value={status ?? row.stockStatus} /> : null}
+      {row.warehouseUpdatedAt ? <input type="hidden" name="expected_updated_at" value={row.warehouseUpdatedAt} /> : null}
+      {row.inventoryUpdatedAt ? <input type="hidden" name="expected_inventory_updated_at" value={row.inventoryUpdatedAt} /> : null}
       <input type="hidden" name="change_summary" value={`Update inventory ${row.productSlug}:${row.sku}`} />
     </>
   );
@@ -470,7 +472,7 @@ export function InventoryManager({
   }
 
   return (
-    <section data-inventory-system className="grid gap-3 rounded-xl border border-slate-800 bg-[#0f141b] p-3 text-slate-100 shadow-none md:p-4">
+    <section data-inventory-system className="mithron-elevated-card grid gap-3 rounded-xl border border-slate-800 bg-[#0f141b] p-3 text-slate-100 md:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Stock control</p>
@@ -488,23 +490,23 @@ export function InventoryManager({
       </div>
 
       <div data-inventory-source-report className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
+        <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Products</p>
           <p className="mt-1 text-lg font-semibold text-slate-100">{formatNumber(inventorySummary.productCount)}</p>
         </div>
-        <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
+        <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Stock units</p>
           <p className="mt-1 text-lg font-semibold text-slate-100">{formatNumber(inventorySummary.stockUnits)}</p>
         </div>
-        <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
+        <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Inventory value</p>
           <p className="mt-1 text-lg font-semibold text-slate-100">{formatCurrency(inventorySummary.totalValue)}</p>
         </div>
-        <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
+        <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Low stock</p>
           <p className="mt-1 text-lg font-semibold text-amber-200">{formatNumber(inventorySummary.lowStockCount)}</p>
         </div>
-        <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
+        <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Out of stock</p>
           <p className="mt-1 text-lg font-semibold text-rose-200">{formatNumber(inventorySummary.outOfStockCount)}</p>
         </div>

@@ -14,6 +14,8 @@ export type SimpleInventoryRow = {
   price: number;
   inventoryValue: number;
   lastUpdated: string | null;
+  warehouseUpdatedAt: string | null;
+  inventoryUpdatedAt: string | null;
   reservedQuantity: number;
   reorderThreshold: number;
   availableQuantity: number;
@@ -102,6 +104,8 @@ export function buildSimpleInventoryRows(products: AdminRow[], inventory: AdminR
       price: asNumber(product?.price),
       inventoryValue: asNumber(product?.price) * quantity,
       lastUpdated: asText(row.updated_at ?? stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
+      warehouseUpdatedAt: asText(stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
+      inventoryUpdatedAt: asText(row.updated_at, "") || null,
       reservedQuantity: asNumber(row.reserved_quantity),
       reorderThreshold: asNumber(row.reorder_threshold),
       availableQuantity: asNumber(stockRow?.available_quantity, quantity),
@@ -132,6 +136,8 @@ export function buildSimpleInventoryRows(products: AdminRow[], inventory: AdminR
       price: asNumber(product?.price),
       inventoryValue: asNumber(product?.price) * quantity,
       lastUpdated: asText(row.updated_at ?? row.last_counted_at, "") || null,
+      warehouseUpdatedAt: asText(row.updated_at ?? row.last_counted_at, "") || null,
+      inventoryUpdatedAt: null,
       reservedQuantity: 0,
       reorderThreshold: 0,
       availableQuantity: quantity,

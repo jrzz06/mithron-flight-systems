@@ -1,6 +1,15 @@
 .shell {
+  display: flex;
   min-width: 0;
   height: 100%;
+  flex-direction: column;
+  border-radius: 18px;
+  box-shadow: var(--elevation-product-rest);
+  transition: box-shadow var(--motion-hover) var(--ease-system);
+}
+
+.shell:is(:hover, :focus-within, :focus-visible) {
+  box-shadow: var(--elevation-product-hover);
 }
 
 .card {
@@ -9,34 +18,35 @@
   min-height: 560px;
   height: 100%;
   min-width: 0;
+  flex: 1 1 auto;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: none;
   border-radius: 18px;
   background: #ffffff;
   color: #111111;
   text-decoration: none;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  box-shadow: none;
   outline: none;
-  transform: translateZ(0);
-  transition: box-shadow 420ms var(--ease-cinematic);
+  transform: none;
+  transition: none;
 }
 
 .card::before {
   display: none;
 }
 
-.card:hover {
+.card:hover,
+.card:focus-visible {
   border-color: transparent;
-  box-shadow:
-    0 8px 20px rgba(15, 23, 42, 0.08),
-    0 24px 48px rgba(15, 23, 42, 0.1);
+  box-shadow: none;
+  transform: none;
 }
 
 .card:focus-visible {
-  box-shadow:
-    0 0 0 3px rgba(31, 107, 70, 0.28),
-    0 14px 42px rgba(15, 23, 42, 0.1);
+  box-shadow: none;
+  outline: 2px solid rgba(31, 107, 70, 0.28);
+  outline-offset: 2px;
 }
 
 .media {
@@ -157,10 +167,10 @@
 .body {
   position: relative;
   z-index: 1;
-  display: grid;
-  flex: 1;
+  display: flex;
+  flex: 1 1 auto;
   min-width: 0;
-  grid-template-rows: auto auto 1fr auto;
+  flex-direction: column;
   gap: 10px;
   padding: 20px 18px 18px;
   background: #ffffff;
@@ -227,12 +237,15 @@
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
+  flex: 0 0 auto;
   margin-top: auto;
   padding-top: 12px;
 }
 
 .description {
   display: -webkit-box;
+  flex: 1 1 auto;
+  min-height: 4.5em;
   margin: 0;
   overflow: hidden;
   color: #4b5563;
@@ -240,7 +253,7 @@
   font-weight: 500;
   line-height: 1.5;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .cta {

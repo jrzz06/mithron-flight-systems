@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { catalogCategoryDefinitions } from "@/lib/catalog-categories";
 import type { ProductShellItem } from "@/services/catalog";
 import { useUiStore } from "@/store/ui";
@@ -16,7 +16,8 @@ function searchCatalog(products: ProductShellItem[], query: string) {
 }
 
 export function SearchOverlay({ products }: { products: ProductShellItem[] }) {
-  const { overlay, setOverlay } = useUiStore();
+  const overlay = useUiStore((state) => state.overlay);
+  const setOverlay = useUiStore((state) => state.setOverlay);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const results = useMemo(() => searchCatalog(products, query), [products, query]);
@@ -84,7 +85,7 @@ export function SearchOverlay({ products }: { products: ProductShellItem[] }) {
                       className="search-result-card ambient-surface ambient-muted group grid min-h-28 grid-cols-[82px_1fr] items-center gap-4 rounded-2xl border border-[var(--surface-border)] p-3 outline-none focus-visible:ring-2 focus-visible:ring-white"
                     >
                       <span className="relative size-20 rounded-xl bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
-                        {open ? <MithronResponsiveImage src={product.image.src} alt={product.image.alt} fill className="object-contain p-2" sizes="80px" /> : null}
+                        {open ? <MithronThumbImage src={product.image.src} alt={product.image.alt} responsive={product.image.responsive} fill className="object-contain p-2" sizes="80px" /> : null}
                       </span>
                       <span>
                         <span className="type-meta text-[10px] text-white/40">{product.category}</span>

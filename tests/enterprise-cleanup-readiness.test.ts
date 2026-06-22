@@ -54,7 +54,7 @@ describe("enterprise cleanup readiness", () => {
     expect(graph.edges).toEqual(expect.arrayContaining([
       { from: "services/cms.ts", to: "config/storefront-content.ts", reason: "CMS fallback content" },
       { from: "components/media/mithron-responsive-image.tsx", to: "data/mithron-supabase-assets.generated.json", reason: "responsive media fallback manifest" },
-      { from: "app/api/upload/route.ts", to: "mithron_assets", reason: "legacy upload pipeline and static manifest source" }
+      { from: "lib/media/canonical-batch-upload.ts", to: "app/api/upload/route.ts", reason: "token-gated batch media upload bypassing admin RBAC" }
     ]));
     expect(ENTERPRISE_CLEANUP_DEPENDENCIES.every((dependency) => dependency.rollbackPlan.length > 0)).toBe(true);
   });

@@ -10,8 +10,9 @@ describe("admin operational UX", () => {
   it("provides shared operational admin controls without changing persistence architecture", () => {
     const modulePanel = source("components/admin/module-panel.tsx");
     const submitButton = source("components/admin/operational-submit-button.tsx");
-    const nav = source("components/admin/admin-nav.tsx");
+    const nav = source("components/platform/platform-nav.tsx");
     const frame = source("components/admin/admin-frame.tsx");
+    const navConfig = source("components/platform/nav-config.ts");
 
     expect(modulePanel).toContain("export function StatusBadge");
     expect(modulePanel).toContain("export function OperationalRecordGrid");
@@ -21,41 +22,22 @@ describe("admin operational UX", () => {
     expect(nav).toContain("usePathname");
     expect(nav).toContain("aria-current");
     expect(nav).toContain("/auth/logout");
-    expect(frame).toContain("AdminNav");
-    expect(frame).toContain("navGroups");
-    expect(frame).toContain("Core");
-    expect(frame).toContain("Dashboard");
-    expect(frame).toContain("Content");
-    expect(frame).toContain("System");
-    expect(frame).toContain("AdminTopbar");
+    expect(frame).toContain("PlatformShell");
+    expect(navConfig).toContain("Home");
+    expect(navConfig).toContain("Overview");
+    expect(navConfig).toContain("Catalog");
+    expect(navConfig).toContain("Workspace");
+    expect(navConfig).toContain("Activity log");
+    expect(navConfig).toContain("/admin/audit");
     expect(frame).toContain("data-admin-shell");
-    expect(frame).toContain("lg:pl-[228px]");
-    expect(frame).toContain("lg:fixed");
-    expect(frame).toContain("lg:inset-y-0");
-    expect(frame).toContain("lg:w-[228px]");
-    expect(frame).toContain("lg:overscroll-contain");
-    expect(frame).toContain("/admin/products#product-list");
-    expect(frame).toContain("Users");
-    expect(frame).toContain("/admin/users");
-    expect(frame).toContain("/admin/settings");
-    expect(frame).not.toContain("/admin/settings#users");
-    expect(frame).toContain('icon: "dashboard"');
-    expect(frame).not.toContain("Icon:");
-    expect(frame).not.toContain("LucideIcon");
     expect(frame).not.toContain('href: "/warehouse"');
-    expect(frame).not.toContain('href: "/warehouse/shipments"');
-    expect(frame).not.toContain('href: "/admin/audit"');
-    expect(frame).not.toContain("Storefront");
-    expect(nav).toContain("AdminNavIconKey");
-    expect(nav).toContain("iconByKey");
-    expect(nav).toContain("Icon");
-    expect(nav).toContain("aria-hidden=\"true\"");
+    expect(nav).toContain("Sign out");
   });
 
   it("uses compact production admin primitives instead of marketing hero panels", () => {
     const modulePanel = source("components/admin/module-panel.tsx");
     const controlShell = source("components/admin/control-shell.tsx");
-    const topbar = source("components/admin/admin-topbar.tsx");
+    const topbar = source("components/platform/platform-topbar.tsx");
 
     expect(modulePanel).toContain("export function AdminMetricGrid");
     expect(modulePanel).toContain("export function AdminSection");
@@ -63,7 +45,7 @@ describe("admin operational UX", () => {
     expect(modulePanel).toContain("export function AdminFormSection");
     expect(modulePanel).toContain("export function AdminStickyActionFooter");
     expect(modulePanel).not.toContain("text-[clamp(2.4rem,5vw,5.2rem)]");
-    expect(controlShell).toContain("data-control-plane");
+    expect(controlShell).toContain("data-control-shell-header");
     expect(controlShell).not.toContain("min-h-[calc(100vh-5rem)]");
     expect(topbar).toContain("data-admin-topbar");
     expect(topbar).toContain("data-admin-command-search");
@@ -74,14 +56,12 @@ describe("admin operational UX", () => {
     const page = source("app/admin/page.tsx");
 
     expect(page).toContain("data-admin-crud-actions");
-    expect(page).toContain("Quick actions");
+    expect(page).toContain("Quick links");
     expect(page).toContain("Create product");
     expect(page).toContain("/admin/products?tool=create#create-product");
-    expect(page).toContain("Archive / restore");
-    expect(page).toContain("/admin/products?tool=publish#archive-product");
     expect(page).toContain("Review orders");
     expect(page).toContain("/admin/orders");
-    expect(page).toContain("Manage users");
+    expect(page).toContain("Manage team");
     expect(page).toContain("/admin/users");
     expect(page).not.toContain("/admin/settings#users");
     expect(page).not.toContain("Hard delete");
@@ -95,8 +75,8 @@ describe("admin operational UX", () => {
     expect(page).toContain("data-admin-dashboard");
     expect(page).toContain("data-admin-quick-actions");
     expect(page).toContain("Recent orders");
-    expect(page).toContain("Low stock");
-    expect(page).toContain("Activity");
+    expect(page).toContain("Needs attention");
+    expect(page).toContain("Recent activity");
     expect(page).not.toContain("Recent CMS changes");
     expect(page).not.toContain("Recent uploads");
     expect(page).not.toContain("Table counts");
@@ -258,7 +238,8 @@ describe("admin operational UX", () => {
   it("surfaces global operator feedback across admin and role shells", () => {
     const toastBridge = source("components/admin/operator-toast-bridge.tsx");
     const frame = source("components/admin/admin-frame.tsx");
-    const shell = source("components/admin/control-shell.tsx");
+    const shell = source("components/platform/platform-shell.tsx");
+    const controlShell = source("components/admin/control-shell.tsx");
     const modulePanel = source("components/admin/module-panel.tsx");
 
     expect(toastBridge).toContain("toast.success");
@@ -268,9 +249,9 @@ describe("admin operational UX", () => {
     expect(toastBridge).toContain("router.replace");
     expect(toastBridge).toContain("cleanedParams.delete(statusKey)");
     expect(toastBridge).toContain("cleanedParams.delete(messageKeyFor(statusKey))");
-    expect(frame).toContain("OperatorToastBridge");
+    expect(frame).toContain("PlatformShell");
     expect(shell).toContain("OperatorToastBridge");
-    expect(shell).toContain("data-operator-state-strip");
+    expect(controlShell).toContain("data-operator-state-strip");
     expect(modulePanel).toContain("export function OperationalStateStrip");
   });
 
@@ -308,7 +289,7 @@ describe("admin operational UX", () => {
 
     expect(ordersPage).toContain("data-warehouse-order-feedback");
     expect(ordersPage).toContain("data-warehouse-order-lifecycle");
-    expect(fulfillmentPage).toContain("redirect(\"/warehouse/picking\")");
+    expect(fulfillmentPage).toContain("/warehouse/picking");
     expect(pickingPage).toContain("data-picking-queue");
     expect(packingPage).toContain("data-packing-station");
     expect(dispatchPage).toContain("data-dispatch-handoff-center");
@@ -319,10 +300,11 @@ describe("admin operational UX", () => {
 
   it("keeps the default admin chrome focused on admin and warehouse work", () => {
     const frame = source("components/admin/admin-frame.tsx");
+    const navConfig = source("components/platform/nav-config.ts");
     const page = source("app/admin/page.tsx");
 
-    expect(frame).not.toContain('href: "/operations"');
     expect(frame).not.toContain('href: "/warehouse"');
+    expect(navConfig).toContain('href: "/operations"');
     expect(page).not.toContain("Operations tasks");
     expect(page).not.toContain("Shipment workflow");
   });

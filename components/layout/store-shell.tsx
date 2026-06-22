@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster } from "sonner";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { StoreNav } from "@/components/navigation/store-nav";
-import { SearchOverlay } from "@/components/overlays/search-overlay";
 import { CartDrawerLoading } from "@/components/overlays/cart-drawer-loading";
 import type { Interest, NavigationNode } from "@/config/types";
 import type { FooterContent } from "@/config/storefront-content";
@@ -20,6 +19,11 @@ import { useUiStore } from "@/store/ui";
 const CartDrawer = dynamic(() => import("@/components/overlays/cart-drawer").then((mod) => mod.CartDrawer), {
   ssr: false,
   loading: () => <CartDrawerLoading />
+});
+
+const SearchOverlay = dynamic(() => import("@/components/overlays/search-overlay").then((mod) => mod.SearchOverlay), {
+  ssr: false,
+  loading: () => null
 });
 
 function hasFlushStorefrontHero(pathname: string | null) {
@@ -56,13 +60,26 @@ export function StoreShell({
   const skipsStorefrontChrome = shouldSkipStorefrontChrome(pathname);
   const isHome = pathname === "/";
   const flushesUnderNav = isHome || hasFlushStorefrontHero(pathname);
-  const isProductDetail = pathname.startsWith("/product/");
   const usesStorefrontChrome = !skipsStorefrontChrome;
-  const usesScrollPaintGuard = usesStorefrontChrome && (isHome || isProductDetail);
   const hasOpenedSearch = useUiStore((state) => state.hasOpenedSearch);
+  const overlay = useUiStore((state) => state.overlay);
   const hasOpenedCart = useCartStore((state) => state.hasOpenedCart);
+  const isCartOpen = useCartStore((state) => state.isCartOpen);
   const [searchPrewarmed, setSearchPrewarmed] = useState(false);
   const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (overlay || isCartOpen) {
+      root.setAttribute("data-overlay-open", "");
+    } else {
+      root.removeAttribute("data-overlay-open");
+    }
+
+    return () => {
+      root.removeAttribute("data-overlay-open");
+    };
+  }, [overlay, isCartOpen]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -73,50 +90,24 @@ export function StoreShell({
   }, [pathname]);
 
   const requestSearchPreload = useCallback((mountWhenReady = false) => {
+    void import("@/components/overlays/search-overlay").catch((error: unknown) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Search overlay preload failed", error);
+      }
+    });
     if (mountWhenReady && isMountedRef.current) {
       setSearchPrewarmed(true);
     }
   }, []);
 
   useEffect(() => {
-    if (!usesStorefrontChrome) {
-      document.documentElement.classList.remove("mithron-scrolling");
-      return;
-    }
+    if (!usesStorefrontChrome) return;
 
     let active = true;
     let timerId: ReturnType<typeof globalThis.setTimeout> | undefined;
-    let scrollClassTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
-    let lastScrollAt = performance.now();
-    let scrollClassActive = false;
-    const root = document.documentElement;
-
-    const markScrollActivity = () => {
-      lastScrollAt = performance.now();
-      if (!usesScrollPaintGuard) return;
-
-      if (!scrollClassActive) {
-        root.classList.add("mithron-scrolling");
-        scrollClassActive = true;
-      }
-
-      if (scrollClassTimer) {
-        globalThis.clearTimeout(scrollClassTimer);
-      }
-
-      scrollClassTimer = globalThis.setTimeout(() => {
-        root.classList.remove("mithron-scrolling");
-        scrollClassActive = false;
-      }, 180);
-    };
 
     const preloadSupportOverlays = () => {
       if (!active) return;
-
-      if (performance.now() - lastScrollAt < 700) {
-        queuePreload(900);
-        return;
-      }
 
       requestSearchPreload(true);
       void import("@/components/overlays/cart-drawer").catch((error: unknown) => {
@@ -124,30 +115,22 @@ export function StoreShell({
           console.error("Overlay preload failed", error);
         }
       });
+      void import("@/components/overlays/search-overlay").catch((error: unknown) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Search overlay preload failed", error);
+        }
+      });
     };
 
-    const queuePreload = (delay: number) => {
-      timerId = globalThis.setTimeout(() => {
-        if (!active) return;
-        preloadSupportOverlays();
-      }, delay);
-    };
-
-    window.addEventListener("scroll", markScrollActivity, { passive: true });
-    queuePreload(3200);
+    timerId = globalThis.setTimeout(preloadSupportOverlays, 1200);
 
     return () => {
       active = false;
-      window.removeEventListener("scroll", markScrollActivity);
       if (timerId) {
         globalThis.clearTimeout(timerId);
       }
-      if (scrollClassTimer) {
-        globalThis.clearTimeout(scrollClassTimer);
-      }
-      root.classList.remove("mithron-scrolling");
     };
-  }, [requestSearchPreload, usesScrollPaintGuard, usesStorefrontChrome]);
+  }, [requestSearchPreload, usesStorefrontChrome]);
 
   if (skipsStorefrontChrome) {
     return (

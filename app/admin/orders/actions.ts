@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminPermission } from "@/services/auth";
-import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
-import { appendOrderTimeline, buildOrderTimelineEntry, buildWarehouseAssignmentUpdate, transitionOrderStatus, type OrderStatus } from "@/services/orders";
+import { fetchAdminRecordsByColumn, updateAdminRecord, appendOrderTimelineViaRpc } from "@/services/admin-actions";
+import { buildOrderTimelineEntry, buildWarehouseAssignmentUpdate, transitionOrderStatus, type OrderStatus } from "@/services/orders";
 
 export async function confirmPaidOrderFormAction(formData: FormData) {
   const context = await requireAdminPermission("orders.write");
@@ -23,23 +23,21 @@ export async function confirmPaidOrderFormAction(formData: FormData) {
   } else {
     throw new Error(`Order cannot be confirmed from status ${currentStatus}.`);
   }
-  const timeline = appendOrderTimeline(
-    order.timeline,
-    buildOrderTimelineEntry({
-      status: nextStatus,
-      event: "admin_confirm",
-      note: "Order confirmed by admin.",
-      actorId: context.userId
-    })
-  );
+  const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? order.updated_at ?? "").trim() || null;
+  const timelineEntry = buildOrderTimelineEntry({
+    status: nextStatus,
+    event: "admin_confirm",
+    note: "Order confirmed by admin.",
+    actorId: context.userId
+  });
 
+  await appendOrderTimelineViaRpc(orderId, timelineEntry, context.userId!, process.env, { expectedUpdatedAt });
   await updateAdminRecord(
     "orders",
     "id",
     orderId,
     {
       status: nextStatus,
-      timeline,
       updated_at: new Date().toISOString()
     },
     context.userId!
@@ -61,18 +59,17 @@ export async function assignOrderToWarehouseFormAction(formData: FormData) {
     currentStatus,
     String(order.fulfillment_status ?? "pending")
   );
-  const timeline = appendOrderTimeline(
-    order.timeline,
-    buildOrderTimelineEntry({
-      status: nextStatus,
-      event: "warehouse_assigned",
-      note: nextFulfillment === "processing"
-        ? "Order assigned to warehouse."
-        : `Order marked assigned while preserving fulfillment status ${nextFulfillment}.`,
-      actorId: context.userId
-    })
-  );
+  const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? order.updated_at ?? "").trim() || null;
+  const timelineEntry = buildOrderTimelineEntry({
+    status: nextStatus,
+    event: "warehouse_assigned",
+    note: nextFulfillment === "processing"
+      ? "Order assigned to warehouse."
+      : `Order marked assigned while preserving fulfillment status ${nextFulfillment}.`,
+    actorId: context.userId
+  });
 
+  await appendOrderTimelineViaRpc(orderId, timelineEntry, context.userId!, process.env, { expectedUpdatedAt });
   await updateAdminRecord(
     "orders",
     "id",
@@ -80,7 +77,6 @@ export async function assignOrderToWarehouseFormAction(formData: FormData) {
     {
       status: nextStatus,
       fulfillment_status: nextFulfillment,
-      timeline,
       updated_at: new Date().toISOString()
     },
     context.userId!

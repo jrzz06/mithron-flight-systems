@@ -56,9 +56,11 @@ describe("production readiness architecture", () => {
 
   it("uses production metadata and baseline browser security headers", () => {
     const layout = source("app/layout.tsx");
+    const siteUrl = source("lib/site-url.ts");
     const nextConfig = source("next.config.ts");
 
-    expect(layout).toContain("NEXT_PUBLIC_SITE_URL");
+    expect(siteUrl).toContain("NEXT_PUBLIC_SITE_URL");
+    expect(layout).toContain("getSiteUrl");
     expect(layout).not.toContain('metadataBase: new URL("http://127.0.0.1:3000")');
     expect(layout).toContain("openGraph");
     expect(layout).toContain("alternates");

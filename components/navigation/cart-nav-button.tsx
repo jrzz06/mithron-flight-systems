@@ -1,8 +1,16 @@
 "use client";
 
 import { ShoppingBag } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { useCartStore } from "@/store/cart";
+
+function preloadCartDrawer() {
+  void import("@/components/overlays/cart-drawer").catch((error: unknown) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Cart drawer preload failed", error);
+    }
+  });
+}
 
 export function CartNavButton() {
   const hydrated = useSyncExternalStore(
@@ -10,8 +18,11 @@ export function CartNavButton() {
     () => true,
     () => false
   );
-  const count = useCartStore((state) => state.itemCount());
+  const count = useCartStore((state) => state.items.length);
   const setCartOpen = useCartStore((state) => state.setCartOpen);
+  const handlePointerEnter = useCallback(() => {
+    preloadCartDrawer();
+  }, []);
 
   const displayCount = hydrated ? count : 0;
 
@@ -20,6 +31,8 @@ export function CartNavButton() {
       type="button"
       aria-label={`Open cart${displayCount ? `, ${displayCount} items` : ""}`}
       data-testid="nav-cart-button"
+      onFocus={handlePointerEnter}
+      onPointerEnter={handlePointerEnter}
       onClick={() => setCartOpen(true)}
       className="adaptive-navbar__icon nav-interactive nav-interactive--subtle relative inline-flex size-10 items-center justify-center rounded-full text-current"
     >

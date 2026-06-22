@@ -10,12 +10,15 @@ import {
   createNotificationRecord,
   deleteProductRecordSafely,
   recordEntityRevisionSnapshot,
+  updateAdminRecord,
   updateOrderRecord,
   updateProductPublicationRecord,
   upsertInventoryRecord,
   upsertProductRecord,
   upsertWarehouseStockRecord
 } from "@/services/admin-actions";
+import { readExpectedUpdatedAt, readOptionalExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
+import { reserveCheckoutStock } from "@/services/checkout-stock";
 import {
   assertOrderFulfillmentTransition,
   buildInventoryLinkageRecords,
@@ -515,6 +518,8 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   const price = readInventoryNumber(formData, "price");
   const variantId = readInventoryString(formData, "variant_id") || null;
   const note = readInventoryString(formData, "note") || null;
+  const expectedWarehouseUpdatedAt = readExpectedUpdatedAt(formData);
+  const expectedInventoryUpdatedAt = readOptionalExpectedUpdatedAt(formData, "expected_inventory_updated_at");
   const actorId = await currentActorId();
   const now = new Date().toISOString();
   const previousInventory = await fetchInventoryBySku(productSlug, sku);
@@ -526,6 +531,31 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   const shouldArchiveProduct = stockStatus === "archived";
   if (shouldArchiveProduct) await assertAdminMutationPermission("mithron_products", actorId);
   const persistedStatus = stockStatus === "archived" ? "out_of_stock" : stockStatus;
+  const quantityDelta = quantity - quantityBefore;
+
+  let movement: JsonRecord | null = null;
+  if (quantityDelta !== 0) {
+    const adjustment = await applyWarehouseStockMovement(
+      {
+        productSlug,
+        sku,
+        variantId,
+        warehouseCode,
+        movementType: "correction",
+        quantityDelta,
+        targetQuantity: null,
+        reasonCode: "warehouse_quick_edit",
+        notes: note,
+        relatedOrderId: null,
+        relatedShipmentId: null,
+        changeSummary: note ?? `Update inventory for ${productSlug}:${sku}`,
+        expectedUpdatedAt: expectedWarehouseUpdatedAt
+      },
+      { actorId, at: now }
+    );
+    movement = adjustment.movement as JsonRecord;
+  }
+
   const records = buildInventoryLinkageRecords(
     {
       productSlug,
@@ -543,36 +573,73 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
     { actorId, at: now }
   );
 
-  const movement = await recordInventoryMovementForStockChange(
-    {
-      productId: productSlug,
-      sku,
-      variantId,
-      warehouseCode,
-      warehouseStockId: String(previousStock?.id ?? "") || null,
-      movementType: "correction",
-      quantityBefore,
-      quantityAfter: quantity,
-      reasonCode: "csv_import_inventory_update",
-      notes: note,
-      actorUserId: actorId,
-      relatedOrderId: null,
-      relatedShipmentId: null,
-      at: now
-    },
-    actorId
-  );
+  const productRecord = shouldArchiveProduct
+    ? await updateProductPublicationRecord(
+        {
+          slug: productSlug,
+          category: category || undefined,
+          price,
+          workflow_status: "archived",
+          is_visible: false,
+          updated_at: now
+        },
+        actorId
+      )
+    : null;
 
-  const productRecord = shouldArchiveProduct ? await updateProductPublicationRecord({
-    slug: productSlug,
-    category: category || undefined,
-    price,
-    workflow_status: "archived",
-    is_visible: false,
-    updated_at: now
-  }, actorId) : null;
-  const inventoryRecord = await upsertInventoryRecord(records.inventoryRecord, actorId);
-  const warehouseRecord = await upsertWarehouseStockRecord(records.warehouseStockRecord, actorId);
+  const inventoryId = String(previousInventory?.id ?? "");
+  const inventoryRecord = inventoryId
+    ? await updateAdminRecord(
+        "inventory",
+        "id",
+        inventoryId,
+        {
+          ...records.inventoryRecord,
+          updated_at: now
+        },
+        actorId,
+        process.env,
+        { expectedUpdatedAt: expectedInventoryUpdatedAt }
+      )
+    : await upsertInventoryRecord(records.inventoryRecord, actorId);
+
+  const currentStock = await fetchWarehouseStockBySku(productSlug, sku, warehouseCode);
+  const warehouseStockId = String(currentStock?.id ?? previousStock?.id ?? "");
+  const warehouseRecord = warehouseStockId
+    ? await updateAdminRecord(
+        "warehouse_stock",
+        "id",
+        warehouseStockId,
+        {
+          committed_quantity: committedQuantity,
+          variant_id: variantId,
+          updated_at: now
+        },
+        actorId
+      )
+    : await upsertWarehouseStockRecord(records.warehouseStockRecord, actorId);
+
+  if (quantityDelta === 0 && !movement) {
+    movement = (await recordInventoryMovementForStockChange(
+      {
+        productId: productSlug,
+        sku,
+        variantId,
+        warehouseCode,
+        warehouseStockId: warehouseStockId || null,
+        movementType: "correction",
+        quantityBefore,
+        quantityAfter: quantity,
+        reasonCode: "warehouse_quick_edit_metadata",
+        notes: note,
+        actorUserId: actorId,
+        relatedOrderId: null,
+        relatedShipmentId: null,
+        at: now
+      },
+      actorId
+    )) as JsonRecord;
+  }
 
   await createActivityLogRecord(
     {
@@ -590,7 +657,8 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
         previous_quantity: quantityBefore,
         category,
         price,
-        note
+        note,
+        quantity_delta: quantityDelta
       }
     },
     actorId
@@ -977,51 +1045,18 @@ export async function createWarehouseOrderFormAction(formData: FormData) {
       },
       actorId
     );
+  }
 
-    if (item.sku) {
-      const inventory = await fetchInventoryBySku(item.product_slug, item.sku);
-      if (inventory) {
-        const currentReserved = Number(inventory.reserved_quantity ?? 0);
-        await upsertInventoryRecord(
-          {
-            product_slug: item.product_slug,
-            sku: item.sku,
-            variant_id: inventory.variant_id ?? null,
-            stock_status: String(inventory.stock_status ?? "available"),
-            quantity: Number(inventory.quantity ?? 0),
-            reserved_quantity: currentReserved + item.quantity,
-            reorder_threshold: Number(inventory.reorder_threshold ?? 0),
-            updated_by: actorId,
-            updated_at: now.toISOString()
-          },
-          actorId
-        );
-      }
+  const reservationItems = draft.orderItems
+    .filter((item) => item.sku)
+    .map((item) => ({
+      productSlug: item.product_slug,
+      quantity: item.quantity,
+      sku: item.sku
+    }));
 
-      const stock = await fetchWarehouseStockBySku(item.product_slug, item.sku, warehouseCode);
-      if (stock) {
-        const availableQuantity = Number(stock.available_quantity ?? 0);
-        await recordInventoryMovementForStockChange(
-          {
-            productId: item.product_slug,
-            sku: item.sku,
-            variantId: String(stock.variant_id ?? inventory?.variant_id ?? "") || null,
-            warehouseCode,
-            warehouseStockId: String(stock.id ?? "") || null,
-            movementType: "adjustment",
-            quantityBefore: availableQuantity,
-            quantityAfter: availableQuantity,
-            reasonCode: "order_reservation",
-            notes: `Reserved ${item.quantity} unit(s) for order ${orderId}.`,
-            actorUserId: actorId,
-            relatedOrderId: orderId,
-            relatedShipmentId: null,
-            at: now
-          },
-          actorId
-        );
-      }
-    }
+  if (reservationItems.length) {
+    await reserveCheckoutStock(orderId, reservationItems, process.env, warehouseCode);
   }
 
   await createActivityLogRecord(

@@ -95,7 +95,9 @@ export default async function AdminSupplierProductsPage({
           className={`rounded-xl border px-4 py-3 text-sm ${
             params.approval_status === "success"
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
-              : "border-rose-500/30 bg-rose-500/10 text-rose-100"
+              : params.approval_status === "conflict"
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
+                : "border-rose-500/30 bg-rose-500/10 text-rose-100"
           }`}
         >
           {params.approval_message}
@@ -106,7 +108,7 @@ export default async function AdminSupplierProductsPage({
         {products.length ? products.map((product) => {
           const missingSupplier = !product.supplier_id;
           return (
-          <article key={product.slug} className="rounded-xl border border-slate-800 bg-[#10151d] p-4">
+          <article key={product.slug} className="mithron-elevated-card rounded-xl border border-slate-800 bg-[#10151d] p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-slate-100">{product.name}</h2>
@@ -121,6 +123,7 @@ export default async function AdminSupplierProductsPage({
               <div className="flex flex-wrap gap-2">
                 <form action={approveProductSubmissionFormAction}>
                   <input type="hidden" name="slug" value={product.slug} />
+                  <input type="hidden" name="expected_updated_at" value={product.updated_at} />
                   <button
                     type="submit"
                     disabled={missingSupplier}
@@ -131,6 +134,7 @@ export default async function AdminSupplierProductsPage({
                 </form>
                 <form action={rejectProductSubmissionFormAction} className="flex items-center gap-2">
                   <input type="hidden" name="slug" value={product.slug} />
+                  <input type="hidden" name="expected_updated_at" value={product.updated_at} />
                   <input name="rejection_reason" required placeholder="Rejection reason" className="rounded-lg border border-slate-700 bg-[#0c1118] px-3 py-2 text-sm text-slate-100" />
                   <button type="submit" className="rounded-lg bg-rose-500 px-3 py-2 text-sm font-semibold text-white">Reject</button>
                 </form>

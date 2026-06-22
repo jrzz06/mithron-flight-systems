@@ -7,17 +7,17 @@ function source(path: string) {
 }
 
 describe("storefront motion audit regressions", () => {
-  it("keeps the homepage composite on one synchronized scroll timeline", () => {
+  it("keeps the homepage composite static without scroll-scrubbed motion", () => {
     const component = source("sections/home/home-landing-composite.tsx");
 
-    expect(component).toContain("ScrollTrigger.create");
-    expect(component).toContain("scrub: true");
-    expect(component).toContain("onUpdate: (self)");
-    expect(component).toContain("--home-composite-progress");
-    expect(component).toContain('data-motion-engine="native-gsap-scrolltrigger"');
-    expect(component).toContain("scheduleCompositeMotion");
-    expect(component).toContain("requestIdleCallback");
-    expect(component).toContain("cancelScheduledMotion?.()");
+    expect(component).not.toContain("ScrollTrigger.create");
+    expect(component).not.toContain("scrub: true");
+    expect(component).not.toContain("onUpdate: (self)");
+    expect(component).not.toContain("--home-composite-progress");
+    expect(component).toContain('data-motion-engine="static"');
+    expect(component).not.toContain("scheduleCompositeMotion");
+    expect(component).not.toContain("requestIdleCallback");
+    expect(component).not.toContain("cancelScheduledMotion?.()");
     expect(component).not.toContain('window.addEventListener("scroll"');
     expect(component).not.toContain("requestAnimationFrame(update)");
   });
@@ -44,13 +44,13 @@ describe("storefront motion audit regressions", () => {
     expect(provider).toContain("usePathname");
     expect(provider).toContain("shouldUseNativeScroll");
     expect(provider).toContain("shell-routes");
-    expect(provider).toContain("requestAnimationFrame");
-    expect(provider).toContain("cancelAnimationFrame");
+    expect(provider).toContain("autoRaf: true");
     expect(provider).toContain("lenis.destroy()");
     expect(provider).toContain("syncTouch: false");
-    expect(provider).toContain("lerp: 0.1");
+    expect(provider).toContain("lerp: 0.08");
     expect(provider).toContain("dataset.smoothScroll");
-    expect(provider).toContain("ScrollTrigger.update()");
+    expect(provider).not.toContain("ScrollTrigger.update()");
+    expect(provider).not.toContain("mithron:viewport-scroll");
     expect(provider).not.toContain("gsap.ticker.add");
     expect(component).not.toContain("mithron:ensure-lenis");
     expect(component).not.toContain("mithron:lenis-ready");
@@ -105,7 +105,6 @@ describe("storefront motion audit regressions", () => {
 
     expect(component).toContain("if (reducedMotion)");
     expect(component).toContain('root.setAttribute("data-motion-state", "reduced")');
-    expect(component).toContain('root.style.setProperty("--home-composite-progress", "0")');
     expect(component).not.toContain("HomeDroneModelScene");
     expect(component).not.toContain("enabled={!reducedMotion");
     expect(component).not.toContain("home-three-scene");

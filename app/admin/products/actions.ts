@@ -23,11 +23,13 @@ import {
   upsertAdminRecord,
   upsertMediaAssetRecord,
   upsertInventoryRecord,
+  AdminRecordConflictError,
   updateAdminRecord,
   updateProductPublicationRecord,
   upsertProductMediaAssetRecord,
   upsertWarehouseStockRecord,
-  upsertProductRecord
+  upsertProductRecord,
+  setProductMediaPrimaryViaRpc
 } from "@/services/admin-actions";
 import { getCurrentAuthContext, requirePermission } from "@/services/auth";
 import { buildInventoryLinkageRecords, buildProductInventoryWorkflowFromFormData } from "@/services/enterprise-admin-forms";
@@ -103,6 +105,9 @@ async function recordProductAuditTrail(input: {
 }
 
 function productActionErrorMessage(error: unknown) {
+  if (error instanceof AdminRecordConflictError) {
+    return error.message;
+  }
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -555,6 +560,7 @@ export async function deleteProductCategoryFormAction(formData: FormData) {
 export async function saveProductQuickEditFormAction(formData: FormData) {
   await runProductAction("Product updated.", async () => {
     const quickInput = buildProductQuickEditFromFormData(formData);
+    const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "").trim() || null;
     const { actorId, actorRole } = await currentActorContext();
     const record = await updateAdminRecord(
       "mithron_products",
@@ -564,7 +570,9 @@ export async function saveProductQuickEditFormAction(formData: FormData) {
         ...quickInput.fields,
         updated_at: new Date().toISOString()
       },
-      actorId
+      actorId,
+      process.env,
+      { expectedUpdatedAt }
     );
 
     await recordProductAuditTrail(
@@ -593,16 +601,23 @@ export async function saveProductMediaLinkFormAction(formData: FormData) {
   await runProductAction("Product media link saved.", async () => {
     const draftInput = buildProductMediaLinkFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
-    const record = await upsertProductMediaAssetRecord(
-      {
-        product_slug: draftInput.identity.product_slug,
-        media_asset_id: draftInput.identity.media_asset_id,
-        usage: draftInput.identity.usage,
-        ...draftInput.fields,
-        updated_at: new Date().toISOString()
-      },
-      actorId
-    );
+    const record = draftInput.fields.is_primary
+      ? await setProductMediaPrimaryViaRpc(
+        draftInput.identity.product_slug,
+        draftInput.identity.media_asset_id,
+        draftInput.identity.usage,
+        actorId
+      )
+      : await upsertProductMediaAssetRecord(
+        {
+          product_slug: draftInput.identity.product_slug,
+          media_asset_id: draftInput.identity.media_asset_id,
+          usage: draftInput.identity.usage,
+          ...draftInput.fields,
+          updated_at: new Date().toISOString()
+        },
+        actorId
+      );
     await recordProductAuditTrail(
       {
         action: "products.media_link",

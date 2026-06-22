@@ -8,8 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, Globe2, Menu, Search, UserRound, X } from "lucide-react";
 import { useAdaptiveNavbarTone } from "@/hooks/use-adaptive-navbar-tone";
 import type { NavbarInkTone } from "@/hooks/use-adaptive-navbar-tone";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
-import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
+import { MithronCardImage } from "@/components/media/mithron-card-image";
+import { resolveBrandMarkSrc } from "@/lib/media/brand-mark";
 import type { NavigationNode } from "@/config/types";
 import type { EnterpriseMenuConfig, EnterpriseMenuOption, FeaturedMenuCard, MegaMenuConfig } from "@/lib/nav-menu-types";
 import { catalogCategoryDefinitions } from "@/lib/catalog-categories";
@@ -59,7 +59,8 @@ export function StoreNav({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { overlay, setOverlay } = useUiStore();
+  const overlay = useUiStore((state) => state.overlay);
+  const setOverlay = useUiStore((state) => state.setOverlay);
   const mobileMenuOpen = overlay === "mobile-menu";
   const normalizedPathname = useMemo(() => normalizePath(pathname), [pathname]);
   const { tone, style } = useAdaptiveNavbarTone(getInitialNavbarTone(normalizedPathname));
@@ -79,6 +80,7 @@ export function StoreNav({
   const [renderedMenuKey, setRenderedMenuKey] = useState<string | null>(null);
   const [featuredByMenu, setFeaturedByMenu] = useState<Record<string, string>>({});
   const closeTimerRef = useRef<number | null>(null);
+  const prefetchDebounceRef = useRef<Map<string, number>>(new Map());
   const activeNavIndex = useMemo(() => {
     return displayedNavigationItems.findIndex((item) => {
       const menu = enterpriseMenuByLabel.get(item.label);
@@ -96,6 +98,26 @@ export function StoreNav({
     if (!href.startsWith("/")) return;
     router.prefetch(href);
   }, [router]);
+
+  const debouncedPrefetchRoute = useCallback((href: string) => {
+    if (!href.startsWith("/")) return;
+    const existing = prefetchDebounceRef.current.get(href);
+    if (existing) window.clearTimeout(existing);
+    const timerId = window.setTimeout(() => {
+      prefetchDebounceRef.current.delete(href);
+      router.prefetch(href);
+    }, 80);
+    prefetchDebounceRef.current.set(href, timerId);
+  }, [router]);
+
+  const preloadSearchOverlay = useCallback(() => {
+    onSearchIntent?.();
+    void import("@/components/overlays/search-overlay").catch((error: unknown) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Search overlay preload failed", error);
+      }
+    });
+  }, [onSearchIntent]);
 
   const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current) {
@@ -173,6 +195,10 @@ export function StoreNav({
   useEffect(() => {
     return () => {
       clearCloseTimer();
+      for (const timerId of prefetchDebounceRef.current.values()) {
+        window.clearTimeout(timerId);
+      }
+      prefetchDebounceRef.current.clear();
     };
   }, [clearCloseTimer]);
 
@@ -254,7 +280,6 @@ export function StoreNav({
 
           <nav className="absolute left-1/2 top-1/2 z-[1] hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-4 whitespace-nowrap lg:flex xl:gap-7 2xl:gap-8">
             {displayedNavigationItems.map((item, index) => {
-              const isInternalRoute = item.href.startsWith("/");
               const isActive = activeNavIndex === index;
               const menu = enterpriseMenuByLabel.get(item.label);
               const isMenuActive = menu ? activeMenuKey === menu.key : false;
@@ -263,14 +288,11 @@ export function StoreNav({
                 <div key={item.label} onPointerEnter={() => menu && openEnterpriseMenu(menu.key)}>
                   <Link
                     href={item.href}
-                    prefetch={false}
                     aria-current={isActive ? "page" : undefined}
                     aria-haspopup={menu ? "true" : undefined}
                     aria-expanded={menu ? isMenuActive : undefined}
                     aria-controls={menuId}
-                    onFocus={() => isInternalRoute && prefetchRoute(item.href)}
                     onPointerEnter={() => {
-                      if (isInternalRoute) prefetchRoute(item.href);
                       if (menu) openEnterpriseMenu(menu.key);
                     }}
                     className={`adaptive-navbar__link type-nav nav-interactive group relative inline-flex h-10 items-center whitespace-nowrap text-current ${isActive ? "is-active" : ""}`}
@@ -289,10 +311,10 @@ export function StoreNav({
               className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-10 items-center justify-center rounded-full text-current"
               aria-label="Search Mithron systems"
               type="button"
-              onFocus={onSearchIntent}
+              onFocus={preloadSearchOverlay}
               onClick={() => setOverlay("search")}
-              onPointerDown={onSearchIntent}
-              onPointerEnter={onSearchIntent}
+              onPointerDown={preloadSearchOverlay}
+              onPointerEnter={preloadSearchOverlay}
             >
               <Search className="size-[18px]" />
             </button>
@@ -300,10 +322,7 @@ export function StoreNav({
             {!isStorefrontGuestOnly() ? (
               <Link
                 href="/account"
-                prefetch={false}
                 aria-label="Account"
-                onFocus={() => prefetchRoute("/account")}
-                onPointerEnter={() => prefetchRoute("/account")}
                 className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-10 items-center justify-center rounded-full text-current"
               >
                 <UserRound className="size-[18px]" />
@@ -318,7 +337,7 @@ export function StoreNav({
           open={activeMenuKey === renderedMenu.key}
           featuredKey={featuredByMenu[renderedMenu.key]}
           onFeatureIntent={(featureKey) => setFeaturedCard(renderedMenu.key, featureKey)}
-          onRouteIntent={prefetchRoute}
+          onRouteIntent={debouncedPrefetchRoute}
           onClose={closeEnterpriseMenu}
         />
       ) : null}
@@ -327,8 +346,7 @@ export function StoreNav({
         open={mobileMenuOpen}
         onClose={() => setOverlay(null)}
         onSearch={() => setOverlay("search")}
-        onSearchIntent={onSearchIntent}
-        onRouteIntent={prefetchRoute}
+        onSearchIntent={preloadSearchOverlay}
       />
     </div>
   );
@@ -511,11 +529,10 @@ function EnterpriseFeaturedCard({
   return (
     <div className="enterprise-feature-card">
       <div className="enterprise-feature-card__media" aria-hidden="true">
-        <MithronResponsiveImage
+        <MithronCardImage
           src={card.image}
           alt=""
           fill
-          loading="lazy"
           sizes="(max-width: 1200px) 30vw, 360px"
           className="object-contain"
         />
@@ -551,8 +568,7 @@ function EnterpriseFeaturedCard({
 }
 
 function MithronBrandMark() {
-  const wordmarkSrc = resolveStorefrontSrc("/media/mithron/shell/mithron-wordmark.png");
-  const src = wordmarkSrc.startsWith("http") ? `${wordmarkSrc}?v=6` : wordmarkSrc;
+  const src = resolveBrandMarkSrc();
   return (
     <span aria-hidden="true" className="mithron-brand-mark relative inline-flex h-[22px] w-auto max-w-[108px] shrink-0 items-center md:h-[26px] md:max-w-[128px]">
       <Image
@@ -562,7 +578,7 @@ function MithronBrandMark() {
         height={111}
         className="block h-full w-auto max-w-full object-contain object-left"
         priority
-        unoptimized={wordmarkSrc.startsWith("http")}
+        unoptimized
       />
     </span>
   );
@@ -573,15 +589,13 @@ function MobileMenu({
   open,
   onClose,
   onSearch,
-  onSearchIntent,
-  onRouteIntent
+  onSearchIntent
 }: {
   navigationItems: NavigationNode[];
   open: boolean;
   onClose: () => void;
   onSearch: () => void;
   onSearchIntent?: () => void;
-  onRouteIntent: (href: string) => void;
 }) {
   return (
     <>
@@ -614,14 +628,8 @@ function MobileMenu({
             <li key={item.label}>
               <Link
                 href={item.href}
-                prefetch={false}
                 tabIndex={open ? 0 : -1}
-                onFocus={() => onRouteIntent(item.href)}
-                onPointerEnter={() => onRouteIntent(item.href)}
-                onClick={() => {
-                  onRouteIntent(item.href);
-                  onClose();
-                }}
+                onClick={onClose}
                 className="adaptive-mobile-menu__link nav-interactive inline-flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-[13px] font-medium tracking-[0.01em]"
               >
                 {item.label}
@@ -649,14 +657,8 @@ function MobileMenu({
           {!isStorefrontGuestOnly() ? (
             <Link
               href="/account"
-              prefetch={false}
               tabIndex={open ? 0 : -1}
-              onFocus={() => onRouteIntent("/account")}
-              onPointerEnter={() => onRouteIntent("/account")}
-              onClick={() => {
-                onRouteIntent("/account");
-                onClose();
-              }}
+              onClick={onClose}
               className="adaptive-mobile-menu__action nav-interactive inline-flex h-11 items-center justify-center rounded-full border"
               aria-label="Account"
             >

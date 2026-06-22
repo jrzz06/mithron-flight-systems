@@ -12,7 +12,9 @@ describe("warehouse legacy route retirement", () => {
     const actions = source("app/warehouse/actions.ts");
     const verifier = source("tools/verify-authenticated-warehouse-session.mjs");
 
-    expect(fulfillmentPage).toContain('redirect("/warehouse/picking")');
+    expect(fulfillmentPage).toContain("/warehouse/picking");
+    expect(fulfillmentPage).toContain("/warehouse/packing");
+    expect(fulfillmentPage).toContain("/warehouse/dispatch");
     expect(fulfillmentPage).not.toContain("getWarehouseSnapshot");
     expect(fulfillmentPage).not.toContain("createShipmentFormAction");
     expect(fulfillmentPage).not.toContain("updateShipmentLifecycleFormAction");

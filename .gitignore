@@ -9,6 +9,8 @@
 # local pipeline state (never commit)
 tools/.enhance-*
 tools/.migrate-*
+public/**/*.enhanced.json
+public/**/*.bak
 tools/load-test-results.json
 
 # dependencies

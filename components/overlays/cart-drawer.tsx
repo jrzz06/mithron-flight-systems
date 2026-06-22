@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Minus, Plus, ShieldCheck, ShoppingBag, Truck, Wrench, X } from "lucide-react";
-import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
+import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { Button } from "@/components/ui/button";
 import type { ProductShellItem } from "@/services/catalog";
 import { glassButtonClassName } from "@/lib/glass-ui";
@@ -12,13 +13,17 @@ import { useCartStore } from "@/store/cart";
 
 export function CartDrawer({ products }: { products: ProductShellItem[] }) {
   const router = useRouter();
-  const items = useCartStore((state) => state.items);
-  const isCartOpen = useCartStore((state) => state.isCartOpen);
-  const setCartOpen = useCartStore((state) => state.setCartOpen);
-  const setQuantity = useCartStore((state) => state.setQuantity);
-  const subtotal = useCartStore((state) => state.subtotal());
-  const taxTotal = useCartStore((state) => state.taxTotal());
-  const grandTotal = useCartStore((state) => state.grandTotal());
+  const { items, isCartOpen, setCartOpen, setQuantity, subtotal, taxTotal, grandTotal } = useCartStore(
+    useShallow((state) => ({
+      items: state.items,
+      isCartOpen: state.isCartOpen,
+      setCartOpen: state.setCartOpen,
+      setQuantity: state.setQuantity,
+      subtotal: state.subtotal(),
+      taxTotal: state.taxTotal(),
+      grandTotal: state.grandTotal()
+    }))
+  );
   const suggestions = products
     .filter((product) => product.interests.includes("agriculture") || product.interests.includes("components"))
     .slice(0, 3);
@@ -65,7 +70,7 @@ export function CartDrawer({ products }: { products: ProductShellItem[] }) {
               {items.map((item) => (
                 <div key={`${item.productSlug}-${item.bundleId}`} className="grid grid-cols-[82px_1fr] gap-4 border-b border-[var(--surface-border)] py-5">
                   <div className="relative size-20 rounded-xl bg-[#0c0c0c]">
-                    {isCartOpen ? <MithronResponsiveImage src={item.image} alt={item.productName} fill className="object-contain p-2" sizes="80px" /> : null}
+                    {isCartOpen ? <MithronThumbImage src={item.image} alt={item.productName} fill className="object-contain p-2" sizes="80px" /> : null}
                   </div>
                   <div>
                     <h3 className="type-card-title text-base">{item.productName}</h3>
@@ -154,7 +159,7 @@ export function CartDrawer({ products }: { products: ProductShellItem[] }) {
                     }}
                   >
                     <span className="relative size-16 rounded-xl bg-white/5">
-                      {isCartOpen ? <MithronResponsiveImage src={product.image.src} alt={product.image.alt} fill className="object-contain p-2" sizes="64px" /> : null}
+                      {isCartOpen ? <MithronThumbImage src={product.image.src} alt={product.image.alt} responsive={product.image.responsive} fill className="object-contain p-2" sizes="64px" /> : null}
                     </span>
                     <span>
                       <span className="type-card-title block text-sm">{product.name}</span>

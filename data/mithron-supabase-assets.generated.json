@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-21T16:58:37.423Z",
+  "updatedAt": "2026-06-22T13:59:56.191Z",
   "assets": [
     {
       "assetId": "hero-ag10-command",
@@ -3626,27 +3626,51 @@
       "status": "generated",
       "fallbackSrc": "/media/mithron/catalog/global-products-category.png",
       "fallbackAlt": "Global products category",
-      "width": 1024,
-      "height": 439,
-      "blurDataUrl": "data:image/webp;base64,UklGRo4AAABXRUJQVlA4IIIAAAAwBACdASocAAwAPwFsrk8rJiQiMAgBYCAJZwC/OCHcvyu9ZsWVrIA8EkAA/uQO7E0N8QSSXj/Ug7UIWX8vYK5J63+PVAXEcRK6ztFq+bYshyJigOZS/ZzbeZexM08dcFGaRv6lBCfyZ225vxOxHrulefir4t27KrijhOnpPcRiNfAA",
+      "width": 2560,
+      "height": 1098,
+      "blurDataUrl": "data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAABQBACdASocAAwAPwFurk+rJqQiMAgBYCAJZwC7AYvq39srHoDZvDC2YGcAAP7kDuxYt/zHvwkgQTwhCwxBx5DJy+HVDNwvIgzxxG8VquhrBNHIllSmAVr2etEYPKrcrWDJWnlXLZ1qq/RfpJc6lRpPbq9J2FNmWk6dsRhhWXnxbfltgAA=",
       "dominantColor": "#181828",
       "variants": {
         "webp": [
           {
+            "width": 2560,
+            "height": 1098,
+            "format": "webp",
+            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-2560w-enh-v1.4fc12d43.webp",
+            "storagePath": "storefront/global-products-category-2560w-enh-v1.4fc12d43.webp",
+            "optimizedSizeKb": 176.26
+          },
+          {
+            "width": 1920,
+            "height": 824,
+            "format": "webp",
+            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-1920w-enh-v1.bd8fc8a2.webp",
+            "storagePath": "storefront/global-products-category-1920w-enh-v1.bd8fc8a2.webp",
+            "optimizedSizeKb": 116.28
+          },
+          {
+            "width": 1280,
+            "height": 549,
+            "format": "webp",
+            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-1280w-enh-v1.7df611a5.webp",
+            "storagePath": "storefront/global-products-category-1280w-enh-v1.7df611a5.webp",
+            "optimizedSizeKb": 64.81
+          },
+          {
             "width": 768,
             "height": 329,
             "format": "webp",
-            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-768w-enh-v1.425b0251.webp",
-            "storagePath": "storefront/global-products-category-768w-enh-v1.425b0251.webp",
-            "optimizedSizeKb": 34.64
+            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-768w-enh-v1.94bf54ff.webp",
+            "storagePath": "storefront/global-products-category-768w-enh-v1.94bf54ff.webp",
+            "optimizedSizeKb": 31.62
           },
           {
             "width": 480,
             "height": 206,
             "format": "webp",
-            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-480w-enh-v1.8e4b673e.webp",
-            "storagePath": "storefront/global-products-category-480w-enh-v1.8e4b673e.webp",
-            "optimizedSizeKb": 17.67
+            "src": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/global-products-category-480w-enh-v1.a5651c5a.webp",
+            "storagePath": "storefront/global-products-category-480w-enh-v1.a5651c5a.webp",
+            "optimizedSizeKb": 16.7
           }
         ]
       }

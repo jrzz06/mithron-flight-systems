@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { getCurrentAuthContext } from "@/services/auth";
+import { MetricGrid } from "@/components/platform";
 import { listSupplierProducts } from "@/services/supplier-actions";
+import { getCurrentAuthContext } from "@/services/auth";
 
 export default async function SupplierDashboardPage() {
   const context = await getCurrentAuthContext();
@@ -12,35 +13,30 @@ export default async function SupplierDashboardPage() {
   }, {});
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-5">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Supplier workspace</p>
-        <h1 className="mt-1 text-2xl font-semibold text-slate-100">Product submissions</h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Create products, submit them for admin review, and track approval status before they appear on the storefront.
+        <p className="text-xs font-medium text-[var(--platform-text-muted)]">Supplier workspace</p>
+        <h2 className="mt-1 text-2xl font-semibold text-[var(--platform-text-primary)]">Overview</h2>
+        <p className="mt-2 max-w-2xl text-sm text-[var(--platform-text-secondary)]">
+          Track product submissions and stock levels before they appear on the storefront.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Draft", counts.draft ?? 0],
-          ["Pending review", counts.pending_review ?? 0],
-          ["Published", counts.published ?? 0],
-          ["Rejected", counts.rejected ?? 0]
-        ].map(([label, value]) => (
-          <article key={label} className="rounded-xl border border-white/[0.08] bg-[#0f141b] p-4">
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">{label}</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-100">{value}</p>
-          </article>
-        ))}
-      </div>
+      <MetricGrid
+        metrics={[
+          { label: "Draft", value: String(counts.draft ?? 0) },
+          { label: "Awaiting review", value: String(counts.pending_review ?? 0) },
+          { label: "Published", value: String(counts.published ?? 0) },
+          { label: "Rejected", value: String(counts.rejected ?? 0) }
+        ]}
+      />
 
       <div className="flex flex-wrap gap-3">
-        <Link href="/supplier/products/new" className="rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white">
+        <Link href="/supplier/products/new" className="rounded-[10px] bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700">
           Add product
         </Link>
-        <Link href="/supplier/products" className="rounded-lg border border-white/[0.08] px-4 py-2 text-sm font-semibold text-slate-200">
-          View all products
+        <Link href="/supplier/products" className="rounded-[10px] border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-2 text-sm font-semibold text-[var(--platform-text-primary)] hover:bg-[var(--platform-surface-muted)]">
+          View products
         </Link>
       </div>
     </div>
