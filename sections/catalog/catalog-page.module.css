@@ -12,7 +12,7 @@
   overflow: clip;
   background: linear-gradient(180deg, #eef0f3 0%, var(--catalog-bg) 100%);
   color: var(--catalog-text);
-  font-family: var(--font-manrope, var(--type-ui, ui-sans-serif, system-ui, sans-serif));
+  font-family: var(--type-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
 }
 
 .shell::before {

@@ -64,8 +64,8 @@ describe("hero carousel premium composition", () => {
     expect(hero).not.toContain("previousIndex");
     expect(hero).not.toContain("stagger: 0.085");
 
-    expect(globals).toContain("--font-display: var(--font-dji)");
-    expect(globals).toContain("--font-body: var(--font-manrope)");
+    expect(globals).toContain("--font-display: var(--font-system)");
+    expect(globals).toContain("--font-body: var(--font-system)");
     expect(globals).toContain(".hero-banner-product-image :is(img, video)");
     expect(globals).not.toContain("@keyframes heroSlideCrossfade");
     expect(globals).toContain("object-fit: cover");
@@ -93,14 +93,14 @@ describe("hero carousel premium composition", () => {
     expect(globals).toContain("margin-bottom: 0");
     expect(globals).toContain("object-fit: cover");
     expect(globals).toContain("width: clamp(520px, 34vw, 580px)");
-    expect(globals).toContain("font-weight: 700");
-    expect(globals).toContain("letter-spacing: -0.025em");
+    expect(globals).toContain("font-weight: 600");
+    expect(globals).toContain("letter-spacing: -0.028em");
     expect(globals).toContain("white-space: nowrap");
     expect(globals).toContain("margin-top: clamp(64px, 6vw, 72px)");
 
-    expect(layout).toContain("Manrope");
-    expect(layout).toContain("--font-manrope");
-    expect(layout).not.toContain("Inter");
+    expect(layout).toContain("Inter");
+    expect(layout).toContain("--font-inter");
+    expect(layout).not.toContain("Manrope");
     expect(layout).not.toContain("Montserrat");
 
     expect(nav).toContain("adaptive-navbar absolute left-0 top-0 z-[999] w-full");

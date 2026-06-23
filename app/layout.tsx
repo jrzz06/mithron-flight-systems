@@ -1,25 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
-import localFont from "next/font/local";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ObservabilityProvider } from "@/components/providers/observability-provider";
 import { buildSiteStructuredData } from "@/lib/structured-data";
 import { getSiteUrl } from "@/lib/site-url";
 
-const manrope = Manrope({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  variable: "--font-inter",
   display: "swap",
   adjustFontFallback: true
-});
-
-const djiBold = localFont({
-  src: "../public/fonts/dji-bold.ttf",
-  variable: "--font-dji",
-  display: "swap",
-  weight: "700",
-  style: "normal"
 });
 
 const siteUrl = getSiteUrl();
@@ -61,7 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${manrope.variable} ${djiBold.variable}`}
+      className={inter.variable}
     >
       <body suppressHydrationWarning>
         <JsonLd data={siteStructuredData} />

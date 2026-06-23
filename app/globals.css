@@ -2,10 +2,10 @@
 @import "./glass-interactive.css";
 
 @theme {
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-subheading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-subheading: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --color-background: #f1f4f7;
   --color-foreground: #0f172a;
@@ -55,13 +55,14 @@
 }
 
 :root {
-  --font-display: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-subheading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-system: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-system);
+  --font-subheading: var(--font-system);
+  --font-body: var(--font-system);
   --type-ui: var(--font-body);
   --type-display: var(--font-display);
-  --type-mission-heading: var(--font-dji), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --type-mission-body: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --type-mission-heading: var(--font-system);
+  --type-mission-body: var(--font-system);
   --type-subheading: var(--font-subheading);
   --type-technical: var(--font-body);
   --type-label-color: #6b7280;
@@ -369,7 +370,7 @@ samp {
   font-family: var(--type-mono);
 }
 
-/* Mithron type system — DJI Bold display + Manrope UI body */
+/* Mithron type system — Inter + system UI stack */
 h1,
 h2,
 h3,
@@ -378,9 +379,9 @@ h5,
 h6,
 .tech-headline {
   font-family: var(--type-display);
-  font-weight: 700;
-  line-height: 1.14;
-  letter-spacing: -0.015em;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
   text-wrap: balance;
   font-feature-settings: "kern" 1, "liga" 1;
 }
@@ -392,20 +393,20 @@ h1,
 .type-section,
 .hero-dji-title,
 .catalog-intro__title {
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.08;
 }
 
 .tech-subheading,
 .type-meta,
 .type-campaign-overline,
 .catalog-intro__eyebrow {
-  font-family: var(--font-dji), var(--font-manrope), sans-serif;
-  font-weight: 700;
+  font-family: var(--type-ui);
+  font-weight: 500;
   font-size: 0.75rem;
   line-height: 1.25;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--type-label-color);
 }
@@ -417,10 +418,10 @@ dd,
 .type-body,
 .type-subtitle,
 .type-nav {
-  font-family: var(--font-manrope), sans-serif;
+  font-family: var(--type-ui);
   font-weight: 400;
-  line-height: 1.62;
-  letter-spacing: 0.005em;
+  line-height: 1.55;
+  letter-spacing: -0.011em;
 }
 
 .tech-body-copy {
@@ -1457,8 +1458,8 @@ canvas {
 }
 
 .hero-dji-title {
-  font-family: var(--font-dji), var(--font-manrope), sans-serif;
-  font-weight: 700;
+  font-family: var(--type-display);
+  font-weight: 600;
   font-size: clamp(34px, 8vw, 40px);
   text-wrap: balance;
   text-shadow: none;
