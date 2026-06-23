@@ -63,7 +63,7 @@ export function MithronResponsiveImageImg({
 
   const handleImageError = (event: SyntheticEvent<HTMLImageElement>) => {
     const nextIndex = fallbackIndex + 1;
-    if (nextIndex < fallbackChain.length && !import.meta.vitest) {
+    if (nextIndex < fallbackChain.length && process.env.VITEST !== "true") {
       setFallbackIndex(nextIndex);
       return;
     }
