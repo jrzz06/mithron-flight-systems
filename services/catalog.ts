@@ -502,16 +502,62 @@ function isCatalogCutoutSrc(src: string) {
   return src.includes("/catalog-cutouts/");
 }
 
+function isRemoteImageSrc(src: string) {
+  return src.startsWith("http://") || src.startsWith("https://");
+}
+
+function withRowImageFallback(linkedMedia: MediaAsset, rowImage: MediaAsset | null): MediaAsset {
+  if (!rowImage?.src || rowImage.src.split("?")[0] === linkedMedia.src.split("?")[0]) {
+    return linkedMedia;
+  }
+
+  const fallbackSrc = rowImage.src;
+  if (linkedMedia.responsive) {
+    return {
+      ...linkedMedia,
+      responsive: {
+        ...linkedMedia.responsive,
+        fallbackSrc
+      }
+    };
+  }
+
+  return {
+    ...linkedMedia,
+    responsive: {
+      assetId: "row-fallback",
+      bucket: "mithron-products",
+      assetRole: "product",
+      category: "product",
+      generatedPromptId: "",
+      status: "fallback",
+      fallbackSrc,
+      fallbackAlt: rowImage.alt,
+      width: rowImage.width ?? 800,
+      height: rowImage.height ?? 600,
+      dominantColor: "transparent",
+      variants: {}
+    }
+  };
+}
+
 function resolveProductImage(
   row: Pick<MithronProductRow, "image" | "hero" | "gallery" | "source_images">,
   name: string,
   linkedMedia?: MediaAsset,
   slug?: string
 ) {
-  if (linkedMedia && isCatalogCutoutSrc(linkedMedia.src)) return linkedMedia;
-  if (linkedMedia) return linkedMedia;
-
   const rowImage = selectPrimaryProductImage(row, name);
+
+  if (linkedMedia && isCatalogCutoutSrc(linkedMedia.src)) return linkedMedia;
+  if (linkedMedia) {
+    if (!linkedMedia.src.trim() && rowImage) return rowImage;
+    if (rowImage && isRemoteImageSrc(rowImage.src) && !isRemoteImageSrc(linkedMedia.src)) {
+      return rowImage;
+    }
+    return withRowImageFallback(linkedMedia, rowImage);
+  }
+
   if (rowImage) {
     if (slug) {
       console.warn(`[catalog] product ${slug} is using inline JSON image fallback; link a primary media_assets row.`);
@@ -592,7 +638,8 @@ function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset):
     bundles: normalizeBundles(row, marketingTagline),
     story: normalizeStory(row, marketingTagline, hero),
     specs: normalizeSpecs(row),
-    anchors: row.anchors?.length ? row.anchors : ["Overview", "Specs", "FAQ"]
+    anchors: row.anchors?.length ? row.anchors : ["Overview", "Specs", "FAQ"],
+    sourceCatalogId: row.source_catalog_id ?? undefined
   };
 }
 

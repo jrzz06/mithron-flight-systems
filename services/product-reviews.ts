@@ -52,7 +52,8 @@ export function getProductPageReviews(input: {
 }): ProductReviewsPayload {
   const wixSlug = resolveWixProductSlug({
     slug: input.slug,
-    sourceCatalogId: input.sourceCatalogId
+    sourceCatalogId: input.sourceCatalogId,
+    productName: input.productName
   });
 
   const wixReviews = getWixReviewsForSlug(wixSlug).map((review) => ({

@@ -137,6 +137,7 @@ export type Product = {
   story: StorySection[];
   specs: Record<string, string>;
   anchors: string[];
+  sourceCatalogId?: string;
 };
 
 export type Interest = {

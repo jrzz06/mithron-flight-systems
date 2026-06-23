@@ -422,6 +422,31 @@
   color: var(--text-primary, #0f172a);
 }
 
+.buyBoxRating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.buyBoxRating:hover {
+  opacity: 0.78;
+}
+
+.buyBoxStarRow {
+  display: inline-flex;
+  gap: 0.18rem;
+}
+
+.buyBoxRatingMeta {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
 .productTagline {
   margin-top: 0.75rem;
   max-width: 42ch;
@@ -1494,6 +1519,15 @@
   filter:
     drop-shadow(0 14px 22px rgba(15, 23, 42, 0.12))
     drop-shadow(0 4px 8px rgba(15, 23, 42, 0.06));
+}
+
+.relatedCardImagePlaceholder {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 62%, rgba(148, 163, 184, 0.22) 0%, transparent 72%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
 }
 
 .relatedCardBody {

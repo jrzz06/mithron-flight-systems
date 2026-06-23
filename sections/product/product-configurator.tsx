@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Bundle, MediaAsset, ProductVariant } from "@/config/types";
+import type { ProductReviewSummary } from "@/lib/product-reviews/types";
 import { isSpecLikeBlob } from "@/lib/product-spec-text";
 import { glassPillClassName } from "@/lib/glass-ui";
 import { cn, formatUsd } from "@/lib/utils";
@@ -27,6 +28,7 @@ export type ProductConfiguratorModel = {
   image: MediaAsset;
   variants: ProductVariant[];
   bundles: Bundle[];
+  reviewSummary?: ProductReviewSummary;
 };
 
 const trustSignals = [
@@ -37,6 +39,18 @@ const trustSignals = [
 
 function isAvailabilityVariant(variants: ProductVariant[]) {
   return variants.length === 1 && variants[0]?.id === "availability";
+}
+
+function BuyBoxStarRow({ rating }: { rating: number }) {
+  const roundedRating = Math.round(rating);
+
+  return (
+    <div className={styles.buyBoxStarRow} aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <span key={index} className={index < roundedRating ? styles.reviewStarFilled : styles.reviewStarEmpty} />
+      ))}
+    </div>
+  );
 }
 
 export function ProductConfigurator({ product }: { product: ProductConfiguratorModel }) {
@@ -88,6 +102,14 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
         </div>
 
         <h1 className={cn("type-section", styles.productTitle)}>{product.name}</h1>
+        {product.reviewSummary ? (
+          <a href="#reviews" className={styles.buyBoxRating}>
+            <BuyBoxStarRow rating={product.reviewSummary.averageRating} />
+            <span className={styles.buyBoxRatingMeta}>
+              {product.reviewSummary.averageRating.toFixed(1)} · {product.reviewSummary.totalReviews} reviews
+            </span>
+          </a>
+        ) : null}
         {showTagline ? (
           <p className={cn("type-body", styles.productTagline)}>{product.tagline}</p>
         ) : null}

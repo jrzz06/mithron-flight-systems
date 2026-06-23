@@ -32,4 +32,27 @@ describe("product reviews", () => {
     expect(payload.summary.totalReviews).toBe(payload.reviews.length);
     expect(payload.summary.averageRating).toBeGreaterThan(0);
   });
+
+  it("resolves reviews for mismatched mithron slugs via source catalog id", () => {
+    const payload = getProductPageReviews({
+      slug: "source-10l-agri-drone-with-basic-features",
+      productName: "10L Agri Drone with Basic features",
+      sourceCatalogId: "mithron-10l-agri-sprayer-drone-tc-certified-2",
+      cmsReviews: []
+    });
+
+    expect(payload.reviews.length).toBeGreaterThan(0);
+    expect(getWixReviewsForSlug("10l-agri-sprayer-drone-tc-certified-2").length).toBeGreaterThan(0);
+  });
+
+  it("falls back to product name when slug and catalog id do not match wix reviews", () => {
+    const payload = getProductPageReviews({
+      slug: "source-10l-agri-drone-with-basic-features",
+      productName: "10L Agri Drone with Basic features",
+      cmsReviews: []
+    });
+
+    expect(payload.reviews.length).toBeGreaterThan(0);
+    expect(payload.summary.totalReviews).toBeGreaterThan(0);
+  });
 });

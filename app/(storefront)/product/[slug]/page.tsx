@@ -16,6 +16,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { getProductOverviewText } from "@/lib/product-detail-content";
 import { buildProductStructuredData } from "@/lib/structured-data";
 import { getPublicCmsSnapshot } from "@/services/cms";
+import type { ProductReviewSummary } from "@/lib/product-reviews/types";
 import { getProductPageReviews } from "@/services/product-reviews";
 import { buildProductMetadata } from "@/services/product-metadata";
 import styles from "@/sections/product/product-detail.module.css";
@@ -35,7 +36,10 @@ function buildProductMediaViewerModel(product: Product): ProductMediaViewerModel
   };
 }
 
-function buildProductConfiguratorModel(product: Product): ProductConfiguratorModel {
+function buildProductConfiguratorModel(
+  product: Product,
+  reviewSummary?: ProductReviewSummary
+): ProductConfiguratorModel {
   return {
     slug: product.slug,
     name: product.name,
@@ -50,7 +54,8 @@ function buildProductConfiguratorModel(product: Product): ProductConfiguratorMod
     taxIncluded: product.taxIncluded,
     image: product.image,
     variants: product.variants,
-    bundles: product.bundles
+    bundles: product.bundles,
+    reviewSummary: reviewSummary && reviewSummary.totalReviews > 0 ? reviewSummary : undefined
   };
 }
 
@@ -76,6 +81,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const reviewPayload = getProductPageReviews({
     slug: product.slug,
     productName: product.name,
+    sourceCatalogId: product.sourceCatalogId,
     cmsReviews: cms.productSupport.reviews
   });
   const hasHighlights = Object.keys(product.specs ?? {}).length > 0;
@@ -96,7 +102,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             <ProductMediaViewer product={buildProductMediaViewerModel(product)} />
           </div>
           <div className={styles.heroBuyCol}>
-            <ProductConfigurator product={buildProductConfiguratorModel(product)} />
+            <ProductConfigurator product={buildProductConfiguratorModel(product, reviewPayload.summary)} />
           </div>
         </div>
       </section>

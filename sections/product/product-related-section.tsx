@@ -1,13 +1,34 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { useState } from "react";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import { clipProductPreviewText } from "@/lib/product-preview-text";
 import { formatINR } from "@/lib/utils";
 import type { ProductShellItem } from "@/services/catalog";
 import styles from "./product-detail.module.css";
 
+function isRemoteImageSrc(src: string) {
+  return src.startsWith("http://") || src.startsWith("https://");
+}
+
+function pickRelatedCardImage(item: ProductShellItem) {
+  const candidates = [item.image.src, item.image.responsive?.fallbackSrc].filter(Boolean) as string[];
+  const remoteCandidate = candidates.find(isRemoteImageSrc);
+
+  if (remoteCandidate) {
+    return { src: remoteCandidate, useSourceImage: true as const, responsive: undefined };
+  }
+
+  return { src: item.image.src, useSourceImage: false as const, responsive: item.image.responsive };
+}
+
 function ProductRelatedCard({ item }: { item: ProductShellItem }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const description = clipProductPreviewText(item.tagline, 88);
+  const pickedImage = pickRelatedCardImage(item);
+  const showPlaceholder = imageFailed;
 
   return (
     <article className={styles.relatedCard}>
@@ -15,14 +36,20 @@ function ProductRelatedCard({ item }: { item: ProductShellItem }) {
         <div className={styles.relatedCardMedia}>
           <div className={styles.relatedCardMediaGlow} aria-hidden="true" />
           <div className={styles.relatedCardImageFrame}>
-            <MithronCardImage
-              src={item.image.src}
-              alt={item.image.alt}
-              fill
-              responsive={item.image.responsive}
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-              className={styles.relatedCardImage}
-            />
+            {showPlaceholder ? (
+              <div className={styles.relatedCardImagePlaceholder} aria-hidden="true" />
+            ) : (
+              <MithronCardImage
+                src={pickedImage.src}
+                alt={item.image.alt}
+                fill
+                responsive={pickedImage.responsive}
+                useSourceImage={pickedImage.useSourceImage}
+                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                className={styles.relatedCardImage}
+                onError={() => setImageFailed(true)}
+              />
+            )}
           </div>
         </div>
 

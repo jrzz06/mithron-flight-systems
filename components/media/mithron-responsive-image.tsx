@@ -74,6 +74,8 @@ export function MithronResponsiveImage({
   style,
   width: widthProp,
   height: heightProp,
+  onError: onErrorProp,
+  onLoad: onLoadProp,
   ...props
 }: MithronResponsiveImageProps) {
   const profile = imageRole ? getMediaDeliveryProfile(imageRole) : undefined;
@@ -123,7 +125,35 @@ export function MithronResponsiveImage({
   const resolvedSizes = sizes ?? (fill ? "100vw" : undefined);
   const deliveredMaxVariantWidth = Math.max(0, ...webpVariants.map((variant) => variant.width), ...avifVariants.map((variant) => variant.width));
 
+  const handleImageError = (event: SyntheticEvent<HTMLImageElement>) => {
+    const notifyParent = () => onErrorProp?.(event);
+
+    if (useNativeRemoteImage) {
+      if (!failedSrc && responsive?.fallbackSrc && responsive.fallbackSrc !== resolvedSrc) {
+        setFailedSrc(responsive.fallbackSrc);
+        return;
+      }
+      notifyParent();
+      return;
+    }
+
+    if (!failedSrc && resolvedSrc !== optimizedSrc) {
+      setFailedSrc(resolvedSrc);
+      return;
+    }
+
+    if (!failedSrc || failedSrc === resolvedSrc) {
+      if (responsive?.fallbackSrc && responsive.fallbackSrc !== imageSrc) {
+        setFailedSrc(responsive.fallbackSrc);
+        return;
+      }
+    }
+
+    notifyParent();
+  };
+
   const handleImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    onLoadProp?.(event);
     const img = event.currentTarget;
     reportImageRenderMetrics(img, {
       component: "MithronResponsiveImage",
@@ -136,24 +166,6 @@ export function MithronResponsiveImage({
       assetId: responsive?.assetId,
       maxVariantWidth: deliveredMaxVariantWidth || undefined
     });
-  };
-
-  const handleImageError = () => {
-    if (useNativeRemoteImage) {
-      if (!failedSrc && responsive?.fallbackSrc && responsive.fallbackSrc !== resolvedSrc) {
-        setFailedSrc(responsive.fallbackSrc);
-      }
-      return;
-    }
-
-    if (!failedSrc && resolvedSrc !== optimizedSrc) {
-      setFailedSrc(resolvedSrc);
-      return;
-    }
-
-    if (!failedSrc || failedSrc === resolvedSrc) {
-      setFailedSrc(responsive?.fallbackSrc ?? resolvedSrc);
-    }
   };
 
   if (useSourceImage || useNativeRemoteImage) {

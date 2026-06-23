@@ -11,6 +11,7 @@ type MithronCardImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "
   fill?: boolean;
   priority?: boolean;
   responsive?: ResponsiveMediaAsset;
+  useSourceImage?: boolean;
   className?: string;
   wrapperClassName?: string;
   style?: CSSProperties;
@@ -25,11 +26,13 @@ export function MithronCardImage({
   fill = true,
   priority = false,
   responsive,
+  useSourceImage = false,
   className,
   wrapperClassName,
   style,
   width,
-  height
+  height,
+  ...props
 }: MithronCardImageProps) {
   return (
     <MithronResponsiveImage
@@ -40,6 +43,7 @@ export function MithronCardImage({
       imageRole="card"
       priority={priority}
       responsive={responsive}
+      useSourceImage={useSourceImage}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
       className={className}
@@ -47,6 +51,7 @@ export function MithronCardImage({
       style={style}
       width={width}
       height={height}
+      {...props}
     />
   );
 }
