@@ -94,7 +94,7 @@ describe("hero carousel premium composition", () => {
     expect(globals).toContain("object-fit: cover");
     expect(globals).toContain("width: clamp(520px, 34vw, 580px)");
     expect(globals).toContain("font-weight: 600");
-    expect(globals).toContain("letter-spacing: -0.028em");
+    expect(globals).toContain("letter-spacing: var(--tracking-tighter)");
     expect(globals).toContain("white-space: nowrap");
     expect(globals).toContain("margin-top: clamp(64px, 6vw, 72px)");
 

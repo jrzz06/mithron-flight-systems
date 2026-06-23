@@ -65,9 +65,23 @@
   --type-mission-body: var(--font-system);
   --type-subheading: var(--font-subheading);
   --type-technical: var(--font-body);
-  --type-label-color: #6b7280;
+  --type-label-color: #64748b;
   --type-body-muted: #64748b;
   --type-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Global Level Typography Tokens */
+  --tracking-tighter: -0.04em;
+  --tracking-tight: -0.02em;
+  --tracking-tight-sm: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+
+  --font-features-display: "cv11", "ss01", "ss03", "cv05", "cv08", "cv09", "cv10", "kern", "liga", "calt";
+  --font-features-ui: "cv11", "ss01", "kern", "liga", "calt";
+  --font-features-numeric: "tnum", "lnum", "kern";
+
   --type-hero: 3rem;
   --type-campaign-headline: clamp(72px, 6vw, 96px);
   --type-campaign-copy: 22px;
@@ -370,7 +384,7 @@ samp {
   font-family: var(--type-mono);
 }
 
-/* Mithron type system — Inter + system UI stack */
+/* Mithron type system — Global Level Typography (Inter + System stack) */
 h1,
 h2,
 h3,
@@ -380,10 +394,12 @@ h6,
 .tech-headline {
   font-family: var(--type-display);
   font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.022em;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-tight);
   text-wrap: balance;
-  font-feature-settings: "kern" 1, "liga" 1;
+  font-feature-settings: var(--font-features-display);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -394,8 +410,8 @@ h1,
 .hero-dji-title,
 .catalog-intro__title {
   font-weight: 600;
-  letter-spacing: -0.028em;
-  line-height: 1.08;
+  letter-spacing: var(--tracking-tighter);
+  line-height: 1.05;
 }
 
 .tech-subheading,
@@ -403,12 +419,13 @@ h1,
 .type-campaign-overline,
 .catalog-intro__eyebrow {
   font-family: var(--type-ui);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.75rem;
   line-height: 1.25;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-wider);
   text-transform: uppercase;
   color: var(--type-label-color);
+  font-feature-settings: var(--font-features-ui);
 }
 
 p,
@@ -420,11 +437,46 @@ dd,
 .type-nav {
   font-family: var(--type-ui);
   font-weight: 400;
-  line-height: 1.55;
-  letter-spacing: -0.011em;
+  line-height: 1.6;
+  letter-spacing: var(--tracking-tight-sm);
+  font-feature-settings: var(--font-features-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.type-price,
+.premium-product-card__price,
+.home-shelf-price,
+.home-shelf-lead-price,
+.tnum {
+  font-feature-settings: var(--font-features-numeric);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .tech-body-copy {
+  color: var(--type-body-muted);
+}
+
+.type-meta,
+.catalog-hero__eyebrow,
+.premium-product-card__category {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--type-label-color);
+}
+
+.type-card-title {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.type-subtitle {
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.5;
   color: var(--type-body-muted);
 }
 
@@ -439,7 +491,7 @@ dd {
 }
 
 .font-extrabold {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .font-bold {
@@ -470,7 +522,7 @@ dd {
 .type-campaign-headline {
   font-family: var(--type-display);
   font-size: var(--type-campaign-headline);
-  font-weight: 700;
+  font-weight: 600;
   line-height: var(--leading-campaign);
   letter-spacing: -0.025em;
   text-wrap: balance;
@@ -509,7 +561,7 @@ dd {
 .type-card-title {
   font-family: var(--type-display);
   font-size: var(--type-card);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.22;
   letter-spacing: -0.01em;
 }
@@ -2049,7 +2101,7 @@ canvas {
   margin: 0;
   color: var(--insta-category);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.14em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -2059,7 +2111,7 @@ canvas {
   margin: 0;
   min-height: auto;
   color: var(--insta-black);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.15;
   text-transform: uppercase;
@@ -2084,7 +2136,7 @@ canvas {
   min-width: 0;
   color: var(--insta-black);
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
   text-align: right;
   white-space: nowrap;
@@ -2170,7 +2222,7 @@ canvas {
   align-items: center;
   gap: 0.75rem;
   color: var(--insta-muted);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -2618,14 +2670,14 @@ canvas {
   margin-bottom: 0.95rem;
   color: #606575;
   font-size: clamp(0.72rem, 0.78vw, 0.84rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.18em;
 }
 
 .home-shelf-title {
   max-width: 14ch;
   font-size: clamp(3rem, 4.7vw, 4rem);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 0.98;
   letter-spacing: 0;
 }
@@ -2727,7 +2779,7 @@ canvas {
   border-radius: 999px;
   padding: 0 0.72rem;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
 }
 
@@ -2792,7 +2844,7 @@ canvas {
 
 .home-shelf-price {
   font-size: clamp(1rem, 1.1vw, 1.18rem);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .home-shelf-card-action {
@@ -3021,7 +3073,7 @@ canvas {
   margin: 0 0 0.65rem;
   color: var(--brand-accent);
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.18em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -3032,7 +3084,7 @@ canvas {
   margin: 0;
   color: var(--home-shelf-ink);
   font-size: clamp(2.55rem, 4.2vw, 3.7rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 0.98;
 }
@@ -3188,7 +3240,7 @@ canvas {
   border-radius: 999px;
   padding: 0 0.68rem;
   font-size: 0.66rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.12em;
   line-height: 1;
 }
@@ -3235,7 +3287,7 @@ canvas {
   overflow: hidden;
   color: var(--home-shelf-ink);
   font-size: clamp(1.02rem, 1vw, 1.14rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.14;
   -webkit-box-orient: vertical;
@@ -3265,7 +3317,7 @@ canvas {
   margin: 0;
   color: var(--home-shelf-ink);
   font-size: clamp(0.98rem, 1vw, 1.08rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
 }
@@ -3606,7 +3658,7 @@ canvas {
   color: #0f172a;
   font-family: var(--type-display);
   font-size: clamp(1.75rem, 2.6vw, 2.65rem);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 0.98;
 }
@@ -3643,7 +3695,7 @@ canvas {
   margin: 0;
   color: #0f172a;
   font-size: clamp(1.08rem, 1.2vw, 1.22rem);
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 
