@@ -64,7 +64,7 @@ describe("hero carousel premium composition", () => {
     expect(hero).not.toContain("previousIndex");
     expect(hero).not.toContain("stagger: 0.085");
 
-    expect(globals).toContain("--font-display: var(--font-system)");
+    expect(globals).toContain("--font-display: var(--font-outfit)");
     expect(globals).toContain("--font-body: var(--font-system)");
     expect(globals).toContain(".hero-banner-product-image :is(img, video)");
     expect(globals).not.toContain("@keyframes heroSlideCrossfade");

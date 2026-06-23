@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ObservabilityProvider } from "@/components/providers/observability-provider";
@@ -11,6 +11,14 @@ const inter = Inter({
   variable: "--font-inter",
   display: "swap",
   adjustFontFallback: true
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  display: "swap",
+  adjustFontFallback: true,
+  weight: ["500", "600", "700"]
 });
 
 const siteUrl = getSiteUrl();
@@ -52,7 +60,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html
       lang="en"
       suppressHydrationWarning
-      className={inter.variable}
+      className={`${inter.variable} ${outfit.variable}`}
     >
       <body suppressHydrationWarning>
         <JsonLd data={siteStructuredData} />

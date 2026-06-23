@@ -191,7 +191,7 @@
   font-family: var(--type-display);
   font-size: clamp(1.75rem, 2.3vw, 2.35rem);
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: -0.03em;
   line-height: 1.04;
   text-transform: none;
 }
@@ -299,9 +299,9 @@
   color: var(--home-ink);
   font-family: var(--type-display);
   font-size: clamp(1.75rem, 2.3vw, 2.35rem);
-  font-weight: 540;
-  letter-spacing: 0;
-  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
 }
 
 .shelfHeaderActions {
@@ -440,9 +440,9 @@
   color: var(--shelf-hero-ink, #111113);
   font-family: var(--type-display);
   font-size: clamp(1.5rem, 2.05vw, 2.2rem);
-  font-weight: 520;
-  letter-spacing: 0;
-  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
   transition: color 320ms var(--ease-cinematic);
 }
 
@@ -460,9 +460,9 @@
   max-width: 18ch;
   font-family: var(--type-display);
   font-size: clamp(1.5rem, 2.05vw, 2.2rem);
-  font-weight: 520;
-  letter-spacing: 0;
-  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.06;
   transition: color 320ms var(--ease-cinematic);
 }
 
@@ -1750,9 +1750,9 @@
   color: var(--home-ink);
   font-family: var(--type-mission-heading);
   font-size: clamp(2.4rem, 3.6vw, 4.2rem);
-  font-weight: 800;
-  line-height: 0.96;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
 }
 
 .agriIntroBody {
@@ -1950,9 +1950,9 @@
   color: #ffffff;
   font-family: var(--type-mission-heading);
   font-size: clamp(1.15rem, 1.35vw, 1.6rem);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
 }
 
 .agriCardCopy span {
@@ -2487,9 +2487,9 @@
   color: var(--home-ink);
   font-family: var(--type-display);
   font-size: clamp(1.9rem, 2.8vw, 2.6rem);
-  font-weight: 800;
-  line-height: 1.06;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
 }
 
 .testimonialsLead {
@@ -2677,9 +2677,9 @@
   color: #ffffff;
   font-family: var(--type-display);
   font-size: clamp(1.9rem, 3vw, 2.8rem);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
   max-width: 16ch;
 }
 
