@@ -2,7 +2,7 @@ import type { FooterColumn } from "@/config/storefront-content";
 
 export const footerOfficialLinks = {
   mithronSmart: "https://www.mithronsmart.com",
-  mithronStore: "https://www.mithron.co",
+  mithronStore: "https://final-mithron-deploy.vercel.app",
   agrone: "https://www.mithronsmart.com/agri-drone-business",
   zroneo: "https://play.google.com/store/apps/details?id=com.mithronfarmer",
   droningPlatform: "https://drone.mithronsmart.com",

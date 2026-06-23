@@ -1,10 +1,15 @@
 import type { Product } from "@/config/types";
 import { calculateProductTaxBreakdown } from "@/lib/product-tax";
 import { getProductOverviewText } from "@/lib/product-detail-content";
-import { toAbsoluteUrl } from "@/lib/site-url";
+import { getSiteOrigin, toAbsoluteUrl } from "@/lib/site-url";
 
-const ORGANIZATION_ID = "https://mithron.com/#organization";
-const WEBSITE_ID = "https://mithron.com/#website";
+function organizationId() {
+  return `${getSiteOrigin()}/#organization`;
+}
+
+function websiteId() {
+  return `${getSiteOrigin()}/#website`;
+}
 
 function schemaAvailability(product: Product) {
   const availability = product.specs.Availability?.toLowerCase() ?? "";
@@ -56,7 +61,7 @@ export function buildOrganizationJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "@id": ORGANIZATION_ID,
+    "@id": organizationId(),
     name: "Mithron Flight Systems",
     url: toAbsoluteUrl("/"),
     logo: toAbsoluteUrl("/favicon.svg"),
@@ -68,10 +73,10 @@ export function buildWebSiteJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "@id": WEBSITE_ID,
+    "@id": websiteId(),
     name: "Mithron Flight Systems",
     url: toAbsoluteUrl("/"),
-    publisher: { "@id": ORGANIZATION_ID },
+    publisher: { "@id": organizationId() },
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -107,7 +112,7 @@ export function buildProductJsonLd(product: Product) {
       price: productOfferPrice(product),
       availability: schemaAvailability(product),
       itemCondition: "https://schema.org/NewCondition",
-      seller: { "@id": ORGANIZATION_ID }
+      seller: { "@id": organizationId() }
     }
   };
 }
