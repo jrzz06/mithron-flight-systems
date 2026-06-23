@@ -24,6 +24,7 @@ import {
 } from "@/lib/product-shelf-classification";
 import { useReducedMotionPreference } from "@/hooks/use-reduced-motion";
 import { formatUsd } from "@/lib/utils";
+import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import type { ProductReviewContent } from "@/config/storefront-content";
 import styles from "./home-landing-composite.module.css";
 
@@ -101,10 +102,30 @@ type MissionWorldConfig = {
 type MiniCarouselItem = {
   itemKey: string;
   label: string;
+  fullLabel: string;
   href: string;
   media: Pick<MediaAsset, "src" | "alt">;
   sourceState: ProofState;
 };
+
+function toSentenceCaseLabel(value: string) {
+  const clean = sanitizeProductPreviewText(value);
+  if (!clean) return "";
+  return clean
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (char) => char.toUpperCase());
+}
+
+function formatMiniCarouselLabel(product: Product) {
+  const source = product.name || product.category || "Catalog";
+  const normalized = toSentenceCaseLabel(source);
+  if (normalized.length <= 32) return normalized;
+
+  const clipped = clipProductPreviewText(normalized, 32).replace(/\.{3}$/, "");
+  if (clipped.length >= 12) return clipped;
+
+  return toSentenceCaseLabel(product.category || "Catalog");
+}
 
 function hasAny(product: Product, values: string[]) {
   const haystack = [
@@ -422,7 +443,8 @@ function pickMiniCarouselItems(products: Product[]): MiniCarouselItem[] {
     .slice(0, 14)
     .map(({ product, index }) => ({
       itemKey: `${product.slug}-${index}`,
-      label: product.name,
+      label: formatMiniCarouselLabel(product),
+      fullLabel: sanitizeProductPreviewText(product.name || product.category),
       href: `/product/${product.slug}`,
       media: product.image,
       sourceState: "VERIFIED"
@@ -1111,6 +1133,7 @@ export function HomeLandingComposite({
                 data-testid="home-mini-carousel-item"
                 data-media-state={item.sourceState}
                 key={item.itemKey}
+                title={item.fullLabel}
               >
                 <span className={styles.miniCarouselImageWell}>
                   <MithronThumbImage

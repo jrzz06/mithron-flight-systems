@@ -85,7 +85,7 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
     desktopObjectPosition: "72% 52%",
     mobileObjectPosition: "50% 58%",
     desktopTransform: "translate3d(0, 0, 0) scale(1)",
-    mobileTransform: "translate3d(0, 10%, 0) scale(0.76)",
+    mobileTransform: "translate3d(0, 0, 0) scale(1)",
     desktopFilter: "none",
     mobileFilter: "none"
   },
@@ -94,7 +94,7 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
     desktopObjectPosition: "62% 58%",
     mobileObjectPosition: "50% 60%",
     desktopTransform: "translate3d(0, 0, 0) scale(1)",
-    mobileTransform: "translate3d(0, 12%, 0) scale(0.74)",
+    mobileTransform: "translate3d(0, 0, 0) scale(1)",
     desktopFilter: "none",
     mobileFilter: "none"
   },
@@ -103,7 +103,7 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
     desktopObjectPosition: "90% 52%",
     mobileObjectPosition: "62% 58%",
     desktopTransform: "translate3d(0, 0, 0) scale(1)",
-    mobileTransform: "translate3d(0, 11%, 0) scale(0.75)",
+    mobileTransform: "translate3d(0, 0, 0) scale(1)",
     desktopFilter: "none",
     mobileFilter: "none"
   }
@@ -244,7 +244,7 @@ export function HeroCarousel({
       data-hero-content-ink={contentInk}
       data-navbar-ink={navbarInk}
       className={cn(
-        "hero-premium-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden",
+        "hero-premium-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden max-md:h-auto max-md:min-h-0",
         tone.section
       )}
     >
