@@ -11,7 +11,7 @@ export function verifyClientAuditToken(request: Request) {
 
 export function requireClientAuditToken(request: Request) {
   if (!verifyClientAuditToken(request)) {
-    return { ok: false as const, error: "Client verification required." };
+    return { ok: false as const, error: "Guest verification failed. Refresh the page and try again." };
   }
   return { ok: true as const };
 }

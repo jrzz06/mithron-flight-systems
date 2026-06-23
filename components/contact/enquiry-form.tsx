@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { isValidCustomerEmail, isValidCustomerPhone, CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
+import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
 import { Button } from "@/components/ui/button";
 
 type EnquiryFormProps = {
   defaultEmail?: string;
   defaultRegion?: string;
+  isGuest?: boolean;
   auditToken?: string | null;
 };
 
-export function EnquiryForm({ defaultEmail = "", defaultRegion = "India", auditToken }: EnquiryFormProps) {
+export function EnquiryForm({ defaultEmail = "", defaultRegion = "India", isGuest = true }: EnquiryFormProps) {
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState("");
   const [subject, setSubject] = useState("");
@@ -48,12 +50,16 @@ export function EnquiryForm({ defaultEmail = "", defaultRegion = "India", auditT
 
     setStatus("loading");
     setError("");
+    const guestHeaders = isGuest ? await buildGuestRequestHeaders() : null;
+    if (isGuest && !guestHeaders?.token) {
+      setError("Unable to verify this browser session. Refresh the page and try again.");
+      setStatus("error");
+      return;
+    }
+
     const response = await fetch("/api/enquiries", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auditToken ? { "x-auth-audit-token": auditToken } : {})
-      },
+      headers: guestHeaders?.headers ?? { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email.trim(), phone: phone.trim(), subject, message, region })
     });
     if (!response.ok) {

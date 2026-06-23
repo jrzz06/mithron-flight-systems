@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { isValidCheckoutEmail, isValidCheckoutPhone } from "@/lib/api/checkout-schema";
+import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
 import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { Button } from "@/components/ui/button";
@@ -341,12 +342,20 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     setLoading("payment");
     setError("");
 
+    const guestHeaders = isSignedIn ? null : await buildGuestRequestHeaders();
+    if (!isSignedIn && !guestHeaders?.token) {
+      setError("Unable to verify this browser session. Refresh the page and try again.");
+      setLoading(null);
+      return;
+    }
+
+    const headers = isSignedIn
+      ? { "Content-Type": "application/json" }
+      : guestHeaders!.headers;
+
     const response = await fetch("/api/checkout", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auditToken ? { "x-auth-audit-token": auditToken } : {})
-      },
+      headers,
       body: JSON.stringify(cartPayload)
     });
     const payload = await response.json().catch(() => ({}));
@@ -393,12 +402,20 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     setLoading("enquiry");
     setError("");
 
+    const guestHeaders = isSignedIn ? null : await buildGuestRequestHeaders();
+    if (!isSignedIn && !guestHeaders?.token) {
+      setError("Unable to verify this browser session. Refresh the page and try again.");
+      setLoading(null);
+      return;
+    }
+
+    const headers = isSignedIn
+      ? { "Content-Type": "application/json" }
+      : guestHeaders!.headers;
+
     const response = await fetch("/api/checkout/enquiry", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auditToken ? { "x-auth-audit-token": auditToken } : {})
-      },
+      headers,
       body: JSON.stringify({ ...cartPayload, message: enquiryMessage.trim() })
     });
     const payload = await response.json().catch(() => ({}));

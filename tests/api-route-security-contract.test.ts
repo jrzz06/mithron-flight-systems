@@ -12,6 +12,7 @@ type RouteSecurityCategory =
   | "health";
 
 const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
+  "app/api/client-verification/route.ts": "public_rate_limited",
   "app/api/catalog/search/route.ts": "public_rate_limited",
   "app/api/checkout/route.ts": "public_rate_limited",
   "app/api/checkout/enquiry/route.ts": "public_rate_limited",
