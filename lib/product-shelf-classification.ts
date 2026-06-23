@@ -214,7 +214,7 @@ export function inferMissionCategory(product: ProductShelfInput): string {
   }
 
   if (/\b(?:survey|mapping|pix4d|gnss|mapper|matic|multispectral|24mp|10x)\b/i.test(text)) {
-    return "Video Drones";
+    return "Survey Drones";
   }
 
   if (/\b(?:video|cinema|4k|videography|decafly|mini[\s-]x[\s-]nano|sky[\s-]pro)\b/i.test(text)) {

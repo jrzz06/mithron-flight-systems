@@ -87,7 +87,7 @@ export function inferProductTaxGroup(category: string, name: string): ProductTax
     return "agri-drones";
   }
 
-  if (["video drones", "creative drones", "surveillance drones", "global products"].includes(normalizedCategory)) {
+  if (["video drones", "creative drones", "surveillance drones", "survey drones", "global products"].includes(normalizedCategory)) {
     return "non-agri-drones";
   }
 

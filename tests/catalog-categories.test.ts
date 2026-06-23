@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  ACCESSORIES_STOREFRONT_LIMIT,
   CATALOG_CATEGORY_SLUGS,
   filterProductsForCategorySlug,
   getCatalogCategoryDefinition,
@@ -51,6 +50,7 @@ describe("catalog categories", () => {
 
     expect(getCatalogCategoryDefinition("global-products").href).toBe("/category/global-products");
     expect(getCatalogCategoryDefinition("agri-drones").href).toBe("/category/agri-drones");
+    expect(getCatalogCategoryDefinition("survey-drones").categoryNames).toEqual(["Survey Drones"]);
   });
 
   it("maps legacy interest slugs to canonical category pages", () => {
@@ -61,28 +61,49 @@ describe("catalog categories", () => {
     expect(interestSlugToCategorySlug.components).toBe("accessories");
   });
 
-  it("dedupes the accessories category into a compact storefront shelf", () => {
+  it("lists every accessory by category without family dedupe", () => {
     const products = [
+      product("source-namoag", "NamoAG"),
+      product("source-aerofc-v2-flight-controller-compatible-with-open-source-firmware-and-gcs", "AeroFC V2 Flight Controller"),
+      product("source-ag-fc-namoag-gps-with-aerogcs-green-software-combo", "Ag++ (FC), NamoAG GPS with AeroGCS Green Software Combo"),
       product("source-hobbywing-x8-3011-propellers-with-mount-ccw", "Hobbywing X8 3011 Propellers with Mount - CCW"),
-      product("source-hobbywing-x8-3011-propellers-cw", "Hobbywing X8 3011 Propellers - CW"),
-      product("source-25000mah-6s-smart-battery-600-cycles", "25000mah 6S Smart Battery (600+ cycles)"),
-      product("source-25000mah-6s-non-smart-battery-600-cycles", "25000mah 6S non-Smart Battery (600+ cycles)"),
-      product("source-v9-flight-controller-for-agriculture-drones", "V9 Flight Controller for Agriculture Drones")
+      product("source-hobbywing-x8-3011-propellers-cw", "Hobbywing X8 3011 Propellers - CW")
     ];
 
     expect(filterProductsForCategorySlug(products, "accessories").map((item) => item.slug)).toEqual([
+      "source-namoag",
+      "source-aerofc-v2-flight-controller-compatible-with-open-source-firmware-and-gcs",
+      "source-ag-fc-namoag-gps-with-aerogcs-green-software-combo",
       "source-hobbywing-x8-3011-propellers-with-mount-ccw",
-      "source-25000mah-6s-smart-battery-600-cycles",
-      "source-v9-flight-controller-for-agriculture-drones"
+      "source-hobbywing-x8-3011-propellers-cw"
     ]);
   });
 
-  it("caps accessories to the storefront shelf limit", () => {
-    const products = Array.from({ length: ACCESSORIES_STOREFRONT_LIMIT + 10 }, (_, index) => (
-      product(`source-accessory-${index}`, `Accessory ${index}`)
-    ));
+  it("keeps survey products on the survey category shelf only", () => {
+    const products = [
+      product("source-pix4d-survey-software", "Pix4D Survey Software", "Survey Drones"),
+      product("source-pix4d-survey-software-accessory", "Pix4D Survey Software", "Accessories"),
+      product("source-namoag", "NamoAG", "Accessories")
+    ];
 
-    expect(filterProductsForCategorySlug(products, "accessories")).toHaveLength(ACCESSORIES_STOREFRONT_LIMIT);
+    expect(filterProductsForCategorySlug(products, "survey-drones").map((item) => item.slug)).toEqual([
+      "source-pix4d-survey-software"
+    ]);
+    expect(filterProductsForCategorySlug(products, "accessories").map((item) => item.slug)).toEqual([
+      "source-pix4d-survey-software-accessory",
+      "source-namoag"
+    ]);
+  });
+
+  it("uses strict surveillance category matching", () => {
+    const products = [
+      product("source-10l-drone-with-safety-security", "10L Drone With Safety Security", "Surveillance Drones"),
+      product("source-mini-x-nano-4k-videography-drone", "MINI X NANO 4K VIDEOGRAPHY DRONE", "Video Drones")
+    ];
+
+    expect(filterProductsForCategorySlug(products, "surveillance-drones").map((item) => item.slug)).toEqual([
+      "source-10l-drone-with-safety-security"
+    ]);
   });
 
   it.skipIf(!hasLiveCatalog)("loads published products for each category slug from the live catalog", async () => {

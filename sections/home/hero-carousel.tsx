@@ -85,16 +85,16 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
   "ag10-arrival": {
     focalPoint: "right-center drone over glacial terrain at sunrise",
     desktopObjectPosition: "72% 52%",
-    mobileObjectPosition: "38% 42%",
+    mobileObjectPosition: "center 45%",
     desktopTransform: "translate3d(0, 0, 0) scale(1)",
     mobileTransform: "translate3d(0, 0, 0) scale(1)",
     desktopFilter: "none",
     mobileFilter: "none"
   },
   "mapping-flight": {
-    focalPoint: "center-right caged drone over night sports court",
+    focalPoint: "center caged drone over night sports court",
     desktopObjectPosition: "62% 58%",
-    mobileObjectPosition: "52% 46%",
+    mobileObjectPosition: "center 42%",
     desktopTransform: "translate3d(0, 0, 0) scale(1)",
     mobileTransform: "translate3d(0, 0, 0) scale(1)",
     desktopFilter: "none",
@@ -103,7 +103,7 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
   "drone-ecosystem": {
     focalPoint: "upper-right medical delivery drone over coastal horizon",
     desktopObjectPosition: "90% 52%",
-    mobileObjectPosition: "54% 44%",
+    mobileObjectPosition: "center 42%",
     desktopTransform: "translate3d(0, 0, 0) scale(1)",
     mobileTransform: "translate3d(0, 0, 0) scale(1)",
     desktopFilter: "none",
@@ -138,19 +138,21 @@ function getHeroImageComposition(slide: HeroSlide) {
   const preset = heroImageComposition[slide.id];
   const composition = slide.composition;
 
-  if (composition?.mediaPosition || composition?.mobileMediaPosition) {
-    return {
-      focalPoint: preset?.focalPoint ?? slide.image.alt,
-      desktopObjectPosition: composition.mediaPosition ?? preset?.desktopObjectPosition ?? defaultHeroComposition.desktopObjectPosition,
-      mobileObjectPosition: composition.mobileMediaPosition ?? preset?.mobileObjectPosition ?? defaultHeroComposition.mobileObjectPosition,
-      desktopTransform: preset?.desktopTransform ?? defaultHeroComposition.desktopTransform,
-      mobileTransform: preset?.mobileTransform ?? defaultHeroComposition.mobileTransform,
-      desktopFilter: preset?.desktopFilter ?? defaultHeroComposition.desktopFilter,
-      mobileFilter: preset?.mobileFilter ?? defaultHeroComposition.mobileFilter
-    };
-  }
-
-  return preset ?? defaultHeroComposition;
+  return {
+    focalPoint: preset?.focalPoint ?? slide.image.alt,
+    desktopObjectPosition:
+      preset?.desktopObjectPosition
+      ?? composition?.mediaPosition
+      ?? defaultHeroComposition.desktopObjectPosition,
+    mobileObjectPosition:
+      preset?.mobileObjectPosition
+      ?? composition?.mobileMediaPosition
+      ?? defaultHeroComposition.mobileObjectPosition,
+    desktopTransform: preset?.desktopTransform ?? defaultHeroComposition.desktopTransform,
+    mobileTransform: preset?.mobileTransform ?? defaultHeroComposition.mobileTransform,
+    desktopFilter: preset?.desktopFilter ?? defaultHeroComposition.desktopFilter,
+    mobileFilter: preset?.mobileFilter ?? defaultHeroComposition.mobileFilter
+  };
 }
 
 function getHeroContentInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
