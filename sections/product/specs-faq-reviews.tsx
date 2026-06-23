@@ -12,7 +12,7 @@ import type { ProductShellItem } from "@/services/catalog";
 import { productSupportContent, type ProductSupportContent } from "@/config/storefront-content";
 import styles from "./product-detail.module.css";
 
-type SupportTab = "faq" | "reviews" | "related";
+type SupportTab = "faq" | "related";
 
 function shellItemToProduct(item: ProductShellItem): Product {
   return {
@@ -45,32 +45,27 @@ export function SpecsFaqReviews({
   support?: ProductSupportContent;
 }) {
   const specs = getCustomerFacingSpecs(product);
-  const scopedReviews = support.reviews.filter((review) => review.productSlug === product.slug);
-  const reviews = scopedReviews.length
-    ? scopedReviews
-    : support.reviews.filter((review) => !review.productSlug);
 
   const tabs = [
     { id: "faq" as SupportTab, label: "FAQ", visible: support.faqs.length > 0 },
-    { id: "reviews" as SupportTab, label: "Reviews", visible: reviews.length > 0 },
     { id: "related" as SupportTab, label: "Related", visible: relatedProducts.length > 0 }
   ].filter((tab) => tab.visible);
 
   const [activeTab, setActiveTab] = useState<SupportTab>(tabs[0]?.id ?? "faq");
 
+  if (!specs.length && !tabs.length) return null;
+
   return (
     <section className={cn("product-detail-support", styles.supportSection)}>
       <div className={styles.supportInner}>
-        <div className={styles.supportHeader}>
-          <div>
-            <h2 className={styles.supportTitle}>Technical details</h2>
-            <p className={styles.supportSubtitle}>Full specifications, deployment questions, and related systems.</p>
-          </div>
-        </div>
-
         {specs.length > 0 ? (
           <div className={styles.fullSpecsSection} id="specs">
-            <h3 className={styles.fullSpecsHeading}>Full specifications</h3>
+            <div className={styles.supportHeader}>
+              <div>
+                <h2 className={styles.supportTitle}>Specs</h2>
+                <p className={styles.supportSubtitle}>Full technical specifications for deployment and procurement review.</p>
+              </div>
+            </div>
             <dl className={styles.specTable}>
               {specs.map(([key, value]) => (
                 <div key={key} className={styles.specRow}>
@@ -116,19 +111,6 @@ export function SpecsFaqReviews({
                       </AccordionItem>
                     ))}
                   </Accordion>
-                </div>
-              ) : null}
-
-              {activeTab === "reviews" && reviews.length > 0 ? (
-                <div id="reviews" role="tabpanel">
-                  <div className={styles.reviewGrid}>
-                    {reviews.map((review) => (
-                      <div key={review.name} className={styles.reviewCard}>
-                        <p className="type-card-title text-base text-[var(--text-primary,#0f172a)]">{review.name}</p>
-                        <p className="type-body mt-2 text-sm leading-relaxed text-slate-600">{review.body}</p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               ) : null}
 

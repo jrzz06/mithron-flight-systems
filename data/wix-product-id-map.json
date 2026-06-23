@@ -1,0 +1,550 @@
+{
+  "extracted_at": "2026-06-23T04:26:24.958Z",
+  "count": 136,
+  "products": {
+    "079561d0-47ba-6bfc-08d7-a832e8e0b420": {
+      "slug": "agri-kisan-drone-medium-10-liter-1",
+      "name": "Agri Kisan Drone Medium - 10 Liter"
+    },
+    "4608baba-b3bb-4423-b83b-75ddc18e1869": {
+      "slug": "agri-kisan-drone-small-8-liter",
+      "name": "Agri Kisan Drone Small - 8 Liter"
+    },
+    "66823262-778a-23f7-db9b-95cc7ebbed9e": {
+      "slug": "16l-type-certified-agri-drone",
+      "name": "16L Type Certified Agri drone"
+    },
+    "37a9c8dc-637d-1aee-5c2b-58ebe66bd5a9": {
+      "slug": "10-liter-dual-agri-drone-with-spreader",
+      "name": "10 Liter Dual Agri drone with Spreader"
+    },
+    "325b9a56-3737-06a3-f048-9adff4458267": {
+      "slug": "drone-soccer-150-mm",
+      "name": "Drone Soccer (150 mm)"
+    },
+    "21f8a349-634f-80c9-ca15-4e2e25359d4d": {
+      "slug": "drone-soccer-200-mm",
+      "name": "Drone Soccer (200 mm)"
+    },
+    "9a8bcbe9-e384-f3c3-257a-dfbdddbea5cc": {
+      "slug": "namoag",
+      "name": "NamoAG"
+    },
+    "e5db8e6c-0962-fc9e-8816-109cef258537": {
+      "slug": "ag-fc-namoag-navigation-for-modern-agriculture-gps-combo-1",
+      "name": "AeroFC V2 Flight Controller (Compatible with Open-Source Firmware & GCS)"
+    },
+    "b30d2a92-b74e-a9b4-a628-966451ccaa26": {
+      "slug": "ag-fc-namoag-navigation-for-modern-agriculture-gps-combo",
+      "name": "Aero FC V2 + NamoAG (Navigation for modern Agriculture) GPS Combo"
+    },
+    "369309ea-bce4-3774-ba50-ca83ca31ffd9": {
+      "slug": "ag-fc-with-aerogcs-green-combo",
+      "name": "Ag++ (FC) with AeroGCS  Green Combo"
+    },
+    "ef8cad29-d222-6c00-7cce-671dc19a169f": {
+      "slug": "ag-fc-namoag-navigation-for-modern-agriculture-with-aerogcs-software",
+      "name": "Ag++ (FC), NamoAG GPS with AeroGCS Green Software Combo"
+    },
+    "47c14064-a454-be8f-295f-76cfb0f55ddc": {
+      "slug": "avispray-10c",
+      "name": "10 Liter Dual Agri Drone"
+    },
+    "8fec462b-30e4-6625-6f1c-a50ffe49bd33": {
+      "slug": "hobbywing-5l-pump-combo",
+      "name": "Hobbywing 5L pump combo"
+    },
+    "d5cf9c34-0eab-ccee-bda1-21eba0d6db69": {
+      "slug": "hobbywing8l-pump-combo",
+      "name": "Hobbywing 8L pump combo"
+    },
+    "a5595078-b9b1-f1f6-6d2e-6c203568267f": {
+      "slug": "hobbywing8l-pump",
+      "name": "Hobbywing 8L pump"
+    },
+    "b7b82cc3-ff6b-6712-2c70-129b46267ac5": {
+      "slug": "copy-of-vertical-landing-gear-16l-agri-drone",
+      "name": "Battery plate with straps"
+    },
+    "e30350a1-d03a-6acb-e5e8-c7ece1f79a3d": {
+      "slug": "vertical-landing-gear-16l-agri-drone",
+      "name": "Vertical landing gear (16L agri drone)"
+    },
+    "3b962da0-85c4-e913-5ba6-bcb62c8634fe": {
+      "slug": "vertical-landing-gear-10l-agri-drone",
+      "name": "Vertical landing gear (10L agri drone)"
+    },
+    "52720b20-b97a-b3c8-8d4f-dd06ce6e2c3c": {
+      "slug": "copy-of-horizontal-landing-gear-16l-agri-drone",
+      "name": "Horizontal landing gear (16L agri drone)"
+    },
+    "fd4311b2-9fe8-b51d-367e-139f8ff4b584": {
+      "slug": "guru",
+      "name": "Guru Student Drone"
+    },
+    "1dae628f-82a0-ec27-9a1a-0217bb08c86a": {
+      "slug": "pluto-x",
+      "name": "Pluto X Student Drone"
+    },
+    "a63467c4-be83-ba62-4cc5-2eb69a7cfcaf": {
+      "slug": "pluto-1-2",
+      "name": "Pluto 1.2 Student Drone"
+    },
+    "c421b1a7-d8fa-3046-e585-5c6818b878da": {
+      "slug": "hobbywing-xrotor-x8-motor-only-cw-for-agriculture-drones-1",
+      "name": "Hobbywing XRotor X8 Motor Only- CW for Agriculture Drones"
+    },
+    "2c1ec2cf-27e9-3219-1ef6-ee526a0a435e": {
+      "slug": "soccer-drone",
+      "name": "Soccer Drone"
+    },
+    "88943f9a-39a0-4683-d3d1-348a1ff3aa11": {
+      "slug": "drone-decafly-d5x",
+      "name": "Drone Decafly D5X"
+    },
+    "81f62566-de87-05d3-b2f2-0e52946e1b38": {
+      "slug": "decafly-d5x-3d-printed-arm-white",
+      "name": "Decafly D5X 3D Printed Arm (WHITE)"
+    },
+    "e6e1a3f6-c743-0abb-9e60-c5971bf22bda": {
+      "slug": "decafly-d5x-cfrp-arm-black",
+      "name": "Decafly D5X CFRP Arm (BLACK)"
+    },
+    "966b55bd-9c80-06b6-68d2-ecddfc2ecf2f": {
+      "slug": "decafly-d5x-landing-gear",
+      "name": "Decafly D5X Landing Gear"
+    },
+    "4c815643-9c8d-c76d-681a-445906e623c3": {
+      "slug": "cfrp-plate",
+      "name": "CFRP PLATE"
+    },
+    "2660beec-f2d4-bca0-845d-7575fc7772f8": {
+      "slug": "decafly-d5x-cfrp-frame-1",
+      "name": "Decafly D5X CFRP Frame"
+    },
+    "3a277d05-2d60-8670-f2ba-c49aa8517e68": {
+      "slug": "decafly-d5x-cfrp-frame",
+      "name": "Decafly D5X Battery Frame"
+    },
+    "354a3aa5-5fb3-b23b-7b1c-5441f1821b8f": {
+      "slug": "10l-drone-with-safety-security",
+      "name": "10L Drone With Safety Security"
+    },
+    "000ea48a-897d-f8c1-eea1-1793f58a0ba0": {
+      "slug": "herewin-6s-16000mah-drone-battery",
+      "name": "HEREWIN 6S 16000mah Drone battery"
+    },
+    "d6e81022-c880-1212-36ea-e2ff5d87b052": {
+      "slug": "propeller-guard",
+      "name": "Propeller Guard"
+    },
+    "b9c6ecc6-f84d-feb0-d5ad-65950a4a5171": {
+      "slug": "tank-outlet-cap",
+      "name": "Tank Outlet Cap"
+    },
+    "f75e671d-e726-dcf7-8d24-29a0861afdb2": {
+      "slug": "12l-festo",
+      "name": "12L Festo"
+    },
+    "2f4db301-a7d6-c93e-5030-843a98c411ca": {
+      "slug": "herewin-6s-22000mah-battery-with-free-battery-plates",
+      "name": "HEREWIN 6S 22000mah Battery with Protector shield"
+    },
+    "6170845b-2f1d-7890-28b6-fd82e4e1d640": {
+      "slug": "copy-of-8kg-seed-spreader-drone-tc-certified",
+      "name": "8KG SEED SPREADER DRONE [TC CERTIFIED]"
+    },
+    "05e1ec61-ec0f-d185-397a-762c578cd527": {
+      "slug": "dual-purpose-drone-sprayer-seed-spreader-tc-certified-1",
+      "name": "DUAL PURPOSE DRONE"
+    },
+    "70f95d65-846b-9ec8-c345-e040c2c3d16b": {
+      "slug": "10l-agri-sprayer-drone-tc-certified-2",
+      "name": "10L Agri Drone with Basic features"
+    },
+    "26be3356-592f-05c0-b700-25cb4850eea5": {
+      "slug": "bhumi-a10e-10-liters-tc-licensed-agri-drone-best-performance-1",
+      "name": "A10E Agri Drone 10 Liters Base"
+    },
+    "133a5ddc-50ba-8103-94bc-3ebb302ade64": {
+      "slug": "bhumi-a10e-10-liters-tc-licensed-agri-drone-best-performance",
+      "name": "A10E 10 Liters Agri DroneVer2"
+    },
+    "17b0544a-86a0-6eaf-ca99-dbef28c57dd1": {
+      "slug": "avispray-16-liters-tc-indigenous-frame-design-base-model",
+      "name": "16 Liters Agri drone base"
+    },
+    "e6ca7b0f-b6f9-454d-6203-74309457a2fe": {
+      "slug": "10-liters-tc-licensed-agri-drone",
+      "name": "10 Liters TC Licensed Agri Drone"
+    },
+    "34cdf65e-6dc7-5a67-2630-80256d63de82": {
+      "slug": "mini-x-nano-4k-1-set-of-battery",
+      "name": "MINI X NANO 4K (1 set of battery)"
+    },
+    "b1f4e707-5c88-a8cb-7a19-1ff62a350bf3": {
+      "slug": "10-liters-tc-licensed-agri-drone-3-acres-spray-in-1-go-1",
+      "name": "10 Liters Agri Drone 3 in 1"
+    },
+    "09c095f2-34d3-53b7-8f83-b5731b4f293a": {
+      "slug": "10-liters-tc-licensed-agri-drone-3-acres-spray-in-1-go",
+      "name": "10 Liters Agri Drone 3 in 1 Ver 2"
+    },
+    "2841c0c0-c7ea-21bc-670c-b23fd32509b2": {
+      "slug": "10-liters-tc-licensed-agri-drone-indegenous-airframe",
+      "name": "10 Liters Agri Drone 4 in 1"
+    },
+    "1867716d-1236-8fe1-4f23-7b907a9773c3": {
+      "slug": "4k-cinema-drone",
+      "name": "4K CINEMA DRONE"
+    },
+    "bafd1d93-8af5-1f4f-aad2-700c0a3d543e": {
+      "slug": "mini-x-nano-4k-videography-drone",
+      "name": "MINI X NANO 4K VIDEOGRAPHY DRONE"
+    },
+    "c6a9d9a4-7a49-fa26-e678-ab69ed536685": {
+      "slug": "sky-pro-4k-videography-drone",
+      "name": "SKY PRO 4K VIDEOGRAPHY DRONE"
+    },
+    "203b3c48-4175-c7d2-d6a6-dea0ddb47574": {
+      "slug": "10l-agri-sprayer-drone-with-6-nozzle-system-tc-certified",
+      "name": "10L DRONE WITH 6 NOZZLE SYSTEM  [TC CERTIFIED]"
+    },
+    "53cdb79e-65c2-eac5-b896-d80ef13419d7": {
+      "slug": "copy-of-25000mah-6s-non-smart-battery-600-cycles",
+      "name": "25000mah 6S non-Smart Battery (600+ cycles)"
+    },
+    "31e40761-ecda-5a7a-e2fc-15b635a587e3": {
+      "slug": "25000mah-6s-smart-battery-600-cycles",
+      "name": "25000mah 6S Smart Battery (600+ cycles)"
+    },
+    "b12a4dbe-6fb0-638e-67fe-be869e22addb": {
+      "slug": "10-liters-tc-licensed-agri-drone-with-obstacle-sensors",
+      "name": "10 Liters Agri Drone with safety sensors"
+    },
+    "13c4e19a-5bc9-92b0-eb69-b10b33dfb84a": {
+      "slug": "voltrox-5v-1-5a",
+      "name": "VOLTROX 5V 1.5A"
+    },
+    "1084eced-1546-0b3b-6ef7-4d6c4609de0d": {
+      "slug": "voltrox-12v-1-5a",
+      "name": "VOLTROX 12V 1.5A"
+    },
+    "e7cf8c3f-cabd-d5c3-6b87-db1e8f2c7bc8": {
+      "slug": "mk2-flight-core",
+      "name": "MK2 FLIGHT CORE"
+    },
+    "8e4e37c5-56ab-f94a-3f31-4b3c2df74071": {
+      "slug": "3012-sets-of-propeller-only",
+      "name": "3012 SETS OF PROPELLER ONLY"
+    },
+    "73dd2ec9-4477-13cb-aac9-bc106c4533ca": {
+      "slug": "3012-sets-of-propeller-with-adaptor",
+      "name": "Horizontal landing gear (10L agri drone)"
+    },
+    "43562338-0012-3bf6-da46-a36476d40a6d": {
+      "slug": "3010-sets-of-propeller-only",
+      "name": "3010 SETS OF PROPELLER ONLY"
+    },
+    "8040207e-b45f-7f93-d991-2f969cd29fe2": {
+      "slug": "3010-sets-of-propeller-with-adaptor",
+      "name": "3010 SETS OF PROPELLER WITH ADAPTOR"
+    },
+    "02f3ae6d-4bba-0acf-05f5-1fd278ef84cf": {
+      "slug": "2408-sets-of-propeller-only",
+      "name": "2408 SETS OF PROPELLER ONLY"
+    },
+    "e0dc1768-2c14-cad7-c6c7-0206be2f46f7": {
+      "slug": "2408-sets-of-propeller-with-adaptor",
+      "name": "2408 SETS OF PROPELLER WITH ADAPTOR"
+    },
+    "f8c359e4-b94f-3057-06a0-0938b7c4cc19": {
+      "slug": "counter-rotating-8008-pro-100kv-12s",
+      "name": "COUNTER ROTATING 8008 PRO 100KV 12S"
+    },
+    "ae4b07f7-e9fe-e8e4-6dcd-c429e5029dbf": {
+      "slug": "8025-pro-160kv-12s-voltage",
+      "name": "8025 PRO 160KV 12S VOLTAGE"
+    },
+    "37345937-6bed-e5fb-6734-e34bc8abba61": {
+      "slug": "8020-pro-150kv-12s-voltage",
+      "name": "8020 IPU 100KV 12S VOLTAGE"
+    },
+    "b901ae33-9176-ff0e-0d51-4cd344cdbc44": {
+      "slug": "8020-pro-120kv-12s-voltage",
+      "name": "8020 PRO 120KV 12S VOLTAGE"
+    },
+    "b5da6011-806d-3a1f-6a8d-e72bb3958956": {
+      "slug": "8015sl-100kv-12s-voltage",
+      "name": "8015SL 100KV 12S VOLTAGE"
+    },
+    "79034d8a-fa3e-eeb6-abf3-b8d76c437113": {
+      "slug": "copy-of-110-sl-100kv-12s",
+      "name": "8008SL 110KV 12S VOLTAGE"
+    },
+    "a746eca7-9245-8b86-7643-c257bd531b7e": {
+      "slug": "4006sl-380-kv",
+      "name": "4006SL 380 KV"
+    },
+    "5cef7561-d65f-d67e-b4f8-f5b5f2afb5cb": {
+      "slug": "jetcore-carrier-board",
+      "name": "JETCORE Carrier Board"
+    },
+    "7f6b62a7-ca6a-c7fe-b592-88d437c363b6": {
+      "slug": "pix4d-survey-software",
+      "name": "Pix4D Survey Software"
+    },
+    "34441450-f5d5-938f-73e3-f60d6a0b3330": {
+      "slug": "pix4d-matic-software",
+      "name": "Pix4D Matic Software"
+    },
+    "410e2251-3e74-55b5-c01b-874cf7a25630": {
+      "slug": "pix4d-mapper-software",
+      "name": "Pix4D Mapper Software"
+    },
+    "e2f742ff-0766-80f9-1502-7c04d47dbd55": {
+      "slug": "pix4d-field-software",
+      "name": "Pix4D Field Software"
+    },
+    "005372b8-dd13-8a3b-361e-7aab245c4763": {
+      "slug": "gnss-receiver-rs2-with-tripod-tribrach",
+      "name": "GNSS RECEIVER RS2+WITH TRIPOD & TRIBRACH"
+    },
+    "750db489-9d89-ff64-b236-d0eac14875d5": {
+      "slug": "gnss-module",
+      "name": "GNSS MODULE"
+    },
+    "f850d10c-a99f-1c55-d13a-4bd1dae9e60b": {
+      "slug": "10l-agri-sprayer-drone-tc-certified-1",
+      "name": "10L Agri Drone Best Price"
+    },
+    "975ea373-c227-8e4e-37a5-a45f9f42ae3f": {
+      "slug": "8kg-seed-spreader-drone-tc-certified",
+      "name": "8KG SEED SPREADER DRONE [TC CERTIFIED]"
+    },
+    "b3fbc2f8-4cfb-9dac-9b11-dda24ad2a0e7": {
+      "slug": "10l-agri-sprayer-drone-tc-certified",
+      "name": "16L Agri Drone Ver2"
+    },
+    "3f6f9a0a-dc20-ad88-05bc-e0fbb8fec3d7": {
+      "slug": "dual-purpose-drone-sprayer-seed-spreader-tc-certified",
+      "name": "DUAL PURPOSE DRONE {SPRAYER+ SEED SPREADER) [TC CERTIFIED]"
+    },
+    "ceb91fc4-d176-f4d0-1d08-a8200c1a1e1d": {
+      "slug": "xt60-female-connectors",
+      "name": "XT60 Female connectors"
+    },
+    "9d759e35-85a9-a2ea-5cf3-34af73001082": {
+      "slug": "cs-050-current-sensor",
+      "name": "CS-050: Current Sensor"
+    },
+    "158abb23-2925-1685-f320-315c29d9d891": {
+      "slug": "hpc-3-power-cube",
+      "name": "HPC - 3 Power Cube"
+    },
+    "c8d5d062-3af9-f98d-19a9-cb52254d4fc6": {
+      "slug": "bharat-fc700-flight-controller",
+      "name": "Power Cube Cables Set"
+    },
+    "150195fa-791f-66cc-9e68-8083ab1def3d": {
+      "slug": "18-inch-drone-frame",
+      "name": "18-inch Drone Frame"
+    },
+    "2e0c9242-ab37-208a-41ca-346db6b771c7": {
+      "slug": "15-inch-drone-frame",
+      "name": "15-inch Drone Frame"
+    },
+    "e87ea24a-dab4-5314-483e-396bfeeac5ec": {
+      "slug": "peregrine-with-multispectral-camera",
+      "name": "Multispectral Camera Survey Drone"
+    },
+    "995d3ffe-4a56-f6b6-5d8e-efe8a74e56dd": {
+      "slug": "peregrine-with-10x-seeker-optical-zoom-cmera",
+      "name": "10X SEEKER OPTICAL ZOOM CMERA Survey Drone"
+    },
+    "77b6f41f-dbd9-d245-3fc5-a8f643aa2cc8": {
+      "slug": "spraycoptor-10l-drone-tc-certified",
+      "name": "10L Agri Spraycopter"
+    },
+    "fe805b11-4042-8900-110b-11eac9e594c1": {
+      "slug": "avispray-16-liters-tc-licensed-agri-drone-tn-aed-subsidy",
+      "name": "16 Liters Agri Drone TC with Pilot License"
+    },
+    "2d98ec9b-e1d9-2df2-d78d-33883caeaae9": {
+      "slug": "avispray-16-liters-tc-licensed-agri-drone",
+      "name": "24MP CAMERA Survey Drone"
+    },
+    "a57793c6-8c70-70ec-519c-6dde430c1634": {
+      "slug": "skyrc-pc1080-dual-channel-charger-for-agriculture-drone-batteries",
+      "name": "SKYRC PC1080 Dual Channel Charger for Agriculture Drone Batteries"
+    },
+    "6e8de4fd-4643-07b3-2269-f2ecdd25a35b": {
+      "slug": "10-05-02-0111-eft-uav-parts-classic-tank-20l-standard-for-e-series-agricultural",
+      "name": "EFT 10L tank with battery plate"
+    },
+    "f3cb4114-c674-e4e6-6508-b9068a1f26df": {
+      "slug": "10-05-02-0093-eft-10l-tank-10l-battery-board-for-agricultural-drone-frame-parts",
+      "name": "10.05.02.0095 EFT 10L Tank 10L/Standard For Agricultural Drone Parts E410P/E610P"
+    },
+    "18d6ecd6-a798-a416-7140-60b073365eae": {
+      "slug": "jiyi-can-hub-12-module-for-k-flight-controller",
+      "name": "Jiyi Can Hub – 12 Module for K++ Flight Controller"
+    },
+    "7a257540-4656-b91b-62e8-c527cebcf232": {
+      "slug": "jiyi-terrain-following-radar-for-agriculture-drones",
+      "name": "Jiyi Terrain following Radar for Agriculture Drones"
+    },
+    "e097a4e7-cf92-782b-43c3-f548f854ba7d": {
+      "slug": "v9-flight-controller-for-agriculture-drones",
+      "name": "V9 Flight Controller for Agriculture Drones"
+    },
+    "2940941f-75c4-9a01-dc98-17eec90b2417": {
+      "slug": "jiyi-k-v2-flight-controller-for-agriculture-drones",
+      "name": "Jiyi K++V2 Flight Controller for Agriculture Drones"
+    },
+    "eb673b1d-8d10-6857-30a2-a98fab673a1a": {
+      "slug": "skydroid-t12-agriculture-transmitter-rc-controller",
+      "name": "Skydroid T12 Agriculture Transmitter RC Controller"
+    },
+    "d70ae402-202e-5999-0f20-00e486c85efa": {
+      "slug": "hobbywing-water-pump-5l-for-agriculture-drones",
+      "name": "Hobbywing Water Pump 5L for Agriculture Drones"
+    },
+    "d1c62478-d2e9-c15c-1142-ddff3eda3c60": {
+      "slug": "hobbywing-x8-3011-propellers-only-with-hub-cw",
+      "name": "Hobbywing X8 3011 Propellers  – CW"
+    },
+    "12e95c37-8037-e812-2f9c-0dc9edd91cad": {
+      "slug": "hobbywing-x8-3011-propellers-only-with-hub-ccw-1",
+      "name": "Hobbywing X8 3011 Propellers with Mount – CCW"
+    },
+    "3eadf991-8db7-44c7-e1a7-ff17a6cb220f": {
+      "slug": "hobbywing-xrotor-x8-motor-only-ccw-for-agriculture-drones",
+      "name": "Hobbywing XRotor X8 Motor Only- CCW for Agriculture Drones"
+    },
+    "87e12a07-21c3-5db0-9b68-e080fc3ddf69": {
+      "slug": "hobbywing-xrotor-x8-motor-only-cw-for-agriculture-drones",
+      "name": "Hobbywing XRotor X8 Motor Only- CW"
+    },
+    "2778cb5b-c9e7-394a-b196-ce90810c5a06": {
+      "slug": "hobbywing-xrotor-x6-plus-motor-only-cw-for-agriculture-drone",
+      "name": "Hobbywing XRotor X6 Plus Motor Only- CW for Agriculture Drone"
+    },
+    "e19071f3-bf6f-4fab-d812-5f41cd5264b9": {
+      "slug": "hobbywing-xrotor-x6-plus-motor-only-ccw-for-agriculture-drones",
+      "name": "Hobbywing XRotor X6 Plus Motor Only- CCW for Agriculture Drones"
+    },
+    "c70fbdc0-4927-05a2-cf3d-f135eab78d54": {
+      "slug": "hobbywing-x6-plus-2480-propellers-only-with-hub-ccw",
+      "name": "Hobbywing 2480 Propellers  with Mount – CCW"
+    },
+    "44fff56c-2058-0111-792c-99e738500f92": {
+      "slug": "siyi-a2-mini-ultra-wide-angle-fpv-gimbal-single-axis-camera-sensor",
+      "name": "SIYI A2 mini Ultra Wide Angle FPV Gimbal Single Axis Camera Sensor"
+    },
+    "76fc52bf-ee9a-091d-20a4-c89ddd747040": {
+      "slug": "siyi-a8-mini-4k-8mp-ultra-hd-6x-digital-zoom-gimbal-camera",
+      "name": "SIYI A8 mini 4K 8MP Ultra HD 6X Digital Zoom Gimbal Camera"
+    },
+    "0201fa4c-c54f-82ff-1a42-78a5b1b22270": {
+      "slug": "hobbywing-x6-plus-150-kv-d30-motor-for-drones",
+      "name": "Hobbywing X6 Plus motor with propeller combo"
+    },
+    "1fefe195-6f8f-12c4-51ed-774ba6dcdd49": {
+      "slug": "tattu-22-2v-25c-6s-22000mah-gtech-lipo-battery",
+      "name": "Tattu 22.2V 25C 6S 22000mAh GTech Lipo Battery"
+    },
+    "19d5dac5-f27c-f71f-fafa-877605623ce9": {
+      "slug": "siyi-mk15-agriculture-transmitter-rc-controller",
+      "name": "Siyi MK15 Agriculture Transmitter RC Controller"
+    },
+    "7b67fa00-4d4b-509e-78cf-fe80cb4ed587": {
+      "slug": "siyi-mk-32-agriculture-transmitter-rc-controller",
+      "name": "Siyi MK 32 Agriculture Transmitter RC Controller HDMI"
+    },
+    "e2eca06c-f2f9-6e2c-a408-1e88a11925b8": {
+      "slug": "hobbywing-x6-plus-2480-propellers-with-hub-cw",
+      "name": "Hobbywing  2480 Propellers CW or CCW"
+    },
+    "2abf9260-ebe6-cfd8-7ebe-cc05bb1e9fbb": {
+      "slug": "hobbywing-xrotor-x6-plus-motor-and-x6-plus-2388-or-2480-folding-propeller-combo",
+      "name": "Hobbywing XRotor X6 Plus with Propeller Combo"
+    },
+    "37a3e82b-764f-bc43-30dd-afb1fa8763aa": {
+      "slug": "skydroid-c10-three-axis-gimbal-camera",
+      "name": "Skydroid C10 Three-Axis Gimbal Camera"
+    },
+    "da281c33-6bf7-0e7c-38fd-0658e6c0091c": {
+      "slug": "transmitter-receiverh16pro",
+      "name": "Transmitter & ReceiverH16PRO"
+    },
+    "47e32e92-2574-7935-22cf-ab96f0687c87": {
+      "slug": "transmitter-receiver-h16",
+      "name": "Transmitter & Receiver H16"
+    },
+    "1f8b5eed-fc1f-4522-bdcc-aaab63870b93": {
+      "slug": "transmitter-receiver-t10",
+      "name": "Transmitter & Receiver T10"
+    },
+    "c0c2c76c-5cb9-5c7c-7c38-a0a653e553a0": {
+      "slug": "transmitter-receiver-h12-pro",
+      "name": "Transmitter & Receiver H12 PRO"
+    },
+    "7460450b-5419-ecc1-6964-595049df8087": {
+      "slug": "transmitter-receiver-h12",
+      "name": "Transmitter & Receiver H12"
+    },
+    "8da80e8a-ebd1-210f-a8b5-13cee8b8a7cb": {
+      "slug": "15-liters-tc-licensed-agri-drone",
+      "name": "15 Liters Agri Drone"
+    },
+    "25093d5e-5709-81be-13d3-f4ad845eec03": {
+      "slug": "li-ion-14s-11c",
+      "name": "LI-ION-14s-11c Battery"
+    },
+    "48c067d5-e660-0da6-0e5e-5555484cbba4": {
+      "slug": "lipo-6s-10c",
+      "name": "LIPO-6s-10C with Smart BMS Battery"
+    },
+    "95f3b07f-577b-6f7d-7c2e-031b43acfce8": {
+      "slug": "6s-24000mah",
+      "name": "6S 24000mAh Battery"
+    },
+    "217c2aa8-5b26-7b40-a092-6328ea63b01b": {
+      "slug": "6s-25200mah",
+      "name": "6S 25200mAh Battery"
+    },
+    "aa6a3bda-583e-cd8b-9f61-654157bae46d": {
+      "slug": "flybox",
+      "name": "Flybox Delivery Drone"
+    },
+    "ee834d86-fd31-429b-9e30-7afd510fa66f": {
+      "slug": "monal-4k-thermal",
+      "name": "Monal 4K+Thermal"
+    },
+    "80af2770-ff6d-47f4-be7b-d23ac3da28c2": {
+      "slug": "nuno",
+      "name": "Nuno  [No TC required]"
+    },
+    "a4136276-9f47-44b0-ab26-b5186ce9fe5a": {
+      "slug": "monal-4k",
+      "name": "Monal 4k"
+    },
+    "90411b14-1d87-47b4-a80d-0ed283e7fa6b": {
+      "slug": "agrow",
+      "name": "5 Liter Agri Drone"
+    },
+    "ea3993b4-a822-482e-a12d-4636a1ec3e86": {
+      "slug": "hobbywing-dc-agri-drone-brushless-pump",
+      "name": "10L Hexa Air Frame"
+    },
+    "36fcd335-0813-4b56-baf8-764210f0f0ce": {
+      "slug": "skydroid-h12-with-inbuilt-screen-and-camera-remote-control",
+      "name": "Skydroid H12 with Inbuilt Screen And Camera Remote Control"
+    },
+    "b4bfabfb-2015-4ae6-a4c8-3ec14f53a7f8": {
+      "slug": "transmitter-t161z-super",
+      "name": "Transmitter T161Z Super"
+    }
+  }
+}

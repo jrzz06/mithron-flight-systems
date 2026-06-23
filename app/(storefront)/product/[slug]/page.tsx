@@ -4,15 +4,19 @@ import type { Product } from "@/config/types";
 import { getProductBySlug, getProductStaticSlugs, getRelatedProductShellItems } from "@/services/catalog";
 import { ProductConfigurator, type ProductConfiguratorModel } from "@/sections/product/product-configurator";
 import { ProductDetailHeader } from "@/sections/product/product-detail-header";
+import { ProductDetailSectionNav } from "@/sections/product/product-detail-section-nav";
 import { ProductHighlights } from "@/sections/product/product-highlights";
 import { ProductMediaViewer, type ProductMediaViewerModel } from "@/sections/product/product-media-viewer";
 import { ProductOverview } from "@/sections/product/product-overview";
+import { ProductRelatedSection } from "@/sections/product/product-related-section";
+import { ProductReviewsSection } from "@/sections/product/product-reviews-section";
 import { ProductStory } from "@/sections/product/product-story";
 import { SpecsFaqReviews } from "@/sections/product/specs-faq-reviews";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getProductOverviewText } from "@/lib/product-detail-content";
 import { buildProductStructuredData } from "@/lib/structured-data";
 import { getPublicCmsSnapshot } from "@/services/cms";
+import { getProductPageReviews } from "@/services/product-reviews";
 import { buildProductMetadata } from "@/services/product-metadata";
 import styles from "@/sections/product/product-detail.module.css";
 
@@ -69,6 +73,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const overviewText = getProductOverviewText(product);
   const showOverview = overviewText.length > 80;
   const structuredData = buildProductStructuredData(product);
+  const reviewPayload = getProductPageReviews({
+    slug: product.slug,
+    productName: product.name,
+    cmsReviews: cms.productSupport.reviews
+  });
+  const hasHighlights = Object.keys(product.specs ?? {}).length > 0;
+  const visibleSectionIds = [
+    "overview",
+    "specs",
+    ...(reviewPayload.reviews.length > 0 ? ["reviews"] : []),
+    ...(relatedProducts.length > 0 ? ["accessories"] : [])
+  ];
 
   return (
     <article className={`product-detail-page ${styles.page}`}>
@@ -84,10 +100,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
         </div>
       </section>
-      <ProductHighlights product={product} />
-      {showOverview ? <ProductOverview product={product} /> : null}
-      <ProductStory product={product} includeFallback={!showOverview} />
-      <SpecsFaqReviews product={product} relatedProducts={relatedProducts} support={cms.productSupport} />
+      <ProductDetailSectionNav visibleSectionIds={visibleSectionIds} />
+      <div id="overview">
+        {hasHighlights ? <ProductHighlights product={product} /> : null}
+        {showOverview ? <ProductOverview product={product} /> : null}
+        <ProductStory product={product} includeFallback={!showOverview} />
+      </div>
+      <SpecsFaqReviews product={product} relatedProducts={[]} support={cms.productSupport} />
+      {reviewPayload.reviews.length > 0 ? (
+        <ProductReviewsSection
+          productName={product.name}
+          reviews={reviewPayload.reviews}
+          summary={reviewPayload.summary}
+        />
+      ) : null}
+      <ProductRelatedSection relatedProducts={relatedProducts} />
     </article>
   );
 }

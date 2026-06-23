@@ -39,6 +39,7 @@
     "media:ingest-external:slug": "node --experimental-strip-types tools/ingest-external-product-media.ts --apply --slug",
     "products:audit-quality": "node --experimental-strip-types tools/audit-product-quality.ts",
     "products:fetch-wix": "node --experimental-strip-types tools/fetch-wix-catalog.ts",
+    "products:fetch-wix-reviews": "node --experimental-strip-types tools/fetch-wix-reviews.ts",
     "products:audit-catalog-parity": "node --experimental-strip-types tools/audit-product-catalog-parity.ts",
     "assets:sync-remote-map": "node tools/sync-storefront-remote-map.mjs",
     "assets:cleanup-orphans": "node tools/cleanup-orphaned-public-media.mjs --apply",

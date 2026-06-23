@@ -5,18 +5,26 @@ import { cn } from "@/lib/utils";
 const sections = [
   { id: "overview", label: "Overview" },
   { id: "specs", label: "Specs" },
-  { id: "faq", label: "FAQ" },
+  { id: "reviews", label: "Reviews" },
   { id: "accessories", label: "Related" }
 ] as const;
 
-export function ProductDetailSectionNav() {
+export function ProductDetailSectionNav({
+  visibleSectionIds
+}: {
+  visibleSectionIds?: string[];
+}) {
+  const visible = new Set(visibleSectionIds ?? sections.map((section) => section.id));
+  const items = sections.filter((section) => visible.has(section.id));
+  if (!items.length) return null;
+
   return (
     <nav
       aria-label="Product sections"
-      className="sticky top-[104px] z-30 border-b border-slate-200/80 bg-[var(--surface-page)]/98"
+      className="sticky top-[104px] z-30 border-b border-slate-200/80 bg-[color-mix(in_srgb,var(--surface-page)_94%,transparent)] backdrop-blur-md"
     >
-      <div className="mx-auto flex max-w-[1440px] gap-1 overflow-x-auto px-5 py-2 md:px-10">
-        {sections.map((section) => (
+      <div className="mx-auto flex max-w-[1440px] gap-1 overflow-x-auto px-5 py-2.5 md:px-10">
+        {items.map((section) => (
           <a
             key={section.id}
             href={`#${section.id}`}
