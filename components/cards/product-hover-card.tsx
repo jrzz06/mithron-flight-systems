@@ -58,8 +58,6 @@ export const ProductHoverCard = memo(function ProductHoverCard({
         <Link href={`/product/${product.slug}`} className={styles.card}>
           <div className={styles.media}>
             <div className={styles.mediaSurface} aria-hidden />
-            <div className={styles.groundShadow} aria-hidden />
-            <div className={styles.productShadow} aria-hidden />
             <div className={styles.imageFrame}>
               <MithronCardImage
                 src={product.image.src}
@@ -105,8 +103,6 @@ export const ProductHoverCard = memo(function ProductHoverCard({
         <div
           className={cn("premium-product-card__media relative overflow-hidden", imageHeights[variant])}
         >
-          <div aria-hidden className="premium-product-card__ground-shadow" />
-          <div aria-hidden className="premium-product-card__product-shadow" />
           <div
             className="premium-product-card__image absolute inset-0"
           >

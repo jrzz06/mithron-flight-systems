@@ -6,6 +6,9 @@
   --catalog-secondary: #475569;
   --catalog-muted: #64748b;
   --catalog-accent: var(--brand-accent-bright);
+  --product-stage-floor: radial-gradient(ellipse 72% 50% at 50% 94%, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.07) 48%, transparent 76%);
+  --product-stage-halo: radial-gradient(ellipse 82% 64% at 50% 52%, rgba(148, 163, 184, 0.26) 0%, rgba(241, 245, 249, 0.12) 46%, transparent 84%);
+  --product-stage-radial: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.12) 0%, rgba(100, 116, 139, 0.05) 54%, transparent 84%);
   min-height: 100vh;
   position: relative;
   isolation: isolate;

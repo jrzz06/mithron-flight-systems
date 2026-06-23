@@ -475,8 +475,6 @@ function ProductShelfSection({
                       key={`${config.id}-${product.slug}`}
                     >
                       <div className={styles.productImageWell}>
-                        <span className={styles.productCutoutShadowGround} aria-hidden />
-                        <span className={styles.productCutoutShadowContact} aria-hidden />
                         {/* Product thumbnail is decorative because the adjacent link text names the product. */}
                         <MithronCardImage
                           src={product.image.src}
@@ -509,22 +507,29 @@ function ProductShelfSection({
               <Link
                 href={config.guideHref}
                 className={styles.guideCard}
+                data-shelf-tone={config.tone}
                 data-testid="home-product-guide-card"
               >
-                <span className={styles.guideLabel}>{config.guideLabel}</span>
-                <strong>{config.guideTitle}</strong>
-                <span className={styles.guideArrow} aria-hidden="true">
-                  <ArrowRight size={14} />
-                </span>
+                <div className={styles.guideCopy}>
+                  <div className={styles.guideCopyTop}>
+                    <span className={styles.guideLabel}>{config.guideLabel}</span>
+                    <strong>{config.guideTitle}</strong>
+                  </div>
+                  <span className={styles.guideArrow} aria-hidden="true">
+                    <ArrowRight size={14} />
+                  </span>
+                </div>
                 {guideMedia ? (
-                  <MithronCardImage
-                    src={guideMedia.src}
-                    alt=""
-                    aria-hidden={true}
-                    fill
-                    sizes="(max-width: 640px) 72vw, 280px"
-                    className={styles.guideImage}
-                  />
+                  <div className={styles.guideImageWell} aria-hidden>
+                    <MithronCardImage
+                      src={guideMedia.src}
+                      alt=""
+                      aria-hidden={true}
+                      fill
+                      sizes="(max-width: 640px) 72vw, 280px"
+                      className={styles.guideImage}
+                    />
+                  </div>
                 ) : null}
               </Link>
             </div>

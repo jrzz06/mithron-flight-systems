@@ -511,6 +511,40 @@
   justify-content: start;
 }
 
+.productShelfSection[data-shelf-tone="world"] .productShelfGrid,
+.productShelfSection[data-shelf-tone="care"] .productShelfGrid,
+.productShelfSection[data-shelf-tone="global"] .productShelfGrid {
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 16px;
+  gap: 10px;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 24px 52px -22px rgba(15, 23, 42, 0.22);
+}
+
+.productShelfSection[data-shelf-tone="world"] .productShelfGrid {
+  background:
+    radial-gradient(ellipse 100% 78% at 0% 100%, rgba(31, 107, 70, 0.14) 0%, transparent 62%),
+    radial-gradient(ellipse 92% 68% at 100% 0%, rgba(100, 116, 139, 0.16) 0%, transparent 58%),
+    linear-gradient(165deg, #e6edf5 0%, #dce6f0 48%, #d2dde9 100%);
+}
+
+.productShelfSection[data-shelf-tone="care"] .productShelfGrid {
+  background:
+    radial-gradient(ellipse 100% 78% at 0% 100%, rgba(31, 107, 70, 0.16) 0%, transparent 62%),
+    radial-gradient(ellipse 92% 68% at 100% 0%, rgba(100, 116, 139, 0.14) 0%, transparent 58%),
+    linear-gradient(165deg, #e4ede8 0%, #d9e8df 48%, #cedfd4 100%);
+}
+
+.productShelfSection[data-shelf-tone="global"] .productShelfGrid {
+  background:
+    radial-gradient(ellipse 100% 78% at 0% 100%, rgba(31, 107, 70, 0.15) 0%, transparent 62%),
+    radial-gradient(ellipse 92% 68% at 100% 0%, rgba(100, 116, 139, 0.18) 0%, transparent 58%),
+    linear-gradient(165deg, #e4eaf0 0%, #d9e2eb 48%, #cfd9e4 100%);
+}
+
 .productCard {
   position: relative;
   min-width: 0;
@@ -519,18 +553,54 @@
   grid-template-rows: 58% 42%;
   overflow: hidden;
   scroll-snap-align: start;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: 12px;
   background: #ffffff;
   color: var(--home-ink);
   text-decoration: none;
+  isolation: isolate;
+  --shelf-product-floor: radial-gradient(ellipse 72% 50% at 50% 94%, rgba(15, 23, 42, 0.2) 0%, rgba(15, 23, 42, 0.07) 48%, transparent 76%);
+  --shelf-product-halo: radial-gradient(ellipse 82% 64% at 50% 52%, rgba(148, 163, 184, 0.26) 0%, rgba(241, 245, 249, 0.12) 46%, transparent 84%);
+  --shelf-product-radial: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.12) 0%, rgba(100, 116, 139, 0.05) 54%, transparent 84%);
   box-shadow:
-    inset 0 0 0 0 rgba(15, 23, 42, 0),
-    0 0 0 rgba(15, 23, 42, 0);
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 20px 42px -16px rgba(15, 23, 42, 0.22),
+    0 10px 22px -12px rgba(15, 23, 42, 0.14),
+    0 2px 8px rgba(15, 23, 42, 0.06);
   transition:
     background-color 300ms var(--ease-cinematic),
+    border-color 300ms var(--ease-cinematic),
     box-shadow 300ms var(--ease-cinematic),
-    filter 300ms var(--ease-cinematic);
+    transform 300ms var(--ease-cinematic);
+}
+
+.productShelfSection[data-shelf-tone="world"] .productCard {
+  --shelf-product-floor: radial-gradient(ellipse 82% 54% at 50% 100%, rgba(15, 23, 42, 0.28) 0%, rgba(31, 107, 70, 0.1) 44%, transparent 74%);
+  --shelf-product-halo: radial-gradient(ellipse 92% 72% at 50% 40%, rgba(148, 163, 184, 0.38) 0%, rgba(226, 232, 240, 0.16) 52%, transparent 88%);
+  --shelf-product-radial: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.14) 0%, rgba(100, 116, 139, 0.08) 54%, transparent 86%);
+}
+
+.productShelfSection[data-shelf-tone="care"] .productCard {
+  --shelf-product-floor: radial-gradient(ellipse 82% 54% at 50% 100%, rgba(15, 23, 42, 0.26) 0%, rgba(31, 107, 70, 0.12) 44%, transparent 74%);
+  --shelf-product-halo: radial-gradient(ellipse 92% 72% at 50% 40%, rgba(148, 163, 184, 0.34) 0%, rgba(226, 232, 240, 0.14) 52%, transparent 88%);
+  --shelf-product-radial: radial-gradient(ellipse at center, rgba(23, 77, 51, 0.12) 0%, rgba(100, 116, 139, 0.07) 54%, transparent 86%);
+}
+
+.productShelfSection[data-shelf-tone="world"] .productCard,
+.productShelfSection[data-shelf-tone="care"] .productCard,
+.productShelfSection[data-shelf-tone="global"] .productCard {
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.productShelfSection[data-shelf-tone="global"] .productCard {
+  --shelf-product-floor: radial-gradient(ellipse 84% 56% at 50% 100%, rgba(15, 23, 42, 0.32) 0%, rgba(31, 107, 70, 0.12) 44%, transparent 76%);
+  --shelf-product-halo: radial-gradient(ellipse 94% 76% at 50% 38%, rgba(148, 163, 184, 0.42) 0%, rgba(226, 232, 240, 0.18) 52%, transparent 90%);
+  --shelf-product-radial: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.16) 0%, rgba(100, 116, 139, 0.09) 56%, transparent 88%);
 }
 
 .productCard::after {
@@ -559,10 +629,87 @@
 .productCard:hover,
 .productCard:focus-visible {
   background: #fbfcfe;
+  border-color: rgba(15, 23, 42, 0.1);
   box-shadow:
-    inset 0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 8px 18px rgba(15, 23, 42, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 28px 52px -16px rgba(15, 23, 42, 0.28),
+    0 14px 28px -12px rgba(15, 23, 42, 0.16);
   outline: none;
+  transform: translateY(-2px);
+}
+
+.productShelfSection[data-shelf-tone="world"] .productCard:hover,
+.productShelfSection[data-shelf-tone="world"] .productCard:focus-visible,
+.productShelfSection[data-shelf-tone="care"] .productCard:hover,
+.productShelfSection[data-shelf-tone="care"] .productCard:focus-visible,
+.productShelfSection[data-shelf-tone="global"] .productCard:hover,
+.productShelfSection[data-shelf-tone="global"] .productCard:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  border-color: transparent;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productImageWell,
+.productShelfSection[data-shelf-tone="care"] .productImageWell,
+.productShelfSection[data-shelf-tone="global"] .productImageWell {
+  background: var(--shelf-product-floor), var(--shelf-product-halo), transparent;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productImageWell::after,
+.productShelfSection[data-shelf-tone="care"] .productImageWell::after,
+.productShelfSection[data-shelf-tone="global"] .productImageWell::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  z-index: 0;
+  width: 84%;
+  height: 44%;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.34) 0%, rgba(15, 23, 42, 0.14) 42%, rgba(31, 107, 70, 0.06) 58%, transparent 82%);
+  pointer-events: none;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productImageWell::before,
+.productShelfSection[data-shelf-tone="care"] .productImageWell::before,
+.productShelfSection[data-shelf-tone="global"] .productImageWell::before {
+  width: 88%;
+  height: 72%;
+  top: 46%;
+  opacity: 1;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productBody,
+.productShelfSection[data-shelf-tone="care"] .productBody,
+.productShelfSection[data-shelf-tone="global"] .productBody {
+  background: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.productShelfSection[data-shelf-tone="world"] .guideCard,
+.productShelfSection[data-shelf-tone="care"] .guideCard,
+.productShelfSection[data-shelf-tone="global"] .guideCard {
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--home-ink);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.productShelfSection[data-shelf-tone="world"] .guideCard:hover,
+.productShelfSection[data-shelf-tone="world"] .guideCard:focus-visible,
+.productShelfSection[data-shelf-tone="care"] .guideCard:hover,
+.productShelfSection[data-shelf-tone="care"] .guideCard:focus-visible,
+.productShelfSection[data-shelf-tone="global"] .guideCard:hover,
+.productShelfSection[data-shelf-tone="global"] .guideCard:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  border-color: transparent;
 }
 
 .productCard:hover::after,
@@ -575,38 +722,22 @@
   position: relative;
   overflow: hidden;
   min-height: 0;
-  background:
-    radial-gradient(ellipse 88% 54% at 50% 84%, rgba(15, 23, 42, 0.09) 0%, rgba(15, 23, 42, 0.025) 42%, transparent 68%),
-    #ffffff;
+  background: var(--shelf-product-floor), var(--shelf-product-halo), #ffffff;
   transition: background-color 320ms var(--ease-cinematic);
 }
 
-.productCutoutShadowGround,
-.productCutoutShadowContact {
+.productImageWell::before {
+  content: "";
   position: absolute;
   left: 50%;
+  top: 52%;
+  z-index: 0;
+  width: 74%;
+  height: 62%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--shelf-product-radial);
   pointer-events: none;
-}
-
-.productCutoutShadowGround {
-  bottom: 12%;
-  z-index: 0;
-  width: 76%;
-  height: 38px;
-  border-radius: 999px;
-  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.3) 0%, rgba(15, 23, 42, 0) 72%);
-  transform: translateX(-50%);
-}
-
-.productCutoutShadowContact {
-  bottom: 14%;
-  z-index: 0;
-  width: 50%;
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.24);
-  opacity: 0.88;
-  transform: translateX(-50%);
 }
 
 .productImage {
@@ -733,66 +864,154 @@
 .guideCard {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto minmax(210px, 1fr);
   min-height: 470px;
   overflow: hidden;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
   background: #ffffff;
   color: var(--home-ink);
-  padding: 24px 24px;
+  padding: 0;
   text-decoration: none;
+  isolation: isolate;
   box-shadow:
-    inset 0 0 0 0 rgba(15, 23, 42, 0),
-    0 0 0 rgba(15, 23, 42, 0);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 20px 42px -16px rgba(15, 23, 42, 0.2),
+    0 10px 22px -12px rgba(15, 23, 42, 0.12);
   transition:
     background-color 300ms var(--ease-cinematic),
+    border-color 300ms var(--ease-cinematic),
     box-shadow 300ms var(--ease-cinematic),
-    filter 300ms var(--ease-cinematic);
+    transform 300ms var(--ease-cinematic);
+}
+
+.guideCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--ease-cinematic);
+}
+
+.guideCopy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 196px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 26px 26px 22px;
+}
+
+.guideCopyTop {
+  display: grid;
+  gap: 10px;
+}
+
+.guideCard[data-shelf-tone="world"],
+.guideCard[data-shelf-tone="care"],
+.guideCard[data-shelf-tone="global"],
+.productShelfSection[data-shelf-tone="world"] .guideCard,
+.productShelfSection[data-shelf-tone="care"] .guideCard,
+.productShelfSection[data-shelf-tone="global"] .guideCard {
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--home-ink);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.guideCard[data-shelf-tone="world"]::before,
+.productShelfSection[data-shelf-tone="world"] .guideCard::before {
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, rgba(31, 107, 70, 0.08) 0%, transparent 58%),
+    radial-gradient(ellipse 74% 58% at 0% 100%, rgba(148, 163, 184, 0.14) 0%, transparent 54%);
+}
+
+.guideCard[data-shelf-tone="care"]::before,
+.productShelfSection[data-shelf-tone="care"] .guideCard::before {
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, rgba(31, 107, 70, 0.1) 0%, transparent 58%),
+    radial-gradient(ellipse 74% 58% at 0% 100%, rgba(148, 163, 184, 0.12) 0%, transparent 54%);
+}
+
+.guideCard[data-shelf-tone="global"]::before,
+.productShelfSection[data-shelf-tone="global"] .guideCard::before {
+  background:
+    radial-gradient(ellipse 90% 70% at 100% 0%, rgba(31, 107, 70, 0.1) 0%, transparent 58%),
+    radial-gradient(ellipse 74% 58% at 0% 100%, rgba(148, 163, 184, 0.14) 0%, transparent 54%);
+}
+
+.guideCard[data-shelf-tone="world"] .guideLabel,
+.guideCard[data-shelf-tone="care"] .guideLabel,
+.guideCard[data-shelf-tone="global"] .guideLabel,
+.productShelfSection[data-shelf-tone="world"] .guideLabel,
+.productShelfSection[data-shelf-tone="care"] .guideLabel,
+.productShelfSection[data-shelf-tone="global"] .guideLabel {
+  color: var(--home-muted);
+}
+
+.guideCard[data-shelf-tone="world"] strong,
+.guideCard[data-shelf-tone="care"] strong,
+.guideCard[data-shelf-tone="global"] strong,
+.productShelfSection[data-shelf-tone="world"] .guideCard strong,
+.productShelfSection[data-shelf-tone="care"] .guideCard strong,
+.productShelfSection[data-shelf-tone="global"] .guideCard strong {
+  color: var(--home-ink);
 }
 
 .guideCard:hover,
 .guideCard:focus-visible {
-  background: #fbfcfe;
-  box-shadow:
-    inset 0 0 0 1px rgba(15, 23, 42, 0.06),
-    0 8px 18px rgba(15, 23, 42, 0.08);
-  filter: contrast(1.025) saturate(1.015);
   outline: none;
+}
+
+.guideCard[data-shelf-tone="world"]:hover,
+.guideCard[data-shelf-tone="world"]:focus-visible,
+.guideCard[data-shelf-tone="care"]:hover,
+.guideCard[data-shelf-tone="care"]:focus-visible,
+.guideCard[data-shelf-tone="global"]:hover,
+.guideCard[data-shelf-tone="global"]:focus-visible {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  border-color: transparent;
 }
 
 .guideLabel {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   color: var(--home-muted);
   font-family: var(--type-ui);
-  font-size: 0.82rem;
-  font-weight: 430;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .guideCard strong {
   position: relative;
-  z-index: 2;
-  max-width: 210px;
-  margin-top: 8px;
+  z-index: 1;
+  max-width: 16ch;
+  margin: 0;
   color: var(--home-ink);
   font-family: var(--type-display);
-  font-size: clamp(1.08rem, 1.22vw, 1.36rem);
-  font-weight: 520;
-  letter-spacing: 0;
+  font-size: clamp(1.2rem, 1.35vw, 1.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
   line-height: 1.08;
 }
 
 .guideArrow {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   display: inline-flex;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   align-items: center;
   justify-content: center;
-  justify-self: start;
-  margin-top: 12px;
   border-radius: 999px;
   background: var(--home-ink);
   color: #ffffff;
@@ -801,17 +1020,71 @@
     transform 260ms var(--ease-cinematic);
 }
 
+.guideCard[data-shelf-tone="global"] .guideArrow,
+.productShelfSection[data-shelf-tone="global"] .guideArrow {
+  border: none;
+  background: var(--home-ink);
+  color: #ffffff;
+}
+
 .guideCard:hover .guideArrow,
 .guideCard:focus-visible .guideArrow {
   background: #111827;
-  transform: scale(1.03);
+  transform: scale(1.04);
+}
+
+.guideCard[data-shelf-tone="global"]:hover .guideArrow,
+.guideCard[data-shelf-tone="global"]:focus-visible .guideArrow,
+.productShelfSection[data-shelf-tone="global"] .guideCard:hover .guideArrow,
+.productShelfSection[data-shelf-tone="global"] .guideCard:focus-visible .guideArrow {
+  background: #111827;
+}
+
+.guideImageWell {
+  position: relative;
+  z-index: 1;
+  min-height: 210px;
+  overflow: hidden;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  background:
+    radial-gradient(ellipse 78% 56% at 50% 100%, rgba(15, 23, 42, 0.14) 0%, transparent 72%),
+    rgba(255, 255, 255, 0.42);
+}
+
+.guideCard[data-shelf-tone="world"] .guideImageWell,
+.guideCard[data-shelf-tone="care"] .guideImageWell,
+.guideCard[data-shelf-tone="global"] .guideImageWell,
+.productShelfSection[data-shelf-tone="world"] .guideImageWell,
+.productShelfSection[data-shelf-tone="care"] .guideImageWell,
+.productShelfSection[data-shelf-tone="global"] .guideImageWell {
+  border-top: none;
+  background:
+    radial-gradient(ellipse 88% 66% at 50% 100%, rgba(15, 23, 42, 0.24) 0%, rgba(31, 107, 70, 0.1) 44%, transparent 76%),
+    radial-gradient(ellipse 80% 58% at 50% 36%, rgba(148, 163, 184, 0.28) 0%, transparent 72%);
+}
+
+.productShelfSection[data-shelf-tone="world"] .guideCopy,
+.productShelfSection[data-shelf-tone="care"] .guideCopy,
+.productShelfSection[data-shelf-tone="global"] .guideCopy {
+  min-height: 176px;
+  padding: 22px 22px 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.productShelfSection[data-shelf-tone="world"] .guideImageWell,
+.productShelfSection[data-shelf-tone="care"] .guideImageWell,
+.productShelfSection[data-shelf-tone="global"] .guideImageWell {
+  min-height: 230px;
+  margin-top: 0;
 }
 
 .guideImage {
+  position: relative;
+  z-index: 1;
   object-fit: contain;
-  object-position: right bottom;
-  padding: 112px 0 0 22px;
-  opacity: 0.92;
+  object-position: center bottom;
+  padding: 8px 18px 14px;
+  opacity: 0.98;
   transform: translate3d(0, 0, 0) scale(1);
   transition: transform 320ms var(--ease-cinematic);
 }
@@ -1628,7 +1901,15 @@
 
   .guideCard {
     min-height: 360px;
-    padding: 24px 22px;
+  }
+
+  .guideCopy {
+    min-height: 168px;
+    padding: 22px 20px 18px;
+  }
+
+  .guideImageWell {
+    min-height: 180px;
   }
 
 }
@@ -1651,6 +1932,7 @@
   .productActionDot,
   .shelfHeroCta,
   .guideCard,
+  .guideCopy,
   .guideArrow,
   .guideImage,
   .missionWorldImage {
@@ -1662,16 +1944,14 @@
   .miniCarouselItem:hover .miniCarouselBuyNow,
   .miniCarouselItem:focus-visible .miniCarouselBuyNow,
   .miniCarouselNext,
+  .productCard:hover,
+  .productCard:focus-visible,
+  .guideCard:hover,
+  .guideCard:focus-visible,
   .productCard:hover .productImage,
   .productCard:focus-visible .productImage,
   .productCard:hover .productBody,
   .productCard:focus-visible .productBody,
-  .productCard:hover .productBuyNow,
-  .productCard:focus-visible .productBuyNow,
-  .productCard:hover .productActionDot,
-  .productCard:focus-visible .productActionDot,
-  .guideCard:hover .guideArrow,
-  .guideCard:focus-visible .guideArrow,
   .guideCard:hover .guideImage,
   .guideCard:focus-visible .guideImage,
   .missionWorldTile:hover .missionWorldImage {
