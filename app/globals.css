@@ -1166,6 +1166,14 @@ dd {
   .mithron-topbar__locale {
     display: none;
   }
+
+  .adaptive-navbar__bar > div {
+    padding-inline: 12px 14px;
+  }
+
+  .adaptive-navbar__brand {
+    margin-right: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1706,31 +1714,82 @@ canvas {
     --type-campaign-overline: 11px;
   }
 
+  [data-testid="home-hero"] {
+    height: clamp(520px, 78svh, 680px);
+    min-height: 520px;
+  }
+
+  [data-testid="home-hero"] .hero-slide-frame[data-hero-slide-state="active"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(246, 247, 248, 0.97) 0%,
+      rgba(246, 247, 248, 0.9) 28%,
+      rgba(246, 247, 248, 0.42) 48%,
+      rgba(246, 247, 248, 0) 62%
+    );
+  }
+
+  [data-testid="home-hero"][data-hero-content-ink="light"] .hero-slide-frame[data-hero-slide-state="active"]::after {
+    background: linear-gradient(
+      180deg,
+      rgba(8, 10, 14, 0.82) 0%,
+      rgba(8, 10, 14, 0.62) 30%,
+      rgba(8, 10, 14, 0.22) 52%,
+      rgba(8, 10, 14, 0) 68%
+    );
+  }
+
   .hero-dji-layout {
     max-width: none;
-    align-items: center;
-    padding-top: clamp(88px, 14%, 104px);
-    padding-inline: clamp(1.25rem, 5vw, 1.75rem);
+    align-items: stretch;
+    justify-content: flex-start;
+    padding-top: clamp(76px, 12svh, 96px);
+    padding-inline: clamp(1rem, 4.5vw, 1.5rem);
   }
 
   .hero-dji-copy-stack {
-    width: 90%;
+    width: 100%;
     max-width: none;
-    align-items: center;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
     min-height: 0;
+    gap: 0;
   }
 
   .hero-dji-title {
-    max-width: 100%;
+    max-width: 12ch;
+    font-size: clamp(30px, 8.8vw, 38px);
+    line-height: 1.04;
+    letter-spacing: var(--tracking-tighter);
   }
 
   .hero-dji-subtitle {
-    max-width: 100%;
+    max-width: 34ch;
+    margin-top: 12px;
+    font-size: clamp(15px, 4.1vw, 17px);
+    line-height: 1.5;
+    letter-spacing: var(--tracking-tight-sm);
+    -webkit-line-clamp: 3;
+  }
+
+  .hero-dji-cta-wrap {
+    margin-top: 20px;
+  }
+
+  .hero-dji-cta {
+    height: 44px;
+    padding-inline: 22px;
+    font-size: 13px;
   }
 
   .hero-dji-pagination {
-    justify-content: center;
+    justify-content: flex-start;
+    margin-top: 18px;
   }
 
   .hero-slide-frame::after {

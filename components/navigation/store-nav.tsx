@@ -263,14 +263,14 @@ export function StoreNav({
       </div>
       <header className="adaptive-navbar__bar relative h-[62px] font-[var(--type-ui)] md:h-[66px]">
         <div className="relative z-10 mx-auto grid h-full w-full max-w-[1680px] grid-cols-[auto_1fr_auto] items-center pl-2 pr-4 md:pl-3 md:pr-8 lg:pl-5 lg:pr-[clamp(2.5rem,6.4vw,7.5rem)]">
-          <div className="flex items-center gap-2 justify-self-start md:gap-2.5">
+          <div className="flex items-center gap-3 justify-self-start md:gap-2.5">
             <Link href="/" aria-label="Go to Mithron home" className="adaptive-navbar__brand nav-interactive inline-flex shrink-0 items-center text-current">
               <MithronBrandMark />
               <span className="sr-only">Mithron</span>
             </Link>
             <button
               type="button"
-              className="adaptive-navbar__icon nav-interactive nav-interactive--subtle flex size-10 items-center justify-center rounded-full text-current lg:hidden"
+              className="adaptive-navbar__icon adaptive-navbar__menu-toggle nav-interactive nav-interactive--subtle -mr-0.5 flex size-10 items-center justify-center rounded-full text-current lg:hidden"
               aria-label="Open menu"
               onClick={() => setOverlay("mobile-menu")}
             >

@@ -1380,31 +1380,66 @@
 
 @media (max-width: 640px) {
   .miniCarousel {
-    min-height: 126px;
-    padding: 12px 0 15px;
+    min-height: 132px;
+    padding: 12px 0 16px;
   }
 
-  .miniCarouselViewport {
-    padding: 0;
+  .miniCarouselViewport::before,
+  .miniCarouselViewport::after {
+    width: 44px;
+  }
+
+  .miniCarouselViewport::before {
+    background: linear-gradient(90deg, #ffffff 0%, rgba(255, 255, 255, 0.72) 58%, rgba(255, 255, 255, 0) 100%);
+  }
+
+  .miniCarouselViewport::after {
+    background: linear-gradient(270deg, #ffffff 0%, rgba(255, 255, 255, 0.78) 62%, rgba(255, 255, 255, 0) 100%);
   }
 
   .miniCarouselRail {
-    gap: 24px;
-    padding: 0 72px;
-    scroll-padding-inline: 72px;
+    gap: 18px;
+    padding: 0 52px 0 16px;
+    scroll-padding-inline: 16px;
   }
 
   .miniCarouselItem {
-    flex-basis: 86px;
-    gap: 12px;
+    flex: 0 0 92px;
+    gap: 10px;
   }
 
   .miniCarouselImageWell {
-    height: 54px;
+    height: 58px;
+  }
+
+  .miniCarouselLabel {
+    display: -webkit-box;
+    overflow: hidden;
+    min-height: 2.45em;
+    font-size: 0.68rem;
+    font-weight: 500;
+    line-height: 1.28;
+    letter-spacing: 0.01em;
+    text-overflow: unset;
+    text-transform: none;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .miniCarouselNext {
-    right: 10px;
+    right: 8px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+
+  .shelfTitle {
+    font-size: clamp(1.5rem, 6.8vw, 1.85rem);
+    line-height: 1.12;
   }
 
   .promoImageBand {
@@ -2279,39 +2314,90 @@
 }
 
 @media (max-width: 640px) {
+  .agriSection {
+    padding: 48px 0 56px;
+  }
+
   .agriContainer {
-    padding: 0 clamp(18px, 5vw, 28px);
+    padding: 0 16px;
   }
+
+  .agriGridLayout {
+    gap: 24px;
+  }
+
+  .agriLeftColumn {
+    gap: 20px;
+  }
+
   .agriHeadline {
-    font-size: clamp(2.2rem, 11vw, 3.2rem);
+    font-size: clamp(1.65rem, 7.6vw, 2.35rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 12px;
   }
+
+  .agriIntroBody p {
+    max-width: none;
+    color: #475569;
+    font-size: 0.94rem;
+    line-height: 1.55;
+  }
+
+  .agriCard_hero {
+    min-height: 240px;
+    height: auto;
+  }
+
+  .agriCard_tall {
+    min-height: 300px;
+  }
+
+  .agriCard_standard {
+    min-height: 220px;
+    height: auto;
+  }
+
+  .agriCard_wide {
+    min-height: 230px;
+    height: auto;
+  }
+
   .agriFallbackNote {
     display: none;
   }
+
   .agriCardCopy {
-    left: 20px;
-    right: 54px;
-    bottom: 20px;
-  }
-  .agriSection .agriCardCopy {
-    left: 18px;
+    left: 16px;
     right: 52px;
-    bottom: 18px;
+    bottom: 16px;
   }
+
+  .agriSection .agriCardCopy {
+    left: 16px;
+    right: 50px;
+    bottom: 16px;
+  }
+
   .agriSection .agriCard_wide .agriCardCopy {
     max-width: none;
   }
+
   .agriCardArrow {
-    right: 20px;
-    bottom: 20px;
+    right: 16px;
+    bottom: 16px;
     width: 32px;
     height: 32px;
   }
+
   .agriCardCopy strong {
-    font-size: 1.25rem;
+    font-size: 1.12rem;
+    line-height: 1.2;
   }
+
   .agriCardCopy span {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
   }
 }
 
