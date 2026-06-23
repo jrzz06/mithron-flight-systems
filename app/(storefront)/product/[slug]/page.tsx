@@ -101,7 +101,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         </div>
       </section>
       <ProductDetailSectionNav visibleSectionIds={visibleSectionIds} />
-      <div id="overview">
+      <div id="overview" className={styles.contentFlow}>
         {hasHighlights ? <ProductHighlights product={product} /> : null}
         {showOverview ? <ProductOverview product={product} /> : null}
         <ProductStory product={product} includeFallback={!showOverview} />
