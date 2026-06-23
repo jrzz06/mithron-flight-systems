@@ -606,6 +606,7 @@ function ProductShelfSection({
             href={config.heroCtaHref}
             className={styles.productShelfHero}
             data-testid="home-product-shelf-hero"
+            data-navbar-ink={shelfNavbarInk(config.tone)}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -627,7 +628,11 @@ function ProductShelfSection({
   );
 }
 
-function renderChapter({
+function shelfNavbarInk(tone: ProductShelfConfig["tone"]): "light" | "dark" {
+  if (tone === "world" || tone === "global") return "light";
+  return "dark";
+}
+
   chapter,
   products,
   shelfConfigs,

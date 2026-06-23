@@ -25,7 +25,8 @@ describe("storefront motion audit regressions", () => {
   it("keeps adaptive navbar tone sampling lightweight under scroll", () => {
     const hook = source("hooks/use-adaptive-navbar-tone.ts");
 
-    expect(hook).toContain("const scheduleFullUpdate = () => scheduleUpdate(false)");
+    expect(hook).toContain("document.elementsFromPoint");
+    expect(hook).toContain('addEventListener("scroll", scheduleUpdate, { passive: true })');
     expect(hook).toContain('attributeFilter: ["data-navbar-ink", "data-navbar-tone", "data-active-hero-theme", "data-hero-content-ink", "data-hero-slide-state"]');
     expect(hook).not.toContain("Array.from(document.images)");
     expect(hook).not.toContain("childList: true");

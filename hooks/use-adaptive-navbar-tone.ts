@@ -38,8 +38,18 @@ const navbarToneStyles = {
   }
 } satisfies Record<NavbarInkTone, NavbarToneStyle>;
 
+const NAVBAR_ROOT_SELECTOR = ".TOP_NAVBAR, .adaptive-mobile-menu, .adaptive-mobile-menu__backdrop";
+
 function isInteractionPaused() {
   return typeof document !== "undefined" && document.documentElement.hasAttribute("data-overlay-open");
+}
+
+function isNavbarElement(element: Element) {
+  return Boolean(element.closest(NAVBAR_ROOT_SELECTOR));
+}
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 767px)").matches;
 }
 
 function toneFromExplicitAttributes(element: Element): NavbarInkTone | null {
@@ -76,14 +86,37 @@ function getNavbarSampleY() {
   return Math.min(Math.max((navRect?.bottom ?? 76) - 24, 16), window.innerHeight - 1);
 }
 
-function measureNavbarTone(currentTone: NavbarInkTone): NavbarInkTone {
-  const hero = document.querySelector("#hero");
-  if (!hero) return currentTone;
-
+function toneFromSurfaceAtNav(): NavbarInkTone | null {
+  const sampleX = Math.round(window.innerWidth * 0.5);
   const sampleY = getNavbarSampleY();
-  const heroRect = hero.getBoundingClientRect();
-  if (heroRect.top <= sampleY && heroRect.bottom >= sampleY) {
-    return toneFromExplicitAttributes(hero) ?? currentTone;
+  const stack = document.elementsFromPoint(sampleX, sampleY);
+
+  for (const element of stack) {
+    if (isNavbarElement(element)) continue;
+
+    if (isMobileViewport() && element.closest('[data-testid="home-hero"]')) {
+      return "light";
+    }
+
+    const tone = toneFromExplicitAttributes(element);
+    if (tone) return tone;
+  }
+
+  return null;
+}
+
+function measureNavbarTone(currentTone: NavbarInkTone): NavbarInkTone {
+  const surfaceTone = toneFromSurfaceAtNav();
+  if (surfaceTone) return surfaceTone;
+
+  const hero = document.querySelector("#hero");
+  if (hero) {
+    const sampleY = getNavbarSampleY();
+    const heroRect = hero.getBoundingClientRect();
+    if (heroRect.top <= sampleY && heroRect.bottom >= sampleY) {
+      if (isMobileViewport()) return "light";
+      return toneFromExplicitAttributes(hero) ?? currentTone;
+    }
   }
 
   return "dark";
@@ -93,24 +126,33 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
   const [tone, setTone] = useState<NavbarInkTone>(initialTone);
 
   useEffect(() => {
-    const scheduleUpdate = (sampleImages = false) => {
-      void sampleImages;
+    const scheduleUpdate = () => {
       if (isInteractionPaused()) return;
       setTone((current) => measureNavbarTone(current));
     };
 
-    const scheduleFullUpdate = () => scheduleUpdate(false);
+    scheduleUpdate();
 
-    scheduleFullUpdate();
-    window.addEventListener("resize", scheduleFullUpdate);
+    let mountAttempts = 0;
+    const retryUntilHeroReady = () => {
+      scheduleUpdate();
+      if (!document.querySelector("#hero") && mountAttempts < 24) {
+        mountAttempts += 1;
+        window.requestAnimationFrame(retryUntilHeroReady);
+      }
+    };
+    retryUntilHeroReady();
+
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
 
     const hero = document.querySelector("#hero");
     const heroObserver = hero
-      ? new IntersectionObserver(scheduleFullUpdate, { threshold: [0, 0.25, 0.5, 0.75, 1] })
+      ? new IntersectionObserver(scheduleUpdate, { threshold: [0, 0.25, 0.5, 0.75, 1] })
       : null;
     if (hero && heroObserver) heroObserver.observe(hero);
 
-    const mutationObserver = new MutationObserver(scheduleFullUpdate);
+    const mutationObserver = new MutationObserver(scheduleUpdate);
     if (document.body) {
       mutationObserver.observe(document.body, {
         subtree: true,
@@ -120,7 +162,7 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
     }
 
     const overlayObserver = new MutationObserver(() => {
-      if (!isInteractionPaused()) scheduleFullUpdate();
+      if (!isInteractionPaused()) scheduleUpdate();
     });
     overlayObserver.observe(document.documentElement, {
       attributes: true,
@@ -128,7 +170,8 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
     });
 
     return () => {
-      window.removeEventListener("resize", scheduleFullUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("scroll", scheduleUpdate);
       heroObserver?.disconnect();
       mutationObserver.disconnect();
       overlayObserver.disconnect();

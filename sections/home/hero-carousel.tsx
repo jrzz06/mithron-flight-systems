@@ -156,6 +156,8 @@ function getHeroContentInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
 }
 
 function getHeroNavbarInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
+  if (slide.theme === "dark") return "light";
+  if (slide.theme === "light") return "dark";
   return resolveHeroTextInk(slide, slideIndex);
 }
 

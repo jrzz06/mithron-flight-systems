@@ -727,7 +727,10 @@ dd {
   content: none;
 }
 
-.adaptive-navbar__brand,
+.adaptive-navbar__brand {
+  color: transparent;
+}
+
 .adaptive-navbar__link,
 .adaptive-navbar__icon {
   color: var(--adaptive-navbar-ink, rgba(17, 17, 19, 0.92));
@@ -785,13 +788,11 @@ dd {
   transition: opacity 155ms var(--ease-system);
 }
 
-.adaptive-navbar[data-nav-ink="light"] .adaptive-navbar__bar .adaptive-navbar__brand,
 .adaptive-navbar[data-nav-ink="light"] .adaptive-navbar__bar .adaptive-navbar__link,
 .adaptive-navbar[data-nav-ink="light"] .adaptive-navbar__bar .adaptive-navbar__icon {
   text-shadow: 0 1px 14px rgba(0, 0, 0, 0.22);
 }
 
-.adaptive-navbar[data-nav-ink="dark"] .adaptive-navbar__bar .adaptive-navbar__brand,
 .adaptive-navbar[data-nav-ink="dark"] .adaptive-navbar__bar .adaptive-navbar__link,
 .adaptive-navbar[data-nav-ink="dark"] .adaptive-navbar__bar .adaptive-navbar__icon {
   text-shadow: none;
