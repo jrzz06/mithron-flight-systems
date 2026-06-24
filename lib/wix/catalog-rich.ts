@@ -226,8 +226,9 @@ function readMedia(product: Record<string, unknown>) {
   for (const item of media?.items ?? []) {
     const image = item.image as Record<string, unknown> | undefined;
     const video = item.video as Record<string, unknown> | undefined;
+    const videoFiles = video?.files as Array<{ url?: unknown }> | undefined;
     const imageUrl = String(image?.url ?? item.url ?? "").trim();
-    const videoUrl = String(video?.url ?? video?.files?.[0]?.url ?? "").trim();
+    const videoUrl = String(video?.url ?? videoFiles?.[0]?.url ?? "").trim();
     if (imageUrl) mediaUrls.push(imageUrl);
     if (videoUrl) videoUrls.push(videoUrl);
   }
