@@ -169,6 +169,16 @@ export function readCategories(product: Record<string, unknown>, fallbackCategor
   return [...names];
 }
 
+function readPriceAmount(value: unknown): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (value && typeof value === "object" && "amount" in value) {
+    const parsed = Number((value as { amount?: unknown }).amount);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function readVariants(product: Record<string, unknown>) {
   const variants: WixVariantSnapshot[] = [];
   const variantSummary = product.variantSummary as { variants?: Array<Record<string, unknown>> } | undefined;
@@ -182,8 +192,8 @@ export function readVariants(product: Record<string, unknown>) {
 
   for (const variant of sourceVariants) {
     const priceData = variant.price as Record<string, unknown> | undefined;
-    const actual = Number(priceData?.actualPrice?.amount ?? priceData?.actualPrice ?? priceData?.price ?? 0);
-    const compare = Number(priceData?.compareAtPrice?.amount ?? priceData?.compareAtPrice ?? 0);
+    const actual = readPriceAmount(priceData?.actualPrice ?? priceData?.price ?? 0);
+    const compare = readPriceAmount(priceData?.compareAtPrice ?? 0);
     const optionNames = (variant.optionChoiceNames as { optionName?: string; choiceName?: string } | undefined);
     const label = [optionNames?.optionName, optionNames?.choiceName].filter(Boolean).join(": ") || decodeHtml(String(variant.name ?? "Variant"));
     variants.push({
