@@ -728,10 +728,25 @@ export function getCmsCutoverDiagnostics(snapshot: PublicCmsSnapshot) {
   };
 }
 
-async function hasCmsSchema() {
+const hasCmsSchema = cache(async () => {
   const rows = await fetchCmsRows("hero_banners", "select=id&limit=1");
   return rows !== null;
-}
+});
+
+export const getPublicHeroBanners = cache(async (): Promise<HeroSlide[]> => {
+  if (!(await hasCmsSchema())) {
+    return fallbackSnapshot.home.heroBanners;
+  }
+
+  const orchestration = await getHomepageCmsOrchestration();
+  if (!shouldLoadCmsSource(orchestration, "hero_banners")) {
+    return fallbackSnapshot.home.heroBanners;
+  }
+
+  const heroRows = await fetchCmsRows("hero_banners", publicCmsQueries.heroBanners);
+  const published = publishedRows(heroRows);
+  return mapHeroRows(published.rows) ?? fallbackSnapshot.home.heroBanners;
+});
 
 async function loadPublicCmsSnapshot(): Promise<PublicCmsSnapshot> {
   if (!(await hasCmsSchema())) {

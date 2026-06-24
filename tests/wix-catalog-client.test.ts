@@ -40,5 +40,7 @@ describe("wix catalog client", () => {
     });
     expect(normalized?.media_urls).toContain("https://static.wixstatic.com/media/example.png");
     expect(normalized?.description_plain).toContain("GST Extra");
+    expect(normalized?.rich.specs).toBeDefined();
+    expect(normalized?.rich.info_sections).toBeDefined();
   });
 });

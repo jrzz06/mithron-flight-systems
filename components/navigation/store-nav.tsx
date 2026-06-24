@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronDown, Globe2, Menu, Search, UserRound, X } from "lucide-react";
 import { useAdaptiveNavbarTone } from "@/hooks/use-adaptive-navbar-tone";
-import type { NavbarInkTone } from "@/hooks/use-adaptive-navbar-tone";
+import { normalizeStorefrontPath, resolveInitialNavbarTone } from "@/lib/navbar-ink-sampling";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import { MithronBrandMark } from "@/components/brand/mithron-brand-mark";
 import type { NavigationNode } from "@/config/types";
@@ -15,20 +15,10 @@ import { catalogCategoryDefinitions } from "@/lib/catalog-categories";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { useUiStore } from "@/store/ui";
 
-function getInitialNavbarTone(pathname: string | null): NavbarInkTone {
-  const normalized = normalizePath(pathname);
-  if (normalized === "/") return "dark";
-  return "dark";
-}
-
-function normalizePath(pathname: string | null) {
-  if (!pathname) return "/";
-  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
-  return pathname;
-}
-
 const MENU_CLOSE_DELAY_MS = 200;
 const MENU_EXIT_MS = 260;
+const NAV_PRIMARY_COUNT = 4;
+const NAV_DESKTOP_PREFETCH_MIN_WIDTH = 800;
 
 const NAV_LABEL_ALIASES: Record<string, string> = {
   "Our Franchise": "Global Products"
@@ -68,8 +58,9 @@ export function StoreNav({
   const overlay = useUiStore((state) => state.overlay);
   const setOverlay = useUiStore((state) => state.setOverlay);
   const mobileMenuOpen = overlay === "mobile-menu";
-  const normalizedPathname = useMemo(() => normalizePath(pathname), [pathname]);
-  const { tone, style } = useAdaptiveNavbarTone(getInitialNavbarTone(normalizedPathname));
+  const normalizedPathname = useMemo(() => normalizeStorefrontPath(pathname), [pathname]);
+  const initialNavbarTone = useMemo(() => resolveInitialNavbarTone(normalizedPathname), [normalizedPathname]);
+  const { tone, style } = useAdaptiveNavbarTone(initialNavbarTone);
   const enterpriseMenuByLabel = useMemo(
     () => new Map(enterpriseMenuConfigs.map((menu) => [menu.label, menu])),
     [enterpriseMenuConfigs]
@@ -118,6 +109,11 @@ export function StoreNav({
 
   const preloadSearchOverlay = useCallback(() => {
     onSearchIntent?.();
+    void fetch("/api/catalog/search?intent=index").catch((error: unknown) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Search index preload failed", error);
+      }
+    });
     void import("@/components/overlays/search-overlay").catch((error: unknown) => {
       if (process.env.NODE_ENV !== "production") {
         console.error("Search overlay preload failed", error);
@@ -160,7 +156,7 @@ export function StoreNav({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!window.matchMedia("(min-width: 1024px)").matches) return;
+    if (!window.matchMedia(`(min-width: ${NAV_DESKTOP_PREFETCH_MIN_WIDTH}px)`).matches) return;
     if (shouldSkipAggressivePrefetch()) return;
 
     const routes = displayedNavigationItems
@@ -272,45 +268,46 @@ export function StoreNav({
         </div>
       </div>
       <header className="adaptive-navbar__bar relative h-16 font-[var(--type-ui)] md:h-[66px]">
-        <div className="relative z-10 mx-auto grid h-full w-full max-w-[1680px] grid-cols-[auto_1fr_auto] items-center pl-2 pr-4 md:pl-3 md:pr-8 lg:pl-5 lg:pr-[clamp(2.5rem,6.4vw,7.5rem)]">
-          <div className="flex items-center justify-self-start md:gap-2.5">
+        <div className="adaptive-navbar__inner relative z-10 mx-auto grid h-full w-full max-w-[1680px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 pl-2 pr-4 md:pl-3 md:pr-8 lg:pl-5 lg:pr-[clamp(2.5rem,6.4vw,7.5rem)]">
+          <div className="flex min-w-0 items-center justify-self-start md:gap-2.5">
             <Link href="/" aria-label="Go to Mithron home" className="adaptive-navbar__brand nav-interactive inline-flex shrink-0 items-center text-current">
               <MithronBrandMark />
               <span className="sr-only">Mithron</span>
             </Link>
           </div>
 
-          <nav className="absolute left-1/2 top-1/2 z-[1] hidden -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-4 whitespace-nowrap lg:flex xl:gap-7 2xl:gap-8">
-            {displayedNavigationItems.map((item, index) => {
-              const isActive = activeNavIndex === index;
-              const menu = enterpriseMenuByLabel.get(item.label);
-              const isMenuActive = menu ? activeMenuKey === menu.key : false;
-              const menuId = menu ? `enterprise-menu-${menu.key}` : undefined;
-              return (
-                <div key={item.label} onPointerEnter={() => menu && openEnterpriseMenu(menu.key)}>
-                  <Link
-                    href={item.href}
-                    aria-current={isActive ? "page" : undefined}
-                    aria-haspopup={menu ? "true" : undefined}
-                    aria-expanded={menu ? isMenuActive : undefined}
-                    aria-controls={menuId}
-                    onPointerEnter={() => {
-                      if (menu) openEnterpriseMenu(menu.key);
-                    }}
-                    className={`adaptive-navbar__link type-nav nav-interactive group relative inline-flex h-10 items-center whitespace-nowrap text-current ${isActive ? "is-active" : ""}`}
-                  >
-                    <span className="adaptive-navbar__label relative z-[1]">{item.label}</span>
-                    {menu ? <ChevronDown className={`ml-1.5 size-3.5 transition-transform duration-[220ms] ease-[var(--ease-cinematic)] ${isMenuActive ? "rotate-180" : ""}`} aria-hidden="true" /> : null}
-                    <span aria-hidden="true" className="adaptive-navbar__underline pointer-events-none absolute bottom-[3px] left-0 h-px w-full origin-center" />
-                  </Link>
-                </div>
-              );
-            })}
-          </nav>
+          <div className="adaptive-navbar__nav-cluster flex min-w-0 items-center justify-center overflow-hidden">
+            <nav
+              className="nav-desktop-links min-w-0 items-center justify-center whitespace-nowrap"
+              aria-label="Primary storefront navigation"
+            >
+              {displayedNavigationItems.map((item, index) => {
+                const priority = index < NAV_PRIMARY_COUNT ? "primary" : "secondary";
+                return (
+                  <NavLinkItem
+                    key={item.label}
+                    item={item}
+                    index={index}
+                    activeNavIndex={activeNavIndex}
+                    enterpriseMenuByLabel={enterpriseMenuByLabel}
+                    activeMenuKey={activeMenuKey}
+                    priority={priority}
+                    onOpenEnterpriseMenu={openEnterpriseMenu}
+                  />
+                );
+              })}
+            </nav>
+            <NavMoreMenu
+              items={displayedNavigationItems.slice(NAV_PRIMARY_COUNT)}
+              activeNavIndex={activeNavIndex}
+              primaryOffset={NAV_PRIMARY_COUNT}
+              onCloseEnterpriseMenu={closeEnterpriseMenu}
+            />
+          </div>
 
-          <div className="ml-auto flex items-center justify-end gap-1 justify-self-end md:gap-2.5">
+          <div className="flex shrink-0 items-center justify-end gap-1 justify-self-end md:gap-2.5">
             <button
-              className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-10 items-center justify-center rounded-full text-current"
+              className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-11 items-center justify-center rounded-full text-current"
               aria-label="Search Mithron systems"
               type="button"
               onFocus={preloadSearchOverlay}
@@ -325,14 +322,14 @@ export function StoreNav({
               <Link
                 href="/account"
                 aria-label="Account"
-                className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-10 items-center justify-center rounded-full text-current"
+                className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-11 items-center justify-center rounded-full text-current"
               >
                 <UserRound className="size-[18px]" />
               </Link>
             ) : null}
             <button
               type="button"
-              className="adaptive-navbar__icon adaptive-navbar__menu-toggle nav-interactive nav-interactive--subtle flex size-10 items-center justify-center rounded-full text-current lg:hidden"
+              className="adaptive-navbar__icon adaptive-navbar__menu-toggle nav-interactive nav-interactive--subtle nav-hamburger flex size-11 items-center justify-center rounded-full text-current"
               aria-label="Open menu"
               onClick={() => setOverlay("mobile-menu")}
             >
@@ -358,6 +355,144 @@ export function StoreNav({
         onSearch={() => setOverlay("search")}
         onSearchIntent={preloadSearchOverlay}
       />
+    </div>
+  );
+}
+
+function NavLinkItem({
+  item,
+  index,
+  activeNavIndex,
+  enterpriseMenuByLabel,
+  activeMenuKey,
+  priority,
+  onOpenEnterpriseMenu
+}: {
+  item: NavigationNode;
+  index: number;
+  activeNavIndex: number;
+  enterpriseMenuByLabel: Map<string, EnterpriseMenuConfig>;
+  activeMenuKey: string | null;
+  priority: "primary" | "secondary";
+  onOpenEnterpriseMenu: (menuKey: string) => void;
+}) {
+  const isActive = activeNavIndex === index;
+  const menu = enterpriseMenuByLabel.get(item.label);
+  const isMenuActive = menu ? activeMenuKey === menu.key : false;
+  const menuId = menu ? `enterprise-menu-${menu.key}` : undefined;
+
+  return (
+    <div
+      className="adaptive-navbar__link-wrap shrink-0"
+      data-nav-priority={priority}
+      onPointerEnter={() => menu && onOpenEnterpriseMenu(menu.key)}
+    >
+      <Link
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
+        aria-haspopup={menu ? "true" : undefined}
+        aria-expanded={menu ? isMenuActive : undefined}
+        aria-controls={menuId}
+        onPointerEnter={() => {
+          if (menu) onOpenEnterpriseMenu(menu.key);
+        }}
+        className={`adaptive-navbar__link type-nav nav-interactive group relative inline-flex h-10 items-center whitespace-nowrap text-current ${isActive ? "is-active" : ""}`}
+      >
+        <span className="adaptive-navbar__label relative z-[1]">{item.label}</span>
+        {menu ? (
+          <ChevronDown
+            className={`ml-1.5 size-3.5 transition-transform duration-[220ms] ease-[var(--ease-cinematic)] ${isMenuActive ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
+        ) : null}
+        <span aria-hidden="true" className="adaptive-navbar__underline pointer-events-none absolute bottom-[3px] left-0 h-px w-full origin-center" />
+      </Link>
+    </div>
+  );
+}
+
+function NavMoreMenu({
+  items,
+  activeNavIndex,
+  primaryOffset,
+  onCloseEnterpriseMenu
+}: {
+  items: NavigationNode[];
+  activeNavIndex: number;
+  primaryOffset: number;
+  onCloseEnterpriseMenu: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div ref={menuRef} className="nav-more-menu relative shrink-0">
+      <button
+        type="button"
+        className="nav-more-button adaptive-navbar__link type-nav nav-interactive group relative inline-flex h-10 items-center whitespace-nowrap text-current"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls="nav-more-dropdown"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="adaptive-navbar__label relative z-[1]">More</span>
+        <ChevronDown
+          className={`ml-1.5 size-3.5 transition-transform duration-[220ms] ease-[var(--ease-cinematic)] ${open ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
+        <span aria-hidden="true" className="adaptive-navbar__underline pointer-events-none absolute bottom-[3px] left-0 h-px w-full origin-center" />
+      </button>
+      <div
+        id="nav-more-dropdown"
+        role="menu"
+        aria-hidden={!open}
+        className={`nav-more-dropdown ${open ? "is-open" : ""}`}
+      >
+        {items.map((item, index) => {
+          const navIndex = primaryOffset + index;
+          const isActive = activeNavIndex === navIndex;
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              role="menuitem"
+              tabIndex={open ? 0 : -1}
+              aria-current={isActive ? "page" : undefined}
+              className={`nav-more-dropdown__link ${isActive ? "is-active" : ""}`}
+              onClick={() => {
+                setOpen(false);
+                onCloseEnterpriseMenu();
+              }}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -594,14 +729,14 @@ function MobileMenu({
     <>
       <button
         aria-label="Close navigation menu"
-        className={`adaptive-mobile-menu__backdrop fixed inset-0 z-[995] cursor-default bg-black/45 ${open ? "is-open" : ""}`}
+        className={`adaptive-mobile-menu__backdrop fixed inset-0 z-[1000] cursor-default bg-black/45 ${open ? "is-open" : ""}`}
         tabIndex={open ? 0 : -1}
         onClick={onClose}
       />
       <div
         data-testid="mobile-menu"
         aria-hidden={!open}
-        className={`adaptive-mobile-menu fixed inset-x-4 top-[calc(var(--store-nav-offset)+8px)] z-[1000] overflow-hidden rounded-[20px] border p-4 md:top-[calc(var(--store-nav-offset)+8px)] lg:hidden ${open ? "is-open" : ""}`}
+        className={`adaptive-mobile-menu fixed inset-x-4 top-[calc(var(--store-nav-offset)+8px)] z-[1001] max-h-[calc(100dvh-var(--store-nav-offset)-16px)] overflow-y-auto rounded-[20px] border p-4 md:top-[calc(var(--store-nav-offset)+8px)] ${open ? "is-open" : ""}`}
       >
         <div className="mb-4 flex items-center justify-between">
           <p className="adaptive-mobile-menu__label text-[11px] font-medium uppercase tracking-[0.14em]">Navigation</p>
@@ -609,7 +744,7 @@ function MobileMenu({
             type="button"
             tabIndex={open ? 0 : -1}
             aria-label="Close menu"
-            className="adaptive-mobile-menu__control nav-interactive nav-interactive--subtle rounded-full p-2"
+            className="adaptive-mobile-menu__control nav-interactive nav-interactive--subtle inline-flex min-h-11 min-w-11 items-center justify-center rounded-full"
             onClick={onClose}
           >
             <X className="size-5" />

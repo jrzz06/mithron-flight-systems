@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { formatUsd } from "@/lib/utils";
+import { formatINR } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
 export default function CartPage() {
@@ -19,20 +19,20 @@ export default function CartPage() {
           {items.length ? items.map((item) => (
             <article key={`${item.productSlug}-${item.bundleId}`} className="rounded-[var(--ds-r-xl)] border border-[var(--surface-border)] bg-[var(--surface-card)] p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <p className="font-semibold text-white">{item.productName}</p>
                   <p className="mt-1 text-sm text-white/60">{item.bundleName}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <input
                     type="number"
                     min={1}
                     value={item.quantity}
                     onChange={(event) => setQuantity(item.productSlug, item.bundleId, Number(event.target.value))}
-                    className="w-16 rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-white"
+                    className="min-h-11 w-16 rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-white"
                   />
-                  <p className="font-semibold text-white">{formatUsd(item.unitPrice * item.quantity)}</p>
-                  <button type="button" onClick={() => removeItem(item.productSlug, item.bundleId)} className="text-sm text-red-400">Remove</button>
+                  <p className="font-semibold text-white">{formatINR(item.unitPrice * item.quantity)}</p>
+                  <button type="button" onClick={() => removeItem(item.productSlug, item.bundleId)} className="min-h-11 px-3 py-2 text-sm text-red-400">Remove</button>
                 </div>
               </div>
             </article>
@@ -41,7 +41,7 @@ export default function CartPage() {
           )}
         </div>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-xl font-semibold text-white">Subtotal: {formatUsd(subtotal)}</p>
+          <p className="text-xl font-semibold text-white">Subtotal: {formatINR(subtotal)}</p>
           <Button asChild disabled={!items.length}>
             <Link href="/checkout">Proceed to checkout</Link>
           </Button>

@@ -6,6 +6,7 @@ import {
   sourceCatalogIdFromWixSlug,
   wixProductPageUrl
 } from "./catalog-normalize.ts";
+import { extractRichProductContent, type WixRichProductContent } from "./catalog-rich.ts";
 
 export type WixProductSnapshot = {
   wix_product_id: string;
@@ -21,11 +22,12 @@ export type WixProductSnapshot = {
   media_urls: string[];
   visible: boolean;
   updated_at: string;
+  rich: WixRichProductContent;
 };
 
 export type WixCatalogSnapshot = {
   version: 1;
-  source: "wix-stores-api-v3";
+  source: "wix-stores-api-v3" | "wix-stores-api-v1";
   site_id: string;
   extracted_at: string;
   product_count: number;
@@ -38,11 +40,21 @@ type WixClientOptions = {
   baseUrl?: string;
 };
 
-const DEFAULT_FIELDS = [
+export const WIX_CATALOG_QUERY_FIELDS = [
   "PLAIN_DESCRIPTION",
+  "DESCRIPTION",
   "MEDIA_ITEMS_INFO",
   "BREADCRUMBS_INFO",
-  "VARIANTS_INFO"
+  "INFO_SECTION",
+  "INFO_SECTION_PLAIN_DESCRIPTION",
+  "URL",
+  "ALL_CATEGORIES_INFO",
+  "DIRECT_CATEGORIES_INFO",
+  "VARIANT_OPTION_CHOICE_NAMES",
+  "MIN_PRICE_VARIANT",
+  "CURRENCY",
+  "DISCOUNT_INFO",
+  "WEIGHT_MEASUREMENT_UNIT_INFO"
 ] as const;
 
 function readNestedPrice(product: Record<string, unknown>) {
@@ -97,8 +109,12 @@ export function normalizeWixProduct(product: Record<string, unknown>, extractedA
 
   const pricing = readNestedPrice(product);
   const descriptionPlain = decodeHtml(
-    String(product.plainDescription ?? product.description ?? product.descriptionPlain ?? "")
+    String(product.plainDescription ?? product.descriptionPlain ?? stripRichDescription(product.description) ?? "")
   );
+  const category = readCategory(product, name);
+  const mediaUrls = readMediaUrls(product);
+  const pageUrl = String((product.url as { url?: string } | undefined)?.url ?? "").trim() || wixProductPageUrl(wixSlug);
+  const rich = extractRichProductContent(product, category, mediaUrls);
 
   return {
     wix_product_id: String(product.id ?? product._id ?? wixSlug),
@@ -106,20 +122,53 @@ export function normalizeWixProduct(product: Record<string, unknown>, extractedA
     name,
     price: pricing.price,
     compare_at: pricing.compare_at,
-    description_plain: descriptionPlain,
-    source_url: wixProductPageUrl(wixSlug),
+    description_plain: descriptionPlain || stripRichDescription(product.description),
+    source_url: pageUrl,
     source_catalog_id: sourceCatalogIdFromWixSlug(wixSlug),
     source_fingerprint: normalizeIdentity(name),
-    category: readCategory(product, name),
-    media_urls: readMediaUrls(product),
+    category: rich.categories[0] ?? category,
+    media_urls: rich.media_urls.length ? rich.media_urls : mediaUrls,
     visible: product.visible !== false,
-    updated_at: String(product.updatedDate ?? product.lastUpdated ?? extractedAt)
+    updated_at: String(product.updatedDate ?? product.lastUpdated ?? extractedAt),
+    rich
   };
 }
 
+function stripRichDescription(value: unknown) {
+  if (typeof value === "string") return decodeHtml(value);
+  if (!value || typeof value !== "object") return "";
+  const nodes = (value as { nodes?: Array<Record<string, unknown>> }).nodes ?? [];
+  const parts: string[] = [];
+  for (const node of nodes) {
+    const text = node.textData as { text?: string } | undefined;
+    if (text?.text) parts.push(text.text);
+    if (Array.isArray(node.nodes)) {
+      for (const child of node.nodes) {
+        const childText = (child as { textData?: { text?: string } }).textData?.text;
+        if (childText) parts.push(childText);
+      }
+    }
+  }
+  return decodeHtml(parts.join(" "));
+}
+
 export async function fetchWixCatalog(options: WixClientOptions): Promise<WixCatalogSnapshot> {
+  const { fetchWixCatalogV1 } = await import("./catalog-v1.ts");
   const baseUrl = options.baseUrl ?? "https://www.wixapis.com";
   const extractedAt = new Date().toISOString();
+
+  try {
+    return await fetchWixCatalogV3(options, baseUrl, extractedAt);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/CATALOG_V1_SITE_CALLING_CATALOG_V3_API|catalog version/i.test(message)) {
+      throw error;
+    }
+    return fetchWixCatalogV1(options);
+  }
+}
+
+async function fetchWixCatalogV3(options: WixClientOptions, baseUrl: string, extractedAt: string): Promise<WixCatalogSnapshot> {
   const products: WixProductSnapshot[] = [];
   let cursor: string | undefined;
 
@@ -135,7 +184,7 @@ export async function fetchWixCatalog(options: WixClientOptions): Promise<WixCat
         query: {
           cursorPaging: { limit: 100, cursor }
         },
-        fields: [...DEFAULT_FIELDS]
+        fields: [...WIX_CATALOG_QUERY_FIELDS]
       })
     });
 

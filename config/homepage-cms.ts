@@ -8,6 +8,7 @@ export type HomepageShelfCms = {
   guideLabel: string;
   guideTitle: string;
   guideHref: string;
+  heroEyebrow: string;
   heroSubtitle: string;
   heroBody: string;
   featureCta: string;
@@ -75,10 +76,11 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       guideLabel: "Buying Guides",
       guideTitle: "Which Drone Fits Your Mission?",
       guideHref: "/products",
-      heroSubtitle: "DRONE IS MITHRON",
-      heroBody: "Welcome to India's 1st & Leading Drone Ecosystem Aggregator",
-      featureCta: "Visit Mithron Smart",
-      heroCtaHref: "https://www.mithronsmart.com",
+      heroEyebrow: "Featured Collection",
+      heroSubtitle: "",
+      heroBody: "Aircraft and mission-ready systems from the published catalog.",
+      featureCta: "View catalog",
+      heroCtaHref: "/products",
       heroImageSrc: storefrontMediaPaths.showcase.droneWorld,
       heroImageAlt: "Mithron drone fleet operating across a rugged mountain valley at golden hour"
     },
@@ -90,10 +92,11 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       guideLabel: "Care Guides",
       guideTitle: "Build a Reliable Spares Kit",
       guideHref: "/accessories",
-      heroSubtitle: "One Stop Drone Solution",
-      heroBody: "Sales / Rental Service / Troubleshooting / Aggregation / Academics / Import / Loan",
-      featureCta: "Visit Mithron Smart",
-      heroCtaHref: "https://www.mithronsmart.com",
+      heroEyebrow: "Essential Care",
+      heroSubtitle: "",
+      heroBody: "Batteries, propellers, controllers, and spares for your fleet.",
+      featureCta: "Shop care",
+      heroCtaHref: "/accessories",
       heroImageSrc: storefrontMediaPaths.showcase.droneCare,
       heroImageAlt: "Mithron Drone Care complete kit with aircraft, controller, batteries, propellers, and service case"
     },
@@ -105,10 +108,11 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       guideLabel: "Catalog Guides",
       guideTitle: "Compare Mission Systems",
       guideHref: "/products",
-      heroSubtitle: "Global Drone Connect",
-      heroBody: "A marketplace to connect for Global products Import and Export / Live Price Bid",
-      featureCta: "Visit Mithron Smart",
-      heroCtaHref: "https://www.mithronsmart.com",
+      heroEyebrow: "Global Selection",
+      heroSubtitle: "",
+      heroBody: "Specialist platforms for teams sourcing across regions.",
+      featureCta: "Browse global",
+      heroCtaHref: "/products",
       heroImageSrc: storefrontMediaPaths.showcase.globalProducts,
       heroImageAlt: "Global Drone Connect industrial drone carrying a shipping container over a digital logistics hub at night"
     }
@@ -275,6 +279,7 @@ function emptyShelf(): HomepageShelfCms {
     guideLabel: "",
     guideTitle: "",
     guideHref: "",
+    heroEyebrow: "",
     heroSubtitle: "",
     heroBody: "",
     featureCta: "",

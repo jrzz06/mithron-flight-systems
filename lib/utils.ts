@@ -13,8 +13,12 @@ export function formatINR(value: number) {
   }).format(value);
 }
 
-/** @deprecated Use formatINR instead. */
-export const formatUsd = formatINR;
+/** Storefront label for catalog/list prices (Indian Rupee, en-IN grouping). */
+export function formatFromINR(value: number) {
+  return `From ${formatINR(value)}`;
+}
+
+export const STORE_CURRENCY_CODE = "INR" as const;
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));

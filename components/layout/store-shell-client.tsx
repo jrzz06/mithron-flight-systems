@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { StoreNav } from "@/components/navigation/store-nav";
+import { CatalogIntegrityNotice } from "@/components/layout/catalog-integrity-notice";
 import { CartDrawerLoading } from "@/components/overlays/cart-drawer-loading";
 import type { EnterpriseMenuConfig } from "@/lib/nav-menu-types";
 import type { NavigationNode } from "@/config/types";
+import type { CatalogDataError } from "@/services/catalog";
 import { shouldSkipStorefrontChrome } from "@/lib/ui/shell-routes";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
@@ -43,11 +45,13 @@ export function StoreShellClient({
   children,
   navigationItems,
   enterpriseMenuConfigs,
+  catalogErrors = [],
   siteFooter
 }: {
   children: ReactNode;
   navigationItems: NavigationNode[];
   enterpriseMenuConfigs: EnterpriseMenuConfig[];
+  catalogErrors?: CatalogDataError[];
   siteFooter: ReactNode;
 }) {
   const pathname = usePathname();
@@ -84,6 +88,11 @@ export function StoreShellClient({
   }, [pathname]);
 
   const requestSearchPreload = useCallback((mountWhenReady = false) => {
+    void fetch("/api/catalog/search?intent=index").catch((error: unknown) => {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Search index preload failed", error);
+      }
+    });
     void import("@/components/overlays/search-overlay").catch((error: unknown) => {
       if (process.env.NODE_ENV !== "production") {
         console.error("Search overlay preload failed", error);
@@ -150,6 +159,7 @@ export function StoreShellClient({
         enterpriseMenuConfigs={enterpriseMenuConfigs}
         onSearchIntent={() => requestSearchPreload()}
       />
+      <CatalogIntegrityNotice errors={catalogErrors} />
       <main
         id="g-main"
         data-testid={isHome ? "home-page-canvas" : undefined}

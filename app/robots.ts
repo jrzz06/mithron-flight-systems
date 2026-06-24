@@ -12,7 +12,8 @@ const DISALLOWED_PATHS = [
   "/checkout",
   "/login",
   "/logout",
-  "/auth/"
+  "/auth/",
+  "/search?*"
 ] as const;
 
 export default function robots(): MetadataRoute.Robots {

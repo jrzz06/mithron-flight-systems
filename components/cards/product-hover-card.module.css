@@ -1,4 +1,5 @@
 .shell {
+  container-type: inline-size;
   display: flex;
   min-width: 0;
   height: 100%;
@@ -7,15 +8,15 @@
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-lg);
   background: var(--ds-card);
-  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.06);
+  box-shadow: var(--elevation-card-rest);
   transition:
     box-shadow var(--motion-hover) var(--ease-system),
     border-color var(--motion-hover) var(--ease-system);
 }
 
-.shell:is(:hover, :focus-within, :focus-visible) {
+.shell:is(:hover, :focus-within) {
   border-color: var(--ds-border-strong);
-  box-shadow: 0 4px 16px rgba(17, 17, 17, 0.1);
+  box-shadow: var(--elevation-card-hover);
   transform: none;
 }
 
@@ -49,22 +50,34 @@
   transform: none;
 }
 
-.card:focus-visible {
-  box-shadow: none;
+.shell:focus-within {
+  overflow: visible;
   outline: 2px solid rgba(31, 107, 70, 0.28);
   outline-offset: 2px;
+}
+
+.card:focus-visible {
+  box-shadow: none;
+  outline: none;
 }
 
 .media {
   position: relative;
   z-index: 1;
-  flex: 0 0 260px;
-  height: 260px;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
+  max-height: 260px;
   overflow: hidden;
   isolation: isolate;
   border-bottom: none;
   border-radius: 0;
   background: var(--ds-card);
+}
+
+@container (max-width: 260px) {
+  .media {
+    max-height: 140px;
+  }
 }
 
 .media::before {
@@ -216,6 +229,7 @@
   letter-spacing: var(--tracking-tight);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-feature-settings: var(--font-features-display);
 }
 
@@ -257,6 +271,7 @@
   letter-spacing: var(--tracking-tight-sm);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-feature-settings: var(--font-features-ui);
 }
 
@@ -293,6 +308,12 @@
   transform: translateX(2px);
 }
 
+@media (max-width: 767px) and (min-width: 641px) {
+  .media {
+    max-height: 200px;
+  }
+}
+
 @media (max-width: 640px) {
   .shell {
     border-radius: var(--ds-r-sm);
@@ -303,8 +324,7 @@
   }
 
   .media {
-    flex-basis: 140px;
-    height: 140px;
+    max-height: 140px;
     border-radius: var(--ds-r-sm) var(--ds-r-sm) 0 0;
   }
 
@@ -320,6 +340,8 @@
   .title {
     font-size: 12px;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
+  line-clamp: 2;
   }
 
   .description {

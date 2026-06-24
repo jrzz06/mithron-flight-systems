@@ -21,7 +21,7 @@ const HERO_ADVANCE_MS = 5000;
 
 const heroSlideCopyById: Record<string, { title: string; subtitle: string }> = {
   "ag10-arrival": {
-    title: "DRONE IS MITHRON",
+    title: "Drone is Mithron",
     subtitle: "Welcome to India's 1st & Leading Drone Ecosystem Aggregator"
   },
   "mapping-flight": {
@@ -29,7 +29,7 @@ const heroSlideCopyById: Record<string, { title: string; subtitle: string }> = {
     subtitle: "A marketplace to connect for Global products Import and Export / Live Price Bid"
   },
   "drone-ecosystem": {
-    title: "One Stop Drone Solution",
+    title: "One Stop Drone Mithron",
     subtitle: "Sales / Rental Service / Troubleshooting / Aggregation / Academics / Import / Loan"
   }
 };
@@ -59,7 +59,7 @@ function resolveHeroCarouselSlides(slides: HeroSlide[]) {
   return defaultHeroSlides.length >= 2 ? normalizeSlides(defaultHeroSlides) : normalizeSlides(slides);
 }
 
-type HeroInkTone = "light" | "dark";
+type HeroInkTone = "light" | "dark" | "split";
 
 type HeroImageComposition = {
   focalPoint: string;
@@ -111,14 +111,14 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
   }
 };
 
-// Ink tone for hero copy only: "light" = white text, "dark" = dark text.
+// Ink tone for hero copy: "light" = white text, "dark" = dark text, "split" = dark title + white subtitle.
 const heroTextInkBySlide: Record<string, HeroInkTone> = {
   "ag10-arrival": "dark",
   "mapping-flight": "light",
   "drone-ecosystem": "light"
 };
 
-const heroTextInkByIndex: HeroInkTone[] = ["dark", "light", "light"];
+const heroTextInkByIndex: HeroInkTone[] = ["dark", "light", "dark"];
 
 function resolveHeroTextInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
   const presetInk = heroTextInkBySlide[slide.id];
@@ -127,7 +127,7 @@ function resolveHeroTextInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
   const indexInk = heroTextInkByIndex[slideIndex];
   if (indexInk) return indexInk;
 
-  if (slide.composition?.textTone === "light" || slide.composition?.textTone === "dark") {
+  if (slide.composition?.textTone === "light" || slide.composition?.textTone === "dark" || slide.composition?.textTone === "split") {
     return slide.composition.textTone;
   }
 
@@ -160,12 +160,26 @@ function getHeroContentInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
 }
 
 function getHeroNavbarInk(slide: HeroSlide, slideIndex: number): HeroInkTone {
-  return resolveHeroTextInk(slide, slideIndex);
+  const ink = resolveHeroTextInk(slide, slideIndex);
+  if (ink === "split") return "light";
+  return ink;
 }
 
 function getSlideTone(contentInk: HeroInkTone) {
-  return contentInk === "light"
-    ? {
+  if (contentInk === "split") {
+    return {
+      section: "bg-black text-white",
+      text: "text-[#0a0d11]",
+      body: "text-[rgba(255,255,255,.92)]",
+      cta: "hero-banner-cta--light focus-visible:ring-white focus-visible:ring-offset-black",
+      control: "border-[rgba(255,255,255,.28)] bg-[rgba(255,255,255,.16)] text-[#ffffff] hover:bg-[rgba(255,255,255,.24)] hover:border-[rgba(255,255,255,.40)]",
+      dots: "bg-[rgba(255,255,255,.44)]",
+      activeDot: "bg-[#ffffff]"
+    };
+  }
+
+  if (contentInk === "light") {
+    return {
       section: "bg-black text-white",
       text: "text-[#ffffff]",
       body: "text-[rgba(255,255,255,.82)]",
@@ -173,16 +187,18 @@ function getSlideTone(contentInk: HeroInkTone) {
       control: "border-[rgba(255,255,255,.28)] bg-[rgba(255,255,255,.16)] text-[#ffffff] hover:bg-[rgba(255,255,255,.24)] hover:border-[rgba(255,255,255,.40)]",
       dots: "bg-[rgba(255,255,255,.44)]",
       activeDot: "bg-[#ffffff]"
-    }
-    : {
-      section: "bg-[#f6f7f8] text-[#111113]",
-      text: "text-[#111113]",
-      body: "text-[rgba(0,0,0,.74)]",
-      cta: "hero-banner-cta--light focus-visible:ring-black focus-visible:ring-offset-white",
-      control: "border-[rgba(0,0,0,.16)] bg-[rgba(255,255,255,.68)] text-[#111113] hover:bg-[rgba(255,255,255,.86)] hover:border-[rgba(0,0,0,.24)]",
-      dots: "bg-[rgba(0,0,0,.24)]",
-      activeDot: "bg-[rgba(0,0,0,.72)]"
     };
+  }
+
+  return {
+    section: "bg-[#f6f7f8] text-[#111113]",
+    text: "text-[#111113]",
+    body: "text-[rgba(0,0,0,.74)]",
+    cta: "hero-banner-cta--light focus-visible:ring-black focus-visible:ring-offset-white",
+    control: "border-[rgba(0,0,0,.16)] bg-[rgba(255,255,255,.68)] text-[#111113] hover:bg-[rgba(255,255,255,.86)] hover:border-[rgba(0,0,0,.24)]",
+    dots: "bg-[rgba(0,0,0,.24)]",
+    activeDot: "bg-[rgba(0,0,0,.72)]"
+  };
 }
 
 export function HeroCarousel({
@@ -274,73 +290,93 @@ export function HeroCarousel({
         }
       }}
       className={cn(
-        "hero-premium-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden",
+        "hero-premium-field relative isolate h-[80svh] min-h-[480px] md:min-h-[580px] w-full overflow-hidden",
         tone.section
       )}
     >
-      {safeSlides.map((item, itemIndex) => (
+      {safeSlides.map((item, itemIndex) => {
+        const slideInk = getHeroContentInk(item, itemIndex);
+        const overlayOpacity = slideInk === "light" || slideInk === "split" ? 0.36 : 0.22;
+        return (
         <div
           key={item.id}
           data-testid={`hero-slide-${item.id}`}
           data-hero-slide-state={getSlideState(itemIndex)} // test-placeholder: data-hero-slide-state="active"
           data-hero-motion="static"
           className="absolute inset-0 hero-slide-frame"
+          style={{ "--hero-slide-overlay-opacity": overlayOpacity } as CSSProperties}
           aria-hidden={itemIndex !== activeIndex}
         >
           <HeroBackdrop slide={item} reducedMotion={reducedMotion} />
         </div>
-      ))}
+      );
+      })}
 
       <div className="hero-dji-layout pointer-events-none absolute inset-0 z-20">
         <div
+          key={`${slide.id}-panel`}
           data-testid="hero-copy"
-          className="hero-premium-copy hero-dji-copy-stack pointer-events-auto"
+          className="hero-premium-copy hero-dji-copy-stack hero-dji-cinematic-copy pointer-events-auto"
         >
-          <h1
-            key={`${slide.id}-title`}
-            className="hero-dji-title"
-          >
-            {slide.title}
-          </h1>
-          <p
-            key={`${slide.id}-subtitle`}
-            className="hero-dji-subtitle"
-          >
-            {slide.subtitle}
-          </p>
-          <div className="hero-dji-cta-wrap">
-            <HeroCta href={slide.href} label={slide.cta} className={tone.cta} />
-          </div>
-          <div data-testid="hero-pagination" className="hero-dji-pagination flex items-center gap-2">
-            {safeSlides.map((item, itemIndex) => (
-              <button
-                key={item.id}
-                data-testid={`hero-pagination-${item.id}`}
-                aria-label={`Go to hero slide ${itemIndex + 1}`}
-                aria-current={itemIndex === activeIndex ? "true" : "false"}
-                className={cn(
-                  "h-1 rounded-full transition-[width,background-color,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  itemIndex === activeIndex ? cn("w-12 opacity-100", tone.activeDot) : cn("w-5 opacity-80", tone.dots)
-                )}
-                onClick={() => goToSlide(itemIndex)}
-              />
-            ))}
+          <div className="hero-dji-content-unit">
+            <div className="hero-dji-headline-row">
+              <HeroControl
+                label="Previous hero"
+                placement="inline"
+                className={cn("hero-dji-prev", tone.control)}
+                onClick={() => goToSlide(activeIndex - 1)}
+              >
+                <ChevronLeft className="size-5" />
+              </HeroControl>
+              <div className="hero-dji-headline-zone">
+                <h1
+                  key={`${slide.id}-title`}
+                  className="hero-dji-title"
+                >
+                  {slide.title}
+                </h1>
+              </div>
+            </div>
+            <p
+              key={`${slide.id}-subtitle`}
+              className="hero-dji-subtitle"
+            >
+              {slide.subtitle}
+            </p>
+            <div className="hero-dji-cta-wrap">
+              <HeroCta href={slide.href} label={slide.cta} className={tone.cta} />
+            </div>
+            <div data-testid="hero-pagination" className="hero-dji-pagination flex items-center gap-2">
+              {safeSlides.map((item, itemIndex) => (
+                <button
+                  key={item.id}
+                  data-testid={`hero-pagination-${item.id}`}
+                  aria-label={`Go to hero slide ${itemIndex + 1}`}
+                  aria-current={itemIndex === activeIndex ? "true" : "false"}
+                  className={cn(
+                    "inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-3 transition-[background-color,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    itemIndex === activeIndex ? "opacity-100" : "opacity-80"
+                  )}
+                  onClick={() => goToSlide(itemIndex)}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "block h-1 rounded-full transition-[width,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                      itemIndex === activeIndex ? cn("w-12", tone.activeDot) : cn("w-5", tone.dots)
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div data-testid="hero-product-stage" className="hero-dji-product-zone" aria-hidden="true" />
       </div>
 
       <HeroControl
-        label="Previous hero"
-        side="left"
-        className={tone.control}
-        onClick={() => goToSlide(activeIndex - 1)}
-      >
-        <ChevronLeft className="size-5" />
-      </HeroControl>
-      <HeroControl
         label="Next hero"
-        side="right"
+        placement="edge"
         className={tone.control}
         onClick={() => goToSlide(activeIndex + 1)}
       >
@@ -418,23 +454,37 @@ function HeroBackdrop({
 
 function HeroControl({
   label,
-  side,
+  placement,
   className,
   onClick,
   children
 }: {
   label: string;
-  side: "left" | "right";
+  placement: "inline" | "edge";
   className: string;
   onClick: () => void;
   children: ReactNode;
 }) {
+  if (placement === "inline") {
+    return (
+      <button
+        aria-label={label}
+        className={cn(
+          "hero-carousel-control-inline hidden size-11 shrink-0 place-items-center rounded-full border opacity-70 transition-[opacity,background-color,border-color,color] duration-300 ease-[var(--ease-cinematic)] hover:opacity-100 md:grid",
+          className
+        )}
+        onClick={onClick}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
     <button
       aria-label={label}
       className={cn(
-        "absolute top-1/2 z-30 hidden size-11 -translate-y-1/2 place-items-center rounded-full border opacity-60 transition-[opacity,background-color,border-color,color] duration-300 ease-[var(--ease-cinematic)] hover:opacity-100 md:grid",
-        side === "left" ? "left-6" : "right-6",
+        "hero-carousel-control hero-carousel-control--right absolute z-30 hidden size-11 place-items-center rounded-full border opacity-70 transition-[opacity,background-color,border-color,color] duration-300 ease-[var(--ease-cinematic)] hover:opacity-100 md:grid",
         className
       )}
       onClick={onClick}

@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { recordClientAuthEvent } from "@/lib/auth/audit-client";
 import { createClient } from "@/lib/client";
+import styles from "../auth/auth-page.module.css";
 
 export function SignupForm({ inviteToken }: { inviteToken?: string }) {
   const supabase = useMemo(() => createClient(), []);
@@ -49,7 +50,7 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 grid gap-4">
+    <form onSubmit={submit} className={styles.form}>
       <input
         aria-label="Email"
         value={email}
@@ -57,7 +58,7 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
         required
         type="email"
         autoComplete="email"
-        className="h-13 rounded-full border border-white/12 bg-[#080b0f]/[0.06] px-5 text-white outline-none transition-colors placeholder:text-white/28 focus:border-[#7ce7c9]"
+        className={styles.input}
         placeholder="name@company.com"
       />
       <input
@@ -68,14 +69,14 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
         minLength={8}
         type="password"
         autoComplete="new-password"
-        className="h-13 rounded-full border border-white/12 bg-[#080b0f]/[0.06] px-5 text-white outline-none transition-colors placeholder:text-white/28 focus:border-[#7ce7c9]"
+        className={styles.input}
         placeholder="Create a password (8+ characters)"
       />
-      {message ? <p className="rounded-2xl border border-white/10 bg-[#080b0f]/[0.05] px-4 py-3 text-sm text-white/70">{message}</p> : null}
+      {message ? <p className={styles.message}>{message}</p> : null}
       <button
         type="submit"
         disabled={status === "submitting" || status === "sent"}
-        className="h-13 rounded-full bg-[#7ce7c9] px-6 text-sm font-bold text-black transition-opacity disabled:opacity-60"
+        className={styles.submit}
       >
         {status === "submitting" ? "Creating account…" : status === "sent" ? "Check your email" : "Create account"}
       </button>

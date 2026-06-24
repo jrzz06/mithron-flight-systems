@@ -23,7 +23,7 @@ test.describe("Mithron cinematic storefront", () => {
     await expect(main.getByTestId("optical-product-field")).toHaveCount(0);
     await expect(main.getByTestId("optical-network")).toHaveCount(0);
     await expect(main.getByTestId("optical-veil")).toHaveCount(0);
-    await expect(main.locator("h1").first()).toContainText("DRONE IS MITHRON");
+    await expect(main.locator("h1").first()).toContainText("Drone is Mithron");
     await expect(main.getByTestId("hero-primary-cta")).toHaveAttribute("href", "https://www.mithronsmart.com");
     await expect(main.getByTestId("hero-primary-cta")).toContainText("Visit Mithron Smart");
 

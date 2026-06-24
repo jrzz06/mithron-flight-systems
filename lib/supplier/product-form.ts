@@ -19,7 +19,7 @@ export function resolveProductSlug(name: string, slugInput = "") {
 
 export function parseProductPrice(value: FormDataEntryValue | null) {
   if (value == null) return Number.NaN;
-  const normalized = String(value).replace(/[,₹\s]/g, "").trim();
+  const normalized = String(value).replace(/[$,₹\s]/g, "").trim();
   if (!normalized) return Number.NaN;
   const price = Number(normalized);
   return Number.isFinite(price) ? price : Number.NaN;

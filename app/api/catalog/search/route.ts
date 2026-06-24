@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
-import { getCartDrawerSuggestions, getFeaturedSearchProducts, searchCatalogProducts } from "@/services/catalog";
+import { getCartDrawerSuggestions, getCatalogSearchIndex, getFeaturedSearchProducts, searchCatalogProducts } from "@/services/catalog";
 
 const MAX_QUERY_LENGTH = 120;
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 48;
+const INDEX_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
 function parseLimit(value: string | null) {
   if (!value?.trim()) return DEFAULT_LIMIT;
@@ -18,14 +19,23 @@ export async function GET(request: Request) {
   const query = url.searchParams.get("q")?.trim() ?? "";
   const intent = url.searchParams.get("intent")?.trim() ?? "";
   const limit = parseLimit(url.searchParams.get("limit"));
-  const rateKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
-  const limiter = await checkDistributedRateLimit(`catalog-search:${rateKey}`, 30, 60_000);
-
-  if (!limiter.allowed) {
-    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
-  }
 
   try {
+    if (intent === "index") {
+      const index = await getCatalogSearchIndex();
+      return NextResponse.json(
+        { query: "", index },
+        { headers: { "Cache-Control": INDEX_CACHE_CONTROL } }
+      );
+    }
+
+    const rateKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+    const limiter = await checkDistributedRateLimit(`catalog-search:${rateKey}`, 120, 60_000);
+
+    if (!limiter.allowed) {
+      return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+    }
+
     if (intent === "cart") {
       const results = await getCartDrawerSuggestions();
       return NextResponse.json({ query: "", results });

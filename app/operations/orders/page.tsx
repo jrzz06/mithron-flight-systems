@@ -1,6 +1,7 @@
 import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { formatINR } from "@/lib/utils";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { createWarehouseOrderFormAction, updateWarehouseOrderLifecycleFormAction } from "@/app/warehouse/actions";
 import { redirect } from "next/navigation";
@@ -64,13 +65,13 @@ export default async function OperationsOrdersPage({ searchParams }: { searchPar
     return {
       label: String(order.order_number ?? order.id ?? "order"),
       value: String(order.fulfillment_status ?? order.status ?? "draft"),
-      detail: `${String(order.customer_email ?? "No customer")} | total ${String(order.total ?? 0)} ${String(order.currency ?? "INR")} | timeline ${timeline}`
+      detail: `${String(order.customer_email ?? "No customer")} | total ${formatINR(Number(order.total ?? 0))} | timeline ${timeline}`
     };
   });
   const itemRows = snapshot.data.orderItems.slice(0, 12).map((item) => ({
     label: `${String(item.product_slug ?? "product")}:${String(item.sku ?? "sku")}`,
     value: String(item.quantity ?? 0),
-    detail: `${String(item.product_name ?? "Product")} | order ${String(item.order_id ?? "unknown")} | line ${String(item.line_total ?? 0)}`
+    detail: `${String(item.product_name ?? "Product")} | order ${String(item.order_id ?? "unknown")} | line ${formatINR(Number(item.line_total ?? 0))}`
   }));
 
   return (

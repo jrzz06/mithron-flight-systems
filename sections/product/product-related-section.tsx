@@ -73,7 +73,7 @@ export function ProductRelatedSection({ relatedProducts }: { relatedProducts: Pr
   if (!relatedProducts.length) return null;
 
   return (
-    <section id="accessories" className={styles.relatedSection} aria-labelledby="product-related-title">
+    <section id="related" className={styles.relatedSection} aria-labelledby="product-related-title">
       <div className={styles.relatedInner}>
         <div className={styles.relatedSectionHeader}>
           <div>

@@ -14,16 +14,17 @@ function StorefrontShellFallback({ children }: { children: React.ReactNode }) {
 }
 
 async function StorefrontShellContent({ children }: { children: React.ReactNode }) {
-  const [menuProducts, cms] = await Promise.all([
+  const [enterpriseMenu, cms] = await Promise.all([
     getEnterpriseMenuProducts(),
     getStorefrontShellCms()
   ]);
-  const enterpriseMenuConfigs = buildEnterpriseMenuConfigs(menuProducts);
+  const enterpriseMenuConfigs = buildEnterpriseMenuConfigs(enterpriseMenu.products);
 
   return (
     <StoreShell
       navigationItems={cms.navigation}
       enterpriseMenuConfigs={enterpriseMenuConfigs}
+      catalogErrors={enterpriseMenu.errors}
       footer={cms.footer}
     >
       {children}

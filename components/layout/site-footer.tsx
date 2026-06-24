@@ -27,7 +27,7 @@ function isExternalHref(href: string) {
 }
 
 function FooterLink({ label, href }: { label: string; href: string }) {
-  const className = "site-footer__link transition-colors hover:text-white focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70";
+  const className = "site-footer__link inline-flex min-h-11 items-center py-2 transition-colors hover:text-white focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70";
 
   if (isExternalHref(href)) {
     return (
@@ -52,19 +52,19 @@ export function SiteFooter({ content = emptyFooterContent }: { content?: FooterC
 
   return (
     <footer className="site-footer ambient-section ambient-dark bg-[var(--ds-footer-bg)] pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white" data-testid="site-footer">
-      <div className="site-footer__inner mx-auto grid max-w-[1440px] gap-6 px-6 py-12 md:grid-cols-2 md:gap-10 md:px-16 xl:grid-cols-[minmax(0,1.15fr)_repeat(4,minmax(0,1fr))]">
+      <div className="site-footer__inner mx-auto grid max-w-[1440px] gap-6 px-6 py-12 md:grid-cols-2 md:gap-10 md:px-16 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.15fr)_repeat(4,minmax(0,1fr))]">
         <div className="site-footer__lead xl:col-span-1">
           <p className="type-meta text-white/45">Mithron India Smart Services</p>
           <h2 className="type-section mt-3 text-3xl text-balance md:text-4xl">{resolved.leadTitle}</h2>
           <p className="type-body mt-4 max-w-xl text-white/68">{resolved.leadBody}</p>
           <div className="site-footer__contact mt-6 flex flex-col gap-2 text-sm text-white/72">
-            <a href={`mailto:${contactEmail}`} className="site-footer__link w-fit transition-colors hover:text-white">
+            <a href={`mailto:${contactEmail}`} className="site-footer__link inline-flex min-h-11 w-fit items-center py-2 transition-colors hover:text-white">
               {contactEmail}
             </a>
-            <a href={`tel:${phoneHref}`} className="site-footer__link w-fit transition-colors hover:text-white">
+            <a href={`tel:${phoneHref}`} className="site-footer__link inline-flex min-h-11 w-fit items-center py-2 transition-colors hover:text-white">
               {contactPhone}
             </a>
-            <Link href="/contact" className="site-footer__link w-fit pt-1 text-white/88 transition-colors hover:text-white">
+            <Link href="/contact" className="site-footer__link inline-flex min-h-11 w-fit items-center py-2 text-white/88 transition-colors hover:text-white">
               Contact Mithron
             </Link>
           </div>

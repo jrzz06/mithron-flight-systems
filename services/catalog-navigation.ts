@@ -13,6 +13,7 @@ import type {
   FranchiseMenuConfig,
   MegaMenuConfig
 } from "@/lib/nav-menu-types";
+import { formatFromINR } from "@/lib/utils";
 
 const MENU_COLUMN_LIMIT = 5;
 
@@ -24,7 +25,7 @@ function productSpecs(product: Product) {
 
   return [
     { label: "Category", value: product.category },
-    { label: "Price", value: product.price ? `From $${product.price}` : "On request" }
+    { label: "Price", value: product.price ? formatFromINR(product.price) : "On request" }
   ];
 }
 

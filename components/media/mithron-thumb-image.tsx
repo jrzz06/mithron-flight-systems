@@ -12,6 +12,8 @@ type MithronThumbImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | 
   className?: string;
   wrapperClassName?: string;
   style?: CSSProperties;
+  loading?: "eager" | "lazy";
+  priority?: boolean;
 };
 
 export function MithronThumbImage({
@@ -22,7 +24,9 @@ export function MithronThumbImage({
   responsive,
   className,
   wrapperClassName,
-  style
+  style,
+  loading = "lazy",
+  priority = false
 }: MithronThumbImageProps) {
   return (
     <MithronResponsiveImage
@@ -32,7 +36,8 @@ export function MithronThumbImage({
       sizes={sizes}
       imageRole="thumb"
       responsive={responsive}
-      loading="lazy"
+      loading={loading}
+      priority={priority}
       decoding="async"
       className={className}
       wrapperClassName={wrapperClassName}

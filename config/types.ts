@@ -149,7 +149,7 @@ export type Interest = {
 
 export type HeroComposition = {
   mode?: "product-stage" | "full-bleed";
-  textTone?: "light" | "dark";
+  textTone?: "light" | "dark" | "split";
   mediaPosition?: string;
   mobileMediaPosition?: string;
   productPosition?: string;

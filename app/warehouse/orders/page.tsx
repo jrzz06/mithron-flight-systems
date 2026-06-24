@@ -1,6 +1,7 @@
 import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { formatINR } from "@/lib/utils";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { createWarehouseOrderFormAction, updateWarehouseOrderLifecycleFormAction } from "../actions";
 import { redirect } from "next/navigation";
@@ -68,7 +69,7 @@ export default async function WarehouseOrdersPage({ searchParams }: { searchPara
   const orderRows = filteredOrders.slice(0, 12).map((order) => ({
     label: String(order.order_number ?? order.id ?? "order"),
     value: String(order.fulfillment_status ?? order.status ?? "draft"),
-    detail: `${String(order.customer_email ?? "No customer")} | total ${String(order.total ?? 0)} ${String(order.currency ?? "INR")}`
+    detail: `${String(order.customer_email ?? "No customer")} | total ${formatINR(Number(order.total ?? 0))}`
   }));
   const itemRows = snapshot.data.orderItems.slice(0, 12).map((item) => ({
     label: `${String(item.product_slug ?? "product")}:${String(item.sku ?? "sku")}`,

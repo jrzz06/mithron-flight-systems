@@ -11,6 +11,7 @@ describe("supplier product form parsing", () => {
     expect(parseProductPrice("49999")).toBe(49999);
     expect(parseProductPrice("49,999")).toBe(49999);
     expect(parseProductPrice("₹ 1250.50")).toBe(1250.5);
+    expect(parseProductPrice("$1,250.50")).toBe(1250.5);
     expect(parseProductPrice("")).toBeNaN();
   });
 

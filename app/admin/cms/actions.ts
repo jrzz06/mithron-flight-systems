@@ -290,6 +290,7 @@ export async function saveHomepageShelfFormAction(formData: FormData) {
     guideLabel: readText(formData, "guide_label"),
     guideTitle: readText(formData, "guide_title"),
     guideHref: readText(formData, "guide_href"),
+    heroEyebrow: readText(formData, "hero_eyebrow"),
     heroSubtitle: readText(formData, "hero_subtitle"),
     heroBody: readText(formData, "hero_body"),
     featureCta: readText(formData, "feature_cta"),

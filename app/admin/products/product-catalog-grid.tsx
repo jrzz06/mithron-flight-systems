@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Copy, Eye, EyeOff, MoreHorizontal, Pencil } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import { resolveNextImageSrc } from "@/lib/media/next-image-src";
+import { formatINR } from "@/lib/utils";
 import {
   saveProductDuplicateFormAction,
   saveProductHardDeleteFormAction,
@@ -54,10 +55,8 @@ function statusClass(status: string) {
 
 function formatCurrency(value: string) {
   const numberValue = Number(value);
-  if (!Number.isFinite(numberValue)) return value || "0";
-  return new Intl.NumberFormat("en-IN", {
-    maximumFractionDigits: 0
-  }).format(numberValue);
+  if (!Number.isFinite(numberValue)) return value || formatINR(0);
+  return formatINR(numberValue);
 }
 
 function ProductImage({ product }: { product: ProductCatalogGridRow }) {

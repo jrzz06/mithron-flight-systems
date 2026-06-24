@@ -118,7 +118,7 @@ export function SupplierNewProductForm({
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-300">Price (INR)</span>
+          <span className="text-slate-300">Price (₹)</span>
           <input
             name="price"
             type="number"

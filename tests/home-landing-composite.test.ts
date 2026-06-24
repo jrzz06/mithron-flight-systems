@@ -283,11 +283,14 @@ describe("home landing composite contract", () => {
     expect(component).toContain('guideTitle: "Build a Reliable Spares Kit"');
     expect(component).toContain('guideLabel: "Catalog Guides"');
     expect(component).toContain('guideTitle: "Compare Mission Systems"');
-    expect(component).toContain('featureCta: "Visit Mithron Smart"');
-    expect(component).toContain('heroSubtitle: "DRONE IS MITHRON"');
-    expect(component).toContain('heroSubtitle: "One Stop Drone Solution"');
-    expect(component).toContain('heroSubtitle: "Global Drone Connect"');
-    expect(component).toContain('heroCtaHref: "https://www.mithronsmart.com"');
+    expect(component).toContain('featureCta: "View catalog"');
+    expect(component).toContain('featureCta: "Shop care"');
+    expect(component).toContain('featureCta: "Browse global"');
+    expect(component).toContain('heroEyebrow: "Featured Collection"');
+    expect(component).toContain('heroEyebrow: "Essential Care"');
+    expect(component).toContain('heroEyebrow: "Global Selection"');
+    expect(component).toContain('heroCtaHref: "/products"');
+    expect(component).toContain('heroCtaHref: "/accessories"');
     expect(component).toContain('tone: "world"');
     expect(component).toContain('tone: "care"');
     expect(component).toContain('tone: "global"');
@@ -300,8 +303,11 @@ describe("home landing composite contract", () => {
     expect(component).toContain("Drone Care");
     expect(component).toContain("Global Product");
     expect(component).not.toContain("Product lineup");
+    expect(component).toContain("shelfHeroEyebrow");
     expect(component).toContain("shelfHeroHeading");
-    expect(component).not.toContain("shelfHeroBody");
+    expect(component).toContain("{config.title}");
+    expect(component).toContain("shelfHeroBody");
+    expect(component).toContain("shelfHeroCta");
     const agriMissionConfig = component.slice(
       component.indexOf('"agri-drones":'),
       component.indexOf('"city-drones":')

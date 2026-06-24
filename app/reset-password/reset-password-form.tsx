@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { recordClientAuthEvent } from "@/lib/auth/audit-client";
 import { createClient } from "@/lib/client";
+import styles from "../auth/auth-page.module.css";
 
 export function ResetPasswordForm() {
   const router = useRouter();
@@ -36,22 +37,23 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 grid gap-4">
+    <form onSubmit={submit} className={styles.form}>
       <input
+        aria-label="New password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         required
         minLength={8}
         type="password"
         autoComplete="new-password"
-        className="h-13 rounded-full border border-white/12 bg-[#080b0f]/[0.06] px-5 text-white outline-none transition-colors placeholder:text-white/28 focus:border-[#7ce7c9]"
+        className={styles.input}
         placeholder="New secure password"
       />
-      {message ? <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100">{message}</p> : null}
+      {message ? <p className={styles.message}>{message}</p> : null}
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="h-13 rounded-full bg-[#7ce7c9] px-6 text-sm font-bold text-black transition-opacity disabled:opacity-60"
+        className={styles.submit}
       >
         {status === "submitting" ? "Updating password" : "Update password"}
       </button>

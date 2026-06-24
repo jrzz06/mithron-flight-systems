@@ -32,13 +32,15 @@ function shellItemToProduct(item: ProductShellItem): Product {
 export function SpecsFaqReviews({
   product,
   relatedProducts,
-  support = productSupportContent
+  support = productSupportContent,
+  showSpecs = true
 }: {
   product: Product;
   relatedProducts: ProductShellItem[];
   support?: ProductSupportContent;
+  showSpecs?: boolean;
 }) {
-  const specs = getCustomerFacingSpecs(product);
+  const specs = showSpecs ? getCustomerFacingSpecs(product) : [];
   const showFaq = support.faqs.length > 0;
   const showRelated = relatedProducts.length > 0;
   const showTabs = showFaq && showRelated;

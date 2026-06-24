@@ -60,10 +60,13 @@ describe("login auth gateway UX", () => {
   it("defines production-grade auth card geometry", () => {
     const css = source("app/login/login.module.css");
 
-    expect(css).toContain("grid-template-columns: minmax(260px, 2fr) minmax(380px, 3fr)");
+    expect(css).toContain("grid-template-columns: minmax(0, 2fr) minmax(0, 3fr)");
+    expect(css).toContain("@media (min-width: 768px) and (max-width: 1023px)");
+    expect(css).toContain("@media (max-width: 767px)");
+    expect(css).toContain("--auth-card-max: clamp(26.25rem, 92vw, 30rem)");
     expect(css).toContain(".authCard");
     expect(css).toContain(".authInput");
-    expect(css).toContain("height: 56px");
+    expect(css).toContain("min-height: 2.75rem");
     expect(css).toContain(".authSubmit");
     expect(css).toContain(".methodDivider");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");

@@ -8,7 +8,7 @@ import type { Bundle, MediaAsset, ProductVariant } from "@/config/types";
 import type { ProductReviewSummary } from "@/lib/product-reviews/types";
 import { isSpecLikeBlob } from "@/lib/product-spec-text";
 import { glassPillClassName } from "@/lib/glass-ui";
-import { cn, formatUsd } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import { formatProductTaxPriceLabel } from "@/lib/product-tax";
 import { useCartStore } from "@/store/cart";
 import styles from "./product-detail.module.css";
@@ -125,7 +125,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
             })}
           </p>
           {product.compareAt && product.compareAt > displayPrice ? (
-            <p className={cn("type-body", styles.priceCompare)}>{formatUsd(product.compareAt)}</p>
+            <p className={cn("type-body", styles.priceCompare)}>{formatINR(product.compareAt)}</p>
           ) : null}
         </div>
 
@@ -202,7 +202,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
                           <p className="type-body mt-1 line-clamp-2 text-xs text-slate-500">{bundle.description}</p>
                         ) : null}
                       </div>
-                      <p className="type-price shrink-0 text-sm font-medium tabular-nums">{formatUsd(bundle.price)}</p>
+                      <p className="type-price shrink-0 text-sm font-medium tabular-nums">{formatINR(bundle.price)}</p>
                     </div>
                   </button>
                 );
@@ -247,11 +247,11 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
         <div className={styles.fixedBarInner}>
           <div className={styles.fixedBarMeta}>
             <p className={styles.fixedBarName}>{product.name}</p>
-            <p className={cn("type-price text-lg font-semibold tabular-nums md:hidden")}>{formatUsd(displayPrice)}</p>
+            <p className={cn("type-price text-lg font-semibold tabular-nums md:hidden")}>{formatINR(displayPrice)}</p>
           </div>
           <div className={styles.fixedBarActions}>
             <span className="type-price hidden text-xl font-semibold tabular-nums md:inline">
-              {formatUsd(displayPrice)}
+              {formatINR(displayPrice)}
             </span>
             <Button
               variant="accentCart"

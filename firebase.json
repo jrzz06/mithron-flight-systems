@@ -1,0 +1,13 @@
+{
+  "auth": {
+    "providers": {
+      "anonymous": true,
+      "phoneNumberSignIn": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Mithron",
+        "supportEmail": "mithronadmin@gmail.com",
+        "authorizedDomains": ["localhost", "127.0.0.1", "final-mithron-deploy.vercel.app"]
+      }
+    }
+  }
+}

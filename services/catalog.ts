@@ -9,15 +9,40 @@ import {
   type ProductShelfInput
 } from "@/lib/product-shelf-classification";
 import {
+  catalogCategoryDefinitions,
   filterProductsForCategorySlug,
-  isCatalogCategorySlug
+  isCatalogCategorySlug,
+  type CatalogCategoryDefinition
 } from "@/lib/catalog-categories";
 import { dedupeProductsBySlug } from "@/lib/catalog-shelf-layout";
+import {
+  getFeaturedFromCatalogIndex,
+  searchCatalogIndex,
+  type CatalogSearchIndexEntry
+} from "@/lib/catalog-search-index";
 import { formatAvailability, isSpecLikeBlob, parseInlineSpecPairs } from "@/lib/product-spec-text";
 import { customerFacingAvailability } from "@/services/inventory-csv";
 import type { OrderCatalogProduct } from "@/services/orders";
 import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
 import { buildProductResponsiveAsset } from "@/lib/media/product-responsive";
+
+export type CatalogDataErrorCode = "missing_source_image";
+
+export type CatalogDataError = {
+  code: CatalogDataErrorCode;
+  slug: string;
+  message: string;
+};
+
+export type EnterpriseMenuLoadResult = {
+  products: Product[];
+  errors: CatalogDataError[];
+};
+
+export type ProductPageLoadResult =
+  | { status: "ready"; product: Product }
+  | { status: "not_found" }
+  | { status: "error"; error: CatalogDataError };
 
 type JsonRecord = Record<string, unknown>;
 
@@ -135,6 +160,10 @@ export type CatalogSearchResult = {
   image: MediaAsset;
 };
 
+export type { CatalogSearchIndexEntry } from "@/lib/catalog-search-index";
+
+type CatalogSearchIndexRow = MithronProductShellRow & Pick<MithronProductRow, "sort_order">;
+
 type CatalogSearchRow = {
   slug: string;
   name: string;
@@ -175,9 +204,10 @@ const HOMEPAGE_PRODUCT_LIMIT = 80;
 const CATALOG_PAGE_SIZE = 200;
 const CATALOG_MAX_ROWS = 10_000;
 const SHELL_PREVIEW_LIMIT = 120;
-const ENTERPRISE_MENU_PRODUCT_LIMIT = 1000;
+const ENTERPRISE_MENU_PER_CATEGORY_LIMIT = 16;
 const PRODUCT_MEDIA_LIMIT = 2000;
 const CHECKOUT_PRICING_SELECT = "slug,name,price,category,charge_tax,tax_group,tax_rate,tax_included";
+const catalogSearchIndexSelect = "slug,name,tagline,price,badge,category,interests,image,hero,source_catalog_id,source_description,sort_order";
 const LEGACY_WIX_INVENTORY_CATEGORY = "Imported Wix Inventory";
 const publishedCatalogFilter = `workflow_status=eq.published&is_visible=eq.true&category=neq.${encodeURIComponent(LEGACY_WIX_INVENTORY_CATEGORY)}&slug=not.like.audit-trace-*`;
 
@@ -319,6 +349,14 @@ function normalizeProductImageSrc(src: string) {
   return resolveStorefrontSrc(src);
 }
 
+function isSupabaseStorageSrc(src: string) {
+  return /^https?:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//i.test(src);
+}
+
+function isExternalHttpsSrc(src: string) {
+  return /^https:\/\//i.test(src.trim());
+}
+
 function trustedCatalogDimensions(rawSrc: string, width: unknown, height: unknown) {
   const parsedWidth = parseFiniteDimension(width);
   const parsedHeight = parseFiniteDimension(height);
@@ -338,7 +376,13 @@ function mediaArea(asset: MediaAsset) {
 
 function mediaQualityScore(asset: MediaAsset, index: number) {
   const area = mediaArea(asset);
-  const sourceRank = asset.src.includes("/storage/v1/object/public/") ? 3 : asset.src.startsWith("/") ? 2 : 1;
+  const sourceRank = asset.src.includes("/storage/v1/object/public/")
+    ? 3
+    : asset.src.startsWith("/")
+      ? 2
+      : isExternalHttpsSrc(asset.src)
+        ? 1.5
+        : 1;
   return area + sourceRank * 10_000 - index;
 }
 
@@ -544,10 +588,6 @@ function normalizeStory(row: MithronProductRow, marketingTagline: string, hero: 
   }];
 }
 
-function isSupabaseStorageSrc(src: string) {
-  return /^https?:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//i.test(src);
-}
-
 function resolveProductImage(
   row: Pick<MithronProductRow, "image" | "hero" | "gallery" | "source_images">,
   name: string,
@@ -556,20 +596,35 @@ function resolveProductImage(
 ) {
   const rowImage = selectPrimaryProductImage(row, name);
   const supabaseRowImage = rowImage && isSupabaseStorageSrc(rowImage.src) ? rowImage : null;
+  const externalRowImage = rowImage && isExternalHttpsSrc(rowImage.src) ? rowImage : null;
 
   if (linkedMedia) {
     if (!linkedMedia.src.trim() && supabaseRowImage) return supabaseRowImage;
+    if (!linkedMedia.src.trim() && externalRowImage) return externalRowImage;
     return linkedMedia;
   }
 
   if (supabaseRowImage) {
-    if (slug) {
-      console.warn(`[catalog] product ${slug} is using inline JSON image fallback; link a primary media_assets row.`);
-    }
     return supabaseRowImage;
   }
 
+  if (externalRowImage) {
+    return externalRowImage;
+  }
+
   return null;
+}
+
+function createMissingSourceImageError(slug: string): CatalogDataError {
+  return {
+    code: "missing_source_image",
+    slug,
+    message: `Missing source image for Mithron product ${slug}.`
+  };
+}
+
+function isMissingSourceImageError(error: unknown): error is Error {
+  return error instanceof Error && error.message.startsWith("Missing source image for Mithron product");
 }
 
 function resolveHydratedProductImage(
@@ -647,7 +702,11 @@ function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset):
   };
 }
 
-function mapEnterpriseMenuProduct(row: EnterpriseMenuProductRow, linkedPrimaryImage?: MediaAsset): Product {
+function mapEnterpriseMenuProduct(
+  row: EnterpriseMenuProductRow,
+  linkedPrimaryImage: MediaAsset | undefined,
+  errors: CatalogDataError[]
+): Product | null {
   const name = cleanText(row.name);
   const marketingTagline = getProductMarketingTagline({
     name,
@@ -655,12 +714,21 @@ function mapEnterpriseMenuProduct(row: EnterpriseMenuProductRow, linkedPrimaryIm
     tagline: row.tagline,
     sourceDescription: row.source_description
   });
-  const image = resolveHydratedProductImage(
+  const image = resolveProductImage(
     { ...row, hero: null, gallery: null },
     name,
     linkedPrimaryImage,
     row.slug
   );
+
+  if (!image) {
+    const error = createMissingSourceImageError(row.slug);
+    errors.push(error);
+    console.warn(`[catalog] ${error.message}`);
+    return null;
+  }
+
+  const hydratedImage = enrichImageWithLinkedResponsive(image, linkedPrimaryImage);
 
   return {
     slug: row.slug,
@@ -673,9 +741,9 @@ function mapEnterpriseMenuProduct(row: EnterpriseMenuProductRow, linkedPrimaryIm
     badge: row.badge ?? undefined,
     category: row.category,
     interests: row.interests ?? [],
-    image,
-    hero: image,
-    gallery: [image],
+    image: hydratedImage,
+    hero: hydratedImage,
+    gallery: [hydratedImage],
     hotspots: [],
     variants: [],
     bundles: [],
@@ -718,6 +786,86 @@ function mapProductShellRow(row: MithronProductShellRow, linkedPrimaryImage?: Me
   };
 }
 
+function mapProductShellRowOrNull(row: MithronProductShellRow, linkedPrimaryImage?: MediaAsset): ProductShellItem | null {
+  const name = cleanText(row.name);
+  const tagline = getProductMarketingTagline({
+    name,
+    category: row.category,
+    tagline: row.tagline,
+    sourceDescription: row.source_description
+  });
+  const resolved = resolveProductImage(row, name, linkedPrimaryImage, row.slug);
+  if (!resolved) return null;
+
+  const interestsValue = row.interests ?? [];
+  return {
+    slug: row.slug,
+    name,
+    tagline,
+    price: toNumber(row.price),
+    badge: row.badge ?? undefined,
+    category: row.category,
+    interests: interestsValue,
+    image: enrichImageWithLinkedResponsive(resolved, linkedPrimaryImage),
+    searchText: [
+      name,
+      tagline,
+      row.category,
+      row.slug,
+      row.source_catalog_id ?? "",
+      row.source_description ?? "",
+      ...interestsValue
+    ].join(" ").toLowerCase()
+  };
+}
+
+function mapSearchIndexEntry(row: CatalogSearchIndexRow): CatalogSearchIndexEntry | null {
+  const item = mapProductShellRowOrNull(row);
+  if (!item) return null;
+
+  return {
+    slug: item.slug,
+    name: item.name,
+    tagline: item.tagline,
+    price: item.price,
+    badge: item.badge,
+    category: item.category,
+    image: item.image,
+    searchText: [
+      item.name,
+      item.tagline,
+      item.category,
+      item.slug,
+      row.source_catalog_id ?? "",
+      ...item.interests
+    ].join(" ").toLowerCase(),
+    sortOrder: row.sort_order ?? Number.MAX_SAFE_INTEGER
+  };
+}
+
+export const getCatalogSearchIndex = cache(async (): Promise<CatalogSearchIndexEntry[]> => {
+  try {
+    const rows = await fetchAllCatalogRows<CatalogSearchIndexRow>(catalogSearchIndexSelect);
+    const index: CatalogSearchIndexEntry[] = [];
+
+    for (const row of rows) {
+      const entry = mapSearchIndexEntry(row);
+      if (entry) index.push(entry);
+    }
+
+    return index;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] failed to build in-memory search index; Supabase fallback will be used: ${message}`);
+    return [];
+  }
+});
+
+async function searchCatalogProductsFallback(query: string, limit: number): Promise<CatalogSearchResult[]> {
+  const rows = await fetchCatalogSearchRows(query, limit);
+  return mapSearchRowsToCatalogResults(rows);
+}
+
 export const getProductShellItems = cache(async (limit = SHELL_PREVIEW_LIMIT): Promise<ProductShellItem[]> => {
   const boundedLimit = Math.min(Math.max(Math.trunc(limit), 1), SHELL_PREVIEW_LIMIT);
   const rows = await fetchCatalogRows<MithronProductShellRow>(
@@ -727,15 +875,19 @@ export const getProductShellItems = cache(async (limit = SHELL_PREVIEW_LIMIT): P
 });
 
 export const getFeaturedSearchProducts = cache(async (limit = 4): Promise<CatalogSearchResult[]> => {
+  const index = await getCatalogSearchIndex();
+  if (index.length) return getFeaturedFromCatalogIndex(index, limit);
+
   const boundedLimit = Math.min(Math.max(Math.trunc(limit), 1), 12);
   const rows = await fetchCatalogRows<MithronProductShellRow>(
-    `select=slug,name,tagline,price,badge,category,interests,image,hero,gallery,source_images,source_catalog_id,source_description&${publishedCatalogFilter}&badge=not.is.null&order=sort_order.asc&limit=${boundedLimit}`
-  );
-  const shellRows = rows.length ? rows : await fetchCatalogRows<MithronProductShellRow>(
     `select=slug,name,tagline,price,badge,category,interests,image,hero,gallery,source_images,source_catalog_id,source_description&${publishedCatalogFilter}&order=sort_order.asc&limit=${boundedLimit}`
   );
-  const items = await mapRowsWithCatalogMedia(shellRows, mapProductShellRow);
-  return items.map(toCatalogSearchResult);
+  const results: CatalogSearchResult[] = [];
+  for (const row of rows) {
+    const item = mapProductShellRowOrNull(row);
+    if (item) results.push(toCatalogSearchResult(item));
+  }
+  return results;
 });
 
 export const getCartDrawerSuggestions = cache(async (): Promise<CatalogSearchResult[]> => {
@@ -894,6 +1046,20 @@ async function fetchAllCatalogRows<T>(select: string): Promise<T[]> {
   return rows;
 }
 
+async function fetchCatalogSearchRowsFallback(query: string, limit: number): Promise<CatalogSearchRow[]> {
+  const token = query.trim().replace(/[*,()."]/g, " ").replace(/\s+/g, " ").trim();
+  if (!token) return [];
+
+  const boundedLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+  const pattern = `"*${token}*"`;
+  const orClause = `(name.ilike.${pattern},tagline.ilike.${pattern},slug.ilike.${pattern},category.ilike.${pattern})`;
+  const rows = await fetchCatalogRows<Pick<CatalogSearchRow, "slug" | "name" | "tagline" | "price" | "badge" | "category" | "image" | "hero">>(
+    `select=slug,name,tagline,price,badge,category,image,hero&${publishedCatalogFilter}&or=${orClause}&order=sort_order.asc&limit=${boundedLimit}`
+  );
+
+  return rows.map((row) => ({ ...row, rank: null }));
+}
+
 async function fetchCatalogSearchRows(query: string, limit: number): Promise<CatalogSearchRow[]> {
   const { url, key } = getCatalogConfig();
   const response = await fetch(`${url}/rest/v1/rpc/search_published_products`, {
@@ -910,11 +1076,19 @@ async function fetchCatalogSearchRows(query: string, limit: number): Promise<Cat
     next: { revalidate: 60, tags: ["catalog", "catalog-search"] }
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to search catalog: ${response.status} ${response.statusText}`);
+  if (response.ok) {
+    const rows = parseCatalogRows<CatalogSearchRow>(await response.text());
+    if (rows.length) return rows;
+    console.warn("[catalog] full-text search returned no matches; falling back to REST ilike search.");
+    return fetchCatalogSearchRowsFallback(query, limit);
   }
 
-  return parseCatalogRows<CatalogSearchRow>(await response.text());
+  if (response.status === 404) {
+    console.warn("[catalog] search_published_products RPC unavailable; falling back to REST ilike search.");
+    return fetchCatalogSearchRowsFallback(query, limit);
+  }
+
+  throw new Error(`Failed to search catalog: ${response.status} ${response.statusText}`);
 }
 
 function toCatalogSearchResult(item: ProductShellItem): CatalogSearchResult {
@@ -931,11 +1105,13 @@ function toCatalogSearchResult(item: ProductShellItem): CatalogSearchResult {
 
 async function mapSearchRowsToCatalogResults(rows: CatalogSearchRow[]): Promise<CatalogSearchResult[]> {
   if (!rows.length) return [];
-  const primaryMedia = await getPrimaryProductMediaLookup();
-  return rows.map((row) => {
+  const primaryMedia = await getPrimaryProductMediaForSlugs(rows.map((row) => row.slug));
+  const results: CatalogSearchResult[] = [];
+
+  for (const row of rows) {
     const name = cleanText(row.name);
     const linkedPrimaryImage = primaryMedia.get(row.slug);
-    const image = resolveHydratedProductImage(
+    const resolved = resolveProductImage(
       {
         image: row.image,
         hero: row.hero,
@@ -946,16 +1122,24 @@ async function mapSearchRowsToCatalogResults(rows: CatalogSearchRow[]): Promise<
       linkedPrimaryImage,
       row.slug
     );
-    return {
+
+    if (!resolved) {
+      console.warn(`[catalog] skipping search result without image: ${row.slug}`);
+      continue;
+    }
+
+    results.push({
       slug: row.slug,
       name,
       tagline: cleanText(row.tagline),
       price: toNumber(row.price),
       badge: row.badge ?? undefined,
       category: row.category,
-      image
-    };
-  });
+      image: enrichImageWithLinkedResponsive(resolved, linkedPrimaryImage)
+    });
+  }
+
+  return results;
 }
 
 async function fetchMediaAssetChunk(chunk: string[]) {
@@ -1046,6 +1230,37 @@ const getPrimaryProductMediaLookup = cache(async (): Promise<Map<string, MediaAs
   }
 });
 
+async function getPrimaryProductMediaForSlugs(slugs: string[]): Promise<Map<string, MediaAsset>> {
+  const uniqueSlugs = [...new Set(slugs.map((slug) => slug.trim()).filter(Boolean))];
+  if (!uniqueSlugs.length) return new Map();
+
+  const { hasServiceRoleKey } = getCatalogConfig(true);
+  if (!hasServiceRoleKey) return new Map();
+
+  try {
+    const links = await fetchProductMediaLinks(
+      `select=product_slug,media_asset_id,usage,is_primary,sort_order,alt_text,caption&usage=eq.primary&is_primary=eq.true&product_slug=${postgrestIn(uniqueSlugs)}&limit=${uniqueSlugs.length}`
+    );
+    const mediaIds = [...new Set(links.map((link) => link.media_asset_id).filter((id): id is string => Boolean(id)))];
+    if (!mediaIds.length) return new Map();
+
+    const mediaById = await fetchMediaAssetsById(mediaIds);
+    const lookup = new Map<string, MediaAsset>();
+
+    for (const link of links.sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))) {
+      if (!link.product_slug || !link.media_asset_id || lookup.has(link.product_slug)) continue;
+      const media = mediaFromMediaAssetRow(mediaById.get(link.media_asset_id), link.alt_text ?? link.caption ?? link.product_slug);
+      if (media) lookup.set(link.product_slug, media);
+    }
+
+    return lookup;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] scoped primary media lookup failed; using inline JSON image fallback: ${message}`);
+    return new Map();
+  }
+}
+
 const getCatalogCutoutMediaLookup = cache(async (): Promise<Map<string, MediaAsset>> => {
   const { hasServiceRoleKey } = getCatalogConfig(true);
   if (!hasServiceRoleKey) return new Map();
@@ -1095,17 +1310,8 @@ export const getHomepageProducts = cache(async (): Promise<Product[]> => {
   const rows = await fetchCatalogRows<MithronProductRow>(
     `select=${homepageProductSelect}&${publishedCatalogFilter}&order=sort_order.asc&limit=${HOMEPAGE_PRODUCT_LIMIT}`
   );
-  const primaryMedia = await getPrimaryProductMediaLookup();
-  let catalogCutouts = new Map<string, MediaAsset>();
 
-  try {
-    catalogCutouts = await getCatalogCutoutMediaLookup();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
-  }
-
-  return rows.map((row) => mapHomepageProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug)));
+  return rows.map((row) => mapHomepageProductRow(row));
 });
 
 function mapHomepageProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset): Product {
@@ -1138,22 +1344,41 @@ export const getProducts = cache(async (): Promise<Product[]> => {
   return dedupeProductsBySlug(products);
 });
 
-export const getEnterpriseMenuProducts = cache(async (): Promise<Product[]> => {
-  const rows: EnterpriseMenuProductRow[] = [];
-  let offset = 0;
+async function fetchEnterpriseMenuCategoryRows(
+  definition: CatalogCategoryDefinition
+): Promise<EnterpriseMenuProductRow[]> {
+  const categoryName = definition.categoryNames[0];
+  if (!categoryName) return [];
 
-  while (rows.length < ENTERPRISE_MENU_PRODUCT_LIMIT) {
-    const remaining = ENTERPRISE_MENU_PRODUCT_LIMIT - rows.length;
-    const pageSize = Math.min(CATALOG_PAGE_SIZE, remaining);
-    const page = await fetchCatalogRows<EnterpriseMenuProductRow>(
-      `select=${enterpriseMenuSelect}&${publishedCatalogFilter}&order=sort_order.asc,slug.asc&limit=${pageSize}&offset=${offset}`
-    );
-    rows.push(...page);
-    if (page.length < pageSize) break;
-    offset += pageSize;
-  }
+  const query = [
+    `select=${enterpriseMenuSelect}`,
+    publishedCatalogFilter,
+    `category=eq.${encodeURIComponent(categoryName)}`,
+    "order=sort_order.asc,slug.asc",
+    `limit=${ENTERPRISE_MENU_PER_CATEGORY_LIMIT}`
+  ].join("&");
 
-  return mapRowsWithCatalogMedia(rows, mapEnterpriseMenuProduct);
+  return fetchCatalogRows<EnterpriseMenuProductRow>(query);
+}
+
+export const getEnterpriseMenuProducts = cache(async (): Promise<EnterpriseMenuLoadResult> => {
+  const rowGroups = await Promise.all(
+    catalogCategoryDefinitions.map((definition) => fetchEnterpriseMenuCategoryRows(definition))
+  );
+
+  const seen = new Set<string>();
+  const rows = rowGroups.flat().filter((row) => {
+    if (!row.slug || seen.has(row.slug)) return false;
+    seen.add(row.slug);
+    return true;
+  });
+
+  const errors: CatalogDataError[] = [];
+  const products = await mapRowsWithCatalogMedia(rows, (row, media) => mapEnterpriseMenuProduct(row, media, errors));
+  return {
+    products: products.filter((product): product is Product => product !== null),
+    errors
+  };
 });
 
 export const getProductAffinityRowBySlug = cache(async (slug: string): Promise<ProductAffinityRow | null> => {
@@ -1203,7 +1428,44 @@ export async function getProductBySlug(slug: string) {
     console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
   }
 
-  return mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug));
+  try {
+    return mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug));
+  } catch (error) {
+    if (isMissingSourceImageError(error)) {
+      console.warn(`[catalog] ${error.message}`);
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+export async function loadProductForPage(slug: string): Promise<ProductPageLoadResult> {
+  const row = await getProductRowBySlug(slug);
+  if (!row) return { status: "not_found" };
+
+  const primaryMedia = await getPrimaryProductMediaLookup();
+  let catalogCutouts = new Map<string, MediaAsset>();
+
+  try {
+    catalogCutouts = await getCatalogCutoutMediaLookup();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
+  }
+
+  try {
+    return {
+      status: "ready",
+      product: mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug))
+    };
+  } catch (error) {
+    if (isMissingSourceImageError(error)) {
+      const catalogError = createMissingSourceImageError(slug);
+      console.warn(`[catalog] ${catalogError.message}`);
+      return { status: "error", error: catalogError };
+    }
+    throw error;
+  }
 }
 
 export async function getProductStaticSlugs() {
@@ -1340,8 +1602,14 @@ export async function searchProducts(query: string, limit = 24) {
 export async function searchCatalogProducts(query: string, limit = 24): Promise<CatalogSearchResult[]> {
   const normalized = query.trim();
   if (!normalized) return [];
-  const rows = await fetchCatalogSearchRows(normalized, limit);
-  return mapSearchRowsToCatalogResults(rows);
+
+  const index = await getCatalogSearchIndex();
+  if (index.length) {
+    return searchCatalogIndex(index, normalized, limit);
+  }
+
+  console.warn("[catalog] in-memory search index empty; falling back to Supabase search.");
+  return searchCatalogProductsFallback(normalized, limit);
 }
 
 export async function getProductsForCategorySlug(slug: string) {

@@ -1,6 +1,7 @@
 import type { Product } from "@/config/types";
 import { calculateProductTaxBreakdown } from "@/lib/product-tax";
 import { getProductOverviewText } from "@/lib/product-detail-content";
+import type { CatalogSearchResult } from "@/services/catalog";
 import { getSiteOrigin, toAbsoluteUrl } from "@/lib/site-url";
 
 function organizationId() {
@@ -81,7 +82,7 @@ export function buildWebSiteJsonLd() {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${toAbsoluteUrl("/products")}?q={search_term_string}`
+        urlTemplate: `${toAbsoluteUrl("/search")}?q={search_term_string}`
       },
       "query-input": "required name=search_term_string"
     }
@@ -148,6 +149,22 @@ export function buildProductBreadcrumbJsonLd(product: Product) {
 
 export function buildSiteStructuredData() {
   return [buildOrganizationJsonLd(), buildWebSiteJsonLd()];
+}
+
+export function buildSearchResultsItemListJsonLd(query: string, results: CatalogSearchResult[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Search results for ${query}`,
+    numberOfItems: results.length,
+    itemListElement: results.map((product, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: product.name,
+      url: toAbsoluteUrl(`/product/${product.slug}`),
+      image: product.image?.src ? normalizeImageUrl(product.image.src) : undefined
+    }))
+  };
 }
 
 export function buildProductStructuredData(product: Product) {

@@ -1,4 +1,5 @@
 .root {
+  container-type: inline-size;
   --home-ink: var(--ds-ink);
   --home-muted: var(--ds-ink-2);
   --home-page: var(--ds-bg);
@@ -259,6 +260,7 @@
 }
 
 .productShelfSection {
+  container-type: inline-size;
   background: var(--home-page);
   border-top: 0;
   padding: var(--ds-s5) 0;
@@ -283,6 +285,7 @@
 
 .productShelfHeader {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   justify-content: space-between;
   gap: 16px;
@@ -294,6 +297,7 @@
 }
 
 .shelfTitle {
+  min-width: 0;
   margin: 0;
   color: var(--home-ink);
   font-family: var(--type-display);
@@ -305,8 +309,10 @@
 
 .shelfHeaderActions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 14px;
+  min-width: 0;
 }
 
 .viewAllLink {
@@ -350,7 +356,8 @@
 
 .productShelfHero {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
   height: clamp(240px, 30vw, 440px);
   min-height: 0;
@@ -358,36 +365,44 @@
   border-radius: 8px;
   background: var(--home-page);
   --shelf-hero-ink: #0f172a;
-  --shelf-hero-muted: rgba(15, 23, 42, 0.68);
-  --shelf-hero-cta-bg: var(--brand-cta-gradient);
-  --shelf-hero-cta-bg-hover: var(--brand-cta-gradient-hover);
-  --shelf-hero-cta-ink: var(--brand-cta-ink);
+  --shelf-hero-muted: rgba(15, 23, 42, 0.62);
+  --shelf-hero-cta-bg: #0f172a;
+  --shelf-hero-cta-bg-hover: #1a2028;
+  --shelf-hero-cta-ink: #ffffff;
+  --shelf-hero-cta-border: 1px solid rgba(15, 23, 42, 0.08);
+  --shelf-hero-cta-shadow: 0 10px 24px -14px rgba(15, 23, 42, 0.28);
   color: var(--shelf-hero-ink);
   text-decoration: none;
 }
 
 .productShelfSection[data-shelf-tone="world"] .productShelfHero {
   --shelf-hero-ink: #ffffff;
-  --shelf-hero-muted: rgba(255, 255, 255, 0.78);
-  --shelf-hero-cta-bg: var(--brand-cta-gradient);
-  --shelf-hero-cta-bg-hover: var(--brand-cta-gradient-hover);
-  --shelf-hero-cta-ink: var(--brand-cta-ink);
+  --shelf-hero-muted: rgba(255, 255, 255, 0.76);
+  --shelf-hero-cta-bg: #ffffff;
+  --shelf-hero-cta-bg-hover: #f4f4f5;
+  --shelf-hero-cta-ink: #0f172a;
+  --shelf-hero-cta-border: 1px solid rgba(255, 255, 255, 0.92);
+  --shelf-hero-cta-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.34);
 }
 
 .productShelfSection[data-shelf-tone="care"] .productShelfHero {
   --shelf-hero-ink: #101418;
-  --shelf-hero-muted: rgba(16, 20, 24, 0.78);
+  --shelf-hero-muted: rgba(16, 20, 24, 0.62);
   --shelf-hero-cta-bg: #101418;
   --shelf-hero-cta-bg-hover: #1a2028;
   --shelf-hero-cta-ink: #ffffff;
+  --shelf-hero-cta-border: 1px solid rgba(16, 20, 24, 0.08);
+  --shelf-hero-cta-shadow: 0 10px 24px -14px rgba(15, 23, 42, 0.22);
 }
 
 .productShelfSection[data-shelf-tone="global"] .productShelfHero {
   --shelf-hero-ink: #ffffff;
-  --shelf-hero-muted: rgba(255, 255, 255, 0.78);
-  --shelf-hero-cta-bg: var(--brand-cta-gradient);
-  --shelf-hero-cta-bg-hover: var(--brand-cta-gradient-hover);
-  --shelf-hero-cta-ink: var(--brand-cta-ink);
+  --shelf-hero-muted: rgba(255, 255, 255, 0.76);
+  --shelf-hero-cta-bg: #ffffff;
+  --shelf-hero-cta-bg-hover: #f4f4f5;
+  --shelf-hero-cta-ink: #0f172a;
+  --shelf-hero-cta-border: 1px solid rgba(255, 255, 255, 0.92);
+  --shelf-hero-cta-shadow: 0 12px 28px -14px rgba(0, 0, 0, 0.34);
 }
 
 .shelfHeroBackdrop {
@@ -397,9 +412,33 @@
   pointer-events: none;
 }
 
-.shelfHeroBackdrop::after {
-  display: none;
-  content: none;
+.productShelfSection[data-shelf-tone="world"] .shelfHeroBackdrop::after,
+.productShelfSection[data-shelf-tone="global"] .shelfHeroBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(8, 12, 20, 0.68) 0%,
+    rgba(8, 12, 20, 0.34) 38%,
+    rgba(8, 12, 20, 0.08) 58%,
+    transparent 72%
+  );
+}
+
+.productShelfSection[data-shelf-tone="care"] .shelfHeroBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.72) 34%,
+    rgba(255, 255, 255, 0.18) 56%,
+    transparent 72%
+  );
 }
 
 .shelfHeroContextImage {
@@ -420,28 +459,37 @@
 }
 
 .shelfHeroCopy {
-  position: absolute;
+  position: relative;
   z-index: 2;
-  top: 50%;
-  left: clamp(22px, 3.8vw, 60px);
-  transform: translateY(-50%);
   display: grid;
-  width: min(440px, 43%);
-  gap: 8px;
+  width: min(400px, 40%);
+  gap: clamp(6px, 0.75vw, 10px);
   justify-items: start;
-  padding: 0;
+  padding: 0 clamp(32px, 5.2vw, 72px);
   text-align: left;
+}
+
+.shelfHeroEyebrow {
+  color: var(--shelf-hero-muted);
+  font-family: var(--type-ui);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-transform: none;
 }
 
 .shelfHeroHeading {
   display: block;
-  max-width: 18ch;
+  margin: 0;
+  max-width: none;
   color: var(--shelf-hero-ink, #111113);
   font-family: var(--type-display);
-  font-size: clamp(1.5rem, 2.05vw, 2.2rem);
+  font-size: clamp(1.9rem, 2.8vw, 3rem);
   font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.06;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  white-space: nowrap;
   transition: color 320ms var(--ease-cinematic);
 }
 
@@ -468,33 +516,44 @@
 .shelfHeroBody {
   display: -webkit-box;
   overflow: hidden;
-  max-width: 400px;
+  max-width: 32ch;
+  margin: 0;
   color: var(--shelf-hero-muted);
   font-family: var(--type-ui);
-  font-size: clamp(0.84rem, 0.95vw, 0.96rem);
+  font-size: clamp(0.92rem, 1.05vw, 1.02rem);
   font-weight: 420;
-  line-height: 1.4;
+  line-height: 1.5;
   transition: color 320ms var(--ease-cinematic);
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .shelfHeroCta {
-  composes: glass-button from global;
   display: inline-flex;
   width: fit-content;
-  min-height: 42px;
+  min-height: 40px;
   align-items: center;
   justify-content: center;
-  margin-top: 14px;
+  margin-top: clamp(8px, 1vw, 14px);
+  border: var(--shelf-hero-cta-border);
   border-radius: 999px;
-  font-size: 0.82rem;
+  background: var(--shelf-hero-cta-bg);
+  box-shadow: var(--shelf-hero-cta-shadow);
+  color: var(--shelf-hero-cta-ink);
+  font-family: var(--type-ui);
+  font-size: 0.84rem;
   font-weight: 600;
-  padding: 0 26px;
+  padding: 0 24px;
+  transition:
+    background-color 260ms var(--ease-cinematic),
+    box-shadow 260ms var(--ease-cinematic),
+    transform 260ms var(--ease-cinematic);
 }
 
 .productShelfHero:hover .shelfHeroCta,
 .productShelfHero:focus-visible .shelfHeroCta {
+  background: var(--shelf-hero-cta-bg-hover);
   transform: translateY(-1px);
 }
 
@@ -507,6 +566,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 298px)) minmax(220px, 1fr);
   gap: clamp(12px, 1.2vw, 18px);
+  align-items: stretch;
   justify-content: start;
 }
 
@@ -520,6 +580,7 @@
   border: 1px solid rgba(15, 23, 42, 0.055);
   border-radius: 14px;
   gap: 8px;
+  overflow: hidden;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.94),
     0 12px 32px -24px rgba(15, 23, 42, 0.1);
@@ -549,6 +610,7 @@
 .productCard {
   position: relative;
   min-width: 0;
+  min-height: 470px;
   display: grid;
   grid-template-rows: 58% 42%;
   overflow: hidden;
@@ -581,6 +643,18 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.74);
   box-shadow: none;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productCard::after,
+.productShelfSection[data-shelf-tone="care"] .productCard::after,
+.productShelfSection[data-shelf-tone="global"] .productCard::after {
+  display: none;
+}
+
+.productShelfSection[data-shelf-tone="world"] .productFooter,
+.productShelfSection[data-shelf-tone="care"] .productFooter,
+.productShelfSection[data-shelf-tone="global"] .productFooter {
+  padding-right: 0;
 }
 
 .productCard::after {
@@ -747,6 +821,7 @@
   transition: color 260ms var(--ease-cinematic);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .productCard:hover .productKicker,
@@ -811,6 +886,7 @@
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(210px, 1fr);
+  min-height: 470px;
   overflow: hidden;
   border: 1px solid var(--ds-border);
   border-radius: var(--ds-r-xl);
@@ -930,8 +1006,8 @@
   font-family: var(--type-ui);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
 .guideCard strong {
@@ -1010,21 +1086,45 @@
 .productShelfSection[data-shelf-tone="world"] .guideCard,
 .productShelfSection[data-shelf-tone="care"] .guideCard,
 .productShelfSection[data-shelf-tone="global"] .guideCard {
-  grid-template-rows: auto minmax(220px, 1fr);
+  grid-template-rows: 42% 58%;
 }
 
 .productShelfSection[data-shelf-tone="world"] .guideCopy,
 .productShelfSection[data-shelf-tone="care"] .guideCopy,
 .productShelfSection[data-shelf-tone="global"] .guideCopy {
-  min-height: 176px;
-  padding: 22px 22px 16px;
+  min-height: 0;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 22px 22px 12px;
 }
 
 .productShelfSection[data-shelf-tone="world"] .guideImageWell,
 .productShelfSection[data-shelf-tone="care"] .guideImageWell,
 .productShelfSection[data-shelf-tone="global"] .guideImageWell {
-  min-height: 230px;
+  min-height: 0;
   margin-top: 0;
+}
+
+.productShelfSection[data-shelf-tone="world"] .guideImageWell::before,
+.productShelfSection[data-shelf-tone="care"] .guideImageWell::before,
+.productShelfSection[data-shelf-tone="global"] .guideImageWell::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  z-index: 0;
+  width: 74%;
+  height: 62%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--shelf-product-radial);
+  pointer-events: none;
+}
+
+.productShelfSection[data-shelf-tone="world"] .guideImage,
+.productShelfSection[data-shelf-tone="care"] .guideImage,
+.productShelfSection[data-shelf-tone="global"] .guideImage {
+  padding: 22px 24px 18px;
 }
 
 .guideImage {
@@ -1056,6 +1156,7 @@
 }
 
 .missionWorldSection {
+  container-type: inline-size;
   display: flex;
   min-height: clamp(760px, 88svh, 980px);
   align-items: center;
@@ -1077,7 +1178,7 @@
 
 .missionWorldHeader {
   display: grid;
-  grid-template-columns: minmax(0, 0.68fr) minmax(320px, 0.32fr);
+  grid-template-columns: minmax(0, 0.68fr) minmax(0, 0.32fr);
   gap: clamp(32px, 6vw, 96px);
   align-items: end;
 }
@@ -1166,10 +1267,10 @@
 .missionWorldSection[data-composition="agri-field"] .missionWorldGrid,
 .missionWorldSection[data-composition="city-urban"] .missionWorldGrid {
   grid-template-columns:
-    minmax(280px, 0.92fr)
+    minmax(0, 0.92fr)
     minmax(0, 1.04fr)
     minmax(0, 1.04fr)
-    minmax(280px, 0.92fr);
+    minmax(0, 0.92fr);
   grid-template-areas:
     "mission-left mission-hero mission-hero mission-right"
     "mission-left mission-small-a mission-small-b mission-right";
@@ -1246,7 +1347,7 @@
 }
 
 .missionWorldSection[data-composition="agri-field"] .missionWorldHeader {
-  grid-template-columns: minmax(0, 0.62fr) minmax(430px, 0.38fr);
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.38fr);
   gap: clamp(48px, 5vw, 80px);
   align-items: start;
 }
@@ -1349,6 +1450,7 @@
   font-size: clamp(0.92rem, 1.02vw, 1.08rem);
   line-height: 1.38;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .missionWorldSection[data-composition="agri-field"] .missionTileCopy small {
@@ -1436,6 +1538,7 @@
   line-height: 1.38;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .missionTileCopy small {
@@ -1574,21 +1677,14 @@
   }
 
   .shelfHeroCopy {
-    left: clamp(24px, 4.6vw, 52px);
     width: min(360px, 48%);
+    padding: 0 clamp(24px, 4.6vw, 52px);
   }
 
   .productShelfSection .shelfBoard {
     margin-inline: calc(-1 * clamp(16px, 4vw, 64px));
     width: calc(100% + (2 * clamp(16px, 4vw, 64px)));
-    max-width: 100vw;
-  }
-
-  .productShelfSection[data-shelf-tone="world"] .productShelfGrid,
-  .productShelfSection[data-shelf-tone="care"] .productShelfGrid,
-  .productShelfSection[data-shelf-tone="global"] .productShelfGrid {
-    overflow-x: auto;
-    overflow-y: visible;
+    max-width: 100%;
   }
 
   .productShelfGrid {
@@ -1597,9 +1693,8 @@
     grid-template-columns: none;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    padding-inline: clamp(16px, 4vw, 64px);
     padding-bottom: 12px;
-    scroll-padding-inline: clamp(16px, 4vw, 64px);
+    scroll-padding-inline: 2px;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -1612,6 +1707,23 @@
   .productCard,
   .guideCard {
     scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 767px) {
+  .productShelfSection .shelfBoard {
+    margin-inline: calc(-1 * clamp(16px, 4vw, 64px));
+    width: calc(100% + (2 * clamp(16px, 4vw, 64px)));
+    max-width: 100%;
+  }
+
+  .productShelfGrid {
+    grid-auto-columns: minmax(224px, 72vw);
+  }
+
+  .agriGridLayout {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 }
 
@@ -1661,6 +1773,8 @@
     white-space: normal;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
+  line-clamp: 2;
   }
 
   .miniCarouselNext {
@@ -1685,6 +1799,12 @@
 }
 
 @media (max-width: 640px) {
+  .miniCarouselRail {
+    gap: 14px;
+    padding: 0 clamp(16px, 5vw, 48px);
+    scroll-padding-inline: clamp(16px, 5vw, 48px);
+  }
+
   .miniCarousel {
     padding: 12px 0 16px;
   }
@@ -1844,17 +1964,18 @@
   }
 
   .shelfHeroCopy {
-    top: 46%;
-    left: 18px;
     width: min(320px, calc(100% - 36px));
+    padding: 0 18px;
+    gap: 8px;
   }
 
-  .shelfHeroCopy strong {
-    max-width: 13ch;
+  .shelfHeroHeading {
+    font-size: clamp(1.55rem, 6.2vw, 2rem);
   }
 
-  .productShelfGrid {
-    grid-auto-columns: minmax(224px, 72vw);
+  .shelfHeroBody {
+    max-width: 28ch;
+    font-size: 0.88rem;
   }
 
   .productBody {
@@ -1875,6 +1996,23 @@
     min-height: 180px;
   }
 
+  .missionWorldSection[data-composition="agri-field"] .missionWorldGrid,
+  .missionWorldSection[data-composition="city-urban"] .missionWorldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 479px) {
+  .container {
+    padding: 0 12px;
+  }
+
+  .productShelfGrid {
+    grid-auto-columns: minmax(200px, 82vw);
+    padding-inline: 12px;
+    scroll-padding-inline: 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1996,6 +2134,7 @@
   font-weight: 600;
   line-height: 1.02;
   letter-spacing: -0.035em;
+  text-wrap: balance;
 }
 
 .agriIntroBody {
@@ -2098,13 +2237,14 @@
 }
 
 .agriCardImageFrame {
-  background: #ffffff;
+  background: #f8fcf9;
+  z-index: 0;
 }
 
 .agriSection .agriCardImageFrame {
   inset: 0;
   height: 100%;
-  background: #ffffff;
+  background: #f8fcf9;
 }
 
 .agriSection :global(.mithron-responsive-image-frame) {
@@ -2125,30 +2265,341 @@
   transform: translate3d(0, 0, 0) scale(calc(var(--agri-image-scale, 1.14) * 1.03));
 }
 
-.agriCardOverlay {
+.agriShowcaseStage,
+.cityShowcaseStage {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Section-level wash removed — lighting originates from card content zones only */
+.agriShowcaseAtmosphere,
+.cityShowcaseAtmosphere {
+  display: none;
+}
+
+.agriGridLayout,
+.cityBentoGrid {
+  position: relative;
+  z-index: 1;
+}
+
+/* Medium ambient lighting — spread zones, strong text scrim */
+.agriSection:not(.citySection) .agriCard {
+  --zone-1-color: 42, 195, 135;
+  --zone-2-color: 118, 195, 155;
+  --zone-3-color: 210, 225, 95;
+  --zone-4-color: 255, 215, 145;
+  --ambient-a: var(--zone-1-color);
+  --ambient-b: var(--zone-2-color);
+  --ambient-c: var(--zone-3-color);
+  --ambient-d: var(--zone-4-color);
+  --mission-asset-stage-height: 78%;
+  --mission-text-scrim-height: 58%;
+}
+
+.citySection .agriCard {
+  --zone-1-color: 55, 145, 245;
+  --zone-2-color: 110, 195, 255;
+  --zone-3-color: 215, 242, 255;
+  --zone-4-color: 130, 225, 248;
+  --ambient-a: var(--zone-1-color);
+  --ambient-b: var(--zone-2-color);
+  --ambient-c: var(--zone-3-color);
+  --ambient-d: var(--zone-4-color);
+  --mission-asset-stage-height: 78%;
+  --mission-text-scrim-height: 58%;
+}
+
+.agriCardAmbient,
+.cityCardAmbient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--mission-asset-stage-height, 68%);
+  bottom: auto;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Zone 4 — corner accent */
+.agriCardAmbient::after,
+.cityCardAmbient::after {
+  content: "";
   position: absolute;
   inset: 0;
-  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 62% 48% at var(--zone-4-x, 90%) var(--zone-4-y, 8%),
+      rgba(var(--zone-4-color), 0.34) 0%,
+      rgba(var(--zone-4-color), 0.12) 48%,
+      transparent 78%
+    );
+  filter: blur(44px);
+  opacity: 0.24;
+  mix-blend-mode: screen;
+}
+
+.agriCardAmbientLayer,
+.cityCardAmbientLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Zone 1 — primary subject (drone / city asset) */
+.agriCardAmbientBeam,
+.cityCardAmbientBeam {
+  background:
+    radial-gradient(
+      ellipse 104% 78% at var(--zone-1-x, 52%) var(--zone-1-y, 40%),
+      rgba(var(--zone-1-color), 0.34) 0%,
+      rgba(var(--zone-1-color), 0.13) 42%,
+      transparent 78%
+    );
+  filter: blur(48px);
+  opacity: 0.32;
+}
+
+/* Zone 2 — secondary subject (pilot / app UI) */
+.agriCardAmbientWash,
+.cityCardAmbientWash {
+  background:
+    radial-gradient(
+      ellipse 96% 72% at var(--zone-2-x, 22%) var(--zone-2-y, 62%),
+      rgba(var(--zone-2-color), 0.32) 0%,
+      rgba(var(--zone-2-color), 0.12) 40%,
+      transparent 76%
+    );
+  filter: blur(44px);
+  opacity: 0.3;
+}
+
+/* Zone 3 — device / map / connection */
+.agriCardAmbientAccent,
+.cityCardAmbientAccent {
+  background:
+    radial-gradient(
+      ellipse 88% 68% at var(--zone-3-x, 74%) var(--zone-3-y, 42%),
+      rgba(var(--zone-3-color), 0.34) 0%,
+      rgba(var(--zone-3-color), 0.12) 46%,
+      transparent 78%
+    );
+  filter: blur(40px);
+  opacity: 0.3;
+}
+
+/* Bottom text scrim — taller, more opaque for readability */
+.agriCardTextProtection,
+.cityCardTextProtection {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--mission-text-scrim-height, 58%);
+  max-height: 240px;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 0 0 12px 12px;
   background: linear-gradient(
-    180deg,
-    rgba(15, 23, 42, 0) 0%,
-    rgba(15, 23, 42, 0) 48%,
-    rgba(15, 23, 42, 0.28) 68%,
-    rgba(15, 23, 42, 0.9) 100%
+    to top,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 1) 35%,
+    rgba(255, 255, 255, 0.95) 55%,
+    rgba(255, 255, 255, 0.75) 75%,
+    rgba(255, 255, 255, 0.35) 90%,
+    transparent 100%
   );
 }
 
-.agriSection .agriCardOverlay {
+.agriSection:not(.citySection) .agriCardTextProtection {
   background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0) 42%,
-    rgba(255, 255, 255, 0.3) 58%,
-    rgba(255, 255, 255, 0.82) 72%,
-    rgba(255, 255, 255, 0.97) 84%,
-    #ffffff 92%
+    to top,
+    rgba(252, 254, 251, 1) 0%,
+    rgba(252, 254, 251, 1) 35%,
+    rgba(252, 254, 251, 0.95) 55%,
+    rgba(252, 254, 251, 0.75) 75%,
+    rgba(252, 254, 251, 0.35) 90%,
+    transparent 100%
   );
+}
+
+.citySection .cityCardTextProtection {
+  background: linear-gradient(
+    to top,
+    rgba(250, 252, 255, 1) 0%,
+    rgba(250, 252, 255, 1) 35%,
+    rgba(250, 252, 255, 0.95) 55%,
+    rgba(250, 252, 255, 0.75) 75%,
+    rgba(250, 252, 255, 0.35) 90%,
+    transparent 100%
+  );
+}
+
+/* Hero vs supporting hierarchy */
+.agriSection:not(.citySection) .agriCard_hero,
+.citySection .citySlotHero.agriCard {
+  box-shadow:
+    0 14px 36px rgba(72, 130, 96, 0.09),
+    0 6px 16px rgba(15, 23, 42, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.citySection .citySlotHero.agriCard {
+  box-shadow:
+    0 14px 36px rgba(90, 115, 145, 0.09),
+    0 6px 16px rgba(15, 23, 42, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.agriSection:not(.citySection) .agriCard_standard .agriCardAmbientLayer,
+.agriSection:not(.citySection) .agriCard_wide .agriCardAmbientLayer {
+  opacity: 0.92;
+}
+
+.citySection .agriCard_standard .cityCardAmbientLayer,
+.citySection .agriCard_wide .cityCardAmbientLayer {
+  opacity: 0.92;
+}
+
+.agriSection:not(.citySection) .agriCard_standard .agriCardAmbientBeam,
+.agriSection:not(.citySection) .agriCard_wide .agriCardAmbientBeam,
+.citySection .agriCard_standard .cityCardAmbientBeam,
+.citySection .agriCard_wide .cityCardAmbientBeam {
+  background:
+    radial-gradient(
+      ellipse 88% 66% at var(--zone-1-x, 52%) var(--zone-1-y, 40%),
+      rgba(var(--zone-1-color), 0.36) 0%,
+      rgba(var(--zone-1-color), 0.14) 42%,
+      transparent 78%
+    );
+}
+
+/* Hero — medium emission */
+.agriCardAmbientDominant .agriCardAmbientBeam,
+.cityCardAmbientDominant .cityCardAmbientBeam {
+  opacity: 0.38;
+  filter: blur(50px);
+  background:
+    radial-gradient(
+      ellipse 108% 80% at var(--zone-1-x, 52%) var(--zone-1-y, 40%),
+      rgba(var(--zone-1-color), 0.4) 0%,
+      rgba(var(--zone-1-color), 0.15) 40%,
+      transparent 76%
+    );
+}
+
+.agriCardAmbientDominant .agriCardAmbientWash,
+.cityCardAmbientDominant .cityCardAmbientWash {
+  opacity: 0.34;
+  filter: blur(48px);
+}
+
+.agriCardAmbientDominant .agriCardAmbientAccent,
+.cityCardAmbientDominant .cityCardAmbientAccent {
+  opacity: 0.34;
+  filter: blur(42px);
+}
+
+.agriCardAmbientDominant::after,
+.cityCardAmbientDominant::after {
+  opacity: 0.22;
+  filter: blur(52px);
+}
+
+/* Tall — slightly stronger zone 1 */
+.agriSection:not(.citySection) .agriCard_tall .agriCardAmbientBeam,
+.citySection .agriCard_tall .cityCardAmbientBeam {
+  opacity: 0.36;
+}
+
+.agriSection:not(.citySection) .agriCard_tall {
+  --mission-asset-stage-height: 80%;
+  --mission-text-scrim-height: 38%;
+}
+
+.agriSection:not(.citySection) .agriCard_hero,
+.citySection .agriCard_hero {
+  --mission-asset-stage-height: 82%;
+  --mission-text-scrim-height: 44%;
+}
+
+.agriSection:not(.citySection) .agriCard_standard,
+.citySection .agriCard_standard {
+  --mission-asset-stage-height: 76%;
+  --mission-text-scrim-height: 36%;
+}
+
+.agriSection:not(.citySection) .agriCard_wide,
+.citySection .agriCard_wide {
+  --mission-asset-stage-height: 78%;
+  --mission-text-scrim-height: 36%;
+}
+
+.agriSection:not(.citySection) .agriCard_hero .agriCardTextProtection,
+.citySection .citySlotHero .cityCardTextProtection {
+  max-height: 176px;
+}
+
+.citySection .citySlotHero .cityCardTextProtection {
+  background: linear-gradient(
+    to top,
+    rgba(250, 252, 255, 1) 0%,
+    rgba(250, 252, 255, 0.97) 14%,
+    rgba(250, 252, 255, 0.9) 34%,
+    rgba(250, 252, 255, 0.56) 58%,
+    rgba(250, 252, 255, 0.22) 78%,
+    transparent 100%
+  );
+}
+
+.agriSection:not(.citySection) .agriCard_hero .agriCardTextProtection {
+  background: linear-gradient(
+    to top,
+    rgba(252, 254, 251, 1) 0%,
+    rgba(252, 254, 251, 0.97) 14%,
+    rgba(252, 254, 251, 0.9) 34%,
+    rgba(252, 254, 251, 0.56) 58%,
+    rgba(252, 254, 251, 0.22) 78%,
+    transparent 100%
+  );
+}
+
+.agriSection:not(.citySection) .agriCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
   pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 1px 0 0 rgba(255, 255, 255, 0.28);
+}
+
+.citySection .agriCard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 1px 0 0 rgba(255, 255, 255, 0.26);
+}
+
+.agriSection:not(.citySection) .agriCard_hero::after,
+.citySection .citySlotHero.agriCard::after {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 1px 0 0 rgba(255, 255, 255, 0.38),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 .agriCardCopy {
@@ -2156,11 +2607,34 @@
   left: 24px;
   right: 64px;
   bottom: 24px;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   gap: 6px;
   pointer-events: none;
+  isolation: isolate;
+}
+
+.agriSection .agriCardCopy::before,
+.citySection .agriCardCopy::before {
+  content: "";
+  position: absolute;
+  inset: -14px -18px -16px -18px;
+  z-index: -1;
+  border-radius: 14px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.agriSection:not(.citySection) .agriCardCopy::before {
+  background: transparent;
+}
+
+.citySection .agriCardCopy::before {
+  background: transparent;
 }
 
 .agriSection .agriCardCopy {
@@ -2193,17 +2667,18 @@
   color: #ffffff;
   font-family: var(--type-mission-heading);
   font-size: clamp(1.15rem, 1.35vw, 1.6rem);
-  font-weight: 600;
-  line-height: 1.1;
+  font-weight: 650;
+  line-height: 1.12;
   letter-spacing: -0.025em;
 }
 
 .agriCardCopy span {
   color: rgba(255, 255, 255, 0.82);
   font-size: 0.86rem;
-  line-height: 1.35;
+  line-height: 1.38;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2214,23 +2689,23 @@
   font-weight: 500;
 }
 
-.agriSection .agriCardCopy strong {
+.agriSection:not(.citySection) .agriCardCopy strong {
   color: var(--home-ink);
 }
 
-.agriSection .agriCardCopy span {
-  color: var(--home-muted);
+.agriSection:not(.citySection) .agriCardCopy span {
+  color: color-mix(in srgb, var(--home-muted) 55%, var(--home-ink));
 }
 
-.agriSection .agriCardCopy small {
-  color: color-mix(in srgb, var(--home-muted) 88%, var(--home-ink));
+.agriSection:not(.citySection) .agriCardCopy small {
+  color: color-mix(in srgb, var(--home-muted) 72%, var(--home-ink));
 }
 
 .agriCardDevice {
   position: absolute;
   top: 16px;
   left: 16px;
-  z-index: 2;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
@@ -2257,7 +2732,7 @@
   position: absolute;
   right: 24px;
   bottom: 24px;
-  z-index: 2;
+  z-index: 4;
   display: flex;
   width: 36px;
   height: 36px;
@@ -2342,7 +2817,8 @@
 .cityCardImageFrame {
   inset: 0;
   height: 100%;
-  background: #ffffff;
+  background: #f7faff;
+  z-index: 0;
 }
 
 .citySection .agriCardImage {
@@ -2358,32 +2834,16 @@
   transform: translate3d(0, 0, 0) scale(calc(var(--city-image-scale, 1.12) * 1.015));
 }
 
-.cityCardOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0) 42%,
-    rgba(255, 255, 255, 0.3) 58%,
-    rgba(255, 255, 255, 0.82) 72%,
-    rgba(255, 255, 255, 0.97) 84%,
-    #ffffff 92%
-  );
-  pointer-events: none;
-}
-
 .citySection .agriCardCopy strong {
   color: var(--home-ink);
 }
 
 .citySection .agriCardCopy span {
-  color: var(--home-muted);
+  color: color-mix(in srgb, var(--home-muted) 55%, var(--home-ink));
 }
 
 .citySection .agriCardCopy small {
-  color: color-mix(in srgb, var(--home-muted) 88%, var(--home-ink));
+  color: color-mix(in srgb, var(--home-muted) 72%, var(--home-ink));
 }
 
 .citySection .agriCardCopy {
@@ -2636,6 +3096,14 @@
     left: 16px;
     right: 50px;
     bottom: 16px;
+  }
+
+  .agriSection .agriCardTextProtection,
+  .citySection .cityCardTextProtection {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 120px;
   }
 
   .agriSection .agriCard_wide .agriCardCopy {

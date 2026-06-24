@@ -2,6 +2,7 @@ import { assertSupabaseAdminConfig } from "@/lib/env";
 import { AdminSection } from "@/components/admin/module-panel";
 import { FeedbackBanner, StatusPill } from "@/components/platform";
 import { countPendingSupplierProducts } from "@/services/supplier-actions";
+import { formatINR } from "@/lib/utils";
 import { approveProductSubmissionFormAction, rejectProductSubmissionFormAction } from "./actions";
 
 type PendingProduct = {
@@ -114,7 +115,7 @@ export default async function AdminSupplierProductsPage({
                       <StatusPill status={product.workflow_status} />
                     </div>
                     <p className="mt-1 text-sm text-[var(--platform-text-muted)]">
-                      {product.category} · INR {product.price.toLocaleString("en-IN")}
+                      {product.category} · {formatINR(product.price)}
                     </p>
                     <p className="mt-1 text-xs text-[var(--platform-text-muted)]">Supplier: {product.supplier_label}</p>
                     {missingSupplier ? (

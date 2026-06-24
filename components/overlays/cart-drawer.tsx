@@ -8,7 +8,7 @@ import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { Button } from "@/components/ui/button";
 import type { CatalogSearchResult } from "@/services/catalog";
 import { glassButtonClassName } from "@/lib/glass-ui";
-import { formatUsd } from "@/lib/utils";
+import { formatINR } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
 export function CartDrawer() {
@@ -110,7 +110,7 @@ export function CartDrawer() {
                           <Plus className="size-4" />
                         </button>
                       </div>
-                      <span className="type-price font-medium">{formatUsd(item.unitPrice * item.quantity)}</span>
+                      <span className="type-price font-medium">{formatINR(item.unitPrice * item.quantity)}</span>
                     </div>
                   </div>
                 </div>
@@ -142,17 +142,17 @@ export function CartDrawer() {
                 <span className="type-price mb-4 grid gap-2 text-sm font-medium">
                   <span className="flex items-center justify-between">
                     <span>Subtotal</span>
-                    <span>{formatUsd(subtotal)}</span>
+                    <span>{formatINR(subtotal)}</span>
                   </span>
                   {taxTotal > 0 ? (
                     <span className="flex items-center justify-between text-white/70">
                       <span>GST</span>
-                      <span>{formatUsd(taxTotal)}</span>
+                      <span>{formatINR(taxTotal)}</span>
                     </span>
                   ) : null}
                   <span className="flex items-center justify-between text-lg">
                     <span>Total</span>
-                    <span>{formatUsd(grandTotal)}</span>
+                    <span>{formatINR(grandTotal)}</span>
                   </span>
                 </span>
                 <span className={glassButtonClassName({ className: "type-button block h-14 w-full rounded-full text-center text-base leading-[3.5rem]" })}>
@@ -188,7 +188,7 @@ export function CartDrawer() {
                     </span>
                     <span>
                       <span className="type-card-title block text-sm">{product.name}</span>
-                      <span className="type-price mt-1 block text-xs font-medium text-white/50">From {formatUsd(product.price)}</span>
+                      <span className="type-price mt-1 block text-xs font-medium text-white/50">From {formatINR(product.price)}</span>
                     </span>
                   </button>
                 ))}

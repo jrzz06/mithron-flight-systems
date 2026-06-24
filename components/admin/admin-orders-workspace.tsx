@@ -6,6 +6,7 @@ import {
   OperationalFeedback,
   StatusBadge
 } from "@/components/admin/module-panel";
+import { formatINR } from "@/lib/utils";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 
 type AdminRow = Record<string, unknown>;
@@ -56,6 +57,11 @@ function text(value: unknown, fallback = "") {
 function numberText(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? String(parsed) : "0";
+}
+
+function moneyText(value: unknown) {
+  const parsed = Number(value ?? 0);
+  return formatINR(Number.isFinite(parsed) ? parsed : 0);
 }
 
 function publicOrderLabel(order: AdminRow) {
@@ -332,7 +338,7 @@ export function AdminOrdersWorkspace({
                       <div className="grid shrink-0 justify-items-end gap-1.5">
                         <StatusBadge status={text(order.status, "pending")} />
                         <span className="text-xs font-medium text-slate-400">
-                          {numberText(order.total)} {text(order.currency, "INR")}
+                          {moneyText(order.total)}
                         </span>
                       </div>
                     </div>
@@ -370,7 +376,7 @@ export function AdminOrdersWorkspace({
                       <StatusBadge status={text(selectedOrder.fulfillment_status, "pending")} />
                     </div>
                     <p className="mt-3 text-lg font-semibold text-slate-100">
-                      {numberText(selectedOrder.total)} {text(selectedOrder.currency, "INR")}
+                      {moneyText(selectedOrder.total)}
                     </p>
                     {text(metadata.enquiry_message) ? (
                       <p className="mt-3 text-sm leading-6 text-slate-400">
@@ -392,7 +398,7 @@ export function AdminOrdersWorkspace({
                       >
                         <div>
                           <p className="font-medium text-slate-100">{text(item.product_name, text(item.product_slug, "Product"))}</p>
-                          <p className="text-xs text-slate-500">Qty {numberText(item.quantity)} · {numberText(item.line_total)} {text(selectedOrder.currency, "INR")}</p>
+                          <p className="text-xs text-slate-500">Qty {numberText(item.quantity)} · {moneyText(item.line_total)}</p>
                         </div>
                         <p className="text-xs text-slate-500">Stock {numberText(stockRow?.available_quantity)}</p>
                       </div>

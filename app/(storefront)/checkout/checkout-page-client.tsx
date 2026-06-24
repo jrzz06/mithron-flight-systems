@@ -9,7 +9,7 @@ import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
 import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { Button } from "@/components/ui/button";
-import { formatUsd } from "@/lib/utils";
+import { formatINR } from "@/lib/utils";
 import { useCartStore } from "@/store/cart";
 
 type AddressRow = {
@@ -122,14 +122,14 @@ function CheckoutInvoice({
               <p className="font-medium text-slate-900">{item.productName}</p>
               <p className="text-slate-600">{item.bundleName} x {item.quantity}</p>
             </div>
-            <p className="font-medium text-slate-900">{formatUsd(item.unitPrice * item.quantity)}</p>
+            <p className="font-medium text-slate-900">{formatINR(item.unitPrice * item.quantity)}</p>
           </div>
         ))}
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-base font-semibold text-slate-900">
         <span>Total</span>
-        <span>{formatUsd(completed.total)}</span>
+        <span>{formatINR(completed.total)}</span>
       </div>
 
       <p className="mt-4 text-sm text-slate-600">
@@ -650,23 +650,23 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
                     <p className="type-body mt-1 text-sm text-white/55">
                       {item.bundleName} x {item.quantity}
                     </p>
-                    <p className="type-price mt-3 font-bold">{formatUsd(item.unitPrice * item.quantity)}</p>
+                    <p className="type-price mt-3 font-bold">{formatINR(item.unitPrice * item.quantity)}</p>
                   </div>
                 ))}
                 <div className="type-price mt-3 grid gap-2 border-t border-white/10 pt-5 text-sm font-medium">
                   <div className="flex items-center justify-between text-white/75">
                     <span>Subtotal</span>
-                    <span>{formatUsd(subtotal)}</span>
+                    <span>{formatINR(subtotal)}</span>
                   </div>
                   {taxTotal > 0 ? (
                     <div className="flex items-center justify-between text-white/75">
                       <span>GST</span>
-                      <span>{formatUsd(taxTotal)}</span>
+                      <span>{formatINR(taxTotal)}</span>
                     </div>
                   ) : null}
                   <div className="flex items-center justify-between text-xl font-bold">
                     <span>Total</span>
-                    <span>{formatUsd(grandTotal)}</span>
+                    <span>{formatINR(grandTotal)}</span>
                   </div>
                 </div>
               </div>

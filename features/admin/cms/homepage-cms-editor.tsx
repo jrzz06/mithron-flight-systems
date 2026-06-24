@@ -223,8 +223,13 @@ function ShelfEditor({
         <Field label="Guide label" name="guide_label" defaultValue={shelf.guideLabel} />
         <Field label="Guide title" name="guide_title" defaultValue={shelf.guideTitle} />
         <Field label="Guide link" name="guide_href" defaultValue={shelf.guideHref} />
-        <Field label="Banner subtitle" name="hero_subtitle" defaultValue={shelf.heroSubtitle} />
-        <Field label="Banner body" name="hero_body" defaultValue={shelf.heroBody} />
+        <Field label="Banner eyebrow" name="hero_eyebrow" defaultValue={shelf.heroEyebrow} />
+        <Field
+          label="Banner heading override (optional)"
+          name="hero_subtitle"
+          defaultValue={shelf.heroSubtitle}
+        />
+        <Field label="Banner description" name="hero_body" defaultValue={shelf.heroBody} />
         <Field label="Banner CTA label" name="feature_cta" defaultValue={shelf.featureCta} />
         <Field label="Banner CTA link" name="hero_cta_href" defaultValue={shelf.heroCtaHref} />
         <CmsMediaField

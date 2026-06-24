@@ -8,6 +8,7 @@ import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import type { SimpleInventoryRow, SimpleInventoryStatus } from "@/services/simple-inventory-view";
 import { buildInventorySnapshot } from "@/services/inventory-csv";
+import { formatINR } from "@/lib/utils";
 
 type InventoryAction = (formData: FormData) => void | Promise<void>;
 
@@ -45,14 +46,6 @@ function statusLabel(status: SimpleInventoryStatus) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0
-  }).format(value);
 }
 
 function formatUpdated(value: string | null) {
@@ -506,7 +499,7 @@ export function InventoryManager({
         </div>
         <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Inventory value</p>
-          <p className="mt-1 text-lg font-semibold text-slate-100">{formatCurrency(inventorySummary.totalValue)}</p>
+          <p className="mt-1 text-lg font-semibold text-slate-100">{formatINR(inventorySummary.totalValue)}</p>
         </div>
         <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Low stock</p>

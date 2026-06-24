@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import type { Product } from "@/config/types";
 import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
-import { cn, formatUsd } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import styles from "./product-hover-card.module.css";
 
 type ProductHoverCardVariant = "rail" | "compact" | "catalog" | "related";
@@ -13,8 +13,8 @@ type ProductHoverCardCta = "pill" | "arrow" | "catalog";
 type ProductHoverCardPresentation = "standard" | "showroom";
 
 const imageHeights: Record<ProductHoverCardVariant, string> = {
-  rail: "h-[390px]",
-  compact: "h-[250px]",
+  rail: "h-[280px] md:h-[390px]",
+  compact: "h-[180px] md:h-[250px]",
   catalog: "h-[248px]",
   related: "h-44"
 };
@@ -85,7 +85,7 @@ export const ProductHoverCard = memo(function ProductHoverCard({
                 View System
                 <ArrowRight aria-hidden className={styles.ctaIcon} />
               </span>
-              <p className={styles.price}>From {formatUsd(product.price)}</p>
+              <p className={styles.price}>From {formatINR(product.price)}</p>
             </div>
           </div>
         </Link>
@@ -154,7 +154,7 @@ export const ProductHoverCard = memo(function ProductHoverCard({
             ) : cta === "arrow" ? (
               <span
                 aria-hidden
-                className="premium-product-card__cta premium-product-card__cta-pill grid size-[42px] place-items-center rounded-full"
+                className="premium-product-card__cta premium-product-card__cta-pill grid size-[44px] place-items-center rounded-full"
               >
                 <ArrowRight className="size-5" />
               </span>
@@ -166,7 +166,7 @@ export const ProductHoverCard = memo(function ProductHoverCard({
                 <ArrowRight aria-hidden className="size-4" />
               </span>
             )}
-            <span className="premium-product-card__price type-price min-w-0 shrink-0 font-bold text-right">From {formatUsd(product.price)}</span>
+            <span className="premium-product-card__price type-price min-w-0 shrink-0 font-bold text-right">From {formatINR(product.price)}</span>
           </div>
         </div>
       </Link>

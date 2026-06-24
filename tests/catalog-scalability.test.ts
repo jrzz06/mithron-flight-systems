@@ -14,8 +14,11 @@ describe("catalog scalability hardening", () => {
   it("routes storefront search through the catalog search API", () => {
     const searchRoute = readFileSync(join(process.cwd(), "app/api/catalog/search/route.ts"), "utf8");
     const searchOverlay = readFileSync(join(process.cwd(), "components/overlays/search-overlay.tsx"), "utf8");
+    const catalog = readFileSync(join(process.cwd(), "services/catalog.ts"), "utf8");
 
     expect(searchRoute).toContain("searchCatalogProducts");
     expect(searchOverlay).toContain("/api/catalog/search");
+    expect(searchOverlay).toContain("intent=index");
+    expect(catalog).toContain("fetchCatalogSearchRowsFallback");
   });
 });

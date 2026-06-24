@@ -14,7 +14,7 @@ export const heroSlides: HeroSlide[] = [
   {
     id: "ag10-arrival",
     productSlug: "source-agri-kisan-drone-small-8-liter",
-    title: "DRONE IS MITHRON",
+    title: "Drone is Mithron",
     subtitle: "Welcome to India's 1st & Leading Drone Ecosystem Aggregator",
     cta: "Visit Mithron Smart",
     href: HERO_EXTERNAL_CTA_HREF,
@@ -50,7 +50,7 @@ export const heroSlides: HeroSlide[] = [
   {
     id: "drone-ecosystem",
     productSlug: "source-v9-flight-controller-for-agriculture-drones",
-    title: "One Stop Drone Solution",
+    title: "One Stop Drone Mithron",
     subtitle: "Sales / Rental Service / Troubleshooting / Aggregation / Academics / Import / Loan",
     cta: "Visit Mithron Smart",
     href: HERO_EXTERNAL_CTA_HREF,

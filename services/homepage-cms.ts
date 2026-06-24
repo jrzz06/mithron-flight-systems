@@ -47,9 +47,37 @@ function sanitizeTestimonialsTitle(title: string, fallback: string) {
   return normalized || fallback;
 }
 
+function sanitizeLegacyShelfBanner(shelf: HomepageShelfCms, fallback: HomepageShelfCms): HomepageShelfCms {
+  const legacyEyebrows = new Set(["Mission Aircraft", "Parts & Service", "Import & Export"]);
+  const legacyBodies = [
+    "Welcome to India's 1st & Leading Drone Ecosystem Aggregator",
+    "Sales / Rental Service / Troubleshooting",
+    "A marketplace to connect for Global products"
+  ];
+  const legacySubtitles = new Set([
+    "Drone is Mithron",
+    "One Stop Drone Solution",
+    "Global Drone Connect",
+    "Systems Built for the Field",
+    "Keep Every Flight Scheduled",
+    "Source Across Borders"
+  ]);
+
+  return {
+    ...shelf,
+    heroEyebrow: legacyEyebrows.has(shelf.heroEyebrow) ? fallback.heroEyebrow : shelf.heroEyebrow,
+    heroSubtitle: legacySubtitles.has(shelf.heroSubtitle) ? fallback.heroSubtitle : shelf.heroSubtitle,
+    heroBody: legacyBodies.some((snippet) => shelf.heroBody.includes(snippet)) ? fallback.heroBody : shelf.heroBody,
+    featureCta: shelf.featureCta === "Visit Mithron Smart" ? fallback.featureCta : shelf.featureCta,
+    heroCtaHref:
+      shelf.heroCtaHref === "https://www.mithronsmart.com" ? fallback.heroCtaHref : shelf.heroCtaHref
+  };
+}
+
 function mergeShelf(partial: unknown, fallback: HomepageShelfCms): HomepageShelfCms {
   const row = isPlainRecord(partial) ? partial : {};
-  return {
+  return sanitizeLegacyShelfBanner(
+    {
     eyebrow: mergeField(optionalString(row.eyebrow), fallback.eyebrow),
     title: mergeField(optionalString(row.title), fallback.title),
     href: mergeHrefField(optionalString(row.href), fallback.href),
@@ -57,13 +85,16 @@ function mergeShelf(partial: unknown, fallback: HomepageShelfCms): HomepageShelf
     guideLabel: mergeField(optionalString(row.guideLabel), fallback.guideLabel),
     guideTitle: mergeField(optionalString(row.guideTitle), fallback.guideTitle),
     guideHref: mergeHrefField(optionalString(row.guideHref), fallback.guideHref),
+    heroEyebrow: mergeField(optionalString(row.heroEyebrow), fallback.heroEyebrow),
     heroSubtitle: mergeField(optionalString(row.heroSubtitle), fallback.heroSubtitle),
     heroBody: mergeField(optionalString(row.heroBody), fallback.heroBody),
     featureCta: mergeField(optionalString(row.featureCta), fallback.featureCta),
     heroCtaHref: mergeHrefField(optionalString(row.heroCtaHref), fallback.heroCtaHref),
     heroImageSrc: mergeField(optionalString(row.heroImageSrc), fallback.heroImageSrc),
     heroImageAlt: mergeField(optionalString(row.heroImageAlt), fallback.heroImageAlt)
-  };
+    },
+    fallback
+  );
 }
 
 function mergeMissionTile(partial: unknown, fallback: HomepageMissionTileCms): HomepageMissionTileCms {

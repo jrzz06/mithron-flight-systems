@@ -1,0 +1,1285 @@
+{
+  "version": 1,
+  "generated_at": "2026-06-24T17:24:49.472Z",
+  "mode": "APPLIED",
+  "summary": {
+    "candidates": 140,
+    "patched": 125,
+    "skipped": 15,
+    "errors": 0
+  },
+  "patches": [
+    {
+      "slug": "source-transmitter-and-receiver-h12",
+      "wix_slug": "transmitter-receiver-h12",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-aerofc-v2-flight-controller-compatible-with-open-source-firmware-and-gcs",
+      "wix_slug": "ag-fc-namoag-navigation-for-modern-agriculture-gps-combo-1",
+      "fields": [
+        "badge",
+        "gallery"
+      ]
+    },
+    {
+      "slug": "source-horizontal-landing-gear-16l-agri-drone",
+      "wix_slug": "copy-of-horizontal-landing-gear-16l-agri-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-x6-plus-motor-with-propeller-combo",
+      "wix_slug": "hobbywing-x6-plus-150-kv-d30-motor-for-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-5-liter-agri-drone",
+      "wix_slug": "agrow",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-8kg-seed-spreader-drone-tc-certified",
+      "wix_slug": "8kg-seed-spreader-drone-tc-certified",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-6s-25200mah-battery",
+      "wix_slug": "6s-25200mah",
+      "fields": [
+        "description"
+      ]
+    },
+    {
+      "slug": "source-tattu-22-2v-25c-6s-22000mah-gtech-lipo-battery",
+      "wix_slug": "tattu-22-2v-25c-6s-22000mah-gtech-lipo-battery",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-dual-purpose-drone-sprayer-seed-spreader-tc-certified",
+      "wix_slug": "dual-purpose-drone-sprayer-seed-spreader-tc-certified",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-a10e-10-liters-agri-dronever2",
+      "wix_slug": "bhumi-a10e-10-liters-tc-licensed-agri-drone-best-performance",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-8008sl-110kv-12s-voltage",
+      "wix_slug": "copy-of-110-sl-100kv-12s",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-10x-seeker-optical-zoom-cmera-survey-drone",
+      "wix_slug": "peregrine-with-10x-seeker-optical-zoom-cmera",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liters-agri-drone-4-in-1",
+      "wix_slug": "10-liters-tc-licensed-agri-drone-indegenous-airframe",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-siyi-a2-mini-ultra-wide-angle-fpv-gimbal-single-axis-camera-sensor",
+      "wix_slug": "siyi-a2-mini-ultra-wide-angle-fpv-gimbal-single-axis-camera-sensor",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-pluto-1-2-student-drone",
+      "wix_slug": "pluto-1-2",
+      "fields": [
+        "badge",
+        "gallery"
+      ]
+    },
+    {
+      "slug": "source-24mp-camera-survey-drone",
+      "wix_slug": "avispray-16-liters-tc-licensed-agri-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-gnss-module",
+      "wix_slug": "gnss-module",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-skyrc-pc1080-dual-channel-charger-for-agriculture-drone-batteries",
+      "wix_slug": "skyrc-pc1080-dual-channel-charger-for-agriculture-drone-batteries",
+      "fields": [
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-8l-pump",
+      "wix_slug": "hobbywing8l-pump",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-16l-agri-drone-ver2",
+      "wix_slug": "10l-agri-sprayer-drone-tc-certified",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liters-agri-drone-3-in-1",
+      "wix_slug": "10-liters-tc-licensed-agri-drone-3-acres-spray-in-1-go-1",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-voltrox-5v-1-5a",
+      "wix_slug": "voltrox-5v-1-5a",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-8025-pro-160kv-12s-voltage",
+      "wix_slug": "8025-pro-160kv-12s-voltage",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-18-inch-drone-frame",
+      "wix_slug": "18-inch-drone-frame",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-16-liters-agri-drone-tc-with-pilot-license",
+      "wix_slug": "avispray-16-liters-tc-licensed-agri-drone-tn-aed-subsidy",
+      "fields": [
+        "badge",
+        "specs",
+        "story",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-lipo-6s-10c-with-smart-bms-battery",
+      "wix_slug": "lipo-6s-10c",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-cs-050-current-sensor",
+      "wix_slug": "cs-050-current-sensor",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-mini-x-nano-4k-1-set-of-battery",
+      "wix_slug": "mini-x-nano-4k-1-set-of-battery",
+      "fields": [
+        "description",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liter-dual-agri-drone-with-spreader",
+      "wix_slug": "10-liter-dual-agri-drone-with-spreader",
+      "fields": [
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-transmitter-and-receiver-h16",
+      "wix_slug": "transmitter-receiver-h16",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-v9-flight-controller-for-agriculture-drones",
+      "wix_slug": "v9-flight-controller-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-12l-festo",
+      "wix_slug": "12l-festo",
+      "fields": [
+        "description"
+      ]
+    },
+    {
+      "slug": "source-4k-cinema-drone",
+      "wix_slug": "4k-cinema-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-8020-ipu-100kv-12s-voltage",
+      "wix_slug": "8020-pro-150kv-12s-voltage",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-6s-24000mah-battery",
+      "wix_slug": "6s-24000mah",
+      "fields": [
+        "description"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-xrotor-x8-motor-only-cw",
+      "wix_slug": "hobbywing-xrotor-x8-motor-only-cw-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-05-02-0095-eft-10l-tank-10l-standard-for-agricultural-drone-parts-e410p-e610p",
+      "wix_slug": "10-05-02-0093-eft-10l-tank-10l-battery-board-for-agricultural-drone-frame-parts",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10l-drone-with-6-nozzle-system-tc-certified",
+      "wix_slug": "10l-agri-sprayer-drone-with-6-nozzle-system-tc-certified",
+      "fields": [
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-power-cube-cables-set",
+      "wix_slug": "bharat-fc700-flight-controller",
+      "fields": [
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-jiyi-can-hub-12-module-for-k-flight-controller",
+      "wix_slug": "jiyi-can-hub-12-module-for-k-flight-controller",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10l-drone-with-safety-security",
+      "wix_slug": "10l-drone-with-safety-security",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-herewin-6s-16000mah-drone-battery",
+      "wix_slug": "herewin-6s-16000mah-drone-battery",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-guru-student-drone",
+      "wix_slug": "guru",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-3010-sets-of-propeller-only",
+      "wix_slug": "3010-sets-of-propeller-only",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-transmitter-t161z-super",
+      "wix_slug": "transmitter-t161z-super",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-skydroid-c10-three-axis-gimbal-camera",
+      "wix_slug": "skydroid-c10-three-axis-gimbal-camera",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-siyi-mk15-agriculture-transmitter-rc-controller",
+      "wix_slug": "siyi-mk15-agriculture-transmitter-rc-controller",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-siyi-mk-32-agriculture-transmitter-rc-controller-hdmi",
+      "wix_slug": "siyi-mk-32-agriculture-transmitter-rc-controller",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-agri-kisan-drone-small-8-liter",
+      "wix_slug": "agri-kisan-drone-small-8-liter",
+      "fields": [
+        "badge",
+        "bundles",
+        "gallery"
+      ]
+    },
+    {
+      "slug": "source-herewin-6s-22000mah-battery-with-protector-shield",
+      "wix_slug": "herewin-6s-22000mah-battery-with-free-battery-plates",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-drone-soccer-200-mm",
+      "wix_slug": "drone-soccer-200-mm",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-a10e-agri-drone-10-liters-base",
+      "wix_slug": "bhumi-a10e-10-liters-tc-licensed-agri-drone-best-performance-1",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-jiyi-k-v2-flight-controller-for-agriculture-drones",
+      "wix_slug": "jiyi-k-v2-flight-controller-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-xrotor-x6-plus-motor-only-cw-for-agriculture-drone",
+      "wix_slug": "hobbywing-xrotor-x6-plus-motor-only-cw-for-agriculture-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-pix4d-field-software",
+      "wix_slug": "pix4d-field-software",
+      "fields": [
+        "description",
+        "badge",
+        "source_fingerprint",
+        "gallery",
+        "source_images",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-vertical-landing-gear-10l-agri-drone",
+      "wix_slug": "vertical-landing-gear-10l-agri-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-siyi-a8-mini-4k-8mp-ultra-hd-6x-digital-zoom-gimbal-camera",
+      "wix_slug": "siyi-a8-mini-4k-8mp-ultra-hd-6x-digital-zoom-gimbal-camera",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-5l-pump-combo",
+      "wix_slug": "hobbywing-5l-pump-combo",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-xrotor-x6-plus-with-propeller-combo",
+      "wix_slug": "hobbywing-xrotor-x6-plus-motor-and-x6-plus-2388-or-2480-folding-propeller-combo",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-horizontal-landing-gear-10l-agri-drone",
+      "wix_slug": "3012-sets-of-propeller-with-adaptor",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-8020-pro-120kv-12s-voltage",
+      "wix_slug": "8020-pro-120kv-12s-voltage",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-pix4d-matic-software",
+      "wix_slug": "pix4d-matic-software",
+      "fields": [
+        "description",
+        "badge",
+        "source_fingerprint",
+        "source_images",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10l-agri-drone-with-basic-features",
+      "wix_slug": "10l-agri-sprayer-drone-tc-certified-2",
+      "fields": [
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-battery-plate-with-straps",
+      "wix_slug": "copy-of-vertical-landing-gear-16l-agri-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-skydroid-t12-agriculture-transmitter-rc-controller",
+      "wix_slug": "skydroid-t12-agriculture-transmitter-rc-controller",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-transmitter-and-receiver-t10",
+      "wix_slug": "transmitter-receiver-t10",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-tank-outlet-cap",
+      "wix_slug": "tank-outlet-cap",
+      "fields": [
+        "description"
+      ]
+    },
+    {
+      "slug": "source-nuno-no-tc-required",
+      "wix_slug": "nuno",
+      "fields": [
+        "badge",
+        "story",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-2480-propellers-cw-or-ccw",
+      "wix_slug": "hobbywing-x6-plus-2480-propellers-with-hub-cw",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-xrotor-x6-plus-motor-only-ccw-for-agriculture-drones",
+      "wix_slug": "hobbywing-xrotor-x6-plus-motor-only-ccw-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-x8-3011-propellers-with-mount-ccw",
+      "wix_slug": "hobbywing-x8-3011-propellers-only-with-hub-ccw-1",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-15-liters-agri-drone",
+      "wix_slug": "15-liters-tc-licensed-agri-drone",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-16l-type-certified-agri-drone",
+      "wix_slug": "16l-type-certified-agri-drone",
+      "fields": [
+        "badge",
+        "gallery"
+      ]
+    },
+    {
+      "slug": "source-ag-fc-namoag-gps-with-aerogcs-green-software-combo",
+      "wix_slug": "ag-fc-namoag-navigation-for-modern-agriculture-with-aerogcs-software",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10l-agri-spraycopter",
+      "wix_slug": "spraycoptor-10l-drone-tc-certified",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "bundles",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liters-agri-drone-3-in-1-ver-2",
+      "wix_slug": "10-liters-tc-licensed-agri-drone-3-acres-spray-in-1-go",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-8015sl-100kv-12s-voltage",
+      "wix_slug": "8015sl-100kv-12s-voltage",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-mini-x-nano-4k-videography-drone",
+      "wix_slug": "mini-x-nano-4k-videography-drone",
+      "fields": [
+        "description",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-3012-sets-of-propeller-only",
+      "wix_slug": "3012-sets-of-propeller-only",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-3010-sets-of-propeller-with-adaptor",
+      "wix_slug": "3010-sets-of-propeller-with-adaptor",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-soccer-drone",
+      "wix_slug": "soccer-drone",
+      "fields": [
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-skydroid-h12-with-inbuilt-screen-and-camera-remote-control",
+      "wix_slug": "skydroid-h12-with-inbuilt-screen-and-camera-remote-control",
+      "fields": [
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-16-liters-agri-drone-base",
+      "wix_slug": "avispray-16-liters-tc-indigenous-frame-design-base-model",
+      "fields": [
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-pluto-x-student-drone",
+      "wix_slug": "pluto-x",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-ag-fc-with-aerogcs-green-combo",
+      "wix_slug": "ag-fc-with-aerogcs-green-combo",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-dual-purpose-drone",
+      "wix_slug": "dual-purpose-drone-sprayer-seed-spreader-tc-certified-1",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liters-tc-licensed-agri-drone",
+      "wix_slug": "10-liters-tc-licensed-agri-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-25000mah-6s-non-smart-battery-600-cycles",
+      "wix_slug": "copy-of-25000mah-6s-non-smart-battery-600-cycles",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liters-agri-drone-with-safety-sensors",
+      "wix_slug": "10-liters-tc-licensed-agri-drone-with-obstacle-sensors",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hpc-3-power-cube",
+      "wix_slug": "hpc-3-power-cube",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-transmitter-and-receiver-h12-pro",
+      "wix_slug": "transmitter-receiver-h12-pro",
+      "fields": [
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-vertical-landing-gear-16l-agri-drone",
+      "wix_slug": "vertical-landing-gear-16l-agri-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-eft-10l-tank-with-battery-plate",
+      "wix_slug": "10-05-02-0111-eft-uav-parts-classic-tank-20l-standard-for-e-series-agricultural",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-voltrox-12v-1-5a",
+      "wix_slug": "voltrox-12v-1-5a",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-aero-fc-v2-namoag-navigation-for-modern-agriculture-gps-combo",
+      "wix_slug": "ag-fc-namoag-navigation-for-modern-agriculture-gps-combo",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-2408-sets-of-propeller-with-adaptor",
+      "wix_slug": "2408-sets-of-propeller-with-adaptor",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-x8-3011-propellers-cw",
+      "wix_slug": "hobbywing-x8-3011-propellers-only-with-hub-cw",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-4006sl-380-kv",
+      "wix_slug": "4006sl-380-kv",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-8l-pump-combo",
+      "wix_slug": "hobbywing8l-pump-combo",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-2408-sets-of-propeller-only",
+      "wix_slug": "2408-sets-of-propeller-only",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-transmitter-and-receiverh16pro",
+      "wix_slug": "transmitter-receiverh16pro",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-monal-4k",
+      "wix_slug": "monal-4k",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-drone-soccer-150-mm",
+      "wix_slug": "drone-soccer-150-mm",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-pix4d-survey-software",
+      "wix_slug": "pix4d-survey-software",
+      "fields": [
+        "description",
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-pix4d-mapper-software",
+      "wix_slug": "pix4d-mapper-software",
+      "fields": [
+        "description",
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-gnss-receiver-rs2-with-tripod-and-tribrach",
+      "wix_slug": "gnss-receiver-rs2-with-tripod-tribrach",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-counter-rotating-8008-pro-100kv-12s",
+      "wix_slug": "counter-rotating-8008-pro-100kv-12s",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-jetcore-carrier-board",
+      "wix_slug": "jetcore-carrier-board",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-agri-kisan-drone-medium-10-liter",
+      "wix_slug": "agri-kisan-drone-medium-10-liter-1",
+      "fields": [
+        "badge",
+        "bundles",
+        "gallery"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-xrotor-x8-motor-only-ccw-for-agriculture-drones",
+      "wix_slug": "hobbywing-xrotor-x8-motor-only-ccw-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10l-hexa-air-frame",
+      "wix_slug": "hobbywing-dc-agri-drone-brushless-pump",
+      "fields": [
+        "description",
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-2480-propellers-with-mount-ccw",
+      "wix_slug": "hobbywing-x6-plus-2480-propellers-only-with-hub-ccw",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-namoag",
+      "wix_slug": "namoag",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-xt60-female-connectors",
+      "wix_slug": "xt60-female-connectors",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-jiyi-terrain-following-radar-for-agriculture-drones",
+      "wix_slug": "jiyi-terrain-following-radar-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-mk2-flight-core",
+      "wix_slug": "mk2-flight-core",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-water-pump-5l-for-agriculture-drones",
+      "wix_slug": "hobbywing-water-pump-5l-for-agriculture-drones",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-hobbywing-xrotor-x8-motor-only-cw-for-agriculture-drones",
+      "wix_slug": "hobbywing-xrotor-x8-motor-only-cw-for-agriculture-drones-1",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-25000mah-6s-smart-battery-600-cycles",
+      "wix_slug": "25000mah-6s-smart-battery-600-cycles",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-10-liter-dual-agri-drone",
+      "wix_slug": "avispray-10c",
+      "fields": [
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-multispectral-camera-survey-drone",
+      "wix_slug": "peregrine-with-multispectral-camera",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "story",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-15-inch-drone-frame",
+      "wix_slug": "15-inch-drone-frame",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-sky-pro-4k-videography-drone",
+      "wix_slug": "sky-pro-4k-videography-drone",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "gallery",
+        "anchors"
+      ]
+    },
+    {
+      "slug": "source-li-ion-14s-11c-battery",
+      "wix_slug": "li-ion-14s-11c",
+      "fields": [
+        "badge"
+      ]
+    },
+    {
+      "slug": "source-10l-agri-drone-best-price",
+      "wix_slug": "10l-agri-sprayer-drone-tc-certified-1",
+      "fields": [
+        "description",
+        "badge",
+        "specs",
+        "anchors"
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "slug": "source-propeller-guard",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "pixy-lr",
+      "reason": "no_wix_match"
+    },
+    {
+      "slug": "zio",
+      "reason": "no_wix_match"
+    },
+    {
+      "slug": "dasfsdf",
+      "reason": "no_wix_match"
+    },
+    {
+      "slug": "source-decafly-d5x-battery-frame",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-decafly-d5x-3d-printed-arm-white",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-monal-4k-thermal",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "pixy-mr",
+      "reason": "no_wix_match"
+    },
+    {
+      "slug": "g-hadron",
+      "reason": "no_wix_match"
+    },
+    {
+      "slug": "source-decafly-d5x-cfrp-frame",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-flybox-delivery-drone",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-decafly-d5x-landing-gear",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-cfrp-plate",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-decafly-d5x-cfrp-arm-black",
+      "reason": "already_complete"
+    },
+    {
+      "slug": "source-drone-decafly-d5x",
+      "reason": "already_complete"
+    }
+  ],
+  "errors": []
+}

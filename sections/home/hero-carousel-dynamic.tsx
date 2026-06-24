@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import type { HeroSlide } from "@/config/types";
 
-function HeroCarouselSkeleton() {
+export function HeroCarouselSkeleton() {
   return (
     <section
       id="hero"

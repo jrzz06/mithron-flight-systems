@@ -34,7 +34,7 @@ export function CartNavButton() {
       onFocus={handlePointerEnter}
       onPointerEnter={handlePointerEnter}
       onClick={() => setCartOpen(true)}
-      className="adaptive-navbar__icon nav-interactive nav-interactive--subtle relative inline-flex size-10 items-center justify-center rounded-full text-current"
+      className="adaptive-navbar__icon nav-interactive nav-interactive--subtle relative inline-flex size-11 items-center justify-center rounded-full text-current"
     >
       <ShoppingBag className="size-[18px]" />
       {displayCount > 0 ? (

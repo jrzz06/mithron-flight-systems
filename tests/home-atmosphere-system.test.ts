@@ -43,4 +43,23 @@ describe("home landing composite visual system", () => {
     expect(css).not.toContain("scale(1.08)");
     expect(css).not.toMatch(/rotateX|rotateY|translateY\(-12px\)|backdrop-filter:\s*blur\(20px\)/);
   });
+
+  it("uses medium spread light zones with bottom text scrims", () => {
+    const component = source("sections/home/home-landing-composite.tsx");
+    const css = source("sections/home/home-landing-composite.module.css");
+
+    expect(css).toMatch(/\.agriShowcaseAtmosphere,\s*\n\.cityShowcaseAtmosphere\s*{\s*display:\s*none;/s);
+    expect(component).toContain("missionLightZoneStyle");
+    expect(component).toContain('"--zone-1-x"');
+    expect(component).toContain("agrone-pilot-registration");
+    expect(component).toContain("dronelancer-model");
+    expect(css).toContain("--mission-asset-stage-height");
+    expect(css).toContain("--mission-text-scrim-height");
+    expect(css).toMatch(/\.agriCardAmbientBeam[\s\S]*opacity:\s*0\.32;/);
+    expect(css).toMatch(/\.agriCardTextProtection[\s\S]*linear-gradient\(\s*to top/s);
+    expect(css).toContain("mix-blend-mode: screen");
+    expect(css).toContain("background: #f8fcf9");
+    expect(css).toContain("background: #f7faff");
+    expect(css).toMatch(/\.agriSection \.agriCardCopy::before/);
+  });
 });

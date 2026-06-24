@@ -1,5 +1,30 @@
 export type NavbarInkTone = "light" | "dark";
 
+const FLUSH_HERO_LIGHT_NAV_ROUTES = new Set([
+  "/agriculture",
+  "/video-drones",
+  "/creative-drones",
+  "/mapping",
+  "/surveillance",
+  "/accessories",
+  "/industrial"
+]);
+
+export function normalizeStorefrontPath(pathname: string | null) {
+  if (!pathname) return "/";
+  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
+  return pathname;
+}
+
+/** SSR-safe navbar ink before client-side hero sampling runs. */
+export function resolveInitialNavbarTone(pathname: string | null): NavbarInkTone {
+  const normalized = normalizeStorefrontPath(pathname);
+  if (normalized === "/") return "light";
+  if (normalized.startsWith("/category/")) return "light";
+  if (FLUSH_HERO_LIGHT_NAV_ROUTES.has(normalized)) return "light";
+  return "dark";
+}
+
 const LUMINANCE_LIGHT_THRESHOLD = 0.58;
 
 function luminanceFromRgb(r: number, g: number, b: number) {

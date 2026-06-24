@@ -6,6 +6,7 @@ import { getPublishedProductSitemapEntries } from "@/services/catalog";
 const STATIC_STOREFRONT_PATHS = [
   "/",
   "/products",
+  "/search",
   "/about",
   "/contact",
   "/product/mithron-care-plus"

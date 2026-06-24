@@ -9,9 +9,11 @@ function source(path: string) {
 }
 
 describe("catalog media precedence", () => {
-  it("keeps Supabase product_media_assets as the sole runtime source of truth", () => {
+  it("prefers Supabase media, with external https URLs as catalog fallback", () => {
     const catalog = source("services/catalog.ts");
     expect(catalog).toContain("isSupabaseStorageSrc");
+    expect(catalog).toContain("isExternalHttpsSrc");
+    expect(catalog).toContain("externalRowImage");
     expect(catalog).not.toContain("wixstatic");
     expect(catalog).toContain("inline JSON image fallback");
   });
@@ -22,5 +24,17 @@ describe("catalog media precedence", () => {
     expect(catalog).toContain("countPublishedProductsWithoutPrimaryLink");
     expect(admin).toContain("publishedProductsWithoutPrimaryLink");
     expect(admin).toContain("mediaParityVerified");
+  });
+
+  it("skips enterprise menu products that are missing source images", () => {
+    const catalog = source("services/catalog.ts");
+    const layout = source("app/(storefront)/layout.tsx");
+    expect(catalog).toContain("export type CatalogDataError");
+    expect(catalog).toContain("export type EnterpriseMenuLoadResult");
+    expect(catalog).toContain("createMissingSourceImageError");
+    expect(catalog).toContain("errors.push(error)");
+    expect(catalog).toContain("export async function loadProductForPage");
+    expect(layout).toContain("catalogErrors={enterpriseMenu.errors}");
+    expect(layout).toContain("enterpriseMenu.products");
   });
 });

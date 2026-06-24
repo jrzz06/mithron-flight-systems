@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   checkDistributedRateLimit: vi.fn(),
   getCartDrawerSuggestions: vi.fn(),
+  getCatalogSearchIndex: vi.fn(),
   getFeaturedSearchProducts: vi.fn(),
   searchCatalogProducts: vi.fn()
 }));
@@ -13,6 +14,7 @@ vi.mock("@/lib/rate-limit-redis", () => ({
 
 vi.mock("@/services/catalog", () => ({
   getCartDrawerSuggestions: mocks.getCartDrawerSuggestions,
+  getCatalogSearchIndex: mocks.getCatalogSearchIndex,
   getFeaturedSearchProducts: mocks.getFeaturedSearchProducts,
   searchCatalogProducts: mocks.searchCatalogProducts
 }));
@@ -23,6 +25,9 @@ describe("catalog search API route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.checkDistributedRateLimit.mockResolvedValue({ allowed: true });
+    mocks.getCatalogSearchIndex.mockResolvedValue([
+      { slug: "pixy-lr", name: "Pixy LR", price: 1000, tagline: "", category: "Video Drones", image: { src: "/a.png", alt: "Pixy LR" }, searchText: "pixy lr", sortOrder: 1 }
+    ]);
     mocks.getFeaturedSearchProducts.mockResolvedValue([
       { slug: "pixy-lr", name: "Pixy LR", price: 1000 }
     ]);
@@ -32,6 +37,17 @@ describe("catalog search API route", () => {
     mocks.searchCatalogProducts.mockResolvedValue([
       { slug: "pixy-mr", name: "Pixy MR", price: 3000 }
     ]);
+  });
+
+  it("returns the cached search index for intent=index", async () => {
+    const response = await GET(new Request("http://localhost/api/catalog/search?intent=index"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toContain("s-maxage=300");
+    expect(mocks.checkDistributedRateLimit).not.toHaveBeenCalled();
+
+    const payload = await response.json() as { index: Array<{ slug: string }> };
+    expect(payload.index).toHaveLength(1);
+    expect(mocks.getCatalogSearchIndex).toHaveBeenCalled();
   });
 
   it("returns featured products for empty query", async () => {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fragment, type CSSProperties, type ReactNode } from "react";
+import { type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, Star } from "lucide-react";
 import type { Product, MediaAsset } from "@/config/types";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -21,7 +21,7 @@ import {
   resolveHomepageShelf
 } from "@/lib/product-shelf-classification";
 import { pickHomeMiniCarouselItems } from "@/lib/home/mini-carousel";
-import { formatUsd } from "@/lib/utils";
+import { formatINR } from "@/lib/utils";
 import { sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import type { ProductReviewContent } from "@/config/storefront-content";
 import { HomeCompositeSection } from "@/sections/home/home-composite-section";
@@ -69,6 +69,7 @@ type ProductShelfConfig = {
   guideLabel: string;
   guideTitle: string;
   guideHref: string;
+  heroEyebrow: string;
   heroSubtitle: string;
   heroBody: string;
   featureCta: string;
@@ -196,10 +197,11 @@ const productShelfConfigs: Record<"drone-world" | "drone-care" | "global-product
     guideLabel: "Buying Guides",
     guideTitle: "Which Drone Fits Your Mission?",
     guideHref: "/products",
-    heroSubtitle: "DRONE IS MITHRON",
-    heroBody: "Welcome to India's 1st & Leading Drone Ecosystem Aggregator",
-    featureCta: "Visit Mithron Smart",
-    heroCtaHref: "https://www.mithronsmart.com",
+    heroEyebrow: "Featured Collection",
+    heroSubtitle: "",
+    heroBody: "Aircraft and mission-ready systems from the published catalog.",
+    featureCta: "View catalog",
+    heroCtaHref: "/products",
     tone: "world"
   },
   "drone-care": {
@@ -215,10 +217,11 @@ const productShelfConfigs: Record<"drone-world" | "drone-care" | "global-product
     guideLabel: "Care Guides",
     guideTitle: "Build a Reliable Spares Kit",
     guideHref: "/accessories",
-    heroSubtitle: "One Stop Drone Solution",
-    heroBody: "Sales / Rental Service / Troubleshooting / Aggregation / Academics / Import / Loan",
-    featureCta: "Visit Mithron Smart",
-    heroCtaHref: "https://www.mithronsmart.com",
+    heroEyebrow: "Essential Care",
+    heroSubtitle: "",
+    heroBody: "Batteries, propellers, controllers, and spares for your fleet.",
+    featureCta: "Shop care",
+    heroCtaHref: "/accessories",
     tone: "care"
   },
   "global-products": {
@@ -234,10 +237,11 @@ const productShelfConfigs: Record<"drone-world" | "drone-care" | "global-product
     guideLabel: "Catalog Guides",
     guideTitle: "Compare Mission Systems",
     guideHref: "/products",
-    heroSubtitle: "Global Drone Connect",
-    heroBody: "A marketplace to connect for Global products Import and Export / Live Price Bid",
-    featureCta: "Visit Mithron Smart",
-    heroCtaHref: "https://www.mithronsmart.com",
+    heroEyebrow: "Global Selection",
+    heroSubtitle: "",
+    heroBody: "Specialist platforms for teams sourcing across regions.",
+    featureCta: "Browse global",
+    heroCtaHref: "/products",
     tone: "global"
   }
 };
@@ -418,6 +422,31 @@ function compactProductMeta(product: Product) {
   return { label, detail };
 }
 
+function formatShelfProductName(name: string): string {
+  const tokens = name.match(/\[[^\]]+\]|\S+/g);
+  if (!tokens) {
+    return name;
+  }
+
+  return tokens
+    .map((token) => {
+      if (/^\[[^\]]+\]$/.test(token)) {
+        return token;
+      }
+
+      if (/^\d+K$/i.test(token) || /^\d+KG$/i.test(token)) {
+        return token.toUpperCase();
+      }
+
+      if (/^[A-Z0-9]{2,}$/.test(token) && token === token.toUpperCase()) {
+        return token;
+      }
+
+      return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
 function ProductShelfSection({
   chapter,
   config,
@@ -429,6 +458,7 @@ function ProductShelfSection({
 }) {
   const shelfProducts = pickShelfProducts(products, config);
   const cardProducts = shelfProducts.slice(0, 4);
+  const guideUsesOptionA = config.tone === "world" || config.tone === "care";
   const guideMedia = cardProducts[0]?.image ?? null;
 
   return (
@@ -462,6 +492,7 @@ function ProductShelfSection({
             <div
               className={styles.productShelfGrid}
               data-testid="home-product-shelf-grid"
+              data-shelf-layout={guideUsesOptionA ? "option-a" : "standard"}
               aria-label={`${config.title} catalog-backed board`}
             >
               {cardProducts.map((product, productIndex) => (
@@ -492,12 +523,12 @@ function ProductShelfSection({
                           <span>{meta.label}</span>
                           {meta.detail ? ` · ${meta.detail}` : null}
                         </p>
-                        <h3 className={styles.productName}>{product.name}</h3>
-                      <div className={styles.productFooter}>
-                        <span>{formatUsd(product.price)}</span>
-                        <span className={styles.productBuyNow}>Buy Now</span>
-                        <span className={styles.productActionDot} aria-hidden="true" />
-                      </div>
+                        <h3 className={styles.productName}>{formatShelfProductName(product.name)}</h3>
+                        <div className={styles.productFooter}>
+                          <span>{formatINR(product.price)}</span>
+                          <span className={styles.productBuyNow}>Buy Now</span>
+                          <span className={styles.productActionDot} aria-hidden="true" />
+                        </div>
                       </div>
                     </Link>
                   );
@@ -526,6 +557,7 @@ function ProductShelfSection({
                       alt=""
                       aria-hidden={true}
                       fill
+                      responsive={guideMedia.responsive}
                       sizes="(max-width: 640px) 72vw, 280px"
                       className={styles.guideImage}
                     />
@@ -540,8 +572,9 @@ function ProductShelfSection({
             className={styles.productShelfHero}
             data-testid="home-product-shelf-hero"
             data-navbar-ink={shelfNavbarInk(config.tone)}
-            target="_blank"
-            rel="noopener noreferrer"
+            {...(/^https?:\/\//i.test(config.heroCtaHref)
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
           >
             <span className={styles.shelfHeroBackdrop} aria-hidden="true">
               <MithronShelfHeroImage
@@ -552,7 +585,14 @@ function ProductShelfSection({
               />
             </span>
             <span className={styles.shelfHeroCopy}>
+              {(config.heroEyebrow || config.eyebrow) ? (
+                <span className={styles.shelfHeroEyebrow}>{config.heroEyebrow || config.eyebrow}</span>
+              ) : null}
               <span className={styles.shelfHeroHeading}>{config.title}</span>
+              {config.heroBody ? <span className={styles.shelfHeroBody}>{config.heroBody}</span> : null}
+              {config.featureCta ? (
+                <span className={styles.shelfHeroCta}>{config.featureCta}</span>
+              ) : null}
             </span>
           </a>
         </div>
@@ -879,6 +919,7 @@ export function HomeLandingComposite({
       guideLabel: cms.shelves.droneWorld.guideLabel,
       guideTitle: cms.shelves.droneWorld.guideTitle,
       guideHref: cms.shelves.droneWorld.guideHref,
+      heroEyebrow: cms.shelves.droneWorld.heroEyebrow,
       heroSubtitle: cms.shelves.droneWorld.heroSubtitle,
       heroBody: cms.shelves.droneWorld.heroBody,
       featureCta: cms.shelves.droneWorld.featureCta,
@@ -893,6 +934,7 @@ export function HomeLandingComposite({
       guideLabel: cms.shelves.droneCare.guideLabel,
       guideTitle: cms.shelves.droneCare.guideTitle,
       guideHref: cms.shelves.droneCare.guideHref,
+      heroEyebrow: cms.shelves.droneCare.heroEyebrow,
       heroSubtitle: cms.shelves.droneCare.heroSubtitle,
       heroBody: cms.shelves.droneCare.heroBody,
       featureCta: cms.shelves.droneCare.featureCta,
@@ -907,6 +949,7 @@ export function HomeLandingComposite({
       guideLabel: cms.shelves.globalProducts.guideLabel,
       guideTitle: cms.shelves.globalProducts.guideTitle,
       guideHref: cms.shelves.globalProducts.guideHref,
+      heroEyebrow: cms.shelves.globalProducts.heroEyebrow,
       heroSubtitle: cms.shelves.globalProducts.heroSubtitle,
       heroBody: cms.shelves.globalProducts.heroBody,
       featureCta: cms.shelves.globalProducts.featureCta,
@@ -1035,43 +1078,163 @@ export function HomeLandingComposite({
 }
 
 function formatMissionHeadline(title: string) {
-  const words = title.trim().split(/\s+/).map((word) => word.toUpperCase());
-  return words.map((word, index) => (
-    <Fragment key={`${word}-${index}`}>
-      {index > 0 ? <br /> : null}
-      {word}
-    </Fragment>
-  ));
+  return title.trim().toUpperCase();
 }
 
-const agriImagePresentation: Record<
-  string,
-  { objectPosition: string; scale: number; transformOrigin: string }
-> = {
+type MissionLightPoint = { x: string; y: string };
+
+type MissionLightZones = {
+  zone1: MissionLightPoint;
+  zone2: MissionLightPoint;
+  zone3: MissionLightPoint;
+  zone4: MissionLightPoint;
+};
+
+type MissionZoneColors = {
+  zone1: string;
+  zone2: string;
+  zone3: string;
+  zone4: string;
+};
+
+type MissionImagePresentation = {
+  objectPosition: string;
+  scale: number;
+  transformOrigin: string;
+  zones: MissionLightZones;
+  zoneColors: MissionZoneColors;
+};
+
+const defaultAgriZones: MissionLightZones = {
+  zone1: { x: "52%", y: "40%" },
+  zone2: { x: "22%", y: "62%" },
+  zone3: { x: "74%", y: "42%" },
+  zone4: { x: "90%", y: "8%" }
+};
+
+const defaultAgriZoneColors: MissionZoneColors = {
+  zone1: "42, 195, 135",
+  zone2: "118, 195, 155",
+  zone3: "210, 225, 95",
+  zone4: "255, 215, 145"
+};
+
+const defaultCityZones: MissionLightZones = {
+  zone1: { x: "50%", y: "36%" },
+  zone2: { x: "24%", y: "54%" },
+  zone3: { x: "72%", y: "22%" },
+  zone4: { x: "90%", y: "8%" }
+};
+
+const defaultCityZoneColors: MissionZoneColors = {
+  zone1: "55, 145, 245",
+  zone2: "110, 195, 255",
+  zone3: "215, 242, 255",
+  zone4: "130, 225, 248"
+};
+
+function missionLightZoneStyle(zones: MissionLightZones, zoneColors: MissionZoneColors): CSSProperties {
+  return {
+    "--zone-1-x": zones.zone1.x,
+    "--zone-1-y": zones.zone1.y,
+    "--zone-2-x": zones.zone2.x,
+    "--zone-2-y": zones.zone2.y,
+    "--zone-3-x": zones.zone3.x,
+    "--zone-3-y": zones.zone3.y,
+    "--zone-4-x": zones.zone4.x,
+    "--zone-4-y": zones.zone4.y,
+    "--zone-1-color": zoneColors.zone1,
+    "--zone-2-color": zoneColors.zone2,
+    "--zone-3-color": zoneColors.zone3,
+    "--zone-4-color": zoneColors.zone4
+  } as CSSProperties;
+}
+
+const agriImagePresentation: Record<string, MissionImagePresentation> = {
   "agrone-drone-owner-registration": {
     objectPosition: "50% 36%",
     scale: 1.18,
-    transformOrigin: "50% 34%"
+    transformOrigin: "50% 34%",
+    zones: {
+      zone1: { x: "50%", y: "38%" },
+      zone2: { x: "22%", y: "58%" },
+      zone3: { x: "76%", y: "46%" },
+      zone4: { x: "90%", y: "8%" }
+    },
+    zoneColors: {
+      zone1: "38, 188, 128",
+      zone2: "108, 188, 148",
+      zone3: "205, 220, 88",
+      zone4: "255, 210, 138"
+    }
   },
   "agrone-pilot-registration": {
     objectPosition: "50% 34%",
     scale: 1.22,
-    transformOrigin: "50% 30%"
+    transformOrigin: "50% 30%",
+    zones: {
+      zone1: { x: "58%", y: "42%" },
+      zone2: { x: "32%", y: "55%" },
+      zone3: { x: "72%", y: "22%" },
+      zone4: { x: "92%", y: "6%" }
+    },
+    zoneColors: {
+      zone1: "32, 178, 118",
+      zone2: "98, 188, 158",
+      zone3: "195, 228, 88",
+      zone4: "255, 205, 128"
+    }
   },
   "all-india-drone-farmer": {
     objectPosition: "56% 38%",
     scale: 1.2,
-    transformOrigin: "52% 36%"
+    transformOrigin: "52% 36%",
+    zones: {
+      zone1: { x: "56%", y: "40%" },
+      zone2: { x: "16%", y: "64%" },
+      zone3: { x: "76%", y: "52%" },
+      zone4: { x: "88%", y: "10%" }
+    },
+    zoneColors: {
+      zone1: "48, 195, 108",
+      zone2: "128, 198, 138",
+      zone3: "235, 205, 88",
+      zone4: "255, 215, 148"
+    }
   },
   "smart-farmer-register": {
     objectPosition: "50% 38%",
     scale: 1.14,
-    transformOrigin: "50% 36%"
+    transformOrigin: "50% 36%",
+    zones: {
+      zone1: { x: "50%", y: "40%" },
+      zone2: { x: "24%", y: "58%" },
+      zone3: { x: "72%", y: "35%" },
+      zone4: { x: "92%", y: "8%" }
+    },
+    zoneColors: {
+      zone1: "58, 185, 98",
+      zone2: "138, 205, 128",
+      zone3: "225, 210, 78",
+      zone4: "255, 212, 132"
+    }
   },
   "agri-drone-loan": {
     objectPosition: "50% 38%",
     scale: 1.14,
-    transformOrigin: "50% 36%"
+    transformOrigin: "50% 36%",
+    zones: {
+      zone1: { x: "42%", y: "38%" },
+      zone2: { x: "68%", y: "50%" },
+      zone3: { x: "55%", y: "28%" },
+      zone4: { x: "90%", y: "10%" }
+    },
+    zoneColors: {
+      zone1: "38, 175, 128",
+      zone2: "98, 175, 205",
+      zone3: "148, 215, 148",
+      zone4: "255, 208, 128"
+    }
   }
 };
 
@@ -1086,7 +1249,13 @@ function getAgriImagePresentation(src: string, cardType: "tall" | "hero" | "stan
 
   const fallbackScale =
     cardType === "standard" ? 1.12 : cardType === "hero" ? 1.18 : cardType === "wide" ? 1.16 : 1.15;
-  return { objectPosition: "50% 36%", scale: fallbackScale, transformOrigin: "50% 34%" };
+  return {
+    objectPosition: "50% 36%",
+    scale: fallbackScale,
+    transformOrigin: "50% 34%",
+    zones: defaultAgriZones,
+    zoneColors: defaultAgriZoneColors
+  };
 }
 
 function renderMissionWorldTile(
@@ -1148,7 +1317,8 @@ function AgriCommunityWorldSection({
       "data-dominant": cardType === "hero" ? "true" : "false",
       style: {
         "--agri-image-scale": String(imagePresentation.scale),
-        "--agri-object-position": imagePresentation.objectPosition
+        "--agri-object-position": imagePresentation.objectPosition,
+        ...missionLightZoneStyle(imagePresentation.zones, imagePresentation.zoneColors)
       } as CSSProperties
     };
 
@@ -1174,7 +1344,15 @@ function AgriCommunityWorldSection({
             transformOrigin: imagePresentation.transformOrigin
           }}
         />
-        <span className={styles.agriCardOverlay} />
+        <span
+          className={`${styles.agriCardAmbient} ${cardType === "hero" ? styles.agriCardAmbientDominant : ""}`}
+          aria-hidden="true"
+        >
+          <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientBeam}`} />
+          <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientWash}`} />
+          <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientAccent}`} />
+        </span>
+        <span className={styles.agriCardTextProtection} aria-hidden="true" />
         <span className={styles.agriCardCopy}>
           <strong>{tile.label}</strong>
           <span>{tile.body}</span>
@@ -1200,7 +1378,9 @@ function AgriCommunityWorldSection({
       data-testid="agri-community-world-section"
     >
       <div className={styles.agriContainer}>
-        <div className={styles.agriGridLayout}>
+        <div className={styles.agriShowcaseStage}>
+          <span className={styles.agriShowcaseAtmosphere} aria-hidden="true" />
+          <div className={styles.agriGridLayout}>
           {/* LEFT COLUMN */}
           <div className={styles.agriLeftColumn}>
             <div className={styles.agriTextHeader}>
@@ -1239,39 +1419,97 @@ function AgriCommunityWorldSection({
             {renderAgriCard(config.tiles[2], "wide")}
           </div>
         </div>
+        </div>
       </div>
     </article>
   );
 }
 
-const cityImagePresentation: Record<
-  string,
-  { objectPosition: string; scale: number; transformOrigin: string }
-> = {
+const cityImagePresentation: Record<string, MissionImagePresentation> = {
   "dronelancer-model": {
     objectPosition: "50% 36%",
     scale: 1.18,
-    transformOrigin: "50% 34%"
+    transformOrigin: "50% 34%",
+    zones: {
+      zone1: { x: "52%", y: "34%" },
+      zone2: { x: "24%", y: "56%" },
+      zone3: { x: "70%", y: "20%" },
+      zone4: { x: "90%", y: "8%" }
+    },
+    zoneColors: {
+      zone1: "48, 138, 238",
+      zone2: "98, 188, 255",
+      zone3: "220, 245, 255",
+      zone4: "118, 225, 248"
+    }
   },
   "city-drone-rental-services-app": {
     objectPosition: "50% 42%",
     scale: 1.1,
-    transformOrigin: "50% 40%"
+    transformOrigin: "50% 40%",
+    zones: {
+      zone1: { x: "48%", y: "40%" },
+      zone2: { x: "22%", y: "56%" },
+      zone3: { x: "72%", y: "24%" },
+      zone4: { x: "92%", y: "10%" }
+    },
+    zoneColors: {
+      zone1: "42, 148, 235",
+      zone2: "108, 198, 255",
+      zone3: "235, 250, 255",
+      zone4: "125, 228, 248"
+    }
   },
   "all-drone-acadamic": {
     objectPosition: "50% 38%",
     scale: 1.1,
-    transformOrigin: "50% 36%"
+    transformOrigin: "50% 36%",
+    zones: {
+      zone1: { x: "50%", y: "36%" },
+      zone2: { x: "28%", y: "58%" },
+      zone3: { x: "74%", y: "22%" },
+      zone4: { x: "90%", y: "8%" }
+    },
+    zoneColors: {
+      zone1: "58, 128, 235",
+      zone2: "118, 168, 255",
+      zone3: "215, 240, 255",
+      zone4: "128, 225, 248"
+    }
   },
   "drone-franchisecare-center": {
     objectPosition: "50% 40%",
     scale: 1.08,
-    transformOrigin: "50% 38%"
+    transformOrigin: "50% 38%",
+    zones: {
+      zone1: { x: "52%", y: "38%" },
+      zone2: { x: "24%", y: "60%" },
+      zone3: { x: "70%", y: "26%" },
+      zone4: { x: "92%", y: "8%" }
+    },
+    zoneColors: {
+      zone1: "68, 128, 215",
+      zone2: "128, 168, 245",
+      zone3: "230, 248, 255",
+      zone4: "138, 228, 252"
+    }
   },
   "drone-technician-aggregation": {
     objectPosition: "50% 40%",
     scale: 1.08,
-    transformOrigin: "50% 38%"
+    transformOrigin: "50% 38%",
+    zones: {
+      zone1: { x: "50%", y: "38%" },
+      zone2: { x: "22%", y: "58%" },
+      zone3: { x: "72%", y: "24%" },
+      zone4: { x: "90%", y: "8%" }
+    },
+    zoneColors: {
+      zone1: "52, 148, 215",
+      zone2: "108, 188, 255",
+      zone3: "225, 248, 255",
+      zone4: "125, 228, 248"
+    }
   }
 };
 
@@ -1286,7 +1524,13 @@ function getCityImagePresentation(src: string, cardType: "tall" | "hero" | "stan
 
   const fallbackScale =
     cardType === "standard" ? 1.08 : cardType === "hero" ? 1.12 : cardType === "wide" ? 1.1 : 1.12;
-  return { objectPosition: "50% 40%", scale: fallbackScale, transformOrigin: "50% 38%" };
+  return {
+    objectPosition: "50% 40%",
+    scale: fallbackScale,
+    transformOrigin: "50% 38%",
+    zones: defaultCityZones,
+    zoneColors: defaultCityZoneColors
+  };
 }
 
 function CityDroneWorldSection({
@@ -1310,7 +1554,8 @@ function CityDroneWorldSection({
       "data-showcase-kind": "mission-image",
       "data-tile-size": cardType,
       "data-city-image": imageKey || undefined,
-      "data-dominant": cardType === "hero" ? "true" : "false"
+      "data-dominant": cardType === "hero" ? "true" : "false",
+      style: missionLightZoneStyle(imagePresentation.zones, imagePresentation.zoneColors)
     };
 
     const tileContent = (
@@ -1336,7 +1581,15 @@ function CityDroneWorldSection({
             ["--city-image-scale"]: String(imagePresentation.scale)
           } as CSSProperties}
         />
-        <span className={styles.cityCardOverlay} aria-hidden="true" />
+        <span
+          className={`${styles.cityCardAmbient} ${cardType === "hero" ? styles.cityCardAmbientDominant : ""}`}
+          aria-hidden="true"
+        >
+          <span className={`${styles.cityCardAmbientLayer} ${styles.cityCardAmbientBeam}`} />
+          <span className={`${styles.cityCardAmbientLayer} ${styles.cityCardAmbientWash}`} />
+          <span className={`${styles.cityCardAmbientLayer} ${styles.cityCardAmbientAccent}`} />
+        </span>
+        <span className={styles.cityCardTextProtection} aria-hidden="true" />
         <span className={styles.agriCardCopy}>
           <strong>{tile.label}</strong>
           <span>{tile.body}</span>
@@ -1362,7 +1615,9 @@ function CityDroneWorldSection({
       data-testid="city-drone-world-section"
     >
       <div className={styles.agriContainer}>
-        <div className={styles.cityBentoGrid}>
+        <div className={styles.cityShowcaseStage}>
+          <span className={styles.cityShowcaseAtmosphere} aria-hidden="true" />
+          <div className={styles.cityBentoGrid}>
           {renderCityCard(config.tiles[1], "hero", styles.citySlotHero)}
 
           <div className={styles.cityTextHeader}>
@@ -1382,6 +1637,7 @@ function CityDroneWorldSection({
           {renderCityCard(config.tiles[3], "standard", styles.citySlotStandardLeft)}
           {renderCityCard(config.tiles[4], "standard", styles.citySlotStandardRight)}
           {renderCityCard(config.tiles[2], "wide", styles.citySlotWide)}
+          </div>
         </div>
       </div>
     </article>

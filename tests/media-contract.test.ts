@@ -37,7 +37,7 @@ describe("cinematic media contract", () => {
     const [firstHero] = heroSlides;
     const manifest = getCriticalMediaManifest();
 
-    expect(firstHero?.title).toBe("DRONE IS MITHRON");
+    expect(firstHero?.title).toBe("Drone is Mithron");
     expect(firstHero?.poster.src).toMatch(/^\/assets\/hero\//);
     expect(firstHero?.video).toBeUndefined();
     expect(firstHero?.image.src).toMatch(/^\/assets\/hero\//);

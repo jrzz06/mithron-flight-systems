@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminSection } from "@/components/admin/module-panel";
 import { MetricGrid } from "@/components/platform";
+import { formatINR } from "@/lib/utils";
 import { getInventoryReportSummary, getSalesReportSummary, getSupplierReportSummary } from "@/services/reports";
 
 export default async function AdminReportsPage() {
@@ -22,7 +23,7 @@ export default async function AdminReportsPage() {
     <div className="grid gap-5">
       <MetricGrid
         metrics={[
-          { label: "Orders", value: String(sales.totalOrders), detail: `Revenue ₹${sales.revenue.toFixed(0)}` },
+          { label: "Orders", value: String(sales.totalOrders), detail: `Revenue ${formatINR(sales.revenue)}` },
           { label: "Supplier products", value: String(suppliers.total), detail: `${suppliers.pending} awaiting review` },
           { label: "Low stock", value: String(inventory.lowStock), detail: `${inventory.outOfStock} out of stock` }
         ]}

@@ -149,8 +149,15 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
   const lastCheckAtRef = useRef(0);
   const rafIdRef = useRef<number | null>(null);
   const resizeTimerRef = useRef<number | null>(null);
+  const hasMountedRef = useRef(false);
 
   useEffect(() => {
+    toneRef.current = initialTone;
+    setTone(initialTone);
+  }, [initialTone]);
+
+  useEffect(() => {
+    hasMountedRef.current = true;
     const applyTone = (nextTone: NavbarInkTone) => {
       if (toneRef.current === nextTone) return;
       toneRef.current = nextTone;
@@ -158,7 +165,7 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
     };
 
     const runToneCheck = () => {
-      if (isInteractionPaused()) return;
+      if (!hasMountedRef.current || isInteractionPaused()) return;
       applyTone(measureNavbarTone(toneRef.current));
       lastCheckAtRef.current = performance.now();
     };
