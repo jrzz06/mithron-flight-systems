@@ -16,6 +16,8 @@ export type ProductDetailSectionId =
   | "media"
   | "applications"
   | "included"
+  | "warranty"
+  | "disclaimers"
   | "faq"
   | "reviews"
   | "related";
@@ -34,6 +36,8 @@ const SECTION_LABELS: Record<ProductDetailSectionId, string> = {
   media: "Media Gallery",
   applications: "Applications",
   included: "What's Included",
+  warranty: "Warranty",
+  disclaimers: "Disclaimers",
   faq: "FAQs",
   reviews: "Reviews",
   related: "Related Products"
@@ -43,13 +47,21 @@ function storyChapters(product: Product) {
   return getStoryChapters(product, { includeFallback: false });
 }
 
-export function getProductFeatureItems(product: Product) {
-  const chapter = storyChapters(product).find((item) => /feature/i.test(item.kicker));
-  if (!chapter?.body) return [];
-  return chapter.body
-    .split(/\n+/)
-    .map((line) => line.replace(/^[-•*]\s*/, "").trim())
-    .filter(Boolean);
+export type ProductFeatureItem = {
+  title: string;
+  body: string;
+};
+
+export function getProductFeatureItems(product: Product): ProductFeatureItem[] {
+  const chapters = storyChapters(product).filter((item) => /feature/i.test(item.kicker));
+  if (!chapters.length) return [];
+
+  return chapters
+    .map((chapter) => ({
+      title: chapter.title.trim(),
+      body: chapter.body.trim()
+    }))
+    .filter((feature) => feature.title && feature.body && !/^key features$/i.test(feature.title));
 }
 
 export function getProductDownloads(product: Product) {
@@ -80,6 +92,20 @@ export function getProductIncludedItems(product: Product) {
   return chapter.body
     .split(/\n+/)
     .map((line) => line.replace(/^[-•*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+export function getProductWarranty(product: Product) {
+  const chapter = storyChapters(product).find((item) => /warranty/i.test(`${item.title} ${item.kicker}`));
+  return chapter?.body?.trim() ?? "";
+}
+
+export function getProductDisclaimers(product: Product) {
+  const chapter = storyChapters(product).find((item) => /disclaimer|important notes/i.test(`${item.title} ${item.kicker}`));
+  if (!chapter?.body) return [];
+  return chapter.body
+    .split(/\n{2,}/)
+    .map((line) => line.trim())
     .filter(Boolean);
 }
 
@@ -137,6 +163,14 @@ export function getVisibleProductDetailSections(
 
   if (getProductIncludedItems(product).length > 0) {
     sections.push({ id: "included", label: SECTION_LABELS.included });
+  }
+
+  if (getProductWarranty(product)) {
+    sections.push({ id: "warranty", label: SECTION_LABELS.warranty });
+  }
+
+  if (getProductDisclaimers(product).length > 0) {
+    sections.push({ id: "disclaimers", label: SECTION_LABELS.disclaimers });
   }
 
   if (options?.hasReviews) sections.push({ id: "reviews", label: SECTION_LABELS.reviews });

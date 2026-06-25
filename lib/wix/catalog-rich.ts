@@ -1,5 +1,11 @@
 import { decodeHtml } from "./catalog-normalize.ts";
 import type { StorySection } from "../../config/types.ts";
+import {
+  mergeSemanticContent,
+  parseSemanticProductHtml,
+  type SemanticFeature,
+  type SemanticProductContent
+} from "./semantic-content-parser.ts";
 
 export type WixInfoSection = {
   id: string;
@@ -38,8 +44,10 @@ export type WixRichProductContent = {
   video_urls: string[];
   document_urls: Array<{ url: string; label: string }>;
   specs: Record<string, string>;
-  features: string[];
+  technical_specs: Record<string, string>;
+  features: SemanticFeature[];
   story_chapters: StorySection[];
+  semantic: SemanticProductContent;
   downloads_html: string;
   applications_html: string;
   included_items: string[];
@@ -89,22 +97,6 @@ function parseDocumentLinks(html: string) {
     }
   }
   return links;
-}
-
-function parseColonSpecPairs(text: string) {
-  const pairs: Record<string, string> = {};
-  const pattern = /([A-Z][A-Za-z0-9\s\-\/\(\)]{1,40}):\s*/g;
-  const matches = [...text.matchAll(pattern)];
-  for (let index = 0; index < matches.length; index += 1) {
-    const match = matches[index];
-    const key = (match[1] ?? "").trim();
-    if (!key) continue;
-    const start = (match.index ?? 0) + match[0].length;
-    const end = index + 1 < matches.length ? (matches[index + 1].index ?? text.length) : text.length;
-    const value = text.slice(start, end).trim();
-    if (value) pairs[key] = value;
-  }
-  return pairs;
 }
 
 function parseFaqPairs(html: string) {
@@ -238,58 +230,50 @@ function readMedia(product: Record<string, unknown>) {
 export function extractRichProductContent(
   product: Record<string, unknown>,
   fallbackCategory: string,
-  fallbackMediaUrls: string[]
+  fallbackMediaUrls: string[],
+  options?: { productName?: string }
 ): WixRichProductContent {
   const infoSections = readInfoSections(product);
   const seo = readSeoData(product);
   const { mediaUrls, videoUrls } = readMedia(product);
   const allMedia = [...new Set([...fallbackMediaUrls, ...mediaUrls])];
-  const descriptionHtml = String(product.plainDescription ?? "").trim();
-  const specs: Record<string, string> = {};
-  const features: string[] = [];
-  const storyChapters: StorySection[] = [];
-  const includedItems: string[] = [];
-  const documentUrls: Array<{ url: string; label: string }> = [];
+  const descriptionHtml = String(product.description ?? product.plainDescription ?? "").trim();
+  const productName = options?.productName ?? decodeHtml(String(product.name ?? "Product"));
+  const semanticParts = [
+    parseSemanticProductHtml(descriptionHtml, {
+      productName,
+      mediaSrc: allMedia[0] ?? ""
+    })
+  ];
+
   const faqPairs: Array<[string, string]> = [];
   let downloadsHtml = "";
-  let applicationsHtml = "";
 
   for (const section of infoSections) {
-    Object.assign(specs, parseTableSpecs(section.html));
-    Object.assign(specs, parseColonSpecPairs(section.plain));
-
-    if (section.kind === "features") features.push(...parseListItems(section.html));
-    if (section.kind === "included") includedItems.push(...parseListItems(section.html));
-    if (section.kind === "downloads") {
-      downloadsHtml += section.html;
-      documentUrls.push(...parseDocumentLinks(section.html));
-    }
-    if (section.kind === "applications") applicationsHtml += section.html;
+    semanticParts.push(
+      parseSemanticProductHtml("", {
+        productName,
+        mediaSrc: allMedia[0] ?? "",
+        sectionTitle: section.title,
+        sectionHtml: section.html
+      })
+    );
     if (section.kind === "faq") faqPairs.push(...parseFaqPairs(section.html));
-
-    if (section.kind === "general" || section.kind === "features" || section.kind === "applications") {
-      if (section.plain.length > 40) {
-        storyChapters.push({
-          id: section.id,
-          kicker: section.kind === "features" ? "Features" : section.title,
-          title: section.title,
-          body: section.plain,
-          media: { src: allMedia[0] ?? "", alt: section.title, kind: "image" },
-          align: "left"
-        });
-      }
-    }
+    if (section.kind === "downloads") downloadsHtml += section.html;
   }
 
-  Object.assign(specs, parseColonSpecPairs(stripTags(descriptionHtml)));
-  Object.assign(specs, parseTableSpecs(descriptionHtml));
-  documentUrls.push(...parseDocumentLinks(descriptionHtml));
+  const semantic = mergeSemanticContent(semanticParts);
+  const documentUrls = [
+    ...semantic.downloads,
+    ...parseDocumentLinks(descriptionHtml),
+    ...parseDocumentLinks(downloadsHtml)
+  ];
 
   const physical = product.physicalProperties as { weight?: number; sku?: string } | undefined;
   const ribbon = product.ribbon as { name?: string; text?: string } | undefined;
 
   return {
-    description_html: descriptionHtml,
+    description_html: semantic.overview_html,
     info_sections: infoSections,
     seo,
     categories: readCategories(product, fallbackCategory),
@@ -301,12 +285,14 @@ export function extractRichProductContent(
     media_urls: allMedia,
     video_urls: videoUrls,
     document_urls: [...new Map(documentUrls.map((item) => [item.url, item])).values()],
-    specs,
-    features: [...new Set(features)],
-    story_chapters: storyChapters,
+    specs: semantic.highlight_specs,
+    technical_specs: semantic.technical_specs,
+    features: semantic.features,
+    story_chapters: semantic.story_chapters,
+    semantic,
     downloads_html: downloadsHtml,
-    applications_html: applicationsHtml,
-    included_items: [...new Set(includedItems)],
+    applications_html: semantic.applications,
+    included_items: semantic.package_contents,
     faq_pairs: faqPairs
   };
 }

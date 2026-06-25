@@ -21,6 +21,12 @@ describe("product spec text", () => {
     expect(isSpecLikeBlob("High-precision mapping workflow.")).toBe(false);
   });
 
+  it("detects dash-separated spec lists", () => {
+    const dashBlob =
+      "UAV Type - Hexacopter Endurance - 28 min Range (LoS) - 1 km Maximum All-Up-Weight - 8.56 kg";
+    expect(isSpecLikeBlob(dashBlob)).toBe(true);
+  });
+
   it("parses glued inline spec pairs from source descriptions", () => {
     const pairs = parseInlineSpecPairs(MULTISPECTRAL_SPEC_BLOB);
 
@@ -48,14 +54,15 @@ describe("product spec text", () => {
     expect(sorted.map(([key]) => key)).toEqual(["UAV Type", "Endurance", "Category"]);
   });
 
-  it("expands marketing feature blobs into separate spec rows", () => {
+  it("extracts measurable metrics without promoting marketing prose into specs", () => {
     const expanded = expandSpecEntries([["Flight Time", MINI_X_NANO_BLOB]]);
 
     expect(expanded.map(([key]) => key)).toEqual(
-      expect.arrayContaining(["Flight Time", "Maximum Speed", "Battery", "Precise Navigation", "High-Speed Performance", "Ample Storage"])
+      expect.arrayContaining(["Flight Time", "Maximum Speed", "Battery"])
     );
+    expect(expanded.map(([key]) => key)).not.toContain("Precise Navigation");
+    expect(expanded.map(([key]) => key)).not.toContain("High-Speed Performance");
     expect(expanded.find(([key]) => key === "Flight Time")?.[1]).toBe("96 mins");
-    expect(expanded.find(([key]) => key === "Precise Navigation")?.[1]).toContain("GPS/GLONASS");
   });
 
   it("keeps highlight cards short", () => {

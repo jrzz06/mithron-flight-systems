@@ -26,10 +26,10 @@ describe("optimistic admin mutations", () => {
   });
 
   it("uses append-only order timeline RPC", () => {
-    const migration = source("supabase/migrations/20260622150000_optimistic_admin_mutations.sql");
-    const ordersActions = source("app/admin/orders/actions.ts");
+    const migration = source("supabase/migrations/20260626000300_order_timeline_atomic_transitions.sql");
+    const workflow = source("services/order-workflow.ts");
     expect(migration).toContain("append_order_timeline_entry");
-    expect(ordersActions).toContain("appendOrderTimelineViaRpc");
+    expect(workflow).toContain("transitionOrderWithTimelineViaRpc");
   });
 
   it("exposes conflict errors with current row snapshots", () => {

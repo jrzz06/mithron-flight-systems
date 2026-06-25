@@ -2,11 +2,13 @@ import Link from "next/link";
 import type { Product } from "@/config/types";
 import {
   getProductApplications,
+  getProductDisclaimers,
   getProductDownloads,
   getProductFeatureItems,
   getProductIncludedItems,
   getProductMediaGallery,
-  getProductTechnicalSpecs
+  getProductTechnicalSpecs,
+  getProductWarranty
 } from "@/lib/product-detail-sections";
 import { getHighlightSpecs } from "@/lib/product-detail-content";
 import { cn } from "@/lib/utils";
@@ -21,11 +23,14 @@ export function ProductFeaturesSection({ product }: { product: Product }) {
       <div className={styles.detailSectionInner}>
         <p className={styles.detailSectionKicker}>Features</p>
         <h2 id="product-features-title" className={styles.detailSectionTitle}>Mission features</h2>
-        <ul className={styles.featureList}>
+        <div className={styles.featureGrid}>
           {features.map((feature) => (
-            <li key={feature} className={styles.featureListItem}>{feature}</li>
+            <article key={feature.title} className={styles.featureCard}>
+              <h3 className={styles.featureCardTitle}>{feature.title}</h3>
+              <p className={styles.featureCardBody}>{feature.body}</p>
+            </article>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );
@@ -125,6 +130,40 @@ export function ProductIncludedSection({ product }: { product: Product }) {
         <ul className={styles.featureList}>
           {items.map((item) => (
             <li key={item} className={styles.featureListItem}>{item}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+export function ProductWarrantySection({ product }: { product: Product }) {
+  const warranty = getProductWarranty(product);
+  if (!warranty) return null;
+
+  return (
+    <section id="warranty" className={styles.detailSection} aria-labelledby="product-warranty-title">
+      <div className={styles.detailSectionInner}>
+        <p className={styles.detailSectionKicker}>Warranty</p>
+        <h2 id="product-warranty-title" className={styles.detailSectionTitle}>Coverage & support</h2>
+        <p className={styles.detailSectionBody}>{warranty}</p>
+      </div>
+    </section>
+  );
+}
+
+export function ProductDisclaimersSection({ product }: { product: Product }) {
+  const disclaimers = getProductDisclaimers(product);
+  if (!disclaimers.length) return null;
+
+  return (
+    <section id="disclaimers" className={styles.detailSection} aria-labelledby="product-disclaimers-title">
+      <div className={styles.detailSectionInner}>
+        <p className={styles.detailSectionKicker}>Disclaimers</p>
+        <h2 id="product-disclaimers-title" className={styles.detailSectionTitle}>Important notes</h2>
+        <ul className={styles.disclaimerList}>
+          {disclaimers.map((item) => (
+            <li key={item} className={styles.disclaimerItem}>{item}</li>
           ))}
         </ul>
       </div>

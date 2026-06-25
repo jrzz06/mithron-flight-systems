@@ -111,6 +111,7 @@ export const warehouseNavGroups: PlatformNavGroup[] = [
     items: [
       { label: "Today", href: "/warehouse/dashboard", icon: "gauge" },
       { label: "Orders", href: "/warehouse/orders", icon: "orders" },
+      { label: "Allocate", href: "/warehouse/allocate", icon: "inventory" },
       { label: "Fulfillment", href: "/warehouse/fulfillment", icon: "fulfillment" },
       { label: "Shipments", href: "/warehouse/shipments", icon: "truck" },
       { label: "Stock", href: "/warehouse/inventory", icon: "inventory" },
@@ -127,7 +128,9 @@ export const supplierNavGroups: PlatformNavGroup[] = [
     items: [
       { label: "Overview", href: "/supplier", icon: "gauge" },
       { label: "Products", href: "/supplier/products", icon: "products" },
-      { label: "Stock levels", href: "/supplier/inventory", icon: "inventory" }
+      { label: "Submissions", href: "/supplier/submissions", icon: "tasks" },
+      { label: "Stock levels", href: "/supplier/inventory", icon: "inventory" },
+      { label: "Orders", href: "/supplier/orders", icon: "orders" }
     ]
   }
 ];
@@ -135,6 +138,7 @@ export const supplierNavGroups: PlatformNavGroup[] = [
 export const warehouseRouteTitles: PlatformRouteTitle[] = [
   { href: "/warehouse/dashboard", title: "Today", kicker: "Warehouse" },
   { href: "/warehouse/orders", title: "Orders", kicker: "Warehouse" },
+  { href: "/warehouse/allocate", title: "Allocate", kicker: "Warehouse" },
   { href: "/warehouse/fulfillment", title: "Fulfillment", kicker: "Warehouse" },
   { href: "/warehouse/picking", title: "Fulfillment", kicker: "Warehouse" },
   { href: "/warehouse/packing", title: "Fulfillment", kicker: "Warehouse" },
@@ -152,5 +156,7 @@ export const supplierRouteTitles: PlatformRouteTitle[] = [
   { href: "/supplier", title: "Overview", kicker: "Supplier" },
   { href: "/supplier/products", title: "Products", kicker: "Supplier" },
   { href: "/supplier/products/new", title: "New product", kicker: "Supplier" },
-  { href: "/supplier/inventory", title: "Stock levels", kicker: "Supplier" }
+  { href: "/supplier/submissions", title: "Submissions", kicker: "Supplier" },
+  { href: "/supplier/inventory", title: "Stock levels", kicker: "Supplier" },
+  { href: "/supplier/orders", title: "Orders", kicker: "Supplier" }
 ];

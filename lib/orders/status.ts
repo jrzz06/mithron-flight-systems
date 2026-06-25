@@ -9,7 +9,9 @@ export const ORDER_STATUSES = [
   "packed",
   "dispatched",
   "in_transit",
-  "delivered"
+  "delivered",
+  "refunded",
+  "cancelled"
 ] as const;
 
 export const FULFILLMENT_STATUSES = [

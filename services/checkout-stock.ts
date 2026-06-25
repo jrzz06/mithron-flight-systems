@@ -58,46 +58,6 @@ export async function resolveCheckoutStockSkus(
   }));
 }
 
-/** @deprecated Use reserveCheckoutStock for atomic checkout reservation. */
-export async function verifyCheckoutStockAvailability(
-  items: Array<{ productSlug: string; quantity: number }>,
-  env: EnvSource = process.env
-) {
-  const config = assertSupabaseAdminConfig(env);
-  if (!items.length) return;
-
-  const slugs = [...new Set(items.map((item) => item.productSlug))];
-  const slugFilter = slugs.map((slug) => encodeURIComponent(slug)).join(",");
-  const response = await fetch(
-    `${config.url}/rest/v1/warehouse_stock?select=product_slug,available_quantity&product_slug=in.(${slugFilter})&warehouse_code=eq.${encodeURIComponent(DEFAULT_WAREHOUSE_CODE)}&order=available_quantity.desc`,
-    { headers: headers(config.serviceRoleKey), cache: "no-store" }
-  );
-
-  if (!response.ok) {
-    throw new Error("Unable to verify checkout stock availability.");
-  }
-
-  const rows = (await response.json()) as Array<{ available_quantity?: number; product_slug?: string }>;
-  const bestAvailableBySlug = new Map<string, number>();
-
-  for (const row of rows) {
-    const slug = String(row.product_slug ?? "");
-    if (!slug) continue;
-    const available = Number(row.available_quantity ?? 0);
-    const existing = bestAvailableBySlug.get(slug) ?? 0;
-    if (available > existing) {
-      bestAvailableBySlug.set(slug, available);
-    }
-  }
-
-  for (const item of items) {
-    const available = bestAvailableBySlug.get(item.productSlug) ?? 0;
-    if (!Number.isFinite(available) || available < item.quantity) {
-      throw new Error(`Insufficient stock for ${item.productSlug}. Available: ${available}, requested: ${item.quantity}.`);
-    }
-  }
-}
-
 export async function reserveCheckoutStock(
   orderId: string,
   items: CheckoutStockItem[],

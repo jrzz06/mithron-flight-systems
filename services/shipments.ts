@@ -515,39 +515,56 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
   if (!shipmentId) throw new Error("Shipment creation failed to return an id.");
 
   const orderItemMap = new Map(orderItems.map((item) => [String(item.id ?? ""), item]));
-  const createdItems = [];
+  const createdItems: JsonRecord[] = [];
+  const stockDeductions: Array<{
+    productSlug: string;
+    sku: string;
+    variantId: string | null;
+    quantity: number;
+  }> = [];
   const hasCheckoutReservation = await orderHasCheckoutReservations(input.orderId, env);
 
-  for (const item of input.items) {
-    const orderItem = orderItemMap.get(item.orderItemId);
-    if (!orderItem) throw new Error(`Order item ${item.orderItemId} was not found.`);
-    const sku = normalizeOptional(String(orderItem.sku ?? ""));
-    if (!sku) {
-      throw new Error(`Cannot ship order item ${item.orderItemId}; SKU is required for inventory deduction.`);
-    }
+  try {
+    for (const item of input.items) {
+      const orderItem = orderItemMap.get(item.orderItemId);
+      if (!orderItem) throw new Error(`Order item ${item.orderItemId} was not found.`);
+      const sku = normalizeOptional(String(orderItem.sku ?? ""));
+      if (!sku) {
+        throw new Error(`Cannot ship order item ${item.orderItemId}; SKU is required for inventory deduction.`);
+      }
 
-    const shipmentItem = await createShipmentItemRecord(
-      {
-        shipment_id: shipmentId,
-        order_item_id: item.orderItemId,
-        product_id: item.productId,
-        variant_id: item.variantId,
-        quantity: item.quantity
-      },
-      options.actorId,
-      env
-    );
-    createdItems.push(shipmentItem);
-
-    if (!hasCheckoutReservation) {
-      await applyWarehouseStockMovement(
+      const shipmentItem = await createShipmentItemRecord(
         {
+          shipment_id: shipmentId,
+          order_item_id: item.orderItemId,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity
+        },
+        options.actorId,
+        env
+      );
+      createdItems.push(shipmentItem);
+
+      if (!hasCheckoutReservation) {
+        stockDeductions.push({
           productSlug: item.productId,
           sku,
           variantId: item.variantId,
+          quantity: item.quantity
+        });
+      }
+    }
+
+    for (const deduction of stockDeductions) {
+      await applyWarehouseStockMovement(
+        {
+          productSlug: deduction.productSlug,
+          sku: deduction.sku,
+          variantId: deduction.variantId,
           warehouseCode: input.warehouseId,
           movementType: "fulfillment",
-          quantityDelta: -item.quantity,
+          quantityDelta: -deduction.quantity,
           targetQuantity: null,
           reasonCode: "shipment_created",
           notes: `Shipment ${shipmentNumber} created for order ${input.orderId}.`,
@@ -562,41 +579,111 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
         }
       );
     }
-  }
 
-  if (hasCheckoutReservation) {
-    await fulfillReservedStock(input.orderId, options.actorId, env, input.warehouseId);
-  }
+    if (hasCheckoutReservation) {
+      await fulfillReservedStock(input.orderId, options.actorId, env, input.warehouseId);
+    }
 
-  const timeline = await createShipmentTimelineRecord(
-    buildShipmentTimelineRecord({
+    const timeline = await createShipmentTimelineRecord(
+      buildShipmentTimelineRecord({
+        shipmentId,
+        eventType: "shipment.created",
+        previousStatus: null,
+        nextStatus: "pending",
+        notes: input.notes,
+        actorUserId: options.actorId,
+        at
+      }),
+      options.actorId,
+      env
+    );
+
+    const updatedOrder = await syncOrderFulfillmentFromShipments(order, options.actorId, at, env);
+    await emitShipmentEvents({
       shipmentId,
-      eventType: "shipment.created",
-      previousStatus: null,
-      nextStatus: "pending",
+      shipmentNumber,
+      orderId: input.orderId,
+      status: "pending",
+      action: "shipment.created",
       notes: input.notes,
-      actorUserId: options.actorId,
-      at
-    }),
-    options.actorId,
-    env
-  );
+      actorId: options.actorId,
+      at,
+      env
+    });
+    await recordEntityRevisionSnapshot("shipments", shipmentId, { shipment, items: createdItems, timeline }, options.actorId, input.changeSummary, env);
 
-  const updatedOrder = await syncOrderFulfillmentFromShipments(order, options.actorId, at, env);
-  await emitShipmentEvents({
-    shipmentId,
-    shipmentNumber,
-    orderId: input.orderId,
-    status: "pending",
-    action: "shipment.created",
-    notes: input.notes,
-    actorId: options.actorId,
-    at,
-    env
-  });
-  await recordEntityRevisionSnapshot("shipments", shipmentId, { shipment, items: createdItems, timeline }, options.actorId, input.changeSummary, env);
+    return { shipment, items: createdItems, timeline, order: updatedOrder };
+  } catch (error) {
+    await cancelShipmentAndRestoreStock({
+      shipmentId,
+      shipmentNumber,
+      shipment,
+      orderId: input.orderId,
+      warehouseCode: input.warehouseId,
+      stockDeductions,
+      orderItems,
+      actorId: options.actorId,
+      at,
+      env
+    });
+    throw error;
+  }
+}
 
-  return { shipment, items: createdItems, timeline, order: updatedOrder };
+async function cancelShipmentAndRestoreStock(input: {
+  shipmentId: string;
+  shipmentNumber: string;
+  shipment: JsonRecord;
+  orderId: string;
+  warehouseCode: string;
+  stockDeductions: Array<{ productSlug: string; sku: string; variantId: string | null; quantity: number }>;
+  orderItems: JsonRecord[];
+  actorId: string | null;
+  at: string;
+  env: EnvSource;
+}) {
+  for (const deduction of input.stockDeductions) {
+    try {
+      await applyWarehouseStockMovement(
+        {
+          productSlug: deduction.productSlug,
+          sku: deduction.sku,
+          variantId: deduction.variantId,
+          warehouseCode: input.warehouseCode,
+          movementType: "return",
+          quantityDelta: deduction.quantity,
+          targetQuantity: null,
+          reasonCode: "shipment_create_rollback",
+          notes: `Rollback failed shipment ${input.shipmentNumber} for order ${input.orderId}.`,
+          relatedOrderId: input.orderId,
+          relatedShipmentId: input.shipmentId,
+          changeSummary: `Restore stock after failed shipment ${input.shipmentNumber}`
+        },
+        {
+          actorId: input.actorId,
+          at: input.at,
+          env: input.env
+        }
+      );
+    } catch {
+      // Best-effort rollback; shipment still marked cancelled.
+    }
+  }
+
+  try {
+    await updateShipmentRecord(
+      input.shipmentId,
+      {
+        shipment_status: "cancelled",
+        notes: `Auto-cancelled after failed shipment workflow. ${String(input.shipment.notes ?? "")}`.trim(),
+        updated_at: input.at
+      },
+      input.actorId,
+      input.env
+    );
+  } catch {
+    // Best-effort cancellation marker.
+  }
 }
 
 async function restoreShipmentStock(input: {
@@ -649,6 +736,23 @@ export async function updateShipmentWorkflow(input: ShipmentUpdateWorkflowInput,
   const current = await fetchShipmentRecord(input.shipmentId, env);
   const previousStatus = assertShipmentStatus(String(current.shipment_status ?? "pending"));
   const nextStatus = assertShipmentTransition(previousStatus, input.shipmentStatus);
+
+  if ((nextStatus === "returned" || nextStatus === "cancelled") && previousStatus !== "returned" && previousStatus !== "cancelled") {
+    const [shipmentItems, orderItems] = await Promise.all([
+      fetchShipmentItemsByShipmentId(input.shipmentId, env),
+      fetchOrderItems(String(current.order_id ?? ""), env)
+    ]);
+    await restoreShipmentStock({
+      shipment: current,
+      shipmentItems,
+      orderItems,
+      status: nextStatus,
+      actorId: options.actorId,
+      at,
+      env
+    });
+  }
+
   const updated = await updateShipmentRecord(
     input.shipmentId,
     {
@@ -677,22 +781,6 @@ export async function updateShipmentWorkflow(input: ShipmentUpdateWorkflowInput,
     options.actorId,
     env
   );
-
-  if ((nextStatus === "returned" || nextStatus === "cancelled") && previousStatus !== "returned" && previousStatus !== "cancelled") {
-    const [shipmentItems, orderItems] = await Promise.all([
-      fetchShipmentItemsByShipmentId(input.shipmentId, env),
-      fetchOrderItems(String(current.order_id ?? ""), env)
-    ]);
-    await restoreShipmentStock({
-      shipment: current,
-      shipmentItems,
-      orderItems,
-      status: nextStatus,
-      actorId: options.actorId,
-      at,
-      env
-    });
-  }
 
   const order = await fetchOrderRecord(String(current.order_id ?? ""), env);
   const updatedOrder = await syncOrderFulfillmentFromShipments(order, options.actorId, at, env);

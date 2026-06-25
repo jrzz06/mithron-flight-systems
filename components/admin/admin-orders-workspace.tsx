@@ -26,6 +26,7 @@ type AdminOrdersWorkspaceProps = {
   snapshotStatus: string;
   blockedReason?: string | null;
   confirmAdminOrderAction: (formData: FormData) => Promise<void>;
+  rejectAdminOrderAction: (formData: FormData) => Promise<void>;
   assignAdminWarehouseAction: (formData: FormData) => Promise<void>;
   updateAdminOrderLifecycleAction: (formData: FormData) => Promise<void>;
   confirmAdminWarehouseHandoffAction: (formData: FormData) => Promise<void>;
@@ -214,6 +215,7 @@ export function AdminOrdersWorkspace({
   snapshotStatus,
   blockedReason,
   confirmAdminOrderAction,
+  rejectAdminOrderAction,
   assignAdminWarehouseAction,
   updateAdminOrderLifecycleAction,
   confirmAdminWarehouseHandoffAction
@@ -418,6 +420,7 @@ export function AdminOrdersWorkspace({
                     {nextStep.action === "confirm" ? (
                       <form action={confirmAdminOrderAction}>
                         <input type="hidden" name="order_id" value={selectedOrderId} />
+                        <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
                         <OperationalSubmitButton
                           pendingLabel="Working..."
@@ -427,9 +430,31 @@ export function AdminOrdersWorkspace({
                         </OperationalSubmitButton>
                       </form>
                     ) : null}
+                    {text(selectedOrder.status) === "admin_review" ? (
+                      <form action={rejectAdminOrderAction} className="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="order_id" value={selectedOrderId} />
+                        <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
+                        {formContextFields()}
+                        <label className="grid gap-1 text-xs text-slate-400">
+                          Rejection note
+                          <input
+                            name="reject_reason"
+                            placeholder="Reason shared with customer"
+                            className="h-10 min-w-[220px] rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100"
+                          />
+                        </label>
+                        <OperationalSubmitButton
+                          pendingLabel="Rejecting..."
+                          className="h-10 rounded-lg border border-rose-700 bg-rose-900/40 px-4 text-sm font-semibold text-rose-100"
+                        >
+                          Reject order
+                        </OperationalSubmitButton>
+                      </form>
+                    ) : null}
                     {nextStep.action === "assign" ? (
                       <form action={assignAdminWarehouseAction}>
                         <input type="hidden" name="order_id" value={selectedOrderId} />
+                        <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
                         <OperationalSubmitButton
                           pendingLabel="Assigning..."

@@ -53,6 +53,7 @@ type CountMetric = {
 };
 
 const ADMIN_LIST_LIMIT = 80;
+const ADMIN_FETCH_TIMEOUT_MS = 30_000;
 const MEDIA_LIBRARY_LIMIT = 96;
 const PRODUCT_MANAGER_LIMIT = 120;
 const PRODUCT_RELATION_LIMIT = 160;
@@ -221,71 +222,104 @@ async function listGovernanceAuthUsers(config: Extract<SupabaseAdminConfig, { co
   }
 }
 
+function adminFetchErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    const cause = error.cause instanceof Error ? error.cause.message : "";
+    return cause ? `${error.message} (${cause})` : error.message;
+  }
+  return String(error);
+}
+
 async function fetchAdminRows<T extends AdminRow>(
   config: Extract<SupabaseAdminConfig, { configured: true }>,
   table: string,
   query = `select=id&limit=${ADMIN_LIST_LIMIT}`
 ) {
-  const response = await fetch(`${config.url}/rest/v1/${table}?${query}`, {
-    headers: getAdminHeaders(config),
-    cache: "no-store"
-  });
+  try {
+    const response = await fetch(`${config.url}/rest/v1/${table}?${query}`, {
+      headers: getAdminHeaders(config),
+      cache: "no-store",
+      signal: AbortSignal.timeout(ADMIN_FETCH_TIMEOUT_MS)
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return {
+        table,
+        status: "UNAVAILABLE" as const,
+        rows: [] as T[],
+        error: `${response.status} ${response.statusText}`
+      };
+    }
+
+    return {
+      table,
+      status: "LIVE" as const,
+      rows: (await response.json()) as T[]
+    };
+  } catch (error) {
     return {
       table,
       status: "UNAVAILABLE" as const,
       rows: [] as T[],
-      error: `${response.status} ${response.statusText}`
+      error: adminFetchErrorMessage(error)
     };
   }
-
-  return {
-    table,
-    status: "LIVE" as const,
-    rows: (await response.json()) as T[]
-  };
 }
 
 async function countTable(config: Extract<SupabaseAdminConfig, { configured: true }>, table: string): Promise<CountMetric> {
-  const response = await fetch(`${config.url}/rest/v1/${table}?select=id&limit=1`, {
-    method: "HEAD",
-    headers: {
-      ...getAdminHeaders(config),
-      Prefer: "count=exact"
-    },
-    cache: "no-store"
-  });
+  try {
+    const response = await fetch(`${config.url}/rest/v1/${table}?select=id&limit=1`, {
+      method: "HEAD",
+      headers: {
+        ...getAdminHeaders(config),
+        Prefer: "count=exact"
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(ADMIN_FETCH_TIMEOUT_MS)
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return { table, count: 0, status: "UNAVAILABLE" };
+    }
+
+    const range = response.headers.get("content-range");
+    const count = range?.includes("/") ? Number(range.split("/").at(-1)) : 0;
+    return { table, count: Number.isFinite(count) ? count : 0, status: "LIVE" };
+  } catch {
     return { table, count: 0, status: "UNAVAILABLE" };
   }
-
-  const range = response.headers.get("content-range");
-  const count = range?.includes("/") ? Number(range.split("/").at(-1)) : 0;
-  return { table, count: Number.isFinite(count) ? count : 0, status: "LIVE" };
 }
 
 async function fetchStorageBuckets(config: Extract<SupabaseAdminConfig, { configured: true }>) {
-  const response = await fetch(`${config.url}/storage/v1/bucket`, {
-    headers: getAdminHeaders(config),
-    cache: "no-store"
-  });
+  try {
+    const response = await fetch(`${config.url}/storage/v1/bucket`, {
+      headers: getAdminHeaders(config),
+      cache: "no-store",
+      signal: AbortSignal.timeout(ADMIN_FETCH_TIMEOUT_MS)
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      return {
+        table: "storage.buckets",
+        status: "UNAVAILABLE" as const,
+        rows: [] as AdminRow[],
+        error: `${response.status} ${response.statusText}`
+      };
+    }
+
+    return {
+      table: "storage.buckets",
+      status: "LIVE" as const,
+      rows: (await response.json()) as AdminRow[]
+    };
+  } catch (error) {
     return {
       table: "storage.buckets",
       status: "UNAVAILABLE" as const,
       rows: [] as AdminRow[],
-      error: `${response.status} ${response.statusText}`
+      error: adminFetchErrorMessage(error)
     };
   }
-
-  return {
-    table: "storage.buckets",
-    status: "LIVE" as const,
-    rows: (await response.json()) as AdminRow[]
-  };
 }
 
 function statusFromMetrics(metrics: CountMetric[]): "LIVE" | "PARTIAL" {
@@ -818,7 +852,7 @@ export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput =
     maybeFetch("inventory", "inventory", "select=product_slug,sku,variant_id,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at&order=updated_at.desc&limit=120"),
     maybeFetch("stock", "warehouse_stock", "select=id,warehouse_code,product_slug,sku,variant_id,available_quantity,committed_quantity,last_counted_at,updated_at&order=updated_at.desc&limit=120"),
     maybeFetch("movements", "inventory_movements", "select=id,movement_type,product_slug,sku,quantity_before,quantity_after,quantity_delta,reason_code,actor_user_id,related_order_id,related_shipment_id,created_at&order=created_at.desc&limit=80"),
-    maybeFetch("orders", "orders", "select=id,order_number,customer_email,status,payment_status,fulfillment_status,total,currency,items,timeline,created_at,updated_at&order=created_at.desc&limit=80"),
+    maybeFetch("orders", "orders", "select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,metadata,timeline,shipment_tracking,created_at,updated_at&order=created_at.desc&limit=80"),
     maybeFetch("orderItems", "order_items", "select=id,order_id,product_slug,product_name,sku,quantity,line_total,metadata,created_at&order=created_at.desc&limit=120"),
     maybeFetch("shipments", "shipments", "select=id,shipment_number,shipment_status,order_id,warehouse_id,carrier_name,tracking_number,updated_at,created_at&order=updated_at.desc&limit=80"),
     maybeFetch("shipmentItems", "shipment_items", "select=id,shipment_id,order_item_id,product_id,variant_id,quantity,created_at&order=created_at.desc&limit=120"),

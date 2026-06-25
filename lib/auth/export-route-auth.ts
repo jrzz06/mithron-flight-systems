@@ -10,7 +10,12 @@ export async function guardExportRoute(permission: EnterprisePermission) {
   } catch (error) {
     if (error instanceof PermissionDeniedError) {
       const message = error.message.toLowerCase();
-      const status = message.includes("not authenticated") || message.includes("anonymous") ? 401 : 403;
+      const status =
+        message.includes("not authenticated") ||
+        message.includes("authentication required") ||
+        message.includes("anonymous")
+          ? 401
+          : 403;
       return NextResponse.json({ error: error.message }, { status });
     }
     return NextResponse.json({ error: "Access denied." }, { status: 403 });

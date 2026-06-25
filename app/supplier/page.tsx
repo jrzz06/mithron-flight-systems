@@ -59,10 +59,22 @@ export default async function SupplierDashboardPage() {
               Manage products
             </Link>
             <Link
+              href="/supplier/submissions"
+              className="inline-flex h-10 items-center justify-center rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 text-sm font-medium text-[var(--platform-text-primary)] transition hover:bg-[var(--platform-surface-muted)]"
+            >
+              View submissions
+            </Link>
+            <Link
+              href="/supplier/orders"
+              className="inline-flex h-10 items-center justify-center rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 text-sm font-medium text-[var(--platform-text-primary)] transition hover:bg-[var(--platform-surface-muted)]"
+            >
+              Customer orders
+            </Link>
+            <Link
               href="/supplier/inventory"
               className="inline-flex h-10 items-center justify-center rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 text-sm font-medium text-[var(--platform-text-primary)] transition hover:bg-[var(--platform-surface-muted)]"
             >
-              Update inventory
+              Request stock update
             </Link>
           </div>
         </AdminSection>

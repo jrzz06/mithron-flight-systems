@@ -99,7 +99,7 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
     revalidatePath("/admin/suppliers/products");
     revalidatePath("/admin/products");
     revalidatePath("/admin/inventory");
-    revalidatePath("/warehouse/stock");
+    revalidatePath("/warehouse/inventory");
   });
 }
 

@@ -3,6 +3,7 @@ import type { Product } from "@/config/types";
 import {
   getCustomerFacingSpecs,
   getHighlightSpecs,
+  getProductOverviewHtml,
   getProductOverviewText,
   getStoryChapters
 } from "@/lib/product-detail-content";
@@ -43,12 +44,32 @@ describe("product detail content", () => {
     expect(getProductOverviewText(product)).toContain("long-form product overview");
   });
 
-  it("falls back to Wix source description when admin description is empty", () => {
+  it("does not use sourceDescription as overview fallback", () => {
     const product = {
       ...baseProduct,
       sourceDescription: "Full Wix Studio product copy with deployment guidance for field operators."
     };
-    expect(getProductOverviewText(product)).toContain("Full Wix Studio product copy");
+    expect(getProductOverviewText(product)).toBe("Precision agriculture field system.");
+  });
+
+  it("suppresses spec-only html descriptions in overview", () => {
+    const product = {
+      ...baseProduct,
+      description:
+        "<p>UAV Type: Hexacopter</p><p>UAV Category: Small</p><p>Endurance: 28 min</p><p>Range (LoS): 1 km</p>"
+    };
+    expect(getProductOverviewHtml(product)).toBeNull();
+    expect(getProductOverviewText(product)).toBe("Precision agriculture field system.");
+  });
+
+  it("returns empty overview text for spec-only products without marketing copy", () => {
+    const product = {
+      ...baseProduct,
+      tagline: "UAV Type: Hexacopter UAV Category: Small Endurance: 28 min Range (LoS): 1 km",
+      description:
+        "UAV Type: Hexacopter UAV Category: Small Endurance: 28 min Range (LoS): 1 km Maximum All-Up-Weight: 8.56 kg"
+    };
+    expect(getProductOverviewText(product)).toBe("");
   });
 
   it("can skip fallback story when overview is rendered separately", () => {

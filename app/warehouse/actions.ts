@@ -18,7 +18,7 @@ import {
   upsertWarehouseStockRecord
 } from "@/services/admin-actions";
 import { readExpectedUpdatedAt, readOptionalExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
-import { reserveCheckoutStock } from "@/services/checkout-stock";
+import { assertValidWarehouseCode } from "@/services/warehouses";
 import {
   assertOrderFulfillmentTransition,
   buildInventoryLinkageRecords,
@@ -37,6 +37,7 @@ import {
 } from "@/services/inventory-csv";
 import { buildValidatedOrderDraft, buildOrderTimelineEntry, appendOrderTimeline, syncOrderStatusFromFulfillment } from "@/services/orders";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
+import { reserveCheckoutStock } from "@/services/checkout-stock";
 import { requirePermission } from "@/services/auth";
 import {
   applyFulfillmentStockMovements,
@@ -69,6 +70,11 @@ async function currentActorId() {
 
 async function requireWarehouseActor() {
   return requirePermission("orders.lifecycle");
+}
+
+async function requireProductCatalogActor() {
+  const context = await requirePermission("products.write");
+  return context.userId;
 }
 
 function orderNumberFromTimestamp(timestamp: Date) {
@@ -182,9 +188,10 @@ async function createOrderLifecycleNotificationIfNeeded(input: {
   );
 }
 
-function warehouseCodeFromFormData(formData: FormData) {
+async function resolveWarehouseCodeFromFormData(formData: FormData) {
   const value = formData.get("warehouse_code");
-  return typeof value === "string" && value.trim() ? value.trim() : "IN-WEST-01";
+  const raw = typeof value === "string" && value.trim() ? value.trim() : "IN-WEST-01";
+  return assertValidWarehouseCode(raw);
 }
 
 function readInventoryString(formData: FormData, key: string, fallback = "") {
@@ -511,7 +518,7 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   const sku = readInventoryString(formData, "sku");
   if (!productSlug || !sku) throw new Error("Product and SKU are required for inventory updates.");
 
-  const warehouseCode = warehouseCodeFromFormData(formData);
+  const warehouseCode = await resolveWarehouseCodeFromFormData(formData);
   const stockStatus = readInventoryStatus(formData);
   const quantity = readInventoryInteger(formData, "quantity");
   const category = readInventoryString(formData, "category");
@@ -573,20 +580,6 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
     { actorId, at: now }
   );
 
-  const productRecord = shouldArchiveProduct
-    ? await updateProductPublicationRecord(
-        {
-          slug: productSlug,
-          category: category || undefined,
-          price,
-          workflow_status: "archived",
-          is_visible: false,
-          updated_at: now
-        },
-        actorId
-      )
-    : null;
-
   const inventoryId = String(previousInventory?.id ?? "");
   const inventoryRecord = inventoryId
     ? await updateAdminRecord(
@@ -641,10 +634,24 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
     )) as JsonRecord;
   }
 
+  const productRecord = shouldArchiveProduct
+    ? await updateProductPublicationRecord(
+        {
+          slug: productSlug,
+          category: category || undefined,
+          price,
+          workflow_status: "archived",
+          is_visible: false,
+          updated_at: now
+        },
+        actorId
+      )
+    : null;
+
   await createActivityLogRecord(
     {
       actor_id: actorId,
-      action: "warehouse.csv_import_inventory_update",
+      action: "warehouse.inventory_quick_edit",
       entity_table: "inventory",
       entity_id: `${productSlug}:${sku}`,
       severity: records.lowStock ? "warning" : "info",
@@ -745,6 +752,7 @@ async function importInventoryCsvRecord(record: InventoryCsvRecord, actorId: str
 }
 
 export async function importInventoryCsvFormAction(formData: FormData) {
+  await requireProductCatalogActor();
   const file = formData.get("inventory_csv");
   if (!(file instanceof File) || file.size <= 0) {
     throw new Error("Choose an inventory CSV file before importing.");
@@ -797,6 +805,9 @@ export async function saveInventoryBulkUpdateFormAction(formData: FormData) {
 
   const nextStatus = readInventoryStatus(formData, "bulk_stock_status");
   const nextCategory = readInventoryString(formData, "bulk_category");
+  if (nextCategory || nextStatus === "archived") {
+    await requireProductCatalogActor();
+  }
   const actorId = await currentActorId();
   const now = new Date().toISOString();
   let updated = 0;
@@ -852,7 +863,7 @@ export async function saveInventoryBulkUpdateFormAction(formData: FormData) {
   await createActivityLogRecord(
     {
       actor_id: actorId,
-      action: "warehouse.csv_import_bulk_update",
+      action: "warehouse.inventory_bulk_update",
       entity_table: "inventory",
       entity_id: "bulk",
       severity: nextStatus === "out_of_stock" || nextStatus === "archived" ? "warning" : "info",
@@ -872,7 +883,7 @@ export async function saveInventoryBulkUpdateFormAction(formData: FormData) {
 export async function deleteInventoryProductFormAction(formData: FormData) {
   const productSlug = readInventoryString(formData, "product_slug");
   if (!productSlug) throw new Error("Product is required before deleting inventory.");
-  const actorId = await currentActorId();
+  const actorId = await requireProductCatalogActor();
   await deleteProductRecordSafely(productSlug, actorId);
   revalidateInventoryPaths();
 }
@@ -883,7 +894,7 @@ export async function duplicateInventoryProductFormAction(formData: FormData) {
   const sku = readInventoryString(formData, "sku");
   if (!productSlug || !sku) throw new Error("Product and SKU are required before duplicating inventory.");
 
-  const actorId = await currentActorId();
+  const actorId = await requireProductCatalogActor();
   const now = new Date().toISOString();
   const copySlug = `${productSlug}-copy-${Date.now()}`;
   const copySku = `${sku}-COPY`;
@@ -938,7 +949,7 @@ export async function duplicateInventoryProductFormAction(formData: FormData) {
   await createActivityLogRecord(
     {
       actor_id: actorId,
-      action: "warehouse.csv_import_duplicate",
+      action: "warehouse.inventory_duplicate",
       entity_table: "inventory",
       entity_id: `${copySlug}:${copySku}`,
       severity: "info",
@@ -975,7 +986,7 @@ export async function createWarehouseOrderFormAction(formData: FormData) {
   const input = buildOrderCreateWorkflowFromFormData(formData);
   const actorId = await currentActorId();
   const now = new Date();
-  const warehouseCode = warehouseCodeFromFormData(formData);
+  const warehouseCode = await resolveWarehouseCodeFromFormData(formData);
   const catalog = await getCheckoutPricingBySlugs(input.checkout.items.map((item) => item.productSlug));
   const draft = buildValidatedOrderDraft(input.checkout, catalog);
   const timeline = appendOrderTimeline(
@@ -1004,8 +1015,6 @@ export async function createWarehouseOrderFormAction(formData: FormData) {
       subtotal: draft.order.subtotal,
       total: draft.order.total,
       currency: input.currency,
-      // @deprecated orders.items duplicates order_items — keep for compatibility; stop writing in a future migration.
-      items: draft.order.items,
       timeline,
       metadata: draft.order.metadata,
       // created_by_user_id is canonical for auth-linked ownership; created_by is legacy staff actor text — remove created_by later.
@@ -1079,8 +1088,9 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
   const input = buildOrderLifecycleUpdateFromFormData(formData);
   const actorId = await currentActorId();
   const now = new Date().toISOString();
-  const warehouseCode = warehouseCodeFromFormData(formData);
+  const warehouseCode = await resolveWarehouseCodeFromFormData(formData);
   const current = await fetchOrderRecord(input.orderId);
+  const expectedUpdatedAt = readExpectedUpdatedAt(formData, String(current.updated_at ?? ""));
   let nextStatus = input.status ?? String(current.status ?? "draft");
   const nextPayment = input.paymentStatus ?? String(current.payment_status ?? "not_required");
   const previousStatus = String(current.status ?? "draft");
@@ -1131,7 +1141,9 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
       timeline,
       updated_at: now
     },
-    actorId
+    actorId,
+    process.env,
+    { expectedUpdatedAt }
   );
 
   await createActivityLogRecord(

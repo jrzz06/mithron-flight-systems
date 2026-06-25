@@ -61,6 +61,7 @@ async function fetchAllProducts(supabase: ReturnType<typeof createSupabaseAdminC
 
 async function main() {
   const dryRun = !process.argv.includes("--apply");
+  const reshapeContent = process.argv.includes("--reshape-content");
   const slugFilter = process.argv.find((arg) => arg.startsWith("--slug="))?.split("=")[1];
   const wixPath = process.argv.find((arg) => arg.startsWith("--wix="))?.split("=")[1] ?? defaultWixPath;
   const reportPath = process.argv.find((arg) => arg.startsWith("--report="))?.split("=")[1] ?? defaultReportPath;
@@ -88,7 +89,7 @@ async function main() {
       continue;
     }
 
-    const patch = buildSafeMigrationPatch(row, wix);
+    const patch = buildSafeMigrationPatch(row, wix, { reshapeContent });
     const fields = Object.keys(patch).filter((key) => key !== "updated_at" && key !== "source_extracted_at");
     if (!fields.length) {
       skipped.push({ slug: row.slug, reason: "already_complete" });

@@ -59,8 +59,11 @@ export function getHighlightSpecs(product: Product, limit = 6) {
 export function getProductOverviewHtml(product: Product) {
   const description = product.description?.trim();
   if (!description) return null;
-  if (/<[^>]+>/.test(description)) return sanitizeProductHtml(description);
-  return null;
+  if (!/<[^>]+>/.test(description)) return null;
+  const sanitized = sanitizeProductHtml(description);
+  const plain = sanitized.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  if (isSpecLikeBlob(plain)) return null;
+  return sanitized;
 }
 
 export function getProductOverviewText(product: Product) {
@@ -72,7 +75,6 @@ export function getProductOverviewText(product: Product) {
   const plainDescription = product.description?.trim();
   const candidates = [
     plainDescription && !/<[^>]+>/.test(plainDescription) ? plainDescription : "",
-    product.sourceDescription,
     product.seoDescription,
     product.ogDescription,
     ...product.story.map((chapter) => chapter.body),
@@ -110,6 +112,16 @@ export function getStoryChapters(product: Product, options?: { includeFallback?:
     media: product.hero,
     align: "center" as const
   }];
+}
+
+export function getDedicatedProductStoryChapters(product: Product, options?: { includeFallback?: boolean }) {
+  const dedicated = /^(features|warranty|disclaimers|downloads|applications)$/i;
+  return getStoryChapters(product, options).filter((chapter) => {
+    if (dedicated.test(chapter.kicker.trim())) return false;
+    if (/^key features$/i.test(chapter.title.trim())) return false;
+    if (/important notes/i.test(chapter.title.trim())) return false;
+    return true;
+  });
 }
 
 export function hasRichProductDetail(product: Product) {

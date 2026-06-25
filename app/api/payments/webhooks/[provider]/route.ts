@@ -5,7 +5,7 @@ import { safeSecretEquals } from "@/lib/auth/timing-safe-bearer";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
 import { releaseCheckoutStock } from "@/services/checkout-stock";
-import { transitionOrderStatus } from "@/services/orders";
+import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } from "@/services/orders";
 import { verifyPaymentWebhook } from "@/services/payments/gateway";
 
 async function recordWebhookEvent(provider: string, eventId: string, payload: unknown) {
@@ -33,6 +33,9 @@ async function createCustomerPaymentNotification(input: {
   customerEmail: string | null;
   orderId: string;
   orderNumber: string;
+  title?: string;
+  body?: string;
+  event?: string;
 }) {
   const config = assertSupabaseAdminConfig(process.env);
   await fetch(`${config.url}/rest/v1/notifications`, {
@@ -46,14 +49,14 @@ async function createCustomerPaymentNotification(input: {
     body: JSON.stringify({
       recipient_id: input.recipientId,
       channel: "customer",
-      title: "Payment confirmed",
-      body: `Your payment for order ${input.orderNumber} was successful. We'll notify you when it ships.`,
+      title: input.title ?? "Payment confirmed",
+      body: input.body ?? `Your payment for order ${input.orderNumber} was successful. We'll notify you when it ships.`,
       status: "unread",
       priority: "normal",
       entity_table: "orders",
       entity_id: input.orderId,
       payload: {
-        event: "payment.succeeded",
+        event: input.event ?? "payment.succeeded",
         recipient_email: input.customerEmail
       }
     })
@@ -208,6 +211,66 @@ export async function POST(request: Request, context: { params: Promise<{ provid
         orderNumber: String(order.order_number ?? order.id)
       });
     }
+    return NextResponse.json({ ok: true, provider, status: event.status });
+  }
+
+  if (event.status === "refunded") {
+    if (orderId) {
+      try {
+        await releaseCheckoutStock(orderId);
+      } catch (releaseError) {
+        console.error("[payments/webhook] refund stock release failed", releaseError);
+      }
+
+      const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
+      const order = orders[0];
+      if (order) {
+        const currentStatus = String(order.status ?? "paid");
+        let nextStatus: string = "refunded";
+        try {
+          nextStatus = transitionOrderStatus(currentStatus, "refunded");
+        } catch {
+          nextStatus = "refunded";
+        }
+
+        const timeline = appendOrderTimeline(
+          order.timeline,
+          buildOrderTimelineEntry({
+            status: nextStatus,
+            event: "payment.refunded",
+            note: "Payment refunded via provider webhook.",
+            actorId: null,
+            metadata: { payment_status: "refunded" }
+          })
+        );
+
+        await updateAdminRecord(
+          "orders",
+          "id",
+          String(order.id),
+          {
+            status: nextStatus,
+            payment_status: "refunded",
+            timeline,
+            updated_at: new Date().toISOString()
+          },
+          null,
+          process.env,
+          { allowSystemActor: true }
+        );
+
+        await createCustomerPaymentNotification({
+          recipientId: typeof order.created_by_user_id === "string" ? order.created_by_user_id : null,
+          customerEmail: typeof order.customer_email === "string" ? order.customer_email : null,
+          orderId: String(order.id),
+          orderNumber: String(order.order_number ?? order.id),
+          title: "Payment refunded",
+          body: `Your payment for order ${String(order.order_number ?? order.id)} has been refunded.`,
+          event: "payment.refunded"
+        });
+      }
+    }
+    return NextResponse.json({ ok: true, provider, status: event.status });
   }
 
   return NextResponse.json({ ok: true, provider, status: event.status });

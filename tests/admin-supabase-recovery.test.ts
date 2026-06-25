@@ -30,6 +30,8 @@ describe("admin Supabase-only workflow recovery", () => {
     expect(adminService).toContain("countTable(config, \"mithron_products\")");
     expect(adminService).toContain("countTable(config, \"media_assets\")");
     expect(adminService).toContain("fetchAdminRows(config, \"category_metadata\"");
+    expect(adminService).toContain("adminFetchErrorMessage");
+    expect(adminService).toContain("AbortSignal.timeout(ADMIN_FETCH_TIMEOUT_MS)");
     expect(adminService).toContain("PRODUCT_MANAGER_LIMIT");
     expect(adminService).toContain("MEDIA_LIBRARY_LIMIT");
     expect(adminService).not.toContain("limit=500");

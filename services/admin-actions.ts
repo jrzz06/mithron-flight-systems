@@ -1056,8 +1056,14 @@ export function createOrderItemRecord(payload: JsonRecord, actorId: string | nul
   return createAdminRecord("order_items", payload, actorId, env);
 }
 
-export function updateOrderRecord(orderId: string, payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
-  return updateAdminRecord("orders", "id", orderId, payload, actorId, env);
+export function updateOrderRecord(
+  orderId: string,
+  payload: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  return updateAdminRecord("orders", "id", orderId, payload, actorId, env, options);
 }
 
 export function createShipmentRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
@@ -1107,6 +1113,7 @@ export async function appendOrderTimelineViaRpc(
   env: EnvSource = process.env,
   options: { expectedUpdatedAt?: string | null } = {}
 ) {
+  await assertAdminMutationPermission("orders", actorId);
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(`${config.url}/rest/v1/rpc/append_order_timeline_entry`, {
     method: "POST",
@@ -1137,6 +1144,62 @@ export async function appendOrderTimelineViaRpc(
   }
 
   await insertAuditLog("update", "orders", orderId, normalizeMutationRecord(result.row), actorId, env);
+  return normalizeMutationRecord(result.row);
+}
+
+export async function transitionOrderWithTimelineViaRpc(
+  orderId: string,
+  entry: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: {
+    status?: string | null;
+    fulfillmentStatus?: string | null;
+    paymentStatus?: string | null;
+    expectedUpdatedAt?: string | null;
+    idempotencyKey?: string | null;
+  } = {}
+) {
+  await assertAdminMutationPermission("orders", actorId);
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/rpc/transition_order_with_timeline`, {
+    method: "POST",
+    headers: headers(config.serviceRoleKey),
+    cache: "no-store",
+    body: JSON.stringify({
+      p_order_id: orderId,
+      p_entry: entry,
+      p_status: options.status ?? null,
+      p_fulfillment_status: options.fulfillmentStatus ?? null,
+      p_payment_status: options.paymentStatus ?? null,
+      p_expected_updated_at: options.expectedUpdatedAt ?? null,
+      p_idempotency_key: options.idempotencyKey ?? null
+    })
+  });
+
+  const text = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new Error(
+      `Failed to transition order with timeline: ${response.status} ${response.statusText}${text ? ` - ${text.slice(0, 300)}` : ""}`
+    );
+  }
+
+  const result = normalizeMutationRecord(text ? JSON.parse(text) : {});
+  if (result.conflict === true) {
+    throw new AdminRecordConflictError(
+      "Concurrent order update detected. Reload the latest order state and retry.",
+      isPlainRecord(result.current_row) ? result.current_row : undefined
+    );
+  }
+
+  if (result.ok !== true) {
+    throw new Error("Failed to transition order with timeline.");
+  }
+
+  if (result.duplicate !== true) {
+    await insertAuditLog("update", "orders", orderId, normalizeMutationRecord(result.row), actorId, env);
+  }
+
   return normalizeMutationRecord(result.row);
 }
 

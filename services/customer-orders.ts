@@ -66,3 +66,103 @@ export async function getCustomerOrder(userId: string, orderId: string, env: Env
 
   return { order, items, payment, shippingAddress };
 }
+
+export async function linkGuestOrdersToUser(userId: string, email: string, env: EnvSource = process.env) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!userId || !normalizedEmail) return { linked: 0 };
+
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(
+    `${config.url}/rest/v1/orders?created_by_user_id=is.null&customer_email=eq.${encodeURIComponent(normalizedEmail)}`,
+    {
+      method: "PATCH",
+      headers: {
+        ...headers(config.serviceRoleKey),
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify({
+        created_by_user_id: userId,
+        updated_at: new Date().toISOString()
+      }),
+      cache: "no-store"
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Failed to link guest orders: ${response.status}${text ? ` - ${text.slice(0, 200)}` : ""}`);
+  }
+
+  const rows = (await response.json()) as JsonRecord[];
+  return { linked: rows.length };
+}
+
+export async function fetchCheckoutOrderStatus(
+  orderId: string,
+  scope: { userId: string } | { guestEmail: string },
+  env: EnvSource = process.env
+) {
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(
+    `${config.url}/rest/v1/orders?select=id,status,payment_status,customer_email,created_by_user_id&id=eq.${encodeURIComponent(orderId)}&limit=1`,
+    { headers: headers(config.serviceRoleKey), cache: "no-store" }
+  );
+  if (!response.ok) return null;
+
+  const rows = (await response.json()) as JsonRecord[];
+  const order = rows[0];
+  if (!order?.id) return null;
+
+  if ("userId" in scope) {
+    if (String(order.created_by_user_id ?? "") !== scope.userId) return null;
+  } else {
+    const orderEmail = String(order.customer_email ?? "").trim().toLowerCase();
+    if (!orderEmail || orderEmail !== scope.guestEmail.trim().toLowerCase()) return null;
+    if (order.created_by_user_id) return null;
+  }
+
+  const paymentsResponse = await fetch(
+    `${config.url}/rest/v1/payments?select=status,verified_at&order_id=eq.${encodeURIComponent(orderId)}&order=created_at.desc&limit=5`,
+    { headers: headers(config.serviceRoleKey), cache: "no-store" }
+  );
+  const payments = paymentsResponse.ok ? ((await paymentsResponse.json()) as JsonRecord[]) : [];
+  const payment = payments.find((row) => String(row.status ?? "") === "succeeded") ?? payments[0] ?? null;
+
+  return {
+    orderId: String(order.id),
+    status: String(order.status ?? ""),
+    paymentStatus: String(payment?.status ?? order.payment_status ?? ""),
+    orderPaymentStatus: String(order.payment_status ?? "")
+  };
+}
+
+export async function lookupOrderForTracking(
+  orderNumber: string,
+  email: string,
+  env: EnvSource = process.env
+) {
+  const normalizedNumber = orderNumber.trim();
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedNumber || !normalizedEmail) return null;
+
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(
+    `${config.url}/rest/v1/orders?select=id,order_number,status,payment_status,fulfillment_status,customer_email,shipment_tracking,timeline,total,currency,created_at,updated_at&order_number=eq.${encodeURIComponent(normalizedNumber)}&customer_email=eq.${encodeURIComponent(normalizedEmail)}&limit=1`,
+    { headers: headers(config.serviceRoleKey), cache: "no-store" }
+  );
+  if (!response.ok) return null;
+
+  const rows = (await response.json()) as JsonRecord[];
+  const order = rows[0];
+  if (!order?.id) return null;
+
+  const orderId = String(order.id);
+  const itemsResponse = await fetch(
+    `${config.url}/rest/v1/order_items?select=product_slug,product_name,quantity,line_total&order_id=eq.${encodeURIComponent(orderId)}&limit=50`,
+    { headers: headers(config.serviceRoleKey), cache: "no-store" }
+  );
+  const items = itemsResponse.ok ? ((await itemsResponse.json()) as JsonRecord[]) : [];
+
+  return { order, items };
+}

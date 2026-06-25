@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminOrdersWorkspace } from "@/components/admin/admin-orders-workspace";
 import { ModulePanel } from "@/components/admin/module-panel";
-import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction } from "@/app/admin/orders/actions";
+import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction, rejectAdminOrderFormAction } from "@/app/admin/orders/actions";
 import { createShipmentFormAction, updateWarehouseOrderLifecycleFormAction } from "@/app/warehouse/actions";
 import { getWarehouseSnapshot } from "@/services/admin";
 
@@ -63,6 +63,19 @@ async function assignAdminWarehouseAction(formData: FormData) {
     redirectWithOrderFeedback(orderId, "error", orderActionMessage(error).slice(0, 240), queue, query);
   }
   redirectWithOrderFeedback(orderId, "success", "Order assigned to warehouse.", queue, query);
+}
+
+async function rejectAdminOrderAction(formData: FormData) {
+  "use server";
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  const queue = String(formData.get("queue") ?? "review");
+  const query = String(formData.get("q") ?? "");
+  try {
+    await rejectAdminOrderFormAction(formData);
+  } catch (error) {
+    redirectWithOrderFeedback(orderId, "error", orderActionMessage(error).slice(0, 240), queue, query);
+  }
+  redirectWithOrderFeedback(orderId, "success", "Order rejected.", queue, query);
 }
 
 async function confirmAdminOrderAction(formData: FormData) {
@@ -145,6 +158,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
         snapshotStatus={snapshot.status}
         blockedReason={snapshot.blockedReason}
         confirmAdminOrderAction={confirmAdminOrderAction}
+        rejectAdminOrderAction={rejectAdminOrderAction}
         assignAdminWarehouseAction={assignAdminWarehouseAction}
         updateAdminOrderLifecycleAction={updateAdminOrderLifecycleAction}
         confirmAdminWarehouseHandoffAction={confirmAdminWarehouseHandoffAction}

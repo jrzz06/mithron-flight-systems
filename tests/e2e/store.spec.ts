@@ -267,8 +267,9 @@ test.describe("Mithron cinematic storefront", () => {
         firstTileHeight: tileRect?.height ?? 0
       };
     });
-    expect(agriLayoutState.sectionHeight).toBeGreaterThanOrEqual(agriLayoutState.viewportHeight * (isMobile ? 0.72 : 0.82));
-    expect(agriLayoutState.firstTileHeight).toBeGreaterThan(isMobile ? 300 : 420);
+    expect(agriLayoutState.sectionHeight).toBeGreaterThanOrEqual(agriLayoutState.viewportHeight * (isMobile ? 0.72 : 0.88));
+    expect(agriLayoutState.sectionHeight).toBeLessThanOrEqual(agriLayoutState.viewportHeight * (isMobile ? 1.08 : 1.02));
+    expect(agriLayoutState.firstTileHeight).toBeGreaterThan(isMobile ? 300 : 360);
     expect(agriLayoutState.pageOverflow).toBeLessThanOrEqual(1);
     const missionShowcaseState = await composite.getByTestId("mission-world-tile").evaluateAll((nodes) => (
       nodes.map((node) => ({

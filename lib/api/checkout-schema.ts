@@ -37,6 +37,7 @@ export type CheckoutRequestBody = {
   addressId?: string;
   guestAddress?: GuestAddress;
   region?: string;
+  promoCode?: string;
 };
 
 export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | null {
@@ -66,6 +67,7 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
   const addressId = typeof record.addressId === "string" ? record.addressId.trim() : undefined;
   const guestAddress = parseGuestAddress(record);
   const region = typeof record.region === "string" ? record.region.trim().slice(0, 120) : undefined;
+  const promoCode = typeof record.promoCode === "string" ? record.promoCode.trim().slice(0, 80) : undefined;
 
   return {
     email,
@@ -73,7 +75,8 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
     items,
     ...(addressId ? { addressId } : {}),
     ...(guestAddress ? { guestAddress } : {}),
-    ...(region ? { region } : {})
+    ...(region ? { region } : {}),
+    ...(promoCode ? { promoCode } : {})
   };
 }
 

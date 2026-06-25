@@ -2,6 +2,7 @@ import { createClient as createSupabaseServiceClient } from "@supabase/supabase-
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { ProfileDisabledError } from "@/lib/auth/profile-disabled";
 import { normalizeCmsRole, type CmsRole } from "@/lib/auth/permissions";
+import { linkGuestOrdersToUser } from "@/services/customer-orders";
 
 type EnvSource = Record<string, string | undefined>;
 
@@ -83,6 +84,12 @@ export async function syncGuestProfileFromIdentity(
 ) {
   const supabase = serviceClient(env);
   await syncProfileIdentityFields(supabase, input);
+
+  if (input.email?.trim()) {
+    await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
+      console.warn("[mithron-auth] Guest order linking failed.", error);
+    });
+  }
 
   const authUser = await supabase.auth.admin.getUserById(input.userId);
   if (authUser.error || !authUser.data.user) return;
@@ -252,8 +259,19 @@ export async function provisionAuthenticatedUserIfMissing(input: {
       firebaseUid: input.firebaseUid,
       phone: input.phone
     });
+    if (input.email?.trim()) {
+      await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
+        console.warn("[mithron-auth] Guest order linking failed.", error);
+      });
+    }
     return null;
   }
 
-  return provisionAuthenticatedUser(input, env);
+  const provisioned = await provisionAuthenticatedUser(input, env);
+  if (input.email?.trim()) {
+    await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
+      console.warn("[mithron-auth] Guest order linking failed.", error);
+    });
+  }
+  return provisioned;
 }

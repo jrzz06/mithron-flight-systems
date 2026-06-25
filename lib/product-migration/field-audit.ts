@@ -2,6 +2,8 @@ import type { Bundle, ProductVariant, StorySection } from "../../config/types.ts
 import type { WixProductSnapshot } from "../wix/catalog-client.ts";
 import { normalizeCatalogName } from "../wix/catalog-normalize.ts";
 import { plainTextToDescriptionHtml } from "../product-reconcile/score-canonical.ts";
+import { isSpecLikeBlob } from "../product-spec-text.ts";
+import { isPollutedSpecEntry, scrubPollutedSpecs } from "../wix/semantic-content-parser.ts";
 
 export type MigrationDbRow = {
   slug: string;
@@ -325,11 +327,6 @@ export function buildMigrationAuditReport(
   };
 }
 
-function isSpecLikeBlob(text: string) {
-  const colonMatches = text.match(/[A-Za-z][A-Za-z0-9\s\-\/\(\)]{0,48}:\s*/g) ?? [];
-  return colonMatches.length >= 3;
-}
-
 export function isJunkDescription(value: string | null | undefined) {
   if (!value?.trim()) return true;
   const text = value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
@@ -343,23 +340,94 @@ function createMediaAsset(src: string, alt: string) {
   return { src, alt, kind: "image" as const, local: false };
 }
 
-export function buildSafeMigrationPatch(row: MigrationDbRow, wix: WixProductSnapshot) {
+function countPollutedSpecs(specs: Record<string, string> | null | undefined) {
+  return Object.entries(specs ?? {}).filter(([key, value]) => isPollutedSpecEntry(key, value)).length;
+}
+
+function specsNeedReshape(specs: Record<string, string> | null | undefined) {
+  const entries = Object.entries(specs ?? {});
+  if (!entries.length) return false;
+  const polluted = countPollutedSpecs(specs);
+  return polluted >= 2 || polluted / entries.length >= 0.25;
+}
+
+function buildSemanticStory(row: MigrationDbRow, wix: WixProductSnapshot, reshape: boolean) {
+  const rich = wix.rich;
+  const media = createMediaAsset(wix.media_urls[0] ?? "", wix.name);
+  const story = reshape ? [] : [...(row.story ?? [])];
+  const existingTitles = new Set(story.map((chapter) => chapter.title.toLowerCase()));
+  const featureTitles = new Set(rich.features.map((feature) => feature.title.toLowerCase()));
+
+  for (const feature of rich.features) {
+    const title = feature.title.toLowerCase();
+    if (existingTitles.has(title)) continue;
+    story.push({
+      id: `wix-feature-${title.replace(/[^a-z0-9]+/g, "-")}`,
+      kicker: "Features",
+      title: feature.title,
+      body: feature.body,
+      media,
+      align: "left"
+    });
+    existingTitles.add(title);
+  }
+
+  for (const chapter of rich.story_chapters) {
+    if (featureTitles.has(chapter.title.toLowerCase()) && /feature/i.test(chapter.kicker)) continue;
+    if (/^key features$/i.test(chapter.title)) continue;
+    if (existingTitles.has(chapter.title.toLowerCase())) continue;
+    story.push({
+      ...chapter,
+      media: chapter.media?.src ? chapter.media : media
+    });
+    existingTitles.add(chapter.title.toLowerCase());
+  }
+
+  return story;
+}
+
+export function buildSafeMigrationPatch(
+  row: MigrationDbRow,
+  wix: WixProductSnapshot,
+  options?: { reshapeContent?: boolean }
+) {
   const patch: Record<string, unknown> = {};
   const rich = wix.rich;
+  const semantic = rich.semantic;
+  const shouldReshape = options?.reshapeContent || specsNeedReshape(row.specs);
+  const overviewHtml = rich.description_html.trim();
+  const overviewPlain = semantic.overview_plain.trim();
+  const overviewStripped = overviewHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const overviewIsSpec = isJunkDescription(overviewStripped) || isSpecLikeBlob(overviewStripped);
+  const needsDescription =
+    shouldReshape
+    || !hasHtmlDescription(row.description)
+    || isJunkDescription(row.description)
+    || !hasText(row.description);
 
-  if ((!hasHtmlDescription(row.description) || isJunkDescription(row.description)) && rich.description_html.trim()) {
-    patch.description = /<[^>]+>/.test(rich.description_html)
-      ? rich.description_html
-      : plainTextToDescriptionHtml(rich.description_html);
-  } else if ((!hasText(row.description) || isJunkDescription(row.description)) && wix.description_plain.trim()) {
-    patch.description = plainTextToDescriptionHtml(wix.description_plain);
+  if (needsDescription) {
+    if (!overviewIsSpec && overviewHtml) {
+      patch.description = /<[^>]+>/.test(overviewHtml)
+        ? overviewHtml
+        : plainTextToDescriptionHtml(overviewHtml);
+    } else if (overviewPlain && !isSpecLikeBlob(overviewPlain)) {
+      patch.description = plainTextToDescriptionHtml(overviewPlain);
+    } else if (wix.description_plain.trim() && !isSpecLikeBlob(wix.description_plain)) {
+      patch.description = plainTextToDescriptionHtml(wix.description_plain);
+    } else {
+      console.warn(
+        `[product-migration] No valid marketing overview for ${row.slug}; description left unchanged.`
+      );
+    }
   }
 
   if (!hasText(row.source_description) && wix.description_plain.trim()) {
     patch.source_description = wix.description_plain;
   }
 
-  if (!hasText(row.tagline) && wix.description_plain.trim()) {
+  if ((!hasText(row.tagline) || shouldReshape) && semantic.tagline.trim()) {
+    patch.tagline = semantic.tagline;
+  } else if (!hasText(row.tagline) && wix.description_plain.trim()) {
     patch.tagline = wix.description_plain.slice(0, 180);
   }
 
@@ -378,55 +446,34 @@ export function buildSafeMigrationPatch(row: MigrationDbRow, wix: WixProductSnap
   if (!hasText(row.source_catalog_id)) patch.source_catalog_id = wix.source_catalog_id;
   if (!hasText(row.source_fingerprint)) patch.source_fingerprint = wix.source_fingerprint;
 
-  const mergedSpecs = { ...(row.specs ?? {}) };
-  for (const [key, value] of Object.entries(rich.specs)) {
-    if (!mergedSpecs[key]?.trim()) mergedSpecs[key] = value;
-  }
-  if (Object.keys(mergedSpecs).length > Object.keys(row.specs ?? {}).length) {
-    patch.specs = mergedSpecs;
-  }
-
-  const story = [...(row.story ?? [])];
-  const existingTitles = new Set(story.map((chapter) => chapter.title.toLowerCase()));
-  for (const chapter of rich.story_chapters) {
-    if (existingTitles.has(chapter.title.toLowerCase())) continue;
-    story.push(chapter);
-  }
-
-  if (rich.features.length && !story.some((chapter) => /feature/i.test(chapter.kicker))) {
-    story.push({
-      id: "wix-features",
-      kicker: "Features",
-      title: "Key features",
-      body: rich.features.map((feature) => `• ${feature}`).join("\n"),
-      media: createMediaAsset(wix.media_urls[0] ?? "", wix.name),
-      align: "left"
+  const wixTechnicalSpecs = scrubPollutedSpecs({ ...rich.technical_specs });
+  if (shouldReshape) {
+    const reshapedSpecs = scrubPollutedSpecs({
+      ...Object.fromEntries(Object.entries(row.specs ?? {}).filter(([key, value]) => !isPollutedSpecEntry(key, value))),
+      ...wixTechnicalSpecs
     });
+    if (Object.keys(reshapedSpecs).length) patch.specs = reshapedSpecs;
+  } else {
+    const mergedSpecs = scrubPollutedSpecs({ ...(row.specs ?? {}) });
+    for (const [key, value] of Object.entries(wixTechnicalSpecs)) {
+      if (!mergedSpecs[key]?.trim()) mergedSpecs[key] = value;
+    }
+    const cleanedCount = countPollutedSpecs(mergedSpecs);
+    const rowPollutedCount = countPollutedSpecs(row.specs);
+    if (
+      Object.keys(mergedSpecs).length > Object.keys(row.specs ?? {}).length
+      || (rowPollutedCount > 0 && cleanedCount < rowPollutedCount)
+    ) {
+      patch.specs = mergedSpecs;
+    }
   }
 
-  if (rich.downloads_html.trim() && !story.some((chapter) => /download|document|manual/i.test(chapter.title))) {
-    story.push({
-      id: "wix-downloads",
-      kicker: "Downloads",
-      title: "Documents & downloads",
-      body: rich.document_urls.map((doc) => `${doc.label}: ${doc.url}`).join("\n"),
-      media: createMediaAsset(wix.media_urls[0] ?? "", wix.name),
-      align: "left"
-    });
+  const story = buildSemanticStory(row, wix, shouldReshape);
+  if (story.length > (row.story?.length ?? 0) || shouldReshape) {
+    if (story.length) patch.story = story;
   }
 
-  if (rich.applications_html.trim() && !story.some((chapter) => /application/i.test(chapter.title))) {
-    story.push({
-      id: "wix-applications",
-      kicker: "Applications",
-      title: "Applications",
-      body: rich.applications_html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
-      media: createMediaAsset(wix.media_urls[0] ?? "", wix.name),
-      align: "left"
-    });
-  }
-
-  if (rich.included_items.length && !(row.bundles?.[0]?.includes?.length)) {
+  if (rich.included_items.length && (shouldReshape || !(row.bundles?.[0]?.includes?.length))) {
     const bundles = row.bundles?.length ? [...row.bundles] : [{
       id: "standard",
       name: wix.name,
@@ -436,13 +483,11 @@ export function buildSafeMigrationPatch(row: MigrationDbRow, wix: WixProductSnap
       includes: [] as string[]
     }];
     const primary = bundles[0];
-    if (!primary.includes.length) {
+    if (!primary.includes.length || shouldReshape) {
       primary.includes = rich.included_items;
       patch.bundles = bundles;
     }
   }
-
-  if (story.length > (row.story?.length ?? 0)) patch.story = story;
 
   if ((row.variants?.length ?? 0) < 2 && rich.variants.length > 1) {
     patch.variants = rich.variants.map((variant) => ({

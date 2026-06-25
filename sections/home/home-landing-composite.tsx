@@ -265,50 +265,50 @@ const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldCon
     tiles: [
       {
         label: "AGRONE Drone Owner Registration",
-        body: "Register your drone on AGRONE and connect with farmers, pilots, and service demand across India.",
+        body: "Connect your drone to AGRONE farmers, pilots, and service demand.",
         href: AGRONE_REGISTRATION_LINKS.droneOwner,
         media: localMedia.agroneDroneOwnerRegistration,
         operator: "AGRONE Network",
         model: "DRONE OWNER NETWORK",
-        location: "Pan-India onboarding",
+        location: "Pan-India",
         size: "tall"
       },
       {
         label: "AGRONE Pilot Registration",
-        body: "Join the certified pilot network, access training pathways, and receive mission assignments through AGRONE.",
+        body: "Join certified pilots, access training, and receive AGRONE missions.",
         href: AGRONE_REGISTRATION_LINKS.pilot,
         media: localMedia.agronePilotRegistration,
         operator: "AGRONE Network",
         model: "AGRONE PILOT NETWORK",
-        location: "Pilot onboarding",
+        location: "Pilot network",
         size: "hero"
       },
       {
         label: "All India Farmer Drone Booking",
-        body: "Book drone spraying, mapping, and monitoring services anywhere in India through the AGRONE booking platform.",
+        body: "Book spraying, mapping, and crop monitoring anywhere in India.",
         media: localMedia.agroneFarmerDroneBooking,
         operator: "AGRONE Network",
         model: "NATIONWIDE BOOKING",
-        location: "Service booking desk",
+        location: "Booking desk",
         size: "tall"
       },
       {
         label: "Smart Farmer Registration",
-        body: "Register as a smart farmer to access AGRONE services, crop insights, and on-demand drone support.",
+        body: "Access AGRONE services, crop insights, and on-demand drone support.",
         href: AGRONE_REGISTRATION_LINKS.smartFarmer,
         media: localMedia.agroneSmartFarmerRegistration,
         operator: "AGRONE Network",
         model: "SMART FARMER PROGRAM",
-        location: "Farmer onboarding",
+        location: "Farmer network",
         size: "wide"
       },
       {
         label: "Agri Drone Loan & EMI Check",
-        body: "Check agri-drone loan eligibility, compare EMI plans, and explore financing options backed by AGRONE partners.",
+        body: "Check loan eligibility, compare EMI plans, and explore AGRONE financing.",
         media: localMedia.agroneAgriDroneLoanEmi,
         operator: "AGRONE Network",
         model: "FINANCING SUPPORT",
-        location: "Loan eligibility check",
+        location: "Loan check",
         size: "standard"
       }
     ]
@@ -325,47 +325,47 @@ const missionWorldConfigs: Record<"agri-drones" | "city-drones", MissionWorldCon
     tiles: [
       {
         label: "Dronelancer Model",
-        body: "Pilot-network and mission-marketplace model connecting city operators, route visibility, and on-demand jobs.",
+        body: "Pilot marketplace connecting operators, routes, and on-demand city jobs.",
         media: localMedia.cityTrafficAnalytics,
         operator: "Mithron City Network",
         model: "DRONELANCER MODEL",
-        location: "Pilot network grid",
+        location: "Pilot grid",
         size: "tall"
       },
       {
         label: "City Drone Rental Services App",
-        body: "Rental, booking, and operator-dispatch flow for city drone services, project requests, and earnings visibility.",
+        body: "Book rentals, dispatch operators, and track project earnings.",
         media: localMedia.citySmartMonitoring,
         operator: "Mithron City Network",
         model: "RENTAL SERVICES APP",
-        location: "Urban booking console",
+        location: "Booking console",
         size: "hero"
       },
       {
         label: "All Drone Academic",
-        body: "Training ecosystem for city pilots, simulation labs, classroom workflows, and certified urban flight programs.",
+        body: "Pilot training, simulation labs, and certified urban flight programs.",
         media: localMedia.cityEmergencyResponse,
         operator: "Mithron Academy Network",
-        model: "ALL DRONE ACADAMIC",
-        location: "Training and simulation hub",
+        model: "ALL DRONE ACADEMIC",
+        location: "Training hub",
         size: "tall"
       },
       {
         label: "Drone FranchiseCare Center",
-        body: "Service-center network for franchise operations, repair care, spare support, and local city maintenance coverage.",
+        body: "Franchise care centers for repair, spares, and local maintenance.",
         media: localMedia.cityInfrastructureInspection,
         operator: "Mithron Service Network",
         model: "FRANCHISECARE CENTER",
-        location: "City care workshop",
+        location: "Care workshop",
         size: "standard"
       },
       {
         label: "Drone Technician Aggregation",
-        body: "Distributed technician aggregation system for diagnostics, field support, tools, and maintenance coordination.",
+        body: "Field technicians for diagnostics, tools, and maintenance coordination.",
         media: localMedia.cityCrowdMonitoring,
         operator: "Mithron Service Network",
         model: "TECHNICIAN AGGREGATION",
-        location: "Field support network",
+        location: "Field network",
         size: "standard"
       }
     ]
@@ -1150,11 +1150,162 @@ function missionLightZoneStyle(zones: MissionLightZones, zoneColors: MissionZone
   } as CSSProperties;
 }
 
+type MissionStoryTheme = {
+  id: string;
+  scrim: "cream" | "cool" | "warm";
+  zoneColors: MissionZoneColors;
+};
+
+const MISSION_STORY_THEMES: Record<string, MissionStoryTheme> = {
+  "agrone-pilot-registration": {
+    id: "pilot",
+    scrim: "cream",
+    zoneColors: {
+      zone1: "118, 220, 196",
+      zone2: "72, 188, 220",
+      zone3: "186, 242, 232",
+      zone4: "148, 214, 204"
+    }
+  },
+  "agrone-drone-owner-registration": {
+    id: "owner",
+    scrim: "cool",
+    zoneColors: {
+      zone1: "72, 148, 220",
+      zone2: "118, 210, 188",
+      zone3: "168, 206, 238",
+      zone4: "132, 188, 210"
+    }
+  },
+  "all-india-drone-farmer": {
+    id: "booking",
+    scrim: "cool",
+    zoneColors: {
+      zone1: "88, 156, 228",
+      zone2: "168, 148, 228",
+      zone3: "196, 188, 242",
+      zone4: "142, 178, 232"
+    }
+  },
+  "smart-farmer-register": {
+    id: "farmer",
+    scrim: "cream",
+    zoneColors: {
+      zone1: "108, 198, 148",
+      zone2: "186, 220, 168",
+      zone3: "228, 238, 210",
+      zone4: "168, 210, 178"
+    }
+  },
+  "agri-drone-loan": {
+    id: "finance",
+    scrim: "warm",
+    zoneColors: {
+      zone1: "228, 196, 128",
+      zone2: "242, 224, 186",
+      zone3: "248, 236, 210",
+      zone4: "220, 188, 132"
+    }
+  },
+  "dronelancer-model": {
+    id: "network",
+    scrim: "cool",
+    zoneColors: {
+      zone1: "108, 168, 228",
+      zone2: "196, 206, 218",
+      zone3: "168, 198, 238",
+      zone4: "148, 178, 212"
+    }
+  },
+  "city-drone-rental-services-app": {
+    id: "rental",
+    scrim: "cool",
+    zoneColors: {
+      zone1: "96, 210, 232",
+      zone2: "228, 242, 248",
+      zone3: "148, 218, 238",
+      zone4: "186, 232, 244"
+    }
+  },
+  "all-drone-acadamic": {
+    id: "academy",
+    scrim: "cool",
+    zoneColors: {
+      zone1: "148, 128, 228",
+      zone2: "88, 156, 228",
+      zone3: "186, 178, 242",
+      zone4: "128, 148, 218"
+    }
+  },
+  "drone-franchisecare-center": {
+    id: "care",
+    scrim: "cream",
+    zoneColors: {
+      zone1: "108, 198, 210",
+      zone2: "228, 242, 246",
+      zone3: "148, 210, 220",
+      zone4: "186, 224, 232"
+    }
+  },
+  "drone-technician-aggregation": {
+    id: "technician",
+    scrim: "cool",
+    zoneColors: {
+      zone1: "196, 206, 218",
+      zone2: "88, 156, 220",
+      zone3: "168, 188, 212",
+      zone4: "148, 178, 228"
+    }
+  }
+};
+
+const FALLBACK_AGRI_STORY: MissionStoryTheme = {
+  id: "agri",
+  scrim: "cream",
+  zoneColors: defaultAgriZoneColors
+};
+
+const FALLBACK_CITY_STORY: MissionStoryTheme = {
+  id: "city",
+  scrim: "cool",
+  zoneColors: defaultCityZoneColors
+};
+
+function missionImageKeyFromSrc(src: string) {
+  return src.split("/").pop()?.replace(/\.[a-z0-9]+$/i, "") ?? "";
+}
+
+function getMissionStoryTheme(src: string, variant: "agri" | "city") {
+  const key = missionImageKeyFromSrc(src);
+  return MISSION_STORY_THEMES[key] ?? (variant === "city" ? FALLBACK_CITY_STORY : FALLBACK_AGRI_STORY);
+}
+
+function missionCardStyle({
+  imagePresentation,
+  storyTheme,
+  variant
+}: {
+  imagePresentation: MissionImagePresentation;
+  storyTheme: MissionStoryTheme;
+  variant: "agri" | "city";
+}): CSSProperties {
+  const scaleVar =
+    variant === "city"
+      ? ({ ["--city-image-scale"]: String(imagePresentation.scale) } as CSSProperties)
+      : ({ ["--agri-image-scale"]: String(imagePresentation.scale) } as CSSProperties);
+
+  return {
+    "--agri-object-position": imagePresentation.objectPosition,
+    ...scaleVar,
+    ...missionLightZoneStyle(imagePresentation.zones, storyTheme.zoneColors)
+  } as CSSProperties;
+}
+
 const agriImagePresentation: Record<string, MissionImagePresentation> = {
   "agrone-drone-owner-registration": {
-    objectPosition: "50% 36%",
-    scale: 1.18,
-    transformOrigin: "50% 34%",
+    objectPosition: "50% 42%",
+    scale: 1.02,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "50%", y: "38%" },
       zone2: { x: "22%", y: "58%" },
@@ -1169,9 +1320,9 @@ const agriImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "agrone-pilot-registration": {
-    objectPosition: "50% 34%",
-    scale: 1.22,
-    transformOrigin: "50% 30%",
+    objectPosition: "54% 40%",
+    scale: 1.03,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "58%", y: "42%" },
       zone2: { x: "32%", y: "55%" },
@@ -1186,9 +1337,9 @@ const agriImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "all-india-drone-farmer": {
-    objectPosition: "56% 38%",
-    scale: 1.2,
-    transformOrigin: "52% 36%",
+    objectPosition: "52% 44%",
+    scale: 1.02,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "56%", y: "40%" },
       zone2: { x: "16%", y: "64%" },
@@ -1203,14 +1354,14 @@ const agriImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "smart-farmer-register": {
-    objectPosition: "50% 38%",
-    scale: 1.14,
-    transformOrigin: "50% 36%",
+    objectPosition: "50% 42%",
+    scale: 1.0,
+    transformOrigin: "center center",
     zones: {
-      zone1: { x: "50%", y: "40%" },
-      zone2: { x: "24%", y: "58%" },
-      zone3: { x: "72%", y: "35%" },
-      zone4: { x: "92%", y: "8%" }
+      zone1: { x: "50%", y: "42%" },
+      zone2: { x: "24%", y: "62%" },
+      zone3: { x: "72%", y: "32%" },
+      zone4: { x: "92%", y: "10%" }
     },
     zoneColors: {
       zone1: "58, 185, 98",
@@ -1220,9 +1371,9 @@ const agriImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "agri-drone-loan": {
-    objectPosition: "50% 38%",
-    scale: 1.14,
-    transformOrigin: "50% 36%",
+    objectPosition: "48% 40%",
+    scale: 1.0,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "42%", y: "38%" },
       zone2: { x: "68%", y: "50%" },
@@ -1248,14 +1399,78 @@ function getAgriImagePresentation(src: string, cardType: "tall" | "hero" | "stan
   if (tuned) return tuned;
 
   const fallbackScale =
-    cardType === "standard" ? 1.12 : cardType === "hero" ? 1.18 : cardType === "wide" ? 1.16 : 1.15;
+    cardType === "standard" ? 1.01 : cardType === "hero" ? 1.03 : cardType === "wide" ? 1.02 : 1.02;
   return {
-    objectPosition: "50% 36%",
+    objectPosition: "50% 40%",
     scale: fallbackScale,
-    transformOrigin: "50% 34%",
+    transformOrigin: "center center",
     zones: defaultAgriZones,
     zoneColors: defaultAgriZoneColors
   };
+}
+
+function MissionWorldCardContent({
+  tile,
+  cardType,
+  imagePresentation,
+  sizes,
+  variant,
+  logoCover
+}: {
+  tile: MissionWorldTile;
+  cardType: "tall" | "hero" | "standard" | "wide";
+  imagePresentation: MissionImagePresentation;
+  sizes: string;
+  variant: "agri" | "city";
+  logoCover?: boolean;
+}) {
+  const isCity = variant === "city";
+  const imageFrameClass = isCity ? styles.cityCardImageFrame : styles.agriCardImageFrame;
+  const textProtectionClass = isCity ? styles.cityCardTextProtection : styles.agriCardTextProtection;
+
+  return (
+    <>
+      <div className={styles.missionCardImageStage}>
+        <MithronMissionTileImage
+          src={tile.media.src}
+          alt={tile.media.alt || tile.label}
+          cardType={cardType}
+          wrapperClassName={imageFrameClass}
+          sizes={sizes}
+          className={styles.agriCardImage}
+          style={{
+            objectPosition: imagePresentation.objectPosition,
+            transformOrigin: imagePresentation.transformOrigin
+          }}
+        />
+        {logoCover ? <span className={styles.missionCardBrandShield} aria-hidden="true" /> : null}
+      </div>
+      <span
+        className={`${styles.agriCardAmbient} ${cardType === "hero" ? styles.agriCardAmbientDominant : ""}`}
+        aria-hidden="true"
+      >
+        <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientBeam}`} />
+        <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientWash}`} />
+        <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientAccent}`} />
+      </span>
+      <div className={styles.missionCardFloat}>
+        <span className={styles.agriCardDevice}>{tile.model}</span>
+        <div className={styles.missionCardCopyRow}>
+          <span className={styles.agriCardCopy}>
+            <span className={textProtectionClass} aria-hidden="true" />
+            <strong>{tile.label}</strong>
+            <span>{tile.body}</span>
+            <small>
+              {tile.operator} | {tile.location}
+            </small>
+          </span>
+          <span className={styles.agriCardArrow} aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </div>
+      </div>
+    </>
+  );
 }
 
 function renderMissionWorldTile(
@@ -1307,6 +1522,7 @@ function AgriCommunityWorldSection({
   ) => {
     const imagePresentation = getAgriImagePresentation(tile.media.src, cardType);
     const imageKey = agriImageKeyFromSrc(tile.media.src);
+    const storyTheme = getMissionStoryTheme(tile.media.src, "agri");
     const tileClassName = `${styles.agriCard} ${styles[`agriCard_${cardType}`]}`;
     const tileProps = {
       className: tileClassName,
@@ -1314,55 +1530,28 @@ function AgriCommunityWorldSection({
       "data-showcase-kind": "mission-image",
       "data-tile-size": cardType,
       "data-agri-image": imageKey || undefined,
+      "data-mission-story": storyTheme.id,
+      "data-scrim": storyTheme.scrim,
       "data-dominant": cardType === "hero" ? "true" : "false",
-      style: {
-        "--agri-image-scale": String(imagePresentation.scale),
-        "--agri-object-position": imagePresentation.objectPosition,
-        ...missionLightZoneStyle(imagePresentation.zones, imagePresentation.zoneColors)
-      } as CSSProperties
+      style: missionCardStyle({ imagePresentation, storyTheme, variant: "agri" })
     };
 
     const tileContent = (
-      <>
-        <MithronMissionTileImage
-          src={tile.media.src}
-          alt={tile.media.alt || tile.label}
-          cardType={cardType}
-          wrapperClassName={styles.agriCardImageFrame}
-          sizes={
-            cardType === "hero"
-              ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 65vw"
-              : cardType === "wide"
-                ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 68vw"
-                : cardType === "tall"
-                  ? "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 52vw"
-                  : "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 32vw"
-          }
-          className={styles.agriCardImage}
-          style={{
-            objectPosition: imagePresentation.objectPosition,
-            transformOrigin: imagePresentation.transformOrigin
-          }}
-        />
-        <span
-          className={`${styles.agriCardAmbient} ${cardType === "hero" ? styles.agriCardAmbientDominant : ""}`}
-          aria-hidden="true"
-        >
-          <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientBeam}`} />
-          <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientWash}`} />
-          <span className={`${styles.agriCardAmbientLayer} ${styles.agriCardAmbientAccent}`} />
-        </span>
-        <span className={styles.agriCardTextProtection} aria-hidden="true" />
-        <span className={styles.agriCardCopy}>
-          <strong>{tile.label}</strong>
-          <span>{tile.body}</span>
-          <small>{tile.operator} | {tile.location}</small>
-        </span>
-        <span className={styles.agriCardDevice}>{tile.model}</span>
-        <span className={styles.agriCardArrow} aria-hidden="true">
-          <ArrowRight size={16} />
-        </span>
-      </>
+      <MissionWorldCardContent
+        tile={tile}
+        cardType={cardType}
+        imagePresentation={imagePresentation}
+        variant="agri"
+        sizes={
+          cardType === "hero"
+            ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 65vw"
+            : cardType === "wide"
+              ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 68vw"
+              : cardType === "tall"
+                ? "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 52vw"
+                : "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 32vw"
+        }
+      />
     );
 
     return renderMissionWorldTile(tile, `agri-${tile.label}`, tileProps, tileContent);
@@ -1427,9 +1616,9 @@ function AgriCommunityWorldSection({
 
 const cityImagePresentation: Record<string, MissionImagePresentation> = {
   "dronelancer-model": {
-    objectPosition: "50% 36%",
-    scale: 1.18,
-    transformOrigin: "50% 34%",
+    objectPosition: "48% 40%",
+    scale: 1.02,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "52%", y: "34%" },
       zone2: { x: "24%", y: "56%" },
@@ -1444,9 +1633,9 @@ const cityImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "city-drone-rental-services-app": {
-    objectPosition: "50% 42%",
-    scale: 1.1,
-    transformOrigin: "50% 40%",
+    objectPosition: "46% 40%",
+    scale: 1.0,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "48%", y: "40%" },
       zone2: { x: "22%", y: "56%" },
@@ -1461,9 +1650,9 @@ const cityImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "all-drone-acadamic": {
-    objectPosition: "50% 38%",
-    scale: 1.1,
-    transformOrigin: "50% 36%",
+    objectPosition: "50% 40%",
+    scale: 1.02,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "50%", y: "36%" },
       zone2: { x: "28%", y: "58%" },
@@ -1478,9 +1667,9 @@ const cityImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "drone-franchisecare-center": {
-    objectPosition: "50% 40%",
-    scale: 1.08,
-    transformOrigin: "50% 38%",
+    objectPosition: "50% 38%",
+    scale: 1.0,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "52%", y: "38%" },
       zone2: { x: "24%", y: "60%" },
@@ -1495,9 +1684,9 @@ const cityImagePresentation: Record<string, MissionImagePresentation> = {
     }
   },
   "drone-technician-aggregation": {
-    objectPosition: "50% 40%",
-    scale: 1.08,
-    transformOrigin: "50% 38%",
+    objectPosition: "50% 42%",
+    scale: 1.0,
+    transformOrigin: "center center",
     zones: {
       zone1: { x: "50%", y: "38%" },
       zone2: { x: "22%", y: "58%" },
@@ -1523,11 +1712,11 @@ function getCityImagePresentation(src: string, cardType: "tall" | "hero" | "stan
   if (tuned) return tuned;
 
   const fallbackScale =
-    cardType === "standard" ? 1.08 : cardType === "hero" ? 1.12 : cardType === "wide" ? 1.1 : 1.12;
+    cardType === "standard" ? 1.01 : cardType === "hero" ? 1.03 : cardType === "wide" ? 1.02 : 1.02;
   return {
-    objectPosition: "50% 40%",
+    objectPosition: "50% 42%",
     scale: fallbackScale,
-    transformOrigin: "50% 38%",
+    transformOrigin: "center center",
     zones: defaultCityZones,
     zoneColors: defaultCityZoneColors
   };
@@ -1547,6 +1736,7 @@ function CityDroneWorldSection({
   ) => {
     const imagePresentation = getCityImagePresentation(tile.media.src, cardType);
     const imageKey = cityImageKeyFromSrc(tile.media.src);
+    const storyTheme = getMissionStoryTheme(tile.media.src, "city");
     const tileClassName = `${styles.agriCard} ${styles[`agriCard_${cardType}`]} ${slotClass}`;
     const tileProps = {
       className: tileClassName,
@@ -1554,52 +1744,30 @@ function CityDroneWorldSection({
       "data-showcase-kind": "mission-image",
       "data-tile-size": cardType,
       "data-city-image": imageKey || undefined,
+      "data-mission-story": storyTheme.id,
+      "data-scrim": storyTheme.scrim,
       "data-dominant": cardType === "hero" ? "true" : "false",
-      style: missionLightZoneStyle(imagePresentation.zones, imagePresentation.zoneColors)
+      "data-logo-cover": imageKey === "city-drone-rental-services-app" ? "true" : undefined,
+      style: missionCardStyle({ imagePresentation, storyTheme, variant: "city" })
     };
 
     const tileContent = (
-      <>
-        <MithronMissionTileImage
-          src={tile.media.src}
-          alt={tile.media.alt}
-          cardType={cardType}
-          wrapperClassName={styles.cityCardImageFrame}
-          sizes={
-            cardType === "hero"
-              ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 60vw"
-              : cardType === "wide"
-                ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 68vw"
-                : cardType === "tall"
-                  ? "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 54vw"
-                  : "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 32vw"
-          }
-          className={styles.agriCardImage}
-          style={{
-            objectPosition: imagePresentation.objectPosition,
-            transformOrigin: imagePresentation.transformOrigin,
-            ["--city-image-scale"]: String(imagePresentation.scale)
-          } as CSSProperties}
-        />
-        <span
-          className={`${styles.cityCardAmbient} ${cardType === "hero" ? styles.cityCardAmbientDominant : ""}`}
-          aria-hidden="true"
-        >
-          <span className={`${styles.cityCardAmbientLayer} ${styles.cityCardAmbientBeam}`} />
-          <span className={`${styles.cityCardAmbientLayer} ${styles.cityCardAmbientWash}`} />
-          <span className={`${styles.cityCardAmbientLayer} ${styles.cityCardAmbientAccent}`} />
-        </span>
-        <span className={styles.cityCardTextProtection} aria-hidden="true" />
-        <span className={styles.agriCardCopy}>
-          <strong>{tile.label}</strong>
-          <span>{tile.body}</span>
-          <small>{tile.operator} | {tile.location}</small>
-        </span>
-        <span className={styles.agriCardDevice}>{tile.model}</span>
-        <span className={styles.agriCardArrow} aria-hidden="true">
-          <ArrowRight size={16} />
-        </span>
-      </>
+      <MissionWorldCardContent
+        tile={tile}
+        cardType={cardType}
+        imagePresentation={imagePresentation}
+        variant="city"
+        logoCover={imageKey === "city-drone-rental-services-app"}
+        sizes={
+          cardType === "hero"
+            ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 60vw"
+            : cardType === "wide"
+              ? "(max-width: 640px) 100vw, (max-width: 980px) 100vw, 68vw"
+              : cardType === "tall"
+                ? "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 54vw"
+                : "(max-width: 640px) 100vw, (max-width: 980px) 48vw, 32vw"
+        }
+      />
     );
 
     return renderMissionWorldTile(tile, `city-${tile.label}`, tileProps, tileContent);
@@ -1618,8 +1786,6 @@ function CityDroneWorldSection({
         <div className={styles.cityShowcaseStage}>
           <span className={styles.cityShowcaseAtmosphere} aria-hidden="true" />
           <div className={styles.cityBentoGrid}>
-          {renderCityCard(config.tiles[1], "hero", styles.citySlotHero)}
-
           <div className={styles.cityTextHeader}>
             <div className={styles.agriEyebrowRow}>
               <span className={styles.agriEyebrow}>{config.eyebrow}</span>
@@ -1627,12 +1793,15 @@ function CityDroneWorldSection({
             <h2 className={styles.agriHeadline}>{config.title.toUpperCase()}</h2>
             <div className={styles.agriIntroBody}>
               <p>{config.body}</p>
-              <p className={styles.agriFallbackNote}>
-                {config.mediaState}: {config.mediaNote}
-              </p>
+              {config.mediaNote ? (
+                <p className={styles.agriFallbackNote}>
+                  {config.mediaState}: {config.mediaNote}
+                </p>
+              ) : null}
             </div>
           </div>
 
+          {renderCityCard(config.tiles[1], "hero", styles.citySlotHero)}
           {renderCityCard(config.tiles[0], "tall", styles.citySlotTall)}
           {renderCityCard(config.tiles[3], "standard", styles.citySlotStandardLeft)}
           {renderCityCard(config.tiles[4], "standard", styles.citySlotStandardRight)}

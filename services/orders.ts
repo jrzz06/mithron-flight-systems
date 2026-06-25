@@ -39,7 +39,6 @@ export type ValidatedOrderDraft = {
     subtotal: number;
     total: number;
     currency: "INR";
-    items: Array<Record<string, unknown>>;
     metadata: JsonRecord;
   };
   orderItems: Array<{
@@ -130,8 +129,6 @@ export function buildValidatedOrderDraft(input: CheckoutOrderInput, catalogProdu
       subtotal,
       total,
       currency: "INR",
-      // @deprecated orders.items duplicates order_items — keep for compatibility; stop writing in a future migration.
-      items: orderItems,
       metadata: {
         ...(input.metadata ?? {}),
         region: input.region ?? null,
@@ -198,20 +195,24 @@ export type OrderStatus =
   | "dispatched"
   | "in_transit"
   | "delivered"
+  | "refunded"
+  | "cancelled"
   | "draft";
 
 const orderStatusTransitions: Record<OrderStatus, OrderStatus[]> = {
   draft: ["pending_payment"],
   pending_payment: ["paid"],
-  paid: ["admin_review"],
-  admin_review: ["confirmed"],
+  paid: ["admin_review", "refunded"],
+  admin_review: ["confirmed", "cancelled"],
   confirmed: ["assigned"],
   assigned: ["processing"],
   processing: ["packed"],
   packed: ["dispatched"],
   dispatched: ["in_transit"],
   in_transit: ["delivered"],
-  delivered: []
+  delivered: ["refunded"],
+  refunded: [],
+  cancelled: []
 };
 
 export function canTransitionOrderStatus(from: string, to: OrderStatus) {
@@ -319,7 +320,9 @@ const orderStatusRank: Record<OrderStatus, number> = {
   packed: 7,
   dispatched: 8,
   in_transit: 9,
-  delivered: 10
+  delivered: 10,
+  refunded: 11,
+  cancelled: 12
 };
 
 /** Keep procurement `orders.status` aligned with warehouse fulfillment transitions. */

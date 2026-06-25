@@ -748,7 +748,7 @@ export async function saveProductPublishStateFormAction(formData: FormData) {
     revalidateCatalogSurfaces(draftInput.identity.slug);
     revalidatePath("/admin/products");
     revalidatePath("/admin/inventory");
-    revalidatePath("/warehouse/stock");
+    revalidatePath("/warehouse/inventory");
   });
 }
 

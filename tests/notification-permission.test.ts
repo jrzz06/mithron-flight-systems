@@ -13,7 +13,9 @@ describe("notification permission hardening", () => {
     expect(roleHasPermission("user", "orders.lifecycle")).toBe(false);
   });
 
-  it("grants operations.write to warehouse for internal ops tooling", () => {
-    expect(roleHasPermission("warehouse", "operations.write")).toBe(true);
+  it("keeps warehouse permissions aligned with /warehouse routes", () => {
+    expect(roleHasPermission("warehouse", "operations.write")).toBe(false);
+    expect(roleHasPermission("warehouse", "warehouse.write")).toBe(true);
+    expect(roleHasPermission("warehouse", "orders.lifecycle")).toBe(true);
   });
 });

@@ -3,7 +3,9 @@ import { ControlShell } from "@/components/admin/control-shell";
 import { OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { listPendingReturnRequests } from "@/services/order-returns";
 import { updateShipmentLifecycleFormAction } from "../actions";
+import { approveCustomerReturnRequestAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,7 @@ async function updateReturnStatus(formData: FormData) {
 
 export default async function ReturnsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const snapshot = await getWarehouseSnapshot({ scope: "returns" });
+  const customerReturns = await listPendingReturnRequests();
   const params = searchParams ? await searchParams : {};
   const operationStatus = value(params, "operation_status");
   const operationMessage = value(params, "operation_message");
@@ -49,6 +52,7 @@ export default async function ReturnsPage({ searchParams }: { searchParams?: Pro
       title="Return inspection"
       description={snapshot.blockedReason ?? "Return actions update shipment lifecycle rows and use the existing stock restoration path for approved returns."}
       metrics={[
+        { label: "Customer requests", value: String(customerReturns.length) },
         { label: "Inspectable", value: String(returnRows.length) },
         { label: "Returned", value: String(snapshot.data.shipments.filter((shipment) => text(shipment.shipment_status) === "returned").length) },
         { label: "Damaged", value: String(snapshot.data.shipments.filter((shipment) => text(shipment.shipment_status) === "damaged").length) }
@@ -59,6 +63,52 @@ export default async function ReturnsPage({ searchParams }: { searchParams?: Pro
         { label: "Activity", href: "/warehouse/activity" }
       ]}
     >
+      <section className="grid gap-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Customer return requests</h2>
+        {customerReturns.length ? customerReturns.map((request) => {
+          const requestId = text(request.id, "");
+          const status = text(request.status, "requested");
+          return (
+            <article key={requestId} className="rounded-xl border border-white/[0.06] bg-[#10151d] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-100">Order {text(request.order_id)}</p>
+                <StatusBadge status={status} />
+              </div>
+              <p className="mt-2 text-sm text-slate-400">{text(request.reason, "No reason provided")}</p>
+              {status === "requested" ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <form action={approveCustomerReturnRequestAction}>
+                    <input type="hidden" name="requestId" value={requestId} />
+                    <input type="hidden" name="action" value="approve" />
+                    <OperationalSubmitButton pendingLabel="Approving" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 text-xs font-semibold text-emerald-100">
+                      Approve return
+                    </OperationalSubmitButton>
+                  </form>
+                  <form action={approveCustomerReturnRequestAction} className="flex items-center gap-2">
+                    <input type="hidden" name="requestId" value={requestId} />
+                    <input type="hidden" name="action" value="reject" />
+                    <input name="adminNote" placeholder="Rejection note" className="h-9 rounded-lg border border-white/[0.06] bg-[#0b1017] px-2 text-xs text-slate-100" />
+                    <OperationalSubmitButton pendingLabel="Rejecting" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-rose-400/20 bg-rose-400/10 px-3 text-xs font-semibold text-rose-100">
+                      Reject
+                    </OperationalSubmitButton>
+                  </form>
+                </div>
+              ) : status === "approved" ? (
+                <form action={approveCustomerReturnRequestAction} className="mt-4">
+                  <input type="hidden" name="requestId" value={requestId} />
+                  <input type="hidden" name="action" value="receive" />
+                  <OperationalSubmitButton pendingLabel="Receiving" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 text-xs font-semibold text-emerald-100">
+                    Mark received & inspect
+                  </OperationalSubmitButton>
+                </form>
+              ) : null}
+            </article>
+          );
+        }) : (
+          <p className="text-sm text-slate-500">No open customer return requests.</p>
+        )}
+      </section>
+
       <section data-returns-workflow className="grid gap-4">
         <OperationalFeedback status={operationStatus} message={operationMessage} context="Returns" idle="Inspection decisions and lifecycle validation messages appear here." />
         <div className="grid gap-3">

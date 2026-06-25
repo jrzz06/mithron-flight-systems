@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StatusBadge } from "@/components/admin/module-panel";
+import { OrderReturnForm } from "@/components/customer/order-return-form";
+import { OrderReviewForm } from "@/components/customer/order-review-form";
 import { createClient } from "@/lib/server";
 import { FULFILLMENT_STATUS_LABELS } from "@/lib/orders/status";
 import { formatINR } from "@/lib/utils";
+import { listCustomerReviewsForOrder } from "@/services/customer-order-reviews";
 import { getCustomerOrder } from "@/services/customer-orders";
+import { listReturnRequestsForOrder } from "@/services/order-returns";
 
 type TimelineEntry = {
   at?: string;
@@ -46,8 +50,16 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
   const detail = await getCustomerOrder(userId, id);
   if (!detail) notFound();
 
+  const [returnRequests, reviews] = await Promise.all([
+    listReturnRequestsForOrder(id, userId),
+    listCustomerReviewsForOrder(id, userId)
+  ]);
+
   const { order, items, payment, shippingAddress } = detail;
   const fulfillmentStatus = String(order.fulfillment_status ?? "pending");
+  const canReturn = fulfillmentStatus === "delivered" || String(order.status ?? "") === "delivered";
+  const canReview = fulfillmentStatus === "delivered";
+  const activeReturn = returnRequests.find((row) => !["cancelled", "rejected", "refunded"].includes(String(row.status ?? "")));
   const fulfillmentLabel = FULFILLMENT_STATUS_LABELS[fulfillmentStatus as keyof typeof FULFILLMENT_STATUS_LABELS]
     ?? fulfillmentStatus.replaceAll("_", " ");
   const timeline = Array.isArray(order.timeline)
@@ -124,15 +136,39 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
 
       <div className="mt-8 grid gap-3">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-white/50">Items</h3>
-        {items.map((item) => (
-          <div key={String(item.id)} className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] p-4">
-            <p className="font-semibold text-white">{String(item.product_name ?? item.product_slug)}</p>
-            <p className="mt-1 text-sm text-white/60">
-              Qty {String(item.quantity ?? 1)} · {formatINR(Number(item.line_total ?? 0))}
-            </p>
-          </div>
-        ))}
+        {items.map((item) => {
+          const slug = String(item.product_slug ?? "");
+          const review = reviews.find((row) => String(row.product_slug) === slug);
+          return (
+            <div key={String(item.id)} className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] p-4">
+              <p className="font-semibold text-white">{String(item.product_name ?? item.product_slug)}</p>
+              <p className="mt-1 text-sm text-white/60">
+                Qty {String(item.quantity ?? 1)} · {formatINR(Number(item.line_total ?? 0))}
+              </p>
+              <OrderReviewForm
+                orderId={id}
+                productSlug={slug}
+                productName={String(item.product_name ?? slug)}
+                disabled={!canReview}
+                existingStatus={review ? String(review.status ?? "pending") : null}
+              />
+            </div>
+          );
+        })}
       </div>
+
+      <section className="mt-8 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] p-5">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-white/50">Returns</h3>
+        {activeReturn ? (
+          <p className="mt-3 text-sm text-white/70">
+            Return request status: <StatusBadge status={String(activeReturn.status ?? "requested")} />
+          </p>
+        ) : (
+          <div className="mt-4">
+            <OrderReturnForm orderId={id} disabled={!canReturn} />
+          </div>
+        )}
+      </section>
     </div>
   );
 }

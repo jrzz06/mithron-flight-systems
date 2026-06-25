@@ -32,9 +32,9 @@ function text(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-function mapCheckoutOrderToEnquiryRow(order: JsonRecord): AdminEnquiryRow {
+function mapCheckoutOrderToEnquiryRow(order: JsonRecord, orderItems: JsonRecord[]): AdminEnquiryRow {
   const metadata = isPlainRecord(order.metadata) ? order.metadata : {};
-  const items = Array.isArray(order.items) ? order.items.filter(isPlainRecord) : [];
+  const items = orderItems.filter(isPlainRecord);
   const firstItem = items[0];
   const itemSummary = items
     .map((item) => `${text(item.product_name, text(item.product_slug, "Item"))} x ${String(item.quantity ?? 1)}`)
@@ -156,13 +156,33 @@ export async function listAdminEnquiries(env: EnvSource = process.env): Promise<
       { headers: headers(config.serviceRoleKey), cache: "no-store" }
     ),
     fetch(
-      `${config.url}/rest/v1/orders?select=id,order_number,customer_email,status,metadata,items,created_at,updated_at&channel=eq.enquiry&order=created_at.desc&limit=100`,
+      `${config.url}/rest/v1/orders?select=id,order_number,customer_email,status,metadata,created_at,updated_at&channel=eq.enquiry&order=created_at.desc&limit=100`,
       { headers: headers(config.serviceRoleKey), cache: "no-store" }
     )
   ]);
 
   const enquiries = enquiriesResponse.ok ? ((await enquiriesResponse.json()) as JsonRecord[]) : [];
   const checkoutOrders = ordersResponse.ok ? ((await ordersResponse.json()) as JsonRecord[]) : [];
+  const checkoutOrderIds = checkoutOrders.map((order) => text(order.id)).filter(Boolean);
+  const orderItemsByOrderId = new Map<string, JsonRecord[]>();
+
+  if (checkoutOrderIds.length) {
+    const itemsResponse = await fetch(
+      `${config.url}/rest/v1/order_items?select=order_id,product_slug,product_name,quantity&order_id=in.(${checkoutOrderIds.map((id) => encodeURIComponent(id)).join(",")})`,
+      { headers: headers(config.serviceRoleKey), cache: "no-store" }
+    );
+    if (itemsResponse.ok) {
+      const orderItems = (await itemsResponse.json()) as JsonRecord[];
+      for (const item of orderItems) {
+        const orderId = text(item.order_id);
+        if (!orderId) continue;
+        const bucket = orderItemsByOrderId.get(orderId) ?? [];
+        bucket.push(item);
+        orderItemsByOrderId.set(orderId, bucket);
+      }
+    }
+  }
+
   const linkedOrderIds = new Set(
     enquiries
       .map((enquiry) => text(enquiry.converted_order_id))
@@ -183,7 +203,7 @@ export async function listAdminEnquiries(env: EnvSource = process.env): Promise<
 
   const backfilledCheckoutEnquiries = checkoutOrders
     .filter((order) => !linkedOrderIds.has(text(order.id)))
-    .map(mapCheckoutOrderToEnquiryRow);
+    .map((order) => mapCheckoutOrderToEnquiryRow(order, orderItemsByOrderId.get(text(order.id)) ?? []));
 
   return [...normalizedEnquiries, ...backfilledCheckoutEnquiries].sort((left, right) => {
     const leftTime = Date.parse(text(left.created_at)) || 0;

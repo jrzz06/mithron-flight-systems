@@ -676,7 +676,10 @@ function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset):
     price: toNumber(row.price),
     compareAt: row.compare_at ? toNumber(row.compare_at) : undefined,
     badge: row.badge ?? undefined,
-    description: row.description ? cleanText(row.description) : undefined,
+    description: (() => {
+      const rawDescription = row.description ? cleanText(row.description) : undefined;
+      return rawDescription && !isSpecLikeBlob(rawDescription) ? rawDescription : undefined;
+    })(),
     sourceDescription: row.source_description ? cleanText(row.source_description) : undefined,
     onSale: row.on_sale ?? undefined,
     discountType: row.discount_type ?? undefined,

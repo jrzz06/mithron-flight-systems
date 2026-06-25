@@ -11,12 +11,14 @@ import { ProductMediaViewer, type ProductMediaViewerModel } from "@/sections/pro
 import { ProductOverview } from "@/sections/product/product-overview";
 import {
   ProductApplicationsSection,
+  ProductDisclaimersSection,
   ProductDownloadsSection,
   ProductFeaturesSection,
   ProductIncludedSection,
   ProductMediaGallerySection,
   ProductSpecificationHighlightsSection,
-  ProductTechnicalSection
+  ProductTechnicalSection,
+  ProductWarrantySection
 } from "@/sections/product/product-detail-sections";
 import { ProductRelatedLazySection, ProductReviewsLazySection } from "@/sections/product/product-below-fold";
 import { ProductStory } from "@/sections/product/product-story";
@@ -128,6 +130,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <ProductTechnicalSection product={product} />
         <ProductApplicationsSection product={product} />
         <ProductIncludedSection product={product} />
+        <ProductWarrantySection product={product} />
+        <ProductDisclaimersSection product={product} />
         <ProductDownloadsSection product={product} />
         <ProductMediaGallerySection product={product} />
         <ProductStory product={product} includeFallback={showStoryFallback} />

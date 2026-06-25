@@ -68,6 +68,12 @@ describe("commerce lifecycle hardening", () => {
     expect(webhook).toContain("releaseCheckoutStock");
   });
 
+  it("handles payment refunds with stock release and order status update", () => {
+    const webhook = source("app/api/payments/webhooks/[provider]/route.ts");
+    expect(webhook).toContain('event.status === "refunded"');
+    expect(webhook).toContain('payment_status: "refunded"');
+  });
+
   it("defines idempotent reservation migration", () => {
     const migration = source("supabase/migrations/20260618000200_commerce_lifecycle_rpcs.sql");
     expect(migration).toContain("movement_type = 'reservation'");

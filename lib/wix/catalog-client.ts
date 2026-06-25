@@ -114,7 +114,7 @@ export function normalizeWixProduct(product: Record<string, unknown>, extractedA
   const category = readCategory(product, name);
   const mediaUrls = readMediaUrls(product);
   const pageUrl = String((product.url as { url?: string } | undefined)?.url ?? "").trim() || wixProductPageUrl(wixSlug);
-  const rich = extractRichProductContent(product, category, mediaUrls);
+  const rich = extractRichProductContent(product, category, mediaUrls, { productName: name });
 
   return {
     wix_product_id: String(product.id ?? product._id ?? wixSlug),

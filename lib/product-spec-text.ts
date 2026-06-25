@@ -1,4 +1,5 @@
 import { sanitizeProductPreviewText } from "@/lib/product-preview-text";
+import { isMeasurableTechnicalValue, isPollutedSpecEntry } from "@/lib/wix/semantic-content-parser";
 
 const SPEC_TOKEN_PATTERN = /(?:UAV Type|UAV Category|Endurance|Range|Maximum|Operating|Wind Resistance|All-Up-Weight|Payload|Battery|Flight Time)/i;
 
@@ -62,7 +63,7 @@ function insertKnownSpecBoundaries(text: string) {
 }
 
 function parseGenericSpecPairs(normalized: string) {
-  const pattern = /([A-Z][A-Za-z0-9\s\-\/\(\)]{1,40}):\s*/g;
+  const pattern = /(?:^|[\n\r]+|(?<=[.!?]\s)|(?<=\s)(?=\d+(?:\.\d+)?\s*[KMG]?))((?:\d+(?:\.\d+)?\s*[KMG]?(?:\s+|(?=[A-Za-z]))?)?[A-Za-z][^\n:.]{1,40}?):\s*/g;
   const matches = [...normalized.matchAll(pattern)];
   if (matches.length < 2) return {};
 
@@ -75,7 +76,7 @@ function parseGenericSpecPairs(normalized: string) {
     const start = (match.index ?? 0) + match[0].length;
     const end = index + 1 < matches.length ? (matches[index + 1].index ?? normalized.length) : normalized.length;
     const value = normalized.slice(start, end).trim();
-    if (value) pairs[key] = value;
+    if (value && !isPollutedSpecEntry(key, value)) pairs[key] = value;
   }
 
   return pairs;
@@ -95,8 +96,13 @@ export function isSpecLikeBlob(text: string) {
 
   const colonMatches = clean.match(/[A-Za-z][A-Za-z0-9\s\-\/\(\)]{0,48}:\s*/g) ?? [];
   if (colonMatches.length >= 3) return true;
+  if (SPEC_TOKEN_PATTERN.test(clean) && colonMatches.length >= 2) return true;
 
-  return SPEC_TOKEN_PATTERN.test(clean) && colonMatches.length >= 2;
+  const dashMatches =
+    clean.match(/\b(?:UAV|Endurance|Range|Maximum|Operating|Payload|Battery|Weight|Dimensions|Flight|Wind)[^\n–-]{0,40}[-–]/g) ?? [];
+  if (dashMatches.length >= 2) return true;
+
+  return false;
 }
 
 export function parseInlineSpecPairs(text: string) {
@@ -167,31 +173,9 @@ function extractLeadingMetrics(text: string): Array<[string, string]> {
   return pairs;
 }
 
-function parseMarketingFeatureSections(text: string): Array<[string, string]> {
-  const pattern = /([A-Z][A-Za-z0-9\s\-/&]+):\s*/g;
-  const matches = [...text.matchAll(pattern)];
-  if (matches.length < 2) return [];
-
-  const sections: Array<[string, string]> = [];
-  for (let index = 0; index < matches.length; index += 1) {
-    const match = matches[index];
-    const label = canonicalSpecLabel(match[1] ?? "");
-    if (!label || label.length < 3 || label.length > 48) continue;
-
-    const start = (match.index ?? 0) + match[0].length;
-    const end = index + 1 < matches.length ? (matches[index + 1].index ?? text.length) : text.length;
-    let body = text.slice(start, end).trim();
-    body = body.replace(/^[.,\s]+/, "").replace(/[.,\s]+$/, "");
-    if (body.length < 8) continue;
-    sections.push([label, body]);
-  }
-
-  return sections;
-}
-
 function shouldExpandSpecValue(value: string) {
   const trimmed = value.trim();
-  return trimmed.length > HIGHLIGHT_VALUE_MAX || isSpecLikeBlob(trimmed) || parseMarketingFeatureSections(trimmed).length >= 2;
+  return trimmed.length > HIGHLIGHT_VALUE_MAX || isSpecLikeBlob(trimmed);
 }
 
 function isKnownSpecLabel(label: string) {
@@ -206,47 +190,43 @@ export function expandSpecEntries(entries: Array<[string, string]>) {
     const value = sanitizeProductPreviewText(rawValue).trim();
     if (!value) continue;
 
+    if (isKnownSpecLabel(key) && isSpecLikeBlob(value)) {
+      const metrics = extractLeadingMetrics(value).filter(
+        ([label, metricValue]) => isKnownSpecLabel(label) || isMeasurableTechnicalValue(metricValue)
+      );
+      if (metrics.length) {
+        expanded.push(...metrics);
+        continue;
+      }
+    }
+
+    if (isPollutedSpecEntry(key, value)) continue;
+
     const inline = parseInlineSpecPairs(value);
-    const inlineEntries = Object.entries(inline);
+    const inlineEntries = Object.entries(inline).filter(([label, labelValue]) => !isPollutedSpecEntry(label, labelValue));
     if (inlineEntries.length >= 2 && inlineEntries.every(([label]) => isKnownSpecLabel(label))) {
       expanded.push(...inlineEntries);
       continue;
     }
 
-    const marketing = parseMarketingFeatureSections(value);
-    if (marketing.length >= 2 || (inlineEntries.length >= 2 && !inlineEntries.every(([label]) => isKnownSpecLabel(label)))) {
-      expanded.push(...extractLeadingMetrics(value));
-      expanded.push(...(marketing.length >= 2 ? marketing : inlineEntries));
-      continue;
-    }
-
-    if (shouldExpandSpecValue(value)) {
-      const metrics = extractLeadingMetrics(value);
+    if (shouldExpandSpecValue(value) && isSpecLikeBlob(value)) {
+      const metrics = extractLeadingMetrics(value).filter(
+        ([label, metricValue]) => isKnownSpecLabel(label) || isMeasurableTechnicalValue(metricValue)
+      );
       if (metrics.length) {
         expanded.push(...metrics);
+        continue;
       }
+    }
 
-      const intro = value.split(/[A-Z][A-Za-z0-9\s\-/&]+:/)[0]?.trim().replace(/[.,\s]+$/, "");
-      if (intro && intro.length > 20 && intro !== value) {
-        const introMetrics = extractLeadingMetrics(intro);
-        if (introMetrics.length) {
-          for (const metric of introMetrics) {
-            if (!expanded.some(([existingKey]) => existingKey.toLowerCase() === metric[0].toLowerCase())) {
-              expanded.push(metric);
-            }
-          }
-        }
-      }
-
-      if (marketing.length === 1) {
-        expanded.push(...marketing);
-      } else if (!metrics.length) {
-        expanded.push([canonicalSpecLabel(key), value]);
-      }
+    if (isKnownSpecLabel(key) && isMeasurableTechnicalValue(value)) {
+      expanded.push([canonicalSpecLabel(key), value]);
       continue;
     }
 
-    expanded.push([canonicalSpecLabel(key), value]);
+    if (isMeasurableTechnicalValue(value) && value.length <= HIGHLIGHT_VALUE_MAX) {
+      expanded.push([canonicalSpecLabel(key), value]);
+    }
   }
 
   return dedupeSpecEntries(expanded);

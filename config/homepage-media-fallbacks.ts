@@ -162,8 +162,8 @@ export const homepageMediaFallbacks = {
   },
   cityEmergencyResponse: {
     src: storefrontMediaPaths.missionCity.allDroneAcademic,
-    alt: "All Drone Acadamic ecosystem showing training, simulation, devices, and flight systems",
-    caption: "All Drone Acadamic",
+    alt: "All Drone Academic ecosystem showing training, simulation, devices, and flight systems",
+    caption: "All Drone Academic",
     sourceState: "VERIFIED"
   },
   agronePilotRegistration: {

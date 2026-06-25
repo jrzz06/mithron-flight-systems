@@ -128,50 +128,50 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       tiles: [
         {
           label: "AGRONE Drone Owner Registration",
-          body: "Register your drone on AGRONE and connect with farmers, pilots, and service demand across India.",
+          body: "Connect your drone to AGRONE farmers, pilots, and service demand.",
           operator: "AGRONE Network",
           model: "DRONE OWNER NETWORK",
-          location: "Pan-India onboarding",
+          location: "Pan-India",
           imageSrc: storefrontMediaPaths.missionAgrone.droneOwnerRegistration,
           imageAlt: "AGRONE drone owner registration",
           href: "https://drone.mithronsmart.com/droneowner_reg"
         },
         {
           label: "AGRONE Pilot Registration",
-          body: "Join the certified pilot network, access training pathways, and receive mission assignments through AGRONE.",
+          body: "Join certified pilots, access training, and receive AGRONE missions.",
           operator: "AGRONE Network",
           model: "AGRONE PILOT NETWORK",
-          location: "Pilot onboarding",
+          location: "Pilot network",
           imageSrc: storefrontMediaPaths.missionAgrone.pilotRegistration,
           imageAlt: "AGRONE pilot registration",
           href: "https://drone.mithronsmart.com/register"
         },
         {
           label: "All India Farmer Drone Booking",
-          body: "Book drone spraying, mapping, and monitoring services anywhere in India through the AGRONE booking platform.",
+          body: "Book spraying, mapping, and crop monitoring anywhere in India.",
           operator: "AGRONE Network",
           model: "NATIONWIDE BOOKING",
-          location: "Service booking desk",
+          location: "Booking desk",
           imageSrc: storefrontMediaPaths.missionAgrone.allIndiaDroneFarmer,
           imageAlt: "All India farmer drone booking",
           href: ""
         },
         {
           label: "Smart Farmer Registration",
-          body: "Register as a smart farmer to access AGRONE services, crop insights, and on-demand drone support.",
+          body: "Access AGRONE services, crop insights, and on-demand drone support.",
           operator: "AGRONE Network",
           model: "SMART FARMER PROGRAM",
-          location: "Farmer onboarding",
+          location: "Farmer network",
           imageSrc: storefrontMediaPaths.missionAgrone.smartFarmerRegister,
           imageAlt: "Smart farmer registration",
           href: "https://drone.mithronsmart.com/farmer"
         },
         {
           label: "Agri Drone Loan & EMI Check",
-          body: "Check agri-drone loan eligibility, compare EMI plans, and explore financing options backed by AGRONE partners.",
+          body: "Check loan eligibility, compare EMI plans, and explore AGRONE financing.",
           operator: "AGRONE Network",
           model: "FINANCING SUPPORT",
-          location: "Loan eligibility check",
+          location: "Loan check",
           imageSrc: storefrontMediaPaths.missionAgrone.agriDroneLoan,
           imageAlt: "Agri drone loan and EMI check",
           href: ""
@@ -188,50 +188,50 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
       tiles: [
         {
           label: "Dronelancer Model",
-          body: "Pilot-network and mission-marketplace model connecting city operators, route visibility, and on-demand jobs.",
+          body: "Pilot marketplace connecting operators, routes, and on-demand city jobs.",
           operator: "Mithron City Network",
           model: "DRONELANCER MODEL",
-          location: "Pilot network grid",
+          location: "Pilot grid",
           imageSrc: storefrontMediaPaths.missionCity.dronelancerModel,
           imageAlt: "Dronelancer Model",
           href: ""
         },
         {
           label: "City Drone Rental Services App",
-          body: "Rental, booking, and operator-dispatch flow for city drone services, project requests, and earnings visibility.",
+          body: "Book rentals, dispatch operators, and track project earnings.",
           operator: "Mithron City Network",
           model: "RENTAL SERVICES APP",
-          location: "Urban booking console",
+          location: "Booking console",
           imageSrc: storefrontMediaPaths.missionCity.rentalServicesApp,
           imageAlt: "City Drone Rental Services App",
           href: ""
         },
         {
           label: "All Drone Academic",
-          body: "Training ecosystem for city pilots, simulation labs, classroom workflows, and certified urban flight programs.",
+          body: "Pilot training, simulation labs, and certified urban flight programs.",
           operator: "Mithron Academy Network",
-          model: "ALL DRONE ACADAMIC",
-          location: "Training and simulation hub",
+          model: "ALL DRONE ACADEMIC",
+          location: "Training hub",
           imageSrc: storefrontMediaPaths.missionCity.allDroneAcademic,
           imageAlt: "All Drone Academic",
           href: ""
         },
         {
           label: "Drone FranchiseCare Center",
-          body: "Service-center network for franchise operations, repair care, spare support, and local city maintenance coverage.",
+          body: "Franchise care centers for repair, spares, and local maintenance.",
           operator: "Mithron Service Network",
           model: "FRANCHISECARE CENTER",
-          location: "City care workshop",
+          location: "Care workshop",
           imageSrc: storefrontMediaPaths.missionCity.franchiseCareCenter,
           imageAlt: "Drone FranchiseCare Center",
           href: ""
         },
         {
           label: "Drone Technician Aggregation",
-          body: "Distributed technician aggregation system for diagnostics, field support, tools, and maintenance coordination.",
+          body: "Field technicians for diagnostics, tools, and maintenance coordination.",
           operator: "Mithron Service Network",
           model: "TECHNICIAN AGGREGATION",
-          location: "Field support network",
+          location: "Field network",
           imageSrc: storefrontMediaPaths.missionCity.technicianAggregation,
           imageAlt: "Drone Technician Aggregation",
           href: ""

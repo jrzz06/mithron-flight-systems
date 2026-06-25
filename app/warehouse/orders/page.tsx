@@ -66,6 +66,31 @@ export default async function WarehouseOrdersPage({ searchParams }: { searchPara
     const haystack = `${String(order.order_number ?? "")} ${String(order.customer_email ?? "")} ${String(order.id ?? "")}`.toLowerCase();
     return (!fulfillmentFilter || fulfillmentStatus === fulfillmentFilter) && (!query || haystack.includes(query));
   });
+
+  function orderMetadata(order: Record<string, unknown>) {
+    const metadata = order.metadata;
+    return metadata && typeof metadata === "object" && !Array.isArray(metadata)
+      ? metadata as Record<string, unknown>
+      : {};
+  }
+
+  function formatGuestAddress(metadata: Record<string, unknown>) {
+    const guest = metadata.guest_shipping_address;
+    if (!guest || typeof guest !== "object" || Array.isArray(guest)) return "";
+    const address = guest as Record<string, unknown>;
+    return [
+      address.line1,
+      address.line2,
+      [address.city, address.region, address.postalCode].filter(Boolean).join(", "),
+      address.country
+    ].filter((part) => typeof part === "string" && part.trim()).join("\n");
+  }
+
+  const handoffOrders = filteredOrders.filter((order) => {
+    const status = String(order.status ?? "");
+    const fulfillment = String(order.fulfillment_status ?? "");
+    return ["assigned", "confirmed", "processing"].includes(status) || ["processing", "pending"].includes(fulfillment);
+  }).slice(0, 8);
   const orderRows = filteredOrders.slice(0, 12).map((order) => ({
     label: String(order.order_number ?? order.id ?? "order"),
     value: String(order.fulfillment_status ?? order.status ?? "draft"),
@@ -161,6 +186,48 @@ export default async function WarehouseOrdersPage({ searchParams }: { searchPara
             <DataList rows={itemRows.length ? itemRows : [{ label: "order_items", value: "0", detail: "No order item rows yet." }]} />
           </section>
         </div>
+
+        {handoffOrders.length ? (
+          <section data-warehouse-order-handoff className="grid gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7ce7c9]">Fulfillment handoff details</p>
+            <div className="grid gap-3">
+              {handoffOrders.map((order) => {
+                const orderId = String(order.id ?? "");
+                const metadata = orderMetadata(order);
+                const items = snapshot.data.orderItems.filter((item) => String(item.order_id ?? "") === orderId);
+                const address = formatGuestAddress(metadata);
+                return (
+                  <article key={orderId} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-white">{String(order.order_number ?? orderId)}</p>
+                      <StatusBadge status={String(order.fulfillment_status ?? order.status ?? "pending")} />
+                    </div>
+                    <div className="mt-3 grid gap-2 text-sm text-white/75 sm:grid-cols-2">
+                      <p>Email: {String(order.customer_email ?? "—")}</p>
+                      <p>Phone: {String(metadata.customer_phone ?? "—")}</p>
+                      <p>Channel: {String(order.channel ?? "checkout")}</p>
+                      <p>Total: {formatINR(Number(order.total ?? 0))}</p>
+                    </div>
+                    {address ? (
+                      <p className="mt-3 whitespace-pre-line text-sm text-white/65">Ship to:\n{address}</p>
+                    ) : null}
+                    {typeof metadata.enquiry_message === "string" && metadata.enquiry_message.trim() ? (
+                      <p className="mt-3 text-sm text-white/65">Notes: {metadata.enquiry_message}</p>
+                    ) : null}
+                    <ul className="mt-3 grid gap-1 text-sm text-white/70">
+                      {items.map((item) => (
+                        <li key={String(item.id)}>
+                          {String(item.product_name ?? item.product_slug)} × {String(item.quantity ?? 1)}
+                          {item.sku ? ` · SKU ${String(item.sku)}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <section data-fulfillment-timeline className="grid gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#7ce7c9]">Fulfillment timeline</p>

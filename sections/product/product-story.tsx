@@ -1,5 +1,5 @@
 import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
-import { getStoryChapters } from "@/lib/product-detail-content";
+import { getDedicatedProductStoryChapters } from "@/lib/product-detail-content";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/config/types";
 import styles from "./product-detail.module.css";
@@ -11,7 +11,7 @@ export function ProductStory({
   product: Product;
   includeFallback?: boolean;
 }) {
-  const chapters = getStoryChapters(product, { includeFallback });
+  const chapters = getDedicatedProductStoryChapters(product, { includeFallback });
   if (!chapters.length) return null;
 
   return (

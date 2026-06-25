@@ -57,9 +57,11 @@ describe("home landing composite visual system", () => {
     expect(css).toContain("--mission-text-scrim-height");
     expect(css).toMatch(/\.agriCardAmbientBeam[\s\S]*opacity:\s*0\.32;/);
     expect(css).toMatch(/\.agriCardTextProtection[\s\S]*linear-gradient\(\s*to top/s);
-    expect(css).toContain("mix-blend-mode: screen");
+    expect(css).toContain("mix-blend-mode: soft-light");
     expect(css).toContain("background: #f8fcf9");
     expect(css).toContain("background: #f7faff");
-    expect(css).toMatch(/\.agriSection \.agriCardCopy::before/);
+    expect(css).toContain(".missionCardBrandShield");
+    expect(css).toContain("data-logo-cover");
+    expect(component).toContain("logoCover");
   });
 });

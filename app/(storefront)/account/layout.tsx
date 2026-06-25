@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 const customerLinks = [
   { href: "/account/orders", label: "Orders" },
+  { href: "/track-order", label: "Track order" },
   { href: "/account/addresses", label: "Addresses" },
   { href: "/account/enquiries", label: "Enquiries" },
   { href: "/account/profile", label: "Profile" },

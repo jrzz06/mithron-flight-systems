@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { isValidCheckoutEmail, isValidCheckoutPhone } from "@/lib/api/checkout-schema";
 import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
@@ -163,6 +163,14 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
   const [enquiryMessage, setEnquiryMessage] = useState("");
   const [phone, setPhone] = useState("");
   const [completed, setCompleted] = useState<CompletionState | null>(null);
+  const checkoutIdempotencyKeyRef = useRef<string | null>(null);
+
+  const getCheckoutIdempotencyKey = useCallback(() => {
+    if (!checkoutIdempotencyKeyRef.current) {
+      checkoutIdempotencyKeyRef.current = crypto.randomUUID();
+    }
+    return checkoutIdempotencyKeyRef.current;
+  }, []);
 
   const stubOrderId = searchParams.get("order");
   const stubFlag = searchParams.get("stub");
@@ -176,6 +184,9 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
       region: checkout.region,
       items: items.map((item) => ({ productSlug: item.productSlug, quantity: item.quantity }))
     };
+
+    const promoCode = checkout.promoCode.trim();
+    if (promoCode) payload.promoCode = promoCode;
 
     if (usingSavedAddress) {
       payload.addressId = checkout.shippingAddressId;
@@ -193,7 +204,7 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     }
 
     return payload;
-  }, [checkout.email, checkout.region, checkout.shippingAddressId, phone, items, usingSavedAddress, guestAddress]);
+  }, [checkout.email, checkout.region, checkout.shippingAddressId, checkout.promoCode, phone, items, usingSavedAddress, guestAddress]);
 
   const markComplete = useCallback((
     mode: CompletionMode,
@@ -300,6 +311,35 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     return true;
   }
 
+  async function waitForCheckoutPaymentConfirmation(input: {
+    orderId: string;
+    email: string;
+    signedIn: boolean;
+  }) {
+    const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
+    if (!input.signedIn && !guestHeaders?.token) return false;
+
+    const query = new URLSearchParams({
+      orderId: input.orderId,
+      ...(input.signedIn ? {} : { email: input.email })
+    });
+
+    for (let attempt = 0; attempt < 15; attempt += 1) {
+      const response = await fetch(`/api/checkout/status?${query.toString()}`, {
+        headers: input.signedIn ? undefined : guestHeaders!.headers,
+        cache: "no-store"
+      });
+      if (response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        if (payload.paid) return true;
+        if (payload.paymentStatus === "failed" || payload.orderPaymentStatus === "failed") return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    return false;
+  }
+
   async function openRazorpayCheckout(input: {
     key: string;
     orderId: string;
@@ -307,6 +347,7 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     razorpayOrderId: string;
     amount: number;
     email: string;
+    signedIn: boolean;
   }) {
     const loaded = await loadRazorpayScript();
     if (!loaded || !window.Razorpay) {
@@ -324,9 +365,21 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
         order_id: input.razorpayOrderId,
         prefill: { email: input.email, contact: phone.trim() },
         theme: { color: "#174d33" },
-        handler: () => {
-          markComplete("payment", input.orderId, input.orderNumber);
-          resolve(true);
+        handler: async () => {
+          setLoading("payment");
+          const paid = await waitForCheckoutPaymentConfirmation({
+            orderId: input.orderId,
+            email: input.email,
+            signedIn: input.signedIn
+          });
+          setLoading(null);
+          if (paid) {
+            markComplete("payment", input.orderId, input.orderNumber);
+            resolve(true);
+            return;
+          }
+          setError("Payment is still processing. Refresh this page shortly or check your email for confirmation.");
+          resolve(false);
         },
         modal: {
           ondismiss: () => resolve(false)
@@ -350,8 +403,14 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     }
 
     const headers = isSignedIn
-      ? { "Content-Type": "application/json" }
-      : guestHeaders!.headers;
+      ? {
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": getCheckoutIdempotencyKey()
+        }
+      : {
+          ...guestHeaders!.headers,
+          "X-Idempotency-Key": getCheckoutIdempotencyKey()
+        };
 
     const response = await fetch("/api/checkout", {
       method: "POST",
@@ -381,7 +440,8 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
         orderNumber,
         razorpayOrderId: payload.clientSecret,
         amount: Number(payload.amount ?? grandTotal),
-        email: checkout.email
+        email: checkout.email,
+        signedIn: isSignedIn
       });
       setLoading(null);
       if (!paid) setError("Payment was not completed.");

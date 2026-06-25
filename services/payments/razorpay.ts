@@ -41,6 +41,7 @@ function envCredentials(env: Record<string, string | undefined>) {
 
 function mapRazorpayStatus(event: string, paymentStatus?: string): PaymentEvent["status"] {
   if (event === "payment.failed" || paymentStatus === "failed") return "failed";
+  if (event === "payment.refunded" || event === "refund.processed" || paymentStatus === "refunded") return "refunded";
   if (event === "payment.captured" || paymentStatus === "captured") return "succeeded";
   if (event === "payment.authorized" || paymentStatus === "authorized") return "processing";
   return "requires_payment";

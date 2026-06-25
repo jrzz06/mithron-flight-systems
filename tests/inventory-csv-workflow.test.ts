@@ -155,17 +155,21 @@ describe("inventory CSV workflow", () => {
 
   it("keeps warehouse quick stock edits on warehouse permissions only", () => {
     const actions = source("app/warehouse/actions.ts");
-    const quickEdit = actions.slice(actions.indexOf("export async function saveInventoryQuickEditFormAction"));
+    const quickEditStart = actions.indexOf("export async function saveInventoryQuickEditFormAction");
+    const quickEditEnd = actions.indexOf("export async function importInventoryCsvFormAction");
+    const quickEdit = actions.slice(quickEditStart, quickEditEnd);
     const archiveGuard = quickEdit.indexOf('const shouldArchiveProduct = stockStatus === "archived";');
     const archivePreflight = quickEdit.indexOf('if (shouldArchiveProduct) await assertAdminMutationPermission("mithron_products", actorId);');
-    const movementWrite = quickEdit.indexOf("const movement = await recordInventoryMovementForStockChange");
+    const movementWrite = quickEdit.indexOf("recordInventoryMovementForStockChange");
     const productArchiveWrite = quickEdit.indexOf("const productRecord = shouldArchiveProduct");
 
     expect(archiveGuard).toBeGreaterThan(-1);
     expect(archivePreflight).toBeGreaterThan(archiveGuard);
     expect(archivePreflight).toBeLessThan(movementWrite);
     expect(productArchiveWrite).toBeGreaterThan(movementWrite);
-    expect(actions).toContain("shouldArchiveProduct ? await updateProductPublicationRecord");
+    expect(actions).toContain("requireProductCatalogActor");
+    expect(actions).toContain("const productRecord = shouldArchiveProduct");
+    expect(actions).toContain("? await updateProductPublicationRecord");
     expect(actions).toContain(": null");
   });
 });

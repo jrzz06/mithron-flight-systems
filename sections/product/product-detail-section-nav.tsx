@@ -11,6 +11,8 @@ const sections: Array<{ id: ProductDetailSectionId; label: string }> = [
   { id: "media", label: "Media Gallery" },
   { id: "applications", label: "Applications" },
   { id: "included", label: "What's Included" },
+  { id: "warranty", label: "Warranty" },
+  { id: "disclaimers", label: "Disclaimers" },
   { id: "faq", label: "FAQs" },
   { id: "reviews", label: "Reviews" },
   { id: "related", label: "Related Products" }

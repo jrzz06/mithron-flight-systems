@@ -77,6 +77,11 @@ async function findCheckoutByIdempotencyKey(
   };
 }
 
+function isDuplicateIdempotencyError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("23505") || /duplicate key|idempotency_key/i.test(message);
+}
+
 async function cancelCheckoutOrder(orderId: string, actorId: string | null, reason: string) {
   try {
     await releaseCheckoutStock(orderId);
@@ -183,6 +188,7 @@ export async function POST(request: Request) {
       })),
       metadata: {
         ...buildShippingMetadata(body.addressId, body.guestAddress),
+        ...(body.promoCode ? { promo_code: body.promoCode } : {}),
         ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {})
       }
     },
@@ -191,22 +197,41 @@ export async function POST(request: Request) {
   );
 
   const orderNumber = `ORD-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-  const order = await createCustomerCheckoutOrderRecord(
-    {
-      ...draft.order,
-      created_by_user_id: userId,
-      order_number: orderNumber
-    },
-    userId
-  );
+  let order: Record<string, unknown>;
+  try {
+    order = await createCustomerCheckoutOrderRecord(
+      {
+        ...draft.order,
+        created_by_user_id: userId,
+        order_number: orderNumber
+      },
+      userId
+    );
+  } catch (error) {
+    if (idempotencyKey && isDuplicateIdempotencyError(error)) {
+      const existing = userId
+        ? await findCheckoutByIdempotencyKey(idempotencyKey, { userId })
+        : await findCheckoutByIdempotencyKey(idempotencyKey, { guestEmail: body.email, guestPhone: body.phone });
+      if (existing) {
+        return NextResponse.json(existing);
+      }
+    }
+    throw error;
+  }
 
   const orderId = String(order.id ?? "");
   if (!orderId) {
     return NextResponse.json({ error: "Order creation failed." }, { status: 500 });
   }
 
-  for (const item of draft.orderItems) {
-    await createCustomerCheckoutOrderItemRecord({ ...item, order_id: orderId }, userId);
+  try {
+    for (const item of draft.orderItems) {
+      await createCustomerCheckoutOrderItemRecord({ ...item, order_id: orderId }, userId);
+    }
+  } catch (error) {
+    await cancelCheckoutOrder(orderId, userId, "order_items_failed");
+    const message = error instanceof Error ? error.message : "Unable to create order line items.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   try {
@@ -232,17 +257,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 503 });
   }
 
-  await createCustomerCheckoutPaymentRecord(
-    {
-      order_id: orderId,
-      provider: process.env.PAYMENT_PROVIDER ?? "stub",
-      provider_intent_id: intent.intentId,
-      amount: draft.order.total,
-      currency: draft.order.currency,
-      status: "requires_payment"
-    },
-    userId
-  );
+  try {
+    await createCustomerCheckoutPaymentRecord(
+      {
+        order_id: orderId,
+        provider: process.env.PAYMENT_PROVIDER ?? "stub",
+        provider_intent_id: intent.intentId,
+        amount: draft.order.total,
+        currency: draft.order.currency,
+        status: "requires_payment"
+      },
+      userId
+    );
+  } catch (error) {
+    await cancelCheckoutOrder(orderId, userId, "payment_record_failed");
+    const message = error instanceof Error ? error.message : "Payment record creation failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 
   const paymentProvider = (process.env.PAYMENT_PROVIDER ?? "stub").toLowerCase();
   const razorpayKeyId = paymentProvider === "razorpay" ? process.env.RAZORPAY_KEY_ID?.trim() ?? null : null;
