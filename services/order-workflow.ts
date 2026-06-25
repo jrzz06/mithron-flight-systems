@@ -8,12 +8,14 @@ import {
   transitionOrderWithTimelineViaRpc,
   updateAdminRecord
 } from "@/services/admin-actions";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import {
   buildOrderTimelineEntry,
   buildWarehouseAssignmentUpdate,
   transitionOrderStatus,
   type OrderStatus
 } from "@/services/orders";
+import { assertValidWarehouseCode } from "@/services/warehouses";
 
 type JsonRecord = Record<string, unknown>;
 type EnvSource = Record<string, string | undefined>;
@@ -62,18 +64,37 @@ async function syncLinkedEnquiryStatus(
   }
 }
 
+async function resolveAssignmentWarehouseCode(
+  order: JsonRecord,
+  explicitCode: string | undefined,
+  env: EnvSource
+) {
+  const policy = await getAdminSettingsPolicy(env);
+  if (explicitCode?.trim()) {
+    return assertValidWarehouseCode(explicitCode.trim(), env);
+  }
+  const metadata = isPlainRecord(order.metadata) ? order.metadata : {};
+  const fromMetadata = typeof metadata.assigned_warehouse_code === "string" ? metadata.assigned_warehouse_code : "";
+  if (fromMetadata) return assertValidWarehouseCode(fromMetadata, env);
+  return assertValidWarehouseCode(policy.defaultWarehouseCode, env);
+}
+
 async function notifyWarehouseAboutOrder(
   order: JsonRecord,
   actorId: string,
   env: EnvSource
 ) {
+  const policy = await getAdminSettingsPolicy(env);
+  if (!policy.warehouseAlertsEnabled) return;
   const orderId = String(order.id ?? "");
   const orderNumber = String(order.order_number ?? orderId);
   const warehouseUsers = await listWarehouseUserIds(env);
   const metadata = isPlainRecord(order.metadata) ? order.metadata : {};
   const phone = typeof metadata.customer_phone === "string" ? metadata.customer_phone : "";
+  const warehouseCode = typeof metadata.assigned_warehouse_code === "string" ? metadata.assigned_warehouse_code : "";
   const body = [
     `Order ${orderNumber} is ready for fulfillment.`,
+    warehouseCode ? `Warehouse: ${warehouseCode}` : null,
     `Customer: ${String(order.customer_email ?? "unknown")}`,
     phone ? `Phone: ${phone}` : null
   ].filter(Boolean).join(" ");
@@ -257,14 +278,80 @@ export async function rejectAdminOrderWorkflow(
   return updated;
 }
 
-export async function assignOrderToWarehouseWorkflow(
-  input: { orderId: string; actorId: string; expectedUpdatedAt?: string | null },
+export async function cancelAdminOrderWorkflow(
+  input: { orderId: string; actorId: string; reason: string; expectedUpdatedAt?: string | null },
   env: EnvSource = process.env
 ) {
   const rows = await fetchAdminRecordsByColumn("orders", "id", input.orderId, env);
   const order = rows[0];
   if (!order) throw new Error("Order not found.");
 
+  const currentStatus = String(order.status ?? "");
+  const fulfillmentStatus = String(order.fulfillment_status ?? "");
+  const terminalStatuses = ["cancelled", "delivered", "returned"];
+  if (terminalStatuses.includes(currentStatus) || terminalStatuses.includes(fulfillmentStatus)) {
+    throw new Error(`Order cannot be cancelled in its current state (${currentStatus}).`);
+  }
+
+  const reason = input.reason.trim();
+  if (!reason) throw new Error("A cancellation reason is required.");
+
+  const idempotencyKey = `admin_cancel:${input.orderId}`;
+  const timelineEntry = buildOrderTimelineEntry({
+    status: "cancelled",
+    event: "admin_cancel",
+    note: reason,
+    actorId: input.actorId,
+    metadata: { idempotency_key: idempotencyKey }
+  });
+
+  const updated = await transitionOrderWithTimelineViaRpc(
+    input.orderId,
+    timelineEntry,
+    input.actorId,
+    env,
+    {
+      status: "cancelled",
+      fulfillmentStatus: "cancelled",
+      expectedUpdatedAt: input.expectedUpdatedAt ?? (String(order.updated_at ?? "") || null),
+      idempotencyKey
+    }
+  );
+
+  await syncLinkedEnquiryStatus(input.orderId, "lost", input.actorId, env);
+  await notifyCustomerAboutOrder(
+    updated,
+    "Order cancelled",
+    reason,
+    input.actorId,
+    env
+  );
+
+  await createActivityLogRecord(
+    {
+      actor_id: input.actorId,
+      action: "admin_cancel",
+      entity_table: "orders",
+      entity_id: input.orderId,
+      severity: "warning",
+      metadata: { reason }
+    },
+    input.actorId,
+    env
+  );
+
+  return updated;
+}
+
+export async function assignOrderToWarehouseWorkflow(
+  input: { orderId: string; actorId: string; warehouseCode?: string; expectedUpdatedAt?: string | null },
+  env: EnvSource = process.env
+) {
+  const rows = await fetchAdminRecordsByColumn("orders", "id", input.orderId, env);
+  const order = rows[0];
+  if (!order) throw new Error("Order not found.");
+
+  const warehouseCode = await resolveAssignmentWarehouseCode(order, input.warehouseCode, env);
   const currentStatus = String(order.status ?? "confirmed");
   const { nextStatus, nextFulfillment } = buildWarehouseAssignmentUpdate(
     currentStatus,
@@ -275,9 +362,9 @@ export async function assignOrderToWarehouseWorkflow(
   const timelineEntry = buildOrderTimelineEntry({
     status: nextStatus,
     event: "warehouse_assigned",
-    note: "Order assigned to warehouse with full customer and line-item context.",
+    note: `Order assigned to warehouse ${warehouseCode}.`,
     actorId: input.actorId,
-    metadata: { idempotency_key: idempotencyKey, fulfillment_status: nextFulfillment }
+    metadata: { idempotency_key: idempotencyKey, fulfillment_status: nextFulfillment, warehouse_code: warehouseCode }
   });
 
   const updated = await transitionOrderWithTimelineViaRpc(
@@ -293,8 +380,34 @@ export async function assignOrderToWarehouseWorkflow(
     }
   );
 
+  const existingMetadata = isPlainRecord(order.metadata) ? order.metadata : {};
+  await updateAdminRecord(
+    "orders",
+    "id",
+    input.orderId,
+    {
+      metadata: {
+        ...existingMetadata,
+        assigned_warehouse_code: warehouseCode
+      },
+      updated_at: new Date().toISOString()
+    },
+    input.actorId,
+    env
+  );
+
   await syncLinkedEnquiryStatus(input.orderId, "converted", input.actorId, env);
-  await notifyWarehouseAboutOrder(updated, input.actorId, env);
+  await notifyWarehouseAboutOrder(
+    {
+      ...updated,
+      metadata: {
+        ...(isPlainRecord(updated.metadata) ? updated.metadata : existingMetadata),
+        assigned_warehouse_code: warehouseCode
+      }
+    },
+    input.actorId,
+    env
+  );
 
   await createActivityLogRecord(
     {
@@ -303,7 +416,7 @@ export async function assignOrderToWarehouseWorkflow(
       entity_table: "orders",
       entity_id: input.orderId,
       severity: "info",
-      metadata: { fulfillment_status: nextFulfillment }
+      metadata: { fulfillment_status: nextFulfillment, warehouse_code: warehouseCode }
     },
     input.actorId,
     env

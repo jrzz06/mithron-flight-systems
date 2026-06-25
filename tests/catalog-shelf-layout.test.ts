@@ -19,6 +19,7 @@ function product(slug: string, name = slug): Product {
     bundles: [],
     hotspots: [],
     story: [],
+    anchors: [],
     workflowStatus: "published",
     isVisible: true
   };

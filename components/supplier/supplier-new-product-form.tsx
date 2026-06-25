@@ -86,39 +86,30 @@ export function SupplierNewProductForm({
         onSubmit={handleSubmit}
         encType="multipart/form-data"
         data-supplier-product-create-form
-        className="relative grid gap-3 rounded-xl border border-white/[0.08] bg-[#0f141b] p-5"
+        className="relative grid gap-3 rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5"
       >
         <SupplierFormStatusOverlay pending={pending} label={pendingLabel} />
 
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-300">Product name</span>
+          <span className="text-[var(--platform-text-secondary)]">Product name</span>
           <input
             name="name"
             required
             autoComplete="off"
             placeholder="Agri spray drone kit"
-            className="rounded-lg border border-white/[0.08] bg-[#0c1118] px-3 py-2 text-slate-100"
+            className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-300">Slug</span>
-          <input
-            name="slug"
-            autoComplete="off"
-            placeholder="Leave empty to auto-generate from name"
-            className="rounded-lg border border-white/[0.08] bg-[#0c1118] px-3 py-2 text-slate-100"
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="text-slate-300">Category</span>
+          <span className="text-[var(--platform-text-secondary)]">Category</span>
           <input
             name="category"
             defaultValue="Agri Drones"
-            className="rounded-lg border border-white/[0.08] bg-[#0c1118] px-3 py-2 text-slate-100"
+            className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-300">Price (₹)</span>
+          <span className="text-[var(--platform-text-secondary)]">Price (₹)</span>
           <input
             name="price"
             type="number"
@@ -126,17 +117,17 @@ export function SupplierNewProductForm({
             step="0.01"
             required
             placeholder="49999"
-            className="rounded-lg border border-white/[0.08] bg-[#0c1118] px-3 py-2 text-slate-100"
+            className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-300">Short description</span>
-          <span className="text-xs text-slate-500">Shown on catalog cards — defaults to product name if empty</span>
+          <span className="text-[var(--platform-text-secondary)]">Short description</span>
+          <span className="text-xs text-[var(--platform-text-muted)]">Shown on catalog cards — defaults to product name if empty</span>
           <textarea
             name="tagline"
             rows={3}
-            placeholder="Brief summary for shoppers and admin review"
-            className="rounded-lg border border-white/[0.08] bg-[#0c1118] px-3 py-2 text-slate-100"
+            placeholder="Brief summary for shoppers"
+            className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
           />
         </label>
 
@@ -169,19 +160,19 @@ export function SupplierNewProductForm({
             name="submit_for_approval"
             value="0"
             onClick={() => setPendingLabel("Saving draft")}
-            className="rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="platform-btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
           >
             Save draft
           </OperationalSubmitButton>
           <OperationalSubmitButton
-            pendingLabel="Submitting"
-            confirmMessage="Save this product and send it to admin for approval?"
+            pendingLabel="Sending for review"
+            confirmMessage="Save this product and send it to our team for review?"
             name="submit_for_approval"
             value="1"
-            onClick={() => setPendingLabel("Saving and submitting for approval")}
+            onClick={() => setPendingLabel("Saving and sending for review")}
             className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 disabled:opacity-60"
           >
-            Save & submit for approval
+            Save and send for review
           </OperationalSubmitButton>
         </div>
       </form>

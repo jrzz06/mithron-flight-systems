@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { getNavbarSampleY, isNavbarWithinSection, inkFromHexColor, toneFromHeroMediaSampling, type NavbarInkTone } from "@/lib/navbar-ink-sampling";
+import { getNavbarSampleY, isNavbarWithinSection, toneFromHeroMediaSampling, type NavbarInkTone } from "@/lib/navbar-ink-sampling";
 
 export type { NavbarInkTone } from "@/lib/navbar-ink-sampling";
 
@@ -107,6 +107,10 @@ function toneFromSurfaceAtNav(): NavbarInkTone | null {
 }
 
 function measureNavbarTone(currentTone: NavbarInkTone): NavbarInkTone {
+  if (isMobileViewport()) {
+    return "dark";
+  }
+
   const sampleY = getNavbarSampleY();
 
   const catalogSection = document.querySelector(".catalog-hero-section--showcase");
@@ -153,7 +157,7 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
 
   useEffect(() => {
     toneRef.current = initialTone;
-    setTone(initialTone);
+    queueMicrotask(() => setTone(initialTone));
   }, [initialTone]);
 
   useEffect(() => {

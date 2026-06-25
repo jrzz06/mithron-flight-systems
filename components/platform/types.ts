@@ -28,6 +28,7 @@ export type PlatformNavItem = {
 export type PlatformNavGroup = {
   label: string;
   items: PlatformNavItem[];
+  defaultCollapsed?: boolean;
 };
 
 export type PlatformScope = "admin" | "warehouse" | "supplier" | "operations";

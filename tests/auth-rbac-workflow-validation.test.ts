@@ -15,7 +15,7 @@ describe("enterprise auth and RBAC workflow validation contract", () => {
     expect(canAccessAdminSection("admin", "cms")).toBe(true);
     expect(canAccessAdminSection("admin", "products")).toBe(true);
     expect(canAccessAdminSection("admin", "warehouse")).toBe(true);
-    expect(canAccessAdminSection("admin", "settings")).toBe(true);
+    expect(canAccessAdminSection("admin", "enquiries")).toBe(true);
     expect(roleHasPermission("admin", "warehouse.write")).toBe(true);
     expect(roleHasPermission("admin", "settings.write")).toBe(true);
   });

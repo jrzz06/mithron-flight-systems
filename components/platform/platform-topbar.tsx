@@ -6,13 +6,14 @@ import { Bell, LogOut, Plus, Search, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { CMS_WORKSPACE_LINKS } from "@/config/cms-workspace";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import type { PlatformRouteTitle, PlatformSearchItem } from "@/components/platform/types";
+import type { PlatformRouteTitle, PlatformSearchItem, PlatformScope } from "@/components/platform/types";
 
 type PlatformTopbarProps = {
   role: string | null;
   userId?: string;
   visibleItems: PlatformSearchItem[];
   routeTitles: PlatformRouteTitle[];
+  scope?: PlatformScope;
   scopeLabel?: string;
   primaryAction?: { label: string; href: string };
   notificationHref?: string;
@@ -20,8 +21,6 @@ type PlatformTopbarProps = {
 
 const defaultQuickActions: PlatformSearchItem[] = [
   { label: "Create product", href: "/admin/products?tool=create#create-product", group: "Action" },
-  { label: "Create order", href: "/admin/orders#create-order", group: "Action" },
-  { label: "Upload media", href: "/admin/media#upload-media", group: "Action" },
   { label: "Edit hero banner", href: CMS_WORKSPACE_LINKS.hero, group: "Action" },
   { label: "Edit category banners", href: CMS_WORKSPACE_LINKS.categoryBanners, group: "Action" }
 ];
@@ -31,6 +30,12 @@ function normalizeRole(role: string | null) {
 }
 
 function titleForPath(pathname: string, routeTitles: PlatformRouteTitle[]) {
+  if (/^\/supplier\/products\/[^/]+\/edit$/.test(pathname)) {
+    return { href: pathname, title: "Edit product", kicker: "Supplier" };
+  }
+  if (/^\/warehouse\/orders\/[^/]+$/.test(pathname)) {
+    return { href: pathname, title: "Order detail", kicker: "Orders" };
+  }
   const sorted = [...routeTitles].sort((a, b) => b.href.length - a.href.length);
   return sorted.find((route) => pathname === route.href || pathname.startsWith(`${route.href}/`)) ?? routeTitles.at(-1)!;
 }
@@ -40,6 +45,7 @@ export function PlatformTopbar({
   userId,
   visibleItems,
   routeTitles,
+  scope,
   scopeLabel,
   primaryAction = { label: "Add product", href: "/admin/products?tool=create#create-product" },
   notificationHref = "/admin/suppliers/products"
@@ -48,7 +54,10 @@ export function PlatformTopbar({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const page = titleForPath(pathname, routeTitles);
-  const commandItems = useMemo(() => [...defaultQuickActions, ...visibleItems], [visibleItems]);
+  const commandItems = useMemo(() => {
+    const includeAdminActions = scope === "admin" || scope === "operations";
+    return includeAdminActions ? [...defaultQuickActions, ...visibleItems] : visibleItems;
+  }, [scope, visibleItems]);
   const filteredItems = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return commandItems.slice(0, 7);
@@ -115,7 +124,7 @@ export function PlatformTopbar({
             {primaryAction ? (
               <Link
                 href={primaryAction.href}
-                className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-[var(--platform-accent)] px-3 text-sm font-medium text-[var(--platform-accent-text)] transition hover:bg-[var(--platform-accent-strong)]"
+                className="platform-btn-primary h-9 rounded-[8px] px-3 text-sm font-medium"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 {primaryAction.label}

@@ -14,7 +14,6 @@ const baseUrl = process.argv.find((arg) => arg.startsWith("--base-url="))?.slice
 
 const marker = `audit-trace-${Date.now()}`;
 const productSlug = process.env.AUTH_VALIDATION_PRODUCT_SLUG ?? "source-agri-kisan-drone-small-8-liter";
-const inventoryProductSlug = process.env.AUTH_VALIDATION_INVENTORY_PRODUCT_SLUG ?? productSlug;
 const traceWarehouseCode = process.env.AUTH_VALIDATION_WAREHOUSE_CODE ?? "IN-WEST-01";
 const traceVariantId = "audit-trace-base";
 const cleanup = [];
@@ -565,24 +564,6 @@ async function validateProductTrace(admin) {
       ? "Product changes are captured in audit_logs/content_revisions, not activity_logs."
       : null
   };
-}
-
-async function resolveInventoryProbeRow() {
-  const stockRows = await serviceQuery(
-    "warehouse_stock",
-    "select=product_slug,sku,warehouse_code,available_quantity&order=updated_at.desc&limit=50"
-  );
-  const stock = stockRows.find((row) => {
-    const slug = String(row?.product_slug ?? "");
-    return slug
-      && !slug.startsWith("audit-trace-")
-      && row?.sku
-      && row?.warehouse_code;
-  });
-  if (!stock) {
-    throw new Error("No warehouse_stock row available for inventory traceability probe.");
-  }
-  return stock;
 }
 
 async function seedInventoryTraceProbe(actorId) {

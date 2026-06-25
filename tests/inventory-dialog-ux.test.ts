@@ -25,6 +25,7 @@ const inventoryRow: SimpleInventoryRow = {
   inventoryValue: 22800,
   lastUpdated: "2026-05-26T12:00:00.000Z",
   reservedQuantity: 0,
+  supplierName: "",
   reorderThreshold: 5,
   availableQuantity: 19,
   committedQuantity: 0,

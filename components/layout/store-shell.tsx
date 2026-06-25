@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { CatalogIntegrityNotice } from "@/components/layout/catalog-integrity-notice";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { StoreShellClient } from "@/components/layout/store-shell-client";
 import type { FooterContent } from "@/config/storefront-content";

@@ -21,7 +21,6 @@ describe("Supabase free-plan performance contract", () => {
     expect(optimizer).toContain("createOptimizedImageVariants");
 
     for (const actionFile of [
-      "app/admin/media/actions.ts",
       "app/admin/products/actions.ts",
       "app/admin/cms/actions.ts"
     ]) {
@@ -61,7 +60,7 @@ describe("Supabase free-plan performance contract", () => {
     const dashboardSnapshot = admin.match(/export const getAdminDashboardSnapshot[\s\S]*?export const getAuditObservabilitySnapshot/)?.[0] ?? "";
 
     expect(dashboardSnapshot).not.toContain("select=*");
-    expect(admin).toContain("select=id,order_number,status,payment_status,fulfillment_status,total,currency,created_at,updated_at");
+    expect(admin).toContain("select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,created_at,updated_at");
     expect(admin).toContain("select=id,title,status,created_at,read_at");
     expect(admin).toContain("select=id,action,entity_table,entity_id,severity,created_at");
     expect(admin).toContain("select=product_slug,sku,stock_status,quantity,reorder_threshold,updated_at");

@@ -7,11 +7,12 @@ import { assertCustomerAddressBelongsToUser } from "@/services/customer-addresse
 import {
   createCustomerCheckoutOrderItemRecord,
   createCustomerCheckoutOrderRecord,
-  createNotificationRecord
+  createNotificationRecord,
+  updateAdminRecord
 } from "@/services/admin-actions";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
 import { buildCustomerEnquiryOrderDraft } from "@/services/orders";
-import { submitCheckoutProductEnquiry } from "@/services/enquiries";
+import { formatEnquiryReference, submitCheckoutProductEnquiry } from "@/services/enquiries";
 import { resolveCheckoutStockSkus } from "@/services/checkout-stock";
 
 export async function POST(request: Request) {
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
     userId
   );
 
-  const orderNumber = `ENQ-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const orderNumber = `ENQ-PENDING-${crypto.randomUUID().slice(0, 8)}`;
   const order = await createCustomerCheckoutOrderRecord(
     {
       ...draft.order,
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
     .map((item) => `${item.product_name} x ${item.quantity}`)
     .join(", ");
 
-  await submitCheckoutProductEnquiry(
+  const enquiry = await submitCheckoutProductEnquiry(
     {
       customerUserId: userId,
       customerEmail: body.email,
@@ -117,7 +118,21 @@ export async function POST(request: Request) {
       productSummary
     },
     userId
-  ).catch(() => undefined);
+  );
+
+  const enquiryNumber = typeof enquiry.enquiry_number === "number"
+    ? enquiry.enquiry_number
+    : Number(enquiry.enquiry_number);
+  const enquiryReference = formatEnquiryReference(
+    Number.isFinite(enquiryNumber) && enquiryNumber > 0 ? enquiryNumber : null
+  );
+  const linkedOrderNumber = Number.isFinite(enquiryNumber) && enquiryNumber > 0
+    ? `ENQ-${enquiryNumber}`
+    : String(order.order_number ?? orderNumber);
+
+  if (Number.isFinite(enquiryNumber) && enquiryNumber > 0) {
+    await updateAdminRecord("orders", "id", orderId, { order_number: linkedOrderNumber }, userId).catch(() => undefined);
+  }
 
   if (userId) {
     await createNotificationRecord(
@@ -132,13 +147,15 @@ export async function POST(request: Request) {
         metadata: { recipient_email: body.email, order_type: "enquiry" }
       },
       userId
-    ).catch(() => undefined);
+    );
   }
 
   return NextResponse.json({
     ok: true,
     orderId,
-    orderNumber: String(order.order_number ?? orderNumber),
+    orderNumber: linkedOrderNumber,
+    enquiryNumber: Number.isFinite(enquiryNumber) && enquiryNumber > 0 ? enquiryNumber : null,
+    enquiryReference,
     mode: "enquiry" as const
   });
 }

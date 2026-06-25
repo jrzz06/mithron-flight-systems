@@ -206,12 +206,13 @@ export function StoreNav({
   }, [displayedNavigationItems, normalizedPathname, prefetchRoute]);
 
   useEffect(() => {
+    const debounceTimers = prefetchDebounceRef.current;
     return () => {
       clearCloseTimer();
-      for (const timerId of prefetchDebounceRef.current.values()) {
+      for (const timerId of debounceTimers.values()) {
         window.clearTimeout(timerId);
       }
-      prefetchDebounceRef.current.clear();
+      debounceTimers.clear();
     };
   }, [clearCloseTimer]);
 
@@ -229,7 +230,7 @@ export function StoreNav({
 
   return (
     <div
-      className="TOP_NAVBAR adaptive-navbar absolute left-0 top-0 z-[999] w-full"
+      className="TOP_NAVBAR adaptive-navbar left-0 top-0 z-[999] w-full max-[767px]:sticky min-[768px]:absolute"
       style={style}
       data-nav-state="adaptive"
       data-nav-ink={tone}

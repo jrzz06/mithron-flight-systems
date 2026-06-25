@@ -20,10 +20,18 @@ type ManagedUser = {
 
 type AdminRow = Record<string, unknown>;
 
+type UserActivityItem = {
+  id: string;
+  timestamp: string;
+  actorName: string;
+  actionLabel: string;
+  targetLabel: string;
+};
+
 type UserManagementPanelProps = {
   users: ManagedUser[];
   invites: AdminRow[];
-  activity: AdminRow[];
+  activity: UserActivityItem[];
   createUserFormAction: (prevState: CreateUserFormState, formData: FormData) => Promise<CreateUserFormState>;
   inviteUserAction: UserAction;
   resetPasswordAction: UserAction;
@@ -142,6 +150,7 @@ function EmptyState() {
 export function UserManagementPanel({
   users,
   invites,
+  activity,
   createUserFormAction,
   inviteUserAction,
   resetPasswordAction,
@@ -347,7 +356,7 @@ export function UserManagementPanel({
         </div>
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-800 bg-[#0f141b] p-4">
           <p className="text-sm font-semibold text-slate-100">Recent invites</p>
           <div className="mt-3 grid gap-2">
@@ -365,6 +374,28 @@ export function UserManagementPanel({
                 </form>
               </div>
             )) : <p className="text-sm text-slate-500">No pending invite rows.</p>}
+          </div>
+        </div>
+
+        <div data-user-activity-feed className="rounded-xl border border-slate-800 bg-[#0f141b] p-4">
+          <p className="text-sm font-semibold text-slate-100">Recent team activity</p>
+          <p className="mt-1 text-xs text-slate-500">Live audit events for user creation, role changes, status updates, and sign-ins.</p>
+          <div className="mt-3 grid gap-2">
+            {activity.length ? activity.slice(0, 8).map((entry) => (
+              <div key={entry.id} className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-200">{entry.actionLabel}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {entry.actorName}
+                      <span className="px-1 text-slate-700">·</span>
+                      {entry.targetLabel}
+                    </p>
+                  </div>
+                  <time className="shrink-0 text-xs text-slate-500">{formatDate(entry.timestamp)}</time>
+                </div>
+              </div>
+            )) : <p className="text-sm text-slate-500">No recent team activity recorded yet.</p>}
           </div>
         </div>
       </div>
@@ -504,7 +535,7 @@ export function UserManagementPanel({
               <form action={removeUserAction} data-user-remove-form className="mt-5 grid gap-3">
                 <HiddenUserFields user={activeUser} />
                 <p className="rounded-lg border border-rose-500/25 bg-rose-950/25 p-3 text-sm leading-6 text-rose-100">
-                  Remove {activeUser.name || activeUser.email} from Supabase Auth and linked access rows. Use this only when the account is no longer needed.
+                  Remove {activeUser.name || activeUser.email} permanently. This will revoke their access to the platform.
                 </p>
                 <OperationalSubmitButton
                   pendingLabel="Removing"

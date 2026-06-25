@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assignEnquiry, submitCheckoutProductEnquiry, submitEnquiry } from "@/services/enquiries";
+import { assignEnquiry, markEnquiryContacted, submitCheckoutProductEnquiry, submitEnquiry } from "@/services/enquiries";
 import { buildValidatedOrderDraft } from "@/services/orders";
 
 describe("enquiry workflow", () => {
@@ -20,5 +20,6 @@ describe("enquiry workflow", () => {
     expect(typeof submitEnquiry).toBe("function");
     expect(typeof submitCheckoutProductEnquiry).toBe("function");
     expect(typeof assignEnquiry).toBe("function");
+    expect(typeof markEnquiryContacted).toBe("function");
   });
 });

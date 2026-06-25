@@ -168,12 +168,12 @@ async function saveSupplierProductDraft(formData: FormData) {
       logSupplierProductFormDebug("redirect", {
         target: "/supplier/products",
         status: "success",
-        message: `"${name}" saved and submitted to admin for approval.`
+        message: `"${name}" saved and sent for review.`
       });
       supplierProductRedirect(
         "/supplier/products",
         "success",
-        `"${name}" saved and submitted to admin for approval.`
+        `"${name}" saved and sent for review.`
       );
     } catch (submitError) {
       if (isActionNavigationError(submitError)) throw submitError;
@@ -181,7 +181,7 @@ async function saveSupplierProductDraft(formData: FormData) {
       supplierProductRedirect(
         `/supplier/products/${slug}/edit`,
         "error",
-        `"${name}" saved as draft but submission failed. Open My products and click Submit for approval. ${actionMessage(submitError)}`
+        `"${name}" saved as draft but could not be sent for review. Open My products and click Send for review. ${actionMessage(submitError)}`
       );
     }
   }
@@ -189,13 +189,13 @@ async function saveSupplierProductDraft(formData: FormData) {
   logSupplierProductFormDebug("redirect", {
     target: `/supplier/products/${slug}/edit`,
     status: "success",
-    message: `"${name}" saved as draft. Submit for admin approval when ready.`
+    message: `"${name}" saved as draft. Send for review when ready.`
   });
 
   supplierProductRedirect(
     `/supplier/products/${slug}/edit`,
     "success",
-    `"${name}" saved as draft. Submit for admin approval when ready.`
+    `"${name}" saved as draft. Send for review when ready.`
   );
 }
 
@@ -310,7 +310,7 @@ export async function submitSupplierProductFormAction(formData: FormData) {
 
     revalidatePath("/supplier/products");
     revalidatePath("/admin/suppliers/products");
-    supplierProductRedirect("/supplier/products", "success", `"${productName}" submitted for admin approval.`);
+    supplierProductRedirect("/supplier/products", "success", `"${productName}" sent for review.`);
   } catch (error) {
     if (isActionNavigationError(error)) throw error;
     supplierProductRedirect("/supplier/products", "error", actionMessage(error));

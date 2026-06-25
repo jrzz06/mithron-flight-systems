@@ -69,23 +69,6 @@ function stripTags(html: string) {
   return decodeHtml(html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " "));
 }
 
-function parseTableSpecs(html: string) {
-  const specs: Record<string, string> = {};
-  const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
-  for (const row of rows) {
-    const cells = [...row[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((cell) => stripTags(cell[1]).trim()).filter(Boolean);
-    if (cells.length >= 2) specs[cells[0]] = cells.slice(1).join(" · ");
-  }
-  return specs;
-}
-
-function parseListItems(html: string) {
-  const items = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
-    .map((match) => stripTags(match[1]).trim())
-    .filter(Boolean);
-  return items.length ? items : stripTags(html).split(/\n+/).map((line) => line.replace(/^[-•*]\s*/, "").trim()).filter(Boolean);
-}
-
 function parseDocumentLinks(html: string) {
   const links: Array<{ url: string; label: string }> = [];
   for (const match of html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {

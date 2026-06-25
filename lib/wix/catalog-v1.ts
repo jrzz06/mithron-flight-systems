@@ -97,7 +97,7 @@ export function normalizeWixV1Product(product: Record<string, unknown>, extracte
   const rich = extractRichProductContent(richSource, category, mediaUrls, { productName: name });
 
   const stock = product.stock as { inventoryStatus?: string } | undefined;
-  const availability = stock?.inventoryStatus ? String(stock.inventoryStatus).split("_").pop() ?? null : null;
+  void stock?.inventoryStatus;
 
   return {
     wix_product_id: String(product.id ?? wixSlug),

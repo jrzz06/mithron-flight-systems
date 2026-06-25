@@ -20,9 +20,9 @@ export default function SupplierError({ error, reset }: SupplierErrorProps) {
     <main data-supplier-error-boundary className="min-h-screen bg-[#070B14] px-6 py-10 text-[#F5F7FA]">
       <section className="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2EE6A6]">Supplier recovery</p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">Supplier portal could not render this view.</h1>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">Something went wrong loading this page.</h1>
         <p className="mt-5 max-w-2xl text-sm leading-6 text-[#A7B1C2]">
-          The supplier workspace stayed isolated. Retry this view or return to your product dashboard while the failed widget is investigated.
+          The supplier workspace stayed isolated. Retry this view or return to your home page while we look into the issue.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <button

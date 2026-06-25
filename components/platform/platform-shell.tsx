@@ -67,6 +67,7 @@ export function PlatformShell({
               userId={userId ?? undefined}
               visibleItems={searchItems}
               routeTitles={routeTitles}
+              scope={scope}
               primaryAction={primaryAction}
               notificationHref={notificationHref}
             />

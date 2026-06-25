@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   BarChart3,
   Bell,
@@ -60,16 +61,41 @@ type PlatformNavProps = {
 
 export function PlatformNav({ groups, dataAttribute = "data-platform-nav" }: PlatformNavProps) {
   const pathname = usePathname();
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(groups.filter((group) => group.defaultCollapsed).map((group) => [group.label, true]))
+  );
 
   return (
     <div className="grid gap-5">
       <nav {...{ [dataAttribute]: true }} data-admin-nav className="grid gap-4">
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const isCollapsed = collapsedGroups[group.label] ?? false;
+          const hasActiveItem = group.items.some((item) => isActivePath(pathname, item.href));
+
+          return (
           <div key={group.label} className="grid gap-0.5">
-            <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--platform-text-muted)]">
-              {group.label}
-            </p>
-            {group.items.map((item) => {
+            <button
+              type="button"
+              onClick={() => {
+                if (!group.defaultCollapsed) return;
+                setCollapsedGroups((current) => ({
+                  ...current,
+                  [group.label]: !isCollapsed
+                }));
+              }}
+              className={`flex w-full items-center justify-between px-2.5 pb-1.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] ${
+                group.defaultCollapsed ? "text-[var(--platform-text-muted)] hover:text-[var(--platform-text-secondary)]" : "text-[var(--platform-text-muted)]"
+              }`}
+              aria-expanded={group.defaultCollapsed ? !isCollapsed : true}
+            >
+              <span>{group.label}</span>
+              {group.defaultCollapsed ? (
+                <span className="text-[9px] font-medium normal-case tracking-normal text-[var(--platform-text-muted)]">
+                  {isCollapsed && !hasActiveItem ? "Show" : "Hide"}
+                </span>
+              ) : null}
+            </button>
+            {group.defaultCollapsed && isCollapsed && !hasActiveItem ? null : group.items.map((item) => {
               const active = isActivePath(pathname, item.href);
               const Icon = item.icon ? iconByKey[item.icon] : null;
               return (
@@ -100,7 +126,8 @@ export function PlatformNav({ groups, dataAttribute = "data-platform-nav" }: Pla
               );
             })}
           </div>
-        ))}
+        );
+        })}
       </nav>
       <form action="/auth/logout" method="post" className="px-1 pb-1">
         <button

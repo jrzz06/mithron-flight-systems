@@ -10,17 +10,22 @@ type AdminNavItemDef = {
   badgeCount?: number;
 };
 
-const adminNavGroups: Array<{ label: string; items: AdminNavItemDef[] }> = [
+type AdminNavGroupDef = {
+  label: string;
+  defaultCollapsed?: boolean;
+  items: AdminNavItemDef[];
+};
+
+const adminNavGroups: AdminNavGroupDef[] = [
   {
     label: "Home",
-    items: [{ label: "Overview", href: "/admin", section: "overview", icon: "dashboard" }]
+    items: [{ label: "Dashboard", href: "/admin", section: "overview", icon: "dashboard" }]
   },
   {
     label: "Catalog",
     items: [
       { label: "Products", href: "/admin/products#product-list", section: "products", icon: "products" },
-      { label: "Inventory", href: "/admin/inventory", section: "warehouse", icon: "inventory" },
-      { label: "Media", href: "/admin/media", section: "media", icon: "media" }
+      { label: "Inventory", href: "/admin/inventory", section: "warehouse", icon: "inventory" }
     ]
   },
   {
@@ -40,26 +45,11 @@ const adminNavGroups: Array<{ label: string; items: AdminNavItemDef[] }> = [
     items: [{ label: "Website", href: "/admin/cms", section: "cms", icon: "cms" }]
   },
   {
-    label: "Insights",
-    items: [
-      { label: "Reports", href: "/admin/reports", section: "reports", icon: "reports" },
-      { label: "Activity log", href: "/admin/audit", section: "audit", icon: "audit" }
-    ]
-  },
-  {
-    label: "Workspace",
+    label: "System",
+    defaultCollapsed: true,
     items: [
       { label: "Operations", href: "/operations", section: "operations", icon: "operations" },
-      { label: "Field requests", href: "/operations/deployments", section: "operations", icon: "operations" },
-      { label: "Tasks", href: "/operations/tasks", section: "tasks", icon: "operations" },
-      { label: "Notifications", href: "/operations/notifications", section: "operations", icon: "enquiries" }
-    ]
-  },
-  {
-    label: "Settings",
-    items: [
-      { label: "General", href: "/admin/settings", section: "settings", icon: "settings" },
-      { label: "Team", href: "/admin/users", section: "settings", icon: "users" }
+      { label: "System Diagnostics", href: "/admin/audit", section: "audit", icon: "audit" }
     ]
   }
 ];
@@ -68,6 +58,7 @@ export function buildAdminNavGroups(role: CmsRole | null, pendingSupplierApprova
   return adminNavGroups
     .map((group) => ({
       label: group.label,
+      defaultCollapsed: group.defaultCollapsed,
       items: group.items
         .filter((item) => Boolean(role && canAccessAdminSection(role, item.section)))
         .map((item) => ({
@@ -89,35 +80,26 @@ export const adminRouteTitles: PlatformRouteTitle[] = [
   { href: "/admin/orders", title: "Orders", kicker: "Fulfillment" },
   { href: "/admin/inventory", title: "Inventory", kicker: "Catalog" },
   { href: "/admin/cms", title: "Website", kicker: "Content" },
-  { href: "/admin/media", title: "Media", kicker: "Catalog" },
   { href: "/admin/suppliers", title: "Suppliers", kicker: "Partners" },
   { href: "/admin/suppliers/products", title: "Submissions", kicker: "Partners" },
   { href: "/admin/enquiries", title: "Enquiries", kicker: "Partners" },
-  { href: "/admin/reports", title: "Reports", kicker: "Insights" },
-  { href: "/admin/audit", title: "Activity log", kicker: "Insights" },
-  { href: "/admin/users", title: "Team", kicker: "Settings" },
-  { href: "/admin/settings", title: "Settings", kicker: "Workspace" },
-  { href: "/operations", title: "Operations", kicker: "Workspace" },
-  { href: "/operations/deployments", title: "Field requests", kicker: "Workspace" },
-  { href: "/operations/tasks", title: "Tasks", kicker: "Workspace" },
-  { href: "/operations/notifications", title: "Notifications", kicker: "Workspace" },
+  { href: "/admin/audit", title: "System Diagnostics", kicker: "System" },
+  { href: "/operations", title: "Operations", kicker: "System" },
+  { href: "/operations/deployments", title: "Field requests", kicker: "System" },
+  { href: "/operations/tasks", title: "Tasks", kicker: "System" },
+  { href: "/operations/notifications", title: "Notifications", kicker: "System" },
   { href: "/operations/orders", title: "Orders", kicker: "Fulfillment" },
-  { href: "/admin", title: "Overview", kicker: "Home" }
+  { href: "/admin", title: "Dashboard", kicker: "Home" }
 ];
 
 export const warehouseNavGroups: PlatformNavGroup[] = [
   {
-    label: "Warehouse",
+    label: "Operations",
     items: [
-      { label: "Today", href: "/warehouse/dashboard", icon: "gauge" },
+      { label: "Dashboard", href: "/warehouse/dashboard", icon: "gauge" },
       { label: "Orders", href: "/warehouse/orders", icon: "orders" },
-      { label: "Allocate", href: "/warehouse/allocate", icon: "inventory" },
-      { label: "Fulfillment", href: "/warehouse/fulfillment", icon: "fulfillment" },
-      { label: "Shipments", href: "/warehouse/shipments", icon: "truck" },
-      { label: "Stock", href: "/warehouse/inventory", icon: "inventory" },
-      { label: "Returns", href: "/warehouse/returns", icon: "returns" },
-      { label: "History", href: "/warehouse/activity", icon: "history" },
-      { label: "Settings", href: "/warehouse/settings", icon: "settings" }
+      { label: "Inventory", href: "/warehouse/inventory", icon: "inventory" },
+      { label: "Dispatch", href: "/warehouse/dispatch", icon: "truck" }
     ]
   }
 ];
@@ -126,37 +108,28 @@ export const supplierNavGroups: PlatformNavGroup[] = [
   {
     label: "Supplier",
     items: [
-      { label: "Overview", href: "/supplier", icon: "gauge" },
-      { label: "Products", href: "/supplier/products", icon: "products" },
-      { label: "Submissions", href: "/supplier/submissions", icon: "enquiries" },
-      { label: "Stock levels", href: "/supplier/inventory", icon: "inventory" },
-      { label: "Orders", href: "/supplier/orders", icon: "orders" }
+      { label: "Home", href: "/supplier", icon: "gauge" },
+      { label: "My products", href: "/supplier/products", icon: "products" },
+      { label: "Review status", href: "/supplier/submissions", icon: "enquiries" },
+      { label: "Stock levels", href: "/supplier/inventory", icon: "inventory" }
     ]
   }
 ];
 
 export const warehouseRouteTitles: PlatformRouteTitle[] = [
-  { href: "/warehouse/dashboard", title: "Today", kicker: "Warehouse" },
-  { href: "/warehouse/orders", title: "Orders", kicker: "Warehouse" },
-  { href: "/warehouse/allocate", title: "Allocate", kicker: "Warehouse" },
-  { href: "/warehouse/fulfillment", title: "Fulfillment", kicker: "Warehouse" },
-  { href: "/warehouse/picking", title: "Fulfillment", kicker: "Warehouse" },
-  { href: "/warehouse/packing", title: "Fulfillment", kicker: "Warehouse" },
-  { href: "/warehouse/dispatch", title: "Fulfillment", kicker: "Warehouse" },
-  { href: "/warehouse/shipments", title: "Shipments", kicker: "Warehouse" },
-  { href: "/warehouse/inventory", title: "Stock", kicker: "Warehouse" },
-  { href: "/warehouse/movements", title: "Stock history", kicker: "Warehouse" },
-  { href: "/warehouse/transfers", title: "Transfers", kicker: "Warehouse" },
-  { href: "/warehouse/returns", title: "Returns", kicker: "Warehouse" },
-  { href: "/warehouse/activity", title: "History", kicker: "Warehouse" },
-  { href: "/warehouse/settings", title: "Settings", kicker: "Warehouse" }
+  { href: "/warehouse/dashboard", title: "Today's Operations", kicker: "Dashboard" },
+  { href: "/warehouse/orders", title: "Orders", kicker: "Orders" },
+  { href: "/warehouse/orders/[id]", title: "Order detail", kicker: "Orders" },
+  { href: "/warehouse/picking", title: "Picking", kicker: "Picking" },
+  { href: "/warehouse/packing", title: "Packing", kicker: "Packing" },
+  { href: "/warehouse/dispatch", title: "Dispatch", kicker: "Dispatch" },
+  { href: "/warehouse/inventory", title: "Inventory", kicker: "Inventory" }
 ];
 
 export const supplierRouteTitles: PlatformRouteTitle[] = [
-  { href: "/supplier", title: "Overview", kicker: "Supplier" },
-  { href: "/supplier/products", title: "Products", kicker: "Supplier" },
-  { href: "/supplier/products/new", title: "New product", kicker: "Supplier" },
-  { href: "/supplier/submissions", title: "Submissions", kicker: "Supplier" },
-  { href: "/supplier/inventory", title: "Stock levels", kicker: "Supplier" },
-  { href: "/supplier/orders", title: "Orders", kicker: "Supplier" }
+  { href: "/supplier", title: "Home", kicker: "Supplier" },
+  { href: "/supplier/products/new", title: "Add product", kicker: "Supplier" },
+  { href: "/supplier/products", title: "My products", kicker: "Supplier" },
+  { href: "/supplier/submissions", title: "Review status", kicker: "Supplier" },
+  { href: "/supplier/inventory", title: "Stock levels", kicker: "Supplier" }
 ];

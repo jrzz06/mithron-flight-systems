@@ -1,28 +1,22 @@
 import Link from "next/link";
+import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { StatusPill } from "@/components/platform";
+import { SupplierSubmitProductButton } from "@/components/supplier/supplier-submit-product-button";
+import { relativeTimeLabel, supplierEmptyMessage, supplierStatusHint } from "@/lib/platform/copy";
 import { getCurrentAuthContext } from "@/services/auth";
 import { listSupplierProducts } from "@/services/supplier-actions";
-import { SupplierSubmitProductButton } from "@/components/supplier/supplier-submit-product-button";
-import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { deleteSupplierProductFormAction, submitSupplierProductFormAction } from "./actions";
 
 function canSubmit(status: string) {
   return status === "draft" || status === "rejected";
 }
 
-function statusBadgeClass(status: string) {
-  if (status === "draft") return "bg-slate-500/15 text-slate-200 ring-slate-500/30";
-  if (status === "pending_review") return "bg-amber-500/15 text-amber-100 ring-amber-500/30";
-  if (status === "published") return "bg-emerald-500/15 text-emerald-100 ring-emerald-500/30";
-  if (status === "rejected") return "bg-rose-500/15 text-rose-100 ring-rose-500/30";
-  return "bg-slate-500/15 text-slate-200 ring-slate-500/30";
+function canEditProduct(status: string) {
+  return status === "draft" || status === "rejected";
 }
 
-function statusHint(status: string) {
-  if (status === "draft") return "Not sent to admin yet — click Submit for approval.";
-  if (status === "pending_review") return "Waiting for admin approval.";
-  if (status === "rejected") return "Rejected by admin — edit and resubmit.";
-  if (status === "published") return "Live on storefront.";
-  return "";
+function canViewProduct(status: string) {
+  return status === "published";
 }
 
 export default async function SupplierProductsPage() {
@@ -34,30 +28,21 @@ export default async function SupplierProductsPage() {
   }).length;
 
   return (
-    <div className="grid gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-100">My products</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-400">
-            Saving a draft does <strong className="font-semibold text-slate-200">not</strong> notify admin.
-            After saving, click <strong className="font-semibold text-emerald-200">Submit for approval</strong> to send it to the admin queue.
-          </p>
-        </div>
-        <Link href="/supplier/products/new" className="rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white">
-          Add product
-        </Link>
-      </div>
+    <div className="grid gap-5">
+      <p className="max-w-3xl text-sm leading-relaxed text-[var(--platform-text-secondary)]">
+        Create and manage your product listings. Save a draft first, then send it for review when you are ready.
+        Approved products go live on the store.
+      </p>
 
       {draftCount > 0 ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 px-4 py-3 text-sm text-amber-100">
-          You have {draftCount} product{draftCount === 1 ? "" : "s"} not yet submitted to admin.
-          Submit them so they appear under <strong className="font-semibold">Admin → Supplier approvals</strong>.
+        <div className="rounded-[8px] border border-amber-500/30 bg-amber-950/15 px-4 py-3 text-sm text-amber-100">
+          You have {draftCount} product{draftCount === 1 ? "" : "s"} waiting to be sent for review.
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-white/[0.08]">
+      <div className="overflow-hidden rounded-[8px] border border-[var(--platform-border)]">
         <table className="min-w-full text-sm">
-          <thead className="bg-[#0f141b] text-left text-slate-400">
+          <thead className="bg-[var(--platform-surface-muted)] text-left text-[var(--platform-text-muted)]">
             <tr>
               <th className="px-4 py-3">Product</th>
               <th className="px-4 py-3">Status</th>
@@ -69,24 +54,32 @@ export default async function SupplierProductsPage() {
             {products.length ? products.map((product) => {
               const slug = String(product.slug);
               const status = String(product.workflow_status ?? "draft");
-              const hint = statusHint(status);
+              const hint = supplierStatusHint(status);
+              const updated = typeof product.updated_at === "string" ? relativeTimeLabel(product.updated_at) : "—";
+
               return (
-                <tr key={slug} className="border-t border-white/[0.06]">
+                <tr key={slug} className="border-t border-[var(--platform-border)]">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-100">{String(product.name)}</div>
-                    {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+                    <div className="font-medium text-[var(--platform-text-primary)]">{String(product.name)}</div>
+                    {hint ? <p className="mt-1 text-xs text-[var(--platform-text-muted)]">{hint}</p> : null}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ring-1 ring-inset ${statusBadgeClass(status)}`}>
-                      {status.replaceAll("_", " ")}
-                    </span>
+                    <StatusPill status={status} />
                   </td>
-                  <td className="px-4 py-3 text-slate-400">{String(product.updated_at ?? "")}</td>
+                  <td className="px-4 py-3 text-[var(--platform-text-muted)]">{updated}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-3">
-                      <Link href={`/supplier/products/${slug}/edit`} className="text-violet-300 hover:underline">
-                        Edit
-                      </Link>
+                      {canEditProduct(status) ? (
+                        <Link href={`/supplier/products/${slug}/edit`} className="text-[var(--platform-accent)] hover:underline">
+                          Edit
+                        </Link>
+                      ) : canViewProduct(status) ? (
+                        <Link href={`/supplier/products/${slug}/edit`} className="text-[var(--platform-text-secondary)] hover:underline">
+                          View listing
+                        </Link>
+                      ) : status === "pending_review" ? (
+                        <span className="text-[var(--platform-text-muted)]">In review</span>
+                      ) : null}
                       {canSubmit(status) ? (
                         <form action={submitSupplierProductFormAction}>
                           <input type="hidden" name="slug" value={slug} />
@@ -99,7 +92,7 @@ export default async function SupplierProductsPage() {
                           <OperationalSubmitButton
                             pendingLabel="Deleting"
                             confirmMessage={`Delete draft "${String(product.name)}"? This cannot be undone.`}
-                            className="ambient-cta inline-flex items-center justify-center self-start text-rose-300 hover:text-rose-200"
+                            className="text-rose-300 hover:text-rose-200"
                           >
                             Delete draft
                           </OperationalSubmitButton>
@@ -111,7 +104,12 @@ export default async function SupplierProductsPage() {
               );
             }) : (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">No supplier products yet.</td>
+                <td colSpan={4} className="px-4 py-8 text-center">
+                  <p className="text-sm text-[var(--platform-text-muted)]">{supplierEmptyMessage("products")}</p>
+                  <Link href="/supplier/products/new" className="mt-3 inline-block text-sm font-medium text-[var(--platform-accent)]">
+                    Add your first product
+                  </Link>
+                </td>
               </tr>
             )}
           </tbody>

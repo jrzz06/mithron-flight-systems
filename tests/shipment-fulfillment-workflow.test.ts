@@ -52,6 +52,7 @@ describe("shipment persistence and fulfillment lifecycle", () => {
     expect(assertShipmentTransition("reserved", "packed")).toBe("packed");
     expect(assertShipmentTransition("pending", "packed")).toBe("packed");
     expect(assertShipmentTransition("packed", "ready_for_pickup")).toBe("ready_for_pickup");
+    expect(assertShipmentTransition("packed", "shipped")).toBe("shipped");
     expect(assertShipmentTransition("ready_for_pickup", "shipped")).toBe("shipped");
     expect(assertShipmentTransition("shipped", "in_transit")).toBe("in_transit");
     expect(assertShipmentTransition("in_transit", "delivered")).toBe("delivered");
@@ -210,8 +211,8 @@ describe("shipment persistence and fulfillment lifecycle", () => {
     expect(warehouseActions).toContain("createShipmentFormAction");
     expect(warehouseActions).toContain("updateShipmentLifecycleFormAction");
     expect(fulfillmentPage).toContain("/warehouse/picking");
-    expect(packingPage).toContain("createShipmentFormAction");
-    expect(packingPage).toContain("Generate shipment");
+    expect(packingPage).toContain("completeWarehousePackingFormAction");
+    expect(packingPage).toContain("WarehousePackingOrderCard");
     expect(dispatchPage).toContain("updateShipmentLifecycleFormAction");
     expect(dispatchPage).toContain("value=\"shipped\"");
     expect(shipmentsPage).toContain("data-shipments-table");

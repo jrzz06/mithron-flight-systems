@@ -1,130 +1,226 @@
 import Link from "next/link";
-import { AdminSection, DataList } from "@/components/admin/module-panel";
-import { connectivityMessage, emptyMessage, humanStatus, relativeTimeLabel } from "@/lib/platform/copy";
-import { getAdminDashboardSnapshot } from "@/services/admin";
+import type { ReactNode } from "react";
+import { AdminDashboardLiveSync } from "@/components/admin/admin-dashboard-live-sync";
+import { StatusPill } from "@/components/platform";
+import { connectivityMessage, relativeTimeLabel } from "@/lib/platform/copy";
+import { formatDashboardCount, getAdminDashboardSnapshot, listPendingSupplierSubmissions, orderNeedsAdminReview } from "@/services/admin";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
+import { listAdminEnquiries } from "@/services/enquiries";
 
-function rowLabel(row: Record<string, unknown>, fallback: string) {
-  return String(row.title ?? row.name ?? row.order_number ?? row.slug ?? row.product_slug ?? row.id ?? fallback);
+export const dynamic = "force-dynamic";
+
+function text(value: unknown, fallback = "") {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-function recentRows(rows: Record<string, unknown>[], fallback: string, valueKey = "status", keyPrefix = fallback.toLowerCase()) {
-  return rows.slice(0, 5).map((row, index) => ({
-    id: `${keyPrefix}-${String(row.id ?? index)}`,
-    label: rowLabel(row, `${fallback} ${index + 1}`),
-    value: humanStatus(String(row[valueKey] ?? row.status ?? row.workflow_status ?? row.stock_status ?? "open")),
-    detail: relativeTimeLabel(String(row.updated_at ?? row.created_at ?? row.createdAt ?? ""))
-  }));
+function orderLabel(order: Record<string, unknown>) {
+  return text(order.order_number) || text(order.id).slice(0, 8) || "Order";
+}
+
+function openEnquiries(enquiries: Awaited<ReturnType<typeof listAdminEnquiries>>) {
+  return enquiries.filter((enquiry) => !["converted", "lost", "closed"].includes(text(enquiry.status, "new")));
 }
 
 export default async function AdminPage() {
-  const snapshot = await getAdminDashboardSnapshot();
-  const lowStockCount = snapshot.data.lowStockAlerts.length;
-  const pendingOrders = snapshot.data.recentOrders.filter((row) =>
-    /pending|processing|review|open/i.test(String(row.order_status ?? row.status ?? ""))
-  ).length;
+  const [snapshot, policy, enquiries, pendingSubmissions] = await Promise.all([
+    getAdminDashboardSnapshot(),
+    getAdminSettingsPolicy(),
+    listAdminEnquiries(),
+    listPendingSupplierSubmissions()
+  ]);
+  const { operationalCounts } = snapshot.data;
 
-  const lowStockRows = snapshot.data.lowStockAlerts.slice(0, 5).map((row, index) => ({
-    id: `low-stock-${String(row.id ?? `${row.product_slug ?? "product"}-${row.sku ?? "sku"}-${index}`)}`,
-    label: String(row.product_name ?? row.product_slug ?? "Product"),
-    value: humanStatus(String(row.stock_status ?? "low_stock")),
-    detail: `SKU ${String(row.sku ?? "—")} · ${String(row.quantity ?? 0)} units`
-  }));
+  const reviewOrders = (snapshot.data.ordersNeedingReview.length
+    ? snapshot.data.ordersNeedingReview
+    : snapshot.data.recentOrders.filter(orderNeedsAdminReview)
+  ).slice(0, 8);
 
-  const attentionRows = [
-    ...recentRows(snapshot.data.recentOrders.filter((row) => /pending|processing|review|open/i.test(String(row.order_status ?? row.status ?? ""))), "Order", "order_status", "order").slice(0, 4),
-    ...lowStockRows.slice(0, 3)
-  ].slice(0, 6);
+  const inventoryAlerts = snapshot.data.lowStockAlerts.slice(0, 8);
+  const queueEnquiries = openEnquiries(enquiries).slice(0, 8);
 
-  const activityRows = [
-    ...recentRows(snapshot.data.recentNotifications, "Notification", "status", "notification").slice(0, 3),
-    ...recentRows(snapshot.data.recentActivity, "Activity", "action", "activity").slice(0, 3)
-  ].slice(0, 5);
+  const kpiCards = [
+    {
+      label: "Orders awaiting review",
+      value: formatDashboardCount(operationalCounts.pendingOrdersReview),
+      href: "/admin/orders?queue=review",
+      tone: "text-amber-300"
+    },
+    {
+      label: "Customer enquiries",
+      value: formatDashboardCount(operationalCounts.openEnquiries),
+      href: "/admin/enquiries?status=new",
+      tone: "text-sky-300"
+    },
+    {
+      label: "Inventory alerts",
+      value: formatDashboardCount(operationalCounts.lowStockAlerts),
+      href: "/admin/inventory",
+      tone: "text-rose-300"
+    },
+    {
+      label: "Supplier approvals",
+      value: formatDashboardCount(operationalCounts.pendingSupplierSubmissions),
+      href: "/admin/suppliers/products",
+      tone: "text-violet-300"
+    }
+  ];
 
   return (
-    <div data-admin-dashboard className="grid gap-5">
+    <div data-admin-dashboard className="grid gap-4">
+      <AdminDashboardLiveSync enabled={policy.realtimeUpdatesEnabled} />
+
       {snapshot.blockedReason ? (
         <p className="rounded-[var(--platform-radius)] border border-[var(--platform-warning)]/20 bg-[var(--platform-warning-soft)] px-4 py-3 text-sm text-[var(--platform-warning)]">
           {connectivityMessage(snapshot.blockedReason)}
         </p>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-        <AdminSection
-          title="Requires action"
-          description="Operational items that need review before the next fulfillment cycle."
-        >
-          <DataList
-            rows={
-              attentionRows.length
-                ? attentionRows
-                : [{ label: "All clear", value: "Nothing urgent", detail: emptyMessage("orders") }]
-            }
-          />
-        </AdminSection>
-
-        <AdminSection title="Operational snapshot" description="Current pressure across core workflows.">
-          <div className="grid gap-2">
-            {[
-              { label: "Orders awaiting review", value: String(pendingOrders), href: "/admin/orders?queue=review" },
-              { label: "Low stock alerts", value: String(lowStockCount), href: "/admin/inventory" },
-              { label: "Supplier submissions", value: "Review queue", href: "/admin/suppliers/products" },
-              { label: "Customer enquiries", value: "Open queue", href: "/admin/enquiries" }
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="mithron-elevated-card mithron-elevated-card--interactive flex items-center justify-between gap-3 rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-3 py-2.5 text-sm transition hover:bg-[var(--platform-surface)]"
-              >
-                <span className="text-[var(--platform-text-secondary)]">{item.label}</span>
-                <span className="font-medium tabular-nums text-[var(--platform-text-primary)]">{item.value}</span>
-              </Link>
-            ))}
-          </div>
-        </AdminSection>
+      <section data-admin-kpi-strip className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {kpiCards.map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className="rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3 transition hover:bg-[var(--platform-surface-raised)]"
+          >
+            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">{card.label}</p>
+            <p className={`mt-1 text-3xl font-semibold tabular-nums ${card.tone}`}>{card.value}</p>
+          </Link>
+        ))}
       </section>
 
-      <section data-admin-quick-actions className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-        <AdminSection title="Quick actions">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {[
-              { label: "Review orders", href: "/admin/orders" },
-              { label: "Review submissions", href: "/admin/suppliers/products" },
-              { label: "Manage inventory", href: "/admin/inventory" },
-              { label: "Enquiry queue", href: "/admin/enquiries" },
-              { label: "Upload media", href: "/admin/media#upload-media" },
-              { label: "Edit website content", href: "/admin/cms" }
-            ].map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                data-admin-crud-action={action.label.toLowerCase().replaceAll(" ", "-")}
-                className="mithron-elevated-card mithron-elevated-card--interactive flex min-h-10 items-center rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-3 text-sm font-medium text-[var(--platform-text-primary)] transition hover:bg-[var(--platform-surface)]"
-              >
-                {action.label}
-              </Link>
-            ))}
-          </div>
-        </AdminSection>
+      <section className="grid gap-4">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--platform-text-muted)]">Action queue</h2>
 
-        <AdminSection title="Inventory risk" description="Products approaching stock thresholds.">
-          <DataList
-            rows={
-              lowStockRows.length
-                ? lowStockRows
-                : [{ label: "Inventory healthy", value: "No alerts", detail: "Stock levels are within range." }]
-            }
-          />
-        </AdminSection>
-      </section>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <QueuePanel title="Pending orders" href="/admin/orders?queue=review" emptyLabel="No orders need review.">
+            {reviewOrders.length ? (
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-[var(--platform-border)] text-left text-[11px] uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Order</th>
+                    <th className="px-3 py-2 font-medium">Customer</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Waiting</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviewOrders.map((order) => (
+                    <tr key={String(order.id)} className="border-b border-[var(--platform-border)] last:border-b-0">
+                      <td className="px-3 py-2">
+                        <Link href={`/admin/orders?order=${encodeURIComponent(orderLabel(order))}&queue=review`} className="font-medium text-[var(--platform-accent)]">
+                          {orderLabel(order)}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 text-[var(--platform-text-secondary)]">{text(order.customer_email, "—")}</td>
+                      <td className="px-3 py-2"><StatusPill status={text(order.status, "pending")} /></td>
+                      <td className="px-3 py-2 text-xs text-[var(--platform-text-muted)]">{relativeTimeLabel(text(order.updated_at) || text(order.created_at))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </QueuePanel>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <AdminSection title="Recent orders">
-          <DataList rows={recentRows(snapshot.data.recentOrders, "Order", "order_status", "order")} />
-        </AdminSection>
-        <AdminSection title="Recent activity">
-          <DataList rows={activityRows.length ? activityRows : [{ label: "Activity", value: "Quiet", detail: emptyMessage("activity") }]} />
-        </AdminSection>
+          <QueuePanel title="Customer enquiries" href="/admin/enquiries" emptyLabel="No open enquiries.">
+            {queueEnquiries.length ? (
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-[var(--platform-border)] text-left text-[11px] uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Customer</th>
+                    <th className="px-3 py-2 font-medium">Subject</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Waiting</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {queueEnquiries.map((enquiry) => (
+                    <tr key={String(enquiry.id)} className="border-b border-[var(--platform-border)] last:border-b-0">
+                      <td className="px-3 py-2 text-[var(--platform-text-primary)]">{text(enquiry.customer_email, "—")}</td>
+                      <td className="px-3 py-2 text-[var(--platform-text-secondary)]">{text(enquiry.subject, "Enquiry")}</td>
+                      <td className="px-3 py-2"><StatusPill status={text(enquiry.status, "new")} /></td>
+                      <td className="px-3 py-2 text-xs text-[var(--platform-text-muted)]">{relativeTimeLabel(text(enquiry.created_at))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </QueuePanel>
+
+          <QueuePanel title="Inventory alerts" href="/admin/inventory" emptyLabel="Stock levels are healthy.">
+            {inventoryAlerts.length ? (
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-[var(--platform-border)] text-left text-[11px] uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Product</th>
+                    <th className="px-3 py-2 font-medium">SKU</th>
+                    <th className="px-3 py-2 font-medium">Qty</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventoryAlerts.map((row, index) => (
+                    <tr key={String(row.id ?? index)} className="border-b border-[var(--platform-border)] last:border-b-0">
+                      <td className="px-3 py-2 font-medium text-[var(--platform-text-primary)]">{text(row.product_name, text(row.product_slug, "Product"))}</td>
+                      <td className="px-3 py-2 text-[var(--platform-text-secondary)]">{text(row.sku, "—")}</td>
+                      <td className="px-3 py-2 text-[var(--platform-text-secondary)]">{String(row.quantity ?? 0)}</td>
+                      <td className="px-3 py-2"><StatusPill status={text(row.stock_status, "low_stock")} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </QueuePanel>
+
+          <QueuePanel title="Supplier approvals" href="/admin/suppliers/products" emptyLabel="No submissions awaiting approval.">
+            {pendingSubmissions.length ? (
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-[var(--platform-border)] text-left text-[11px] uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Product</th>
+                    <th className="px-3 py-2 font-medium">Supplier</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingSubmissions.map((product) => (
+                    <tr key={product.slug} className="border-b border-[var(--platform-border)] last:border-b-0">
+                      <td className="px-3 py-2 font-medium text-[var(--platform-text-primary)]">{product.name}</td>
+                      <td className="px-3 py-2 text-[var(--platform-text-secondary)]">{product.supplierLabel}</td>
+                      <td className="px-3 py-2"><StatusPill status="pending_review" /></td>
+                      <td className="px-3 py-2 text-xs text-[var(--platform-text-muted)]">{relativeTimeLabel(product.updatedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
+          </QueuePanel>
+        </div>
       </section>
+    </div>
+  );
+}
+
+function QueuePanel({
+  title,
+  href,
+  emptyLabel,
+  children
+}: {
+  title: string;
+  href: string;
+  emptyLabel: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)]">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--platform-border)] px-3 py-2">
+        <h3 className="text-sm font-medium text-[var(--platform-text-primary)]">{title}</h3>
+        <Link href={href} className="text-xs font-medium text-[var(--platform-accent)]">View all</Link>
+      </div>
+      <div className="overflow-x-auto">
+        {children ? children : <p className="px-3 py-4 text-sm text-[var(--platform-text-muted)]">{emptyLabel}</p>}
+      </div>
     </div>
   );
 }

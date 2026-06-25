@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getCurrentAuthContext } from "@/services/auth";
+import { requirePermission } from "@/services/auth";
 import { createSupplierStockRequest } from "@/services/supplier-stock-requests";
 
 function feedbackPath(status: "success" | "error", message: string) {
@@ -9,7 +9,7 @@ function feedbackPath(status: "success" | "error", message: string) {
 }
 
 export async function submitSupplierStockRequestAction(formData: FormData) {
-  const context = await getCurrentAuthContext();
+  const context = await requirePermission("products.submit");
   const userId = context.userId;
   if (!userId) redirect("/login?next=/supplier/inventory");
 

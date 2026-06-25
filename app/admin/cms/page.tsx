@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CmsVisualWorkspaceLoader } from "@/components/admin/cms-visual-workspace-loader";
 import type { CmsRestoreRevision, CmsWorkspaceMedia, CmsWorkspacePage, CmsWorkspaceSection } from "@/features/admin/cms/cms-visual-workspace";
 import { HomepageCmsEditor } from "@/components/admin/homepage-cms-editor-loader";
@@ -5,8 +6,9 @@ import { CMS_WORKSPACE_ANCHORS, CMS_WORKSPACE_PAGES } from "@/config/cms-workspa
 import { homepageCmsSections as homepageSectionDefinitions, type HomepageCmsSectionId } from "@/config/homepage-cms";
 import { footerContent } from "@/config/storefront-content";
 import { ModulePanel, OperationalFeedback } from "@/components/admin/module-panel";
-import { getCmsAdvancedWorkspaceSnapshot, getCmsCoreSnapshot } from "@/services/admin";
+import { getCmsAdvancedWorkspaceSnapshot, getCmsCoreSnapshot, getCmsMarketingWorkspaceSnapshot } from "@/services/admin";
 import { getHomepageCmsContent } from "@/services/homepage-cms";
+import { connectivityMessage } from "@/lib/platform/copy";
 
 export const dynamic = "force-dynamic";
 
@@ -53,16 +55,25 @@ function tableRows(snapshot: { data: { tables: Array<{ table: string; rows: Admi
 }
 
 function mergeCmsSnapshots(
-  core: Awaited<ReturnType<typeof getCmsCoreSnapshot>>,
-  advanced: Awaited<ReturnType<typeof getCmsAdvancedWorkspaceSnapshot>> | null
+  ...snapshots: Array<Awaited<ReturnType<typeof getCmsCoreSnapshot>> | Awaited<ReturnType<typeof getCmsAdvancedWorkspaceSnapshot>> | null>
 ) {
-  if (!advanced) return core;
-  return {
-    status: core.status === "LIVE" && advanced.status === "LIVE" ? "LIVE" as const : "PARTIAL" as const,
+  const active = snapshots.filter((snapshot): snapshot is NonNullable<typeof snapshot> => Boolean(snapshot));
+  if (!active.length) {
+    return {
+      status: "BLOCKED" as const,
+      source: "blocked" as const,
+      blockedReason: "CMS snapshot unavailable.",
+      data: { tables: [] as Array<{ table: string; rows: AdminRow[] }> }
+    };
+  }
+
+  const [first, ...rest] = active;
+  return rest.reduce((merged, snapshot) => ({
+    status: merged.status === "LIVE" && snapshot.status === "LIVE" ? "LIVE" as const : "PARTIAL" as const,
     source: "supabase-admin" as const,
-    blockedReason: core.blockedReason ?? advanced.blockedReason,
-    data: { tables: [...core.data.tables, ...advanced.data.tables] }
-  };
+    blockedReason: merged.blockedReason ?? snapshot.blockedReason,
+    data: { tables: [...merged.data.tables, ...snapshot.data.tables] }
+  }), first);
 }
 
 function statusLabel(row: AdminRow) {
@@ -151,6 +162,7 @@ function fields(overrides: Partial<CmsWorkspaceSection["fields"]> = {}): CmsWork
     compositionMobileMediaPosition: "center",
     compositionProductDominance: "flagship",
     routeKey: "",
+    routePath: "",
     showcaseImageSrc: "",
     showcaseImageAlt: "",
     showcaseImageJson: "{}",
@@ -233,12 +245,13 @@ function latestRestoreRevision(rows: ContentRevisionRow[]): CmsRestoreRevision {
 export default async function CmsPage({ searchParams }: CmsPageProps) {
   const params = await searchParams;
   const advancedView = params?.view === "advanced";
-  const [coreSnapshot, advancedSnapshot, homepageContent] = await Promise.all([
+  const [coreSnapshot, marketingSnapshot, advancedSnapshot, homepageContent] = await Promise.all([
     getCmsCoreSnapshot(),
+    getCmsMarketingWorkspaceSnapshot(),
     advancedView ? getCmsAdvancedWorkspaceSnapshot() : Promise.resolve(null),
     getHomepageCmsContent()
   ]);
-  const snapshot = mergeCmsSnapshots(coreSnapshot, advancedSnapshot);
+  const snapshot = mergeCmsSnapshots(coreSnapshot, marketingSnapshot, advancedSnapshot);
   const cmsStatus = params?.cms_status === "error" ? "error" : params?.cms_status === "success" ? "success" : null;
   const cmsMessage = params?.cms_message ? decodeURIComponent(params.cms_message) : "";
   const cmsTable = params?.cms_table ? decodeURIComponent(params.cms_table) : "Website";
@@ -250,6 +263,9 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
   const footerLinks = advancedView ? tableRows(snapshot, "footer_links") : [];
   const navigationRows = advancedView ? tableRows(snapshot, "site_navigation") : [];
   const categoryRows = advancedView ? tableRows(snapshot, "category_metadata") : [];
+  const faqRows = tableRows(snapshot, "faqs");
+  const campaignRows = tableRows(snapshot, "promotional_campaigns");
+  const visibilityRows = advancedView ? tableRows(snapshot, "section_visibility") : [];
   const mediaRows = tableRows(snapshot, "media_assets").filter((asset) => publicMediaUrl(asset));
   const revisionRows = advancedView ? (tableRows(snapshot, "content_revisions") as ContentRevisionRow[]) : [];
 
@@ -416,11 +432,92 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
     };
   });
 
+  const faqSections: CmsWorkspaceSection[] = faqRows.map((faq, index) => {
+    const faqBase = sectionBase(faq, `faq-${index + 1}`);
+    const entityId = text(faq.id, faqBase.entityId);
+    return {
+      id: `faq-${entityId}`,
+      pageId: "faqs-page",
+      anchor: `cms-section-faq-${entityId}`,
+      routePath: "/contact",
+      previewHref: "/contact",
+      kind: "faq",
+      title: text(faq.question, `FAQ ${index + 1}`),
+      description: "Edit support FAQ entries shown on product and contact surfaces.",
+      table: "faqs",
+      ...faqBase,
+      entityId,
+      fields: fields({
+        title: text(faq.question),
+        body: text(faq.answer),
+        sectionKey: text(faq.scope, "global"),
+        productSlug: text(faq.product_slug)
+      })
+    };
+  });
+
+  const campaignSections: CmsWorkspaceSection[] = campaignRows.map((campaign, index) => {
+    const campaignBase = sectionBase(campaign, `campaign-${index + 1}`);
+    const entityId = text(campaign.id, campaignBase.entityId);
+    return {
+      id: `campaign-${entityId}`,
+      pageId: "campaigns-page",
+      anchor: `cms-section-campaign-${entityId}`,
+      routePath: "/",
+      previewHref: "/",
+      kind: "campaign",
+      title: text(campaign.label, `Campaign ${index + 1}`),
+      description: "Edit promotional campaign copy, CTA, and scheduling.",
+      table: "promotional_campaigns",
+      ...campaignBase,
+      entityId,
+      fields: fields({
+        label: text(campaign.label),
+        title: text(campaign.headline),
+        body: text(campaign.body),
+        ctaLabel: text(campaign.cta_label),
+        href: text(campaign.href),
+        mediaAssetId: text(campaign.media_asset_id),
+        startsAt: text(campaign.starts_at),
+        endsAt: text(campaign.ends_at)
+      })
+    };
+  });
+
+  const visibilitySections: CmsWorkspaceSection[] = visibilityRows.map((row, index) => {
+    const sectionKey = text(row.section_key, `section-${index + 1}`);
+    const routePath = text(row.route_path, "/");
+    const visibilityBase = sectionBase(row, `${sectionKey}:${routePath}`);
+    return {
+      id: `visibility-${sectionKey}-${routePath.replaceAll("/", "-")}`,
+      pageId: "section-visibility-page",
+      anchor: `cms-section-visibility-${sectionKey}`,
+      routePath,
+      previewHref: routePath,
+      kind: "section_visibility",
+      title: `${sectionKey} visibility`,
+      description: `Control whether ${sectionKey} is visible on ${routePath}.`,
+      table: "section_visibility",
+      ...visibilityBase,
+      entityId: `${sectionKey}:${routePath}`,
+      stateEntityId: `${sectionKey}:${routePath}`,
+      fields: fields({
+        sectionKey,
+        routePath,
+        startsAt: text(row.starts_at),
+        endsAt: text(row.ends_at)
+      })
+    };
+  });
+
   const sections: CmsWorkspaceSection[] = advancedView
     ? [
         ...heroSections,
         ...categorySections,
         ...productReviewSections,
+        ...faqSections,
+        ...campaignSections,
+        ...visibilitySections,
         ...footerSections,
         ...navigationSections
       ]
@@ -442,7 +539,10 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
     "footer-page": footerSectionIds,
     about: aboutSectionIds,
     contact: contactSectionIds,
-    "product-reviews": productReviewSections.map((section) => section.id)
+    "product-reviews": productReviewSections.map((section) => section.id),
+    "faqs-page": faqSections.map((section) => section.id),
+    "campaigns-page": campaignSections.map((section) => section.id),
+    "section-visibility-page": visibilitySections.map((section) => section.id)
   };
   const workspacePages: CmsWorkspacePage[] = CMS_WORKSPACE_PAGES
     .map((page) => ({ ...page, sectionIds: sectionIdsByPage[page.id] ?? [] }))
@@ -513,7 +613,7 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
       <ModulePanel
         eyebrow="CMS editor"
         title="Homepage content."
-        description={snapshot.blockedReason ?? "Edit the live homepage in the same order visitors see it — hero, shelves, mission worlds, reviews, about, and footer."}
+        description={connectivityMessage(snapshot.blockedReason) || "Edit the live homepage in the same order visitors see it — hero, shelves, mission worlds, reviews, about, and footer."}
         status={snapshot.status}
         metrics={metrics}
       />
@@ -536,6 +636,21 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
         initialSection={initialSection}
       />
 
+      {faqSections.length || campaignSections.length ? (
+        <section data-cms-marketing-workspace className="rounded-xl border border-slate-800 bg-[#0f141b] p-4 shadow-none">
+          <p className="text-sm font-semibold text-slate-200">Support FAQs & campaigns</p>
+          <p className="mt-1 text-sm text-slate-500">Edit support FAQs and promotional campaigns without opening the advanced workspace.</p>
+          <div className="mt-4">
+            <CmsVisualWorkspaceLoader
+              pages={workspacePages.filter((page) => page.id === "faqs-page" || page.id === "campaigns-page")}
+              sections={[...faqSections, ...campaignSections]}
+              media={media}
+              restoreRevision={latestRestoreRevision(revisionRows)}
+            />
+          </div>
+        </section>
+      ) : null}
+
       <details className="rounded-xl border border-slate-800 bg-[#0f141b] p-4 shadow-none" open={advancedView}>
         <summary className="cursor-pointer text-sm font-semibold text-slate-200">
           Advanced CMS — navigation, category banners, revisions
@@ -549,9 +664,15 @@ export default async function CmsPage({ searchParams }: CmsPageProps) {
               restoreRevision={latestRestoreRevision(revisionRows)}
             />
           ) : (
-            <p className="rounded-xl border border-dashed border-slate-800 bg-[#10151d] px-4 py-6 text-sm text-slate-400">
-              Advanced workspace data loads on demand. Add <code className="text-emerald-300">?view=advanced</code> to the URL to open navigation, category banners, footer columns, FAQs, and revision restore tools.
-            </p>
+            <div className="rounded-xl border border-dashed border-slate-800 bg-[#10151d] px-4 py-6 text-sm text-slate-400">
+              <p>Advanced workspace data loads on demand for navigation, category banners, footer columns, FAQs, and revision restore tools.</p>
+              <Link
+                href="/admin/cms?view=advanced"
+                className="mt-4 inline-flex h-9 items-center rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-3 text-sm font-semibold text-emerald-200 hover:bg-emerald-950/50"
+              >
+                Open advanced workspace
+              </Link>
+            </div>
           )}
         </div>
       </details>

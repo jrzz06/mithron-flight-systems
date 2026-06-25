@@ -6,22 +6,19 @@ export type AdminSection =
   | "overview"
   | "cms"
   | "products"
-  | "media"
   | "warehouse"
   | "orders"
   | "operations"
   | "tasks"
-  | "settings"
   | "audit"
   | "suppliers"
-  | "enquiries"
-  | "reports";
+  | "enquiries";
 
 const protectedPrefixes = ["/admin", "/warehouse", "/operations", "/account", "/supplier"] as const;
 const authPublicPrefixes = ["/login", "/auth/login", "/auth/callback", "/auth/logout", "/logout"] as const;
 
 const roleAccess: Record<CmsRole, AdminSection[]> = {
-  admin: ["overview", "cms", "products", "media", "warehouse", "orders", "operations", "tasks", "settings", "audit", "suppliers", "enquiries", "reports"],
+  admin: ["overview", "cms", "products", "warehouse", "orders", "operations", "tasks", "audit", "suppliers", "enquiries"],
   warehouse: ["warehouse", "orders"],
   supplier: ["products"],
   user: []
@@ -81,14 +78,14 @@ export function sectionFromPath(pathname: string): AdminSection {
   if (normalized.startsWith("/operations")) return "operations";
   if (normalized.startsWith("/admin/suppliers")) return "suppliers";
   if (normalized.startsWith("/admin/enquiries")) return "enquiries";
-  if (normalized.startsWith("/admin/reports")) return "reports";
   if (normalized.startsWith("/admin/cms")) return "cms";
   if (normalized.startsWith("/admin/products")) return "products";
   if (normalized.startsWith("/admin/inventory")) return "warehouse";
-  if (normalized.startsWith("/admin/media")) return "media";
-  if (normalized.startsWith("/admin/settings")) return "settings";
   if (normalized.startsWith("/admin/audit")) return "audit";
   if (normalized.startsWith("/admin/orders")) return "orders";
+  if (normalized.startsWith("/admin/settings") || normalized.startsWith("/admin/users") || normalized.startsWith("/admin/media") || normalized.startsWith("/admin/reports")) {
+    return "overview";
+  }
   return "overview";
 }
 

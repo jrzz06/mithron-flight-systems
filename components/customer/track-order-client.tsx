@@ -79,7 +79,7 @@ export function TrackOrderClient() {
               value={orderNumber}
               onChange={(event) => setOrderNumber(event.target.value)}
               className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-page)] px-4 py-3 text-white"
-              placeholder="MTH-..."
+              placeholder="ORD-..."
             />
           </label>
           <label className="grid gap-2 text-sm text-white/70">

@@ -17,15 +17,14 @@ import {
   filterDroneWorldProducts,
   isDroneCareShelfProduct,
   isDroneWorldCategory,
-  isGlobalProductsCategory,
-  resolveHomepageShelf
+  isGlobalProductsCategory
 } from "@/lib/product-shelf-classification";
 import { pickHomeMiniCarouselItems } from "@/lib/home/mini-carousel";
 import { formatINR } from "@/lib/utils";
-import { sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import type { ProductReviewContent } from "@/config/storefront-content";
 import { HomeCompositeSection } from "@/sections/home/home-composite-section";
 import { HomeMiniCarousel } from "@/sections/home/home-mini-carousel";
+import { ProductShelfScrollRail } from "@/sections/home/product-shelf-scroll-rail";
 import styles from "./home-landing-composite.module.css";
 
 type ProofState = "VERIFIED" | "FALLBACK";
@@ -489,7 +488,7 @@ function ProductShelfSection({
 
         <div className={styles.shelfBoard} data-home-composite-reveal>
           {cardProducts.length > 0 ? (
-            <div
+            <ProductShelfScrollRail
               className={styles.productShelfGrid}
               data-testid="home-product-shelf-grid"
               data-shelf-layout={guideUsesOptionA ? "option-a" : "standard"}
@@ -564,7 +563,7 @@ function ProductShelfSection({
                   </div>
                 ) : null}
               </Link>
-            </div>
+            </ProductShelfScrollRail>
           ) : null}
 
           <a

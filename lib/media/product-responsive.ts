@@ -65,8 +65,7 @@ function parseResponsiveMetadata(value: unknown): ProductResponsiveMetadata | nu
 
 function variantFromEntry(
   entry: ProductVariantEntry,
-  format: "avif" | "webp",
-  fallbackPublicUrl: string
+  format: "avif" | "webp"
 ): ResponsiveMediaVariant | null {
   const src = typeof entry.public_url === "string" && entry.public_url.trim()
     ? entry.public_url.trim()
@@ -133,12 +132,12 @@ function collectGeneratedVariants(
   }
 
   for (const entry of metadata.variants?.avif ?? []) {
-    const variant = variantFromEntry(entry, "avif", fallbackPublicUrl);
+    const variant = variantFromEntry(entry, "avif");
     if (variant) avif.push(variant);
   }
 
   for (const entry of metadata.variants?.webp ?? []) {
-    const variant = variantFromEntry(entry, "webp", fallbackPublicUrl);
+    const variant = variantFromEntry(entry, "webp");
     if (variant) webp.push(variant);
   }
 

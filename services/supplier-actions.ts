@@ -6,9 +6,21 @@ import {
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
+import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
 
 type JsonRecord = Record<string, unknown>;
 type EnvSource = Record<string, string | undefined>;
+
+export type SupplierInventoryRow = {
+  id: string;
+  product_slug: string;
+  product_name: string;
+  sku: string;
+  stock_status: string;
+  quantity: number;
+  reorder_threshold: number;
+  updated_at: string;
+};
 
 const supplierProductMutationOptions = {
   guard: () => requirePermission("products.submit")
@@ -23,13 +35,13 @@ async function ensureSupplierProfile(userId: string, env: EnvSource = process.en
 function mapSupplierProductError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("code=23505") || message.includes("duplicate key")) {
-    return new Error("A product with this slug already exists. Change the slug or product name.");
+    return new Error("A product with this name already exists. Try a different product name.");
   }
   if (message.includes("code=23503") || message.includes("is not present in table \"profiles\"")) {
     return new Error("Your supplier profile is not set up yet. Sign out and sign in again, then retry.");
   }
   if (message.includes("code=23514") || message.includes("workflow_status")) {
-    return new Error("Product workflow status is invalid. Contact support — database migrations may be pending.");
+    return new Error("This product cannot be updated right now. Contact support if the problem continues.");
   }
   return error instanceof Error ? error : new Error(message);
 }
@@ -37,7 +49,7 @@ function mapSupplierProductError(error: unknown) {
 async function assertProductSlugAvailable(slug: string, env: EnvSource = process.env) {
   const existing = await fetchAdminRecordsByColumn("mithron_products", "slug", slug, env);
   if (existing.length) {
-    throw new Error("A product with this slug already exists. Change the slug or product name.");
+    throw new Error("A product with this name already exists. Try a different product name.");
   }
 }
 
@@ -70,7 +82,7 @@ export async function createSupplierProductDraft(
   if (slug) await assertProductSlugAvailable(slug, env);
 
   try {
-    return await createAdminRecord(
+    const record = await createAdminRecord(
       "mithron_products",
       {
         ...payload,
@@ -83,6 +95,11 @@ export async function createSupplierProductDraft(
       env,
       supplierProductMutationOptions
     );
+    const slug = String(record.slug ?? payload.slug ?? "").trim();
+    if (slug) {
+      await ensureProductInventoryRecord(slug, actorId, env);
+    }
+    return record;
   } catch (error) {
     throw mapSupplierProductError(error);
   }
@@ -104,7 +121,7 @@ export async function updateSupplierOwnedProduct(
   }
   const status = String(product.workflow_status ?? "draft");
   if (!["draft", "rejected"].includes(status)) {
-    throw new Error("Supplier can only edit draft or rejected products.");
+    throw new Error("You can only edit products that are still in draft or need changes.");
   }
   try {
     return await updateAdminRecord("mithron_products", "slug", slug, payload, actorId, env, {
@@ -130,7 +147,7 @@ export async function submitSupplierProductForReview(
   }
   const status = String(product.workflow_status ?? "draft");
   if (!["draft", "rejected"].includes(status)) {
-    throw new Error("Only draft or rejected products can be submitted for review.");
+    throw new Error("Only drafts and products needing changes can be sent for review.");
   }
   try {
     return await updateAdminRecord(
@@ -227,8 +244,11 @@ export async function listAdminUserIds(env: EnvSource = process.env) {
   return rows.map((row) => String(row.user_id ?? "")).filter(Boolean);
 }
 
-export async function listSupplierInventory(supplierId: string, env: EnvSource = process.env) {
+export async function listSupplierInventory(supplierId: string, env: EnvSource = process.env): Promise<SupplierInventoryRow[]> {
   const products = await listSupplierProducts(supplierId, env);
+  const nameBySlug = new Map(
+    products.map((product) => [String(product.slug ?? ""), String(product.name ?? product.slug ?? "")])
+  );
   const slugs = products.map((product) => String(product.slug)).filter(Boolean);
   if (!slugs.length) return [];
   const config = assertSupabaseAdminConfig(env);
@@ -237,5 +257,15 @@ export async function listSupplierInventory(supplierId: string, env: EnvSource =
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
   if (!response.ok) return [];
-  return (await response.json()) as JsonRecord[];
+  const rows = (await response.json()) as JsonRecord[];
+  return rows.map((row) => ({
+    id: String(row.id ?? ""),
+    product_slug: String(row.product_slug ?? ""),
+    product_name: nameBySlug.get(String(row.product_slug ?? "")) ?? String(row.product_slug ?? ""),
+    sku: String(row.sku ?? ""),
+    stock_status: String(row.stock_status ?? "available"),
+    quantity: Number(row.quantity ?? 0),
+    reorder_threshold: Number(row.reorder_threshold ?? 0),
+    updated_at: String(row.updated_at ?? "")
+  }));
 }

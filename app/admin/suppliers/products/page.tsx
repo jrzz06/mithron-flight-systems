@@ -63,7 +63,7 @@ async function fetchPendingProducts(): Promise<PendingProduct[]> {
       category: String(product.category),
       price: Number(product.price ?? 0),
       supplier_id: supplierId,
-      supplier_label: supplierId ? profileById.get(supplierId) ?? supplierId : "Unknown supplier",
+      supplier_label: supplierId ? profileById.get(supplierId) ?? "Unknown supplier" : "Unknown supplier",
       workflow_status: String(product.workflow_status ?? "pending_review"),
       updated_at: String(product.updated_at ?? "")
     };
@@ -131,7 +131,7 @@ export default async function AdminSupplierProductsPage({
                       <button
                         type="submit"
                         disabled={missingSupplier}
-                        className="inline-flex h-9 items-center rounded-[8px] bg-[var(--platform-accent)] px-3 text-sm font-medium text-[var(--platform-surface)] transition hover:bg-[var(--platform-accent-strong)] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="platform-btn-primary h-9 rounded-[8px] px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Approve
                       </button>

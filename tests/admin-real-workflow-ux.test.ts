@@ -60,7 +60,7 @@ describe("admin real workflow UX", () => {
     const cmsWorkspace = source("features/admin/cms/cms-visual-workspace.tsx");
     const cmsForms = source("services/cms-admin-forms.ts");
     const cmsActions = source("app/admin/cms/actions.ts");
-    const mediaPage = source("app/admin/media/page.tsx");
+    const productsActions = source("app/admin/products/actions.ts");
     const publicCms = source("services/cms.ts");
 
     expect(cmsWorkspace).toContain("data-cms-media-picker");
@@ -78,9 +78,8 @@ describe("admin real workflow UX", () => {
     expect(cmsForms).toContain("video_src");
     expect(publicCms).toContain("mediaFromColumns");
     expect(publicCms).not.toContain("slide.productSlug && slide.title");
-    expect(mediaPage).toContain("data-media-delete-form");
-    expect(mediaPage).toContain("deleteMediaAssetFormAction");
-    expect(mediaPage).not.toContain("FALLBACK ACTIVE");
+    expect(productsActions).toContain("assertAllowedMediaMimeType");
+    expect(productsActions).toContain("upsertMediaAssetRecord");
   });
 
   it("switches the control plane to a minimal dark enterprise theme", () => {

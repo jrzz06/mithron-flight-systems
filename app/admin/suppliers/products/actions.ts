@@ -6,20 +6,12 @@ import { operationalFeedbackFromActionError, readExpectedUpdatedAt } from "@/lib
 import { requirePermission } from "@/services/auth";
 import { revalidateCatalogSurfaces } from "@/lib/catalog-cache";
 import {
-  AdminRecordConflictError,
   createNotificationRecord,
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
-import { ensureInventoryForPublishedProduct } from "@/services/product-inventory-sync";
+import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
 import { assertProductCanPublish } from "@/services/product-publish";
-
-function supplierApprovalErrorMessage(error: unknown) {
-  if (error instanceof AdminRecordConflictError) {
-    return `${error.message} Reload the approval queue and retry.`;
-  }
-  return error instanceof Error ? error.message : String(error);
-}
 
 async function runSupplierApprovalAction(successMessage: string, action: () => Promise<void>) {
   let status: "success" | "error" | "conflict" = "success";
@@ -59,6 +51,7 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
 
     await assertProductCanPublish(slug, { requireSupplier: true });
     const expectedUpdatedAt = readExpectedUpdatedAt(formData, String(product.updated_at ?? ""));
+    await ensureProductInventoryRecord(slug, context.userId);
     await updateAdminRecord(
       "mithron_products",
       "slug",
@@ -76,8 +69,6 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
       process.env,
       { expectedUpdatedAt }
     );
-
-    await ensureInventoryForPublishedProduct(slug, context.userId);
 
     const supplierId = String(product.supplier_id ?? "");
     if (supplierId) {

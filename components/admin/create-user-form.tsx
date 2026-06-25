@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { CopyPasswordPanel } from "@/components/admin/copy-password-panel";
 
 export type CreateUserFormState = {
   status: "idle" | "success" | "error";
@@ -101,14 +102,11 @@ export function CreateUserForm({
           {state.status === "success" ? "User created — " : "Could not create user — "}
           {state.message}
           {state.status === "success" && state.email && state.temporaryPassword ? (
-            <div className="mt-3 rounded-lg border border-emerald-500/20 bg-black/20 p-3 text-xs leading-6 text-emerald-50">
-              <p className="font-semibold uppercase tracking-[0.08em] text-emerald-200">Login credentials</p>
-              <p className="mt-2"><span className="text-emerald-300/80">Email:</span> {state.email}</p>
-              <p><span className="text-emerald-300/80">Password:</span> {state.temporaryPassword}</p>
-              <p className="mt-2 text-emerald-300/70">
-                {state.passwordGenerated ? "Auto-generated password — copy it now. It will not be shown again." : "Use this password at /login."}
-              </p>
-            </div>
+            <CopyPasswordPanel
+              email={state.email}
+              temporaryPassword={state.temporaryPassword}
+              passwordGenerated={state.passwordGenerated}
+            />
           ) : null}
         </div>
       ) : null}

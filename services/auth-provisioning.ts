@@ -3,6 +3,7 @@ import { assertSupabaseAdminConfig } from "@/lib/env";
 import { ProfileDisabledError } from "@/lib/auth/profile-disabled";
 import { normalizeCmsRole, type CmsRole } from "@/lib/auth/permissions";
 import { linkGuestOrdersToUser } from "@/services/customer-orders";
+import { linkGuestEnquiriesToUser } from "@/services/enquiries";
 
 type EnvSource = Record<string, string | undefined>;
 
@@ -88,6 +89,9 @@ export async function syncGuestProfileFromIdentity(
   if (input.email?.trim()) {
     await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
       console.warn("[mithron-auth] Guest order linking failed.", error);
+    });
+    await linkGuestEnquiriesToUser(input.userId, input.email, env).catch((error) => {
+      console.warn("[mithron-auth] Guest enquiry linking failed.", error);
     });
   }
 
@@ -271,6 +275,9 @@ export async function provisionAuthenticatedUserIfMissing(input: {
   if (input.email?.trim()) {
     await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
       console.warn("[mithron-auth] Guest order linking failed.", error);
+    });
+    await linkGuestEnquiriesToUser(input.userId, input.email, env).catch((error) => {
+      console.warn("[mithron-auth] Guest enquiry linking failed.", error);
     });
   }
   return provisioned;

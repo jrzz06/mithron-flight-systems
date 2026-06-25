@@ -32,7 +32,6 @@ function readonlyInputClass(variant: "light" | "dark") {
 export function ProductTaxFields({
   initialChargeTax = true,
   initialTaxGroup,
-  initialTaxRate,
   initialTaxIncluded = false,
   variant = "dark"
 }: ProductTaxFieldsProps) {

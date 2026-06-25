@@ -93,6 +93,33 @@ export const CMS_WORKSPACE_PAGES = [
     previewHref: "/",
     description: "Homepage product review quote and attribution controls.",
     order: 100
+  },
+  {
+    id: "faqs-page",
+    label: "FAQs",
+    anchor: "cms-page-faqs",
+    routePath: "/contact",
+    previewHref: "/contact",
+    description: "Support FAQ entries for contact and product surfaces.",
+    order: 110
+  },
+  {
+    id: "campaigns-page",
+    label: "Promotional Campaigns",
+    anchor: "cms-page-campaigns",
+    routePath: "/",
+    previewHref: "/",
+    description: "Homepage and storefront promotional campaign blocks.",
+    order: 120
+  },
+  {
+    id: "section-visibility-page",
+    label: "Section Visibility",
+    anchor: "cms-page-section-visibility",
+    routePath: "/",
+    previewHref: "/",
+    description: "Show or hide homepage sections by route and schedule.",
+    order: 130
   }
 ] as const;
 

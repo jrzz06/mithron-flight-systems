@@ -225,10 +225,12 @@ export function HeroCarousel({
     return "inactive";
   };
 
+  const slideCount = safeSlides.length;
+
   const goToSlide = useCallback((nextIndex: number) => {
-    if (!safeSlides.length) return;
-    setIndex((nextIndex + safeSlides.length) % safeSlides.length);
-  }, [safeSlides.length]);
+    if (!slideCount) return;
+    setIndex((nextIndex + slideCount) % slideCount);
+  }, [slideCount]);
 
   useEffect(() => {
     if (reducedMotion || safeSlides.length < 2 || isHovered) return;

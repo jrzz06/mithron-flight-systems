@@ -4,8 +4,12 @@ const STATUS_LABELS: Record<string, string> = {
   blocked: "Temporarily unavailable",
   pending: "Awaiting review",
   pending_review: "Awaiting review",
+  admin_review: "New enquiry",
   draft: "Draft",
-  published: "Published",
+  published: "Live on store",
+  approved: "Live on store",
+  archived: "Removed from store",
+  available: "In stock",
   processing: "In progress",
   packed: "Packed",
   shipped: "Shipped",
@@ -13,6 +17,10 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
   low_stock: "Low stock",
   out_of_stock: "Out of stock",
+  discontinued: "Discontinued",
+  reserved: "Reserved",
+  inactive: "Inactive",
+  hidden: "Hidden",
   open: "Open",
   closed: "Closed",
   unread: "Unread",
@@ -20,12 +28,33 @@ const STATUS_LABELS: Record<string, string> = {
   success: "Complete",
   error: "Failed",
   warning: "Needs attention",
+  rejected: "Changes requested",
   create: "",
   rbac: "",
   cms: "",
   media: "",
   orders: "",
   protected: ""
+};
+
+const SUPPLIER_EMPTY_MESSAGES: Record<string, string> = {
+  products: "You have not added any products yet. Start by creating your first listing.",
+  inventory: "Stock levels will appear here once your products are linked to warehouse inventory.",
+  submissions: "Products you send for review will appear here.",
+  attention: "Nothing needs your attention right now.",
+  awaiting: "No products are currently awaiting review.",
+  changes: "No products need changes at the moment.",
+  recent: "No products are live on the store yet.",
+  stock: "Stock information is not available yet.",
+  default: "Nothing to show yet."
+};
+
+const SUPPLIER_STATUS_HINTS: Record<string, string> = {
+  draft: "Not sent for review yet — save your work, then send for review.",
+  pending_review: "Waiting for our team to review your submission.",
+  rejected: "Our team has requested changes — update and resubmit.",
+  published: "This product is live on the store.",
+  archived: "This product has been removed from the store."
 };
 
 const EMPTY_MESSAGES: Record<string, string> = {
@@ -64,6 +93,33 @@ export function connectivityMessage(blockedReason?: string | null): string {
 
 export function emptyMessage(context: string): string {
   return EMPTY_MESSAGES[context] ?? EMPTY_MESSAGES.default;
+}
+
+export function supplierEmptyMessage(context: string): string {
+  return SUPPLIER_EMPTY_MESSAGES[context] ?? SUPPLIER_EMPTY_MESSAGES.default;
+}
+
+export function supplierStatusHint(status: string): string {
+  const normalized = status.toLowerCase().trim();
+  return SUPPLIER_STATUS_HINTS[normalized] ?? "";
+}
+
+export function supplierRejectionLabel(): string {
+  return "What to change";
+}
+
+export function supplierStatusExplanation(status: string): string {
+  const normalized = status.toLowerCase().trim();
+  if (normalized === "pending_review") {
+    return "You cannot edit this product while it is being reviewed.";
+  }
+  if (normalized === "published") {
+    return "This product is live on the store. Contact us if you need changes.";
+  }
+  if (normalized === "archived") {
+    return "This product has been removed from the store.";
+  }
+  return `This product is ${humanStatus(status).toLowerCase()} and cannot be edited here.`;
 }
 
 export function relativeTimeLabel(iso: string): string {

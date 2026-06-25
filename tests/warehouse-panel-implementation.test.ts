@@ -117,15 +117,13 @@ describe("warehouse panel implementation", () => {
     expect(pages.dashboard).toContain("picking queue");
     expect(pages.dashboard).toContain("dispatched today");
 
-    expect(pages.picking).toContain("data-picking-queue");
-    expect(pages.picking).toContain("updateWarehouseOrderLifecycleFormAction");
-    expect(pages.picking).toContain("value=\"picked\"");
+    expect(pages.picking).toContain("WarehousePickingTable");
     expect(pages.picking).toContain("data-barcode-ready");
 
     expect(pages.packing).toContain("data-packing-station");
-    expect(pages.packing).toContain("createShipmentFormAction");
-    expect(pages.packing).toContain("value=\"packed\"");
-    expect(pages.packing).toContain("data-packing-checklist");
+    expect(pages.packing).toContain("completeWarehousePackingFormAction");
+    expect(pages.packing).toContain("WarehousePackingOrderCard");
+    expect(source("components/warehouse/warehouse-packing-order-card.tsx")).toContain("data-packing-checklist");
 
     expect(pages.dispatch).toContain("data-dispatch-handoff-center");
     expect(pages.dispatch).toContain("updateShipmentLifecycleFormAction");

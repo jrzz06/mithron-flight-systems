@@ -24,10 +24,10 @@ describe("admin operational UX", () => {
     expect(nav).toContain("/auth/logout");
     expect(frame).toContain("PlatformShell");
     expect(navConfig).toContain("Home");
-    expect(navConfig).toContain("Overview");
+    expect(navConfig).toContain("Dashboard");
     expect(navConfig).toContain("Catalog");
-    expect(navConfig).toContain("Workspace");
-    expect(navConfig).toContain("Activity log");
+    expect(navConfig).toContain("Team");
+    expect(navConfig).toContain("Users & access");
     expect(navConfig).toContain("/admin/audit");
     expect(frame).toContain("data-admin-shell");
     expect(frame).not.toContain('href: "/warehouse"');
@@ -55,15 +55,15 @@ describe("admin operational UX", () => {
   it("surfaces obvious admin CRUD entry points from the overview page", () => {
     const page = source("app/admin/page.tsx");
 
-    expect(page).toContain("data-admin-crud-actions");
-    expect(page).toContain("Quick links");
-    expect(page).toContain("Create product");
-    expect(page).toContain("/admin/products?tool=create#create-product");
-    expect(page).toContain("Review orders");
-    expect(page).toContain("/admin/orders");
-    expect(page).toContain("Manage team");
-    expect(page).toContain("/admin/users");
-    expect(page).not.toContain("/admin/settings#users");
+    expect(page).toContain("data-admin-kpi-strip");
+    expect(page).toContain("Action queue");
+    expect(page).toContain("Pending orders");
+    expect(page).toContain("/admin/orders?queue=review");
+    expect(page).toContain("Supplier approvals");
+    expect(page).toContain("/admin/suppliers/products");
+    expect(page).toContain("Customer enquiries");
+    expect(page).toContain("/admin/enquiries");
+    expect(page).not.toContain("data-admin-quick-actions");
     expect(page).not.toContain("Hard delete");
     expect(page).not.toContain("Open storefront");
   });
@@ -73,10 +73,14 @@ describe("admin operational UX", () => {
     const adminService = source("services/admin.ts");
 
     expect(page).toContain("data-admin-dashboard");
-    expect(page).toContain("data-admin-quick-actions");
-    expect(page).toContain("Recent orders");
-    expect(page).toContain("Needs attention");
-    expect(page).toContain("Recent activity");
+    expect(page).toContain("data-admin-kpi-strip");
+    expect(page).toContain("Action queue");
+    expect(page).toContain("Inventory alerts");
+    expect(page).toContain("listAdminEnquiries");
+    expect(page).toContain("listPendingSupplierSubmissions");
+    expect(page).not.toContain("data-admin-quick-actions");
+    expect(page).not.toContain("Recent orders");
+    expect(page).not.toContain("Recent activity");
     expect(page).not.toContain("Recent CMS changes");
     expect(page).not.toContain("Recent uploads");
     expect(page).not.toContain("Table counts");
@@ -86,6 +90,9 @@ describe("admin operational UX", () => {
     expect(adminService).toContain("recentNotifications");
     expect(adminService).toContain("recentActivity");
     expect(adminService).toContain("lowStockAlerts");
+    expect(adminService).toContain("operationalCounts");
+    expect(adminService).toContain("ordersNeedingReview");
+    expect(adminService).toContain("listPendingSupplierSubmissions");
     expect(adminService).not.toContain("recentShipments");
     expect(adminService).not.toContain("pendingOperations");
   });
@@ -189,20 +196,24 @@ describe("admin operational UX", () => {
     const ordersWorkspace = source("components/admin/admin-orders-workspace.tsx");
     const ordersUi = `${ordersPage}\n${ordersWorkspace}`;
 
-    expect(inventoryPage).toContain("data-inventory-mutation-feedback");
-    expect(inventoryPage).toContain("InventoryManager");
+    expect(inventoryPage).toContain("OperationalFeedback");
+    expect(inventoryPage).toContain("WarehouseInventoryManager");
     expect(inventoryPage).toContain("getCsvInventoryRows");
+    expect(inventoryPage).toContain("backfillMissingInventoryRows");
     expect(inventoryPage).not.toContain("getWarehouseSnapshot");
     expect(inventoryPage).toContain("saveWarehouseInventoryWithFeedback");
     expect(adminInventoryPage).toContain("InventoryManager");
     expect(adminInventoryPage).toContain("getCsvInventoryRows");
+    expect(adminInventoryPage).toContain("repairMissingProductInventory");
+    expect(adminInventoryPage).toContain("totalProductCount");
     expect(adminInventoryPage).not.toContain("getWarehouseSnapshot");
     expect(inventoryManager).toContain("data-inventory-system");
+    expect(inventoryManager).toContain("products total");
     expect(inventoryManager).toContain("data-inventory-row");
     expect(inventoryManager).toContain("data-inventory-source-report");
     expect(inventoryManager).toContain("data-inventory-quick-edit-form");
     expect(inventoryManager).toContain("data-advanced-warehouse-details");
-    expect(inventoryManager).toContain("Stock update");
+    expect(inventoryManager).toContain("Adjust stock");
     expect(inventoryManager).toContain("In stock");
     expect(inventoryManager).toContain("Low stock");
     expect(inventoryManager).toContain("Out of stock");
@@ -215,19 +226,14 @@ describe("admin operational UX", () => {
     expect(ordersUi).toContain("OperationalSubmitButton");
   });
 
-  it("keeps media and CMS operations visible and retry-safe", () => {
-    const mediaPage = source("app/admin/media/page.tsx");
-    const uploadPanel = source("app/admin/media/media-upload-panel.tsx");
+  it("keeps product media and CMS operations visible and retry-safe", () => {
+    const productsPage = source("app/admin/products/page.tsx");
     const cmsPage = source("app/admin/cms/page.tsx");
     const cmsWorkspace = source("features/admin/cms/cms-visual-workspace.tsx");
 
-    expect(mediaPage).toContain("data-media-search");
-    expect(mediaPage).toContain("data-media-thumbnail-grid");
-    expect(mediaPage).toContain("data-media-delete-form");
-    expect(mediaPage).toContain("OperationalFeedback");
-    expect(uploadPanel).toContain("useFormStatus");
-    expect(uploadPanel).toContain("disabled={pending || !files.length || rejectedCount > 0}");
-    expect(uploadPanel).toContain("aria-live=\"polite\"");
+    expect(productsPage).toContain("data-product-local-image-upload");
+    expect(productsPage).toContain("id=\"product-media\"");
+    expect(productsPage).toContain("OperationalFeedback");
     expect(cmsPage).not.toContain("Editable website systems.");
     expect(cmsPage).toContain("data-cms-operational-feedback");
     expect(cmsWorkspace).toContain("data-cms-visual-editor");
@@ -288,14 +294,13 @@ describe("admin operational UX", () => {
     const shipmentsPage = source("app/warehouse/shipments/page.tsx");
     const movementsPage = source("app/warehouse/movements/page.tsx");
 
-    expect(ordersPage).toContain("data-warehouse-order-feedback");
-    expect(ordersPage).toContain("data-warehouse-order-lifecycle");
-    expect(fulfillmentPage).toContain("/warehouse/picking");
+    expect(ordersPage).toContain("OperationalFeedback");
+    expect(ordersPage).toContain("WarehouseOrderQueueTable");
+    expect(fulfillmentPage).toContain('redirect("/warehouse/orders")');
     expect(pickingPage).toContain("data-picking-queue");
     expect(packingPage).toContain("data-packing-station");
     expect(dispatchPage).toContain("data-dispatch-handoff-center");
-    expect(shipmentsPage).toContain("data-shipment-progress-board");
-    expect(shipmentsPage).toContain("data-shipment-timeline-snippets");
+    expect(shipmentsPage).toContain('redirect("/warehouse/dispatch")');
     expect(movementsPage).toContain("data-ledger-delta-summary");
   });
 

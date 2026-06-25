@@ -9,7 +9,8 @@ export function OperationalSubmitButton({
   confirmMessage,
   onClick,
   name,
-  value
+  value,
+  disabled = false
 }: {
   children: React.ReactNode;
   pendingLabel?: string;
@@ -18,6 +19,7 @@ export function OperationalSubmitButton({
   onClick?: () => void;
   name?: string;
   value?: string;
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
 
@@ -26,7 +28,7 @@ export function OperationalSubmitButton({
       type="submit"
       name={name}
       value={value}
-      disabled={pending}
+      disabled={pending || disabled}
       aria-busy={pending}
       aria-live="polite"
       onClick={(event) => {

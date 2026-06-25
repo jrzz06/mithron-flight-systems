@@ -22,7 +22,9 @@ describe("image fallback chain", () => {
             {
               src: "https://example.supabase.co/storage/v1/object/public/mithron-products/demo-768w-v1.webp",
               width: 768,
-              height: 576
+              height: 576,
+              format: "webp",
+              storagePath: "catalog-cutouts/v1/demo-768w-v1.webp"
             }
           ]
         }

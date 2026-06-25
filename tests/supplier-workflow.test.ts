@@ -39,7 +39,8 @@ describe("supplier workflow guards", () => {
     const editPage = readFileSync(join(root, "app/supplier/products/[slug]/edit/page.tsx"), "utf8");
     expect(editPage).toContain('const canEdit = ["draft", "rejected"]');
     expect(editPage).not.toContain('["draft", "pending_review", "rejected"]');
-    expect(editPage).toContain("cannot be edited until approval completes");
+    expect(editPage).toContain("supplierStatusExplanation");
+    expect(editPage).toContain("You cannot edit this product while it is being reviewed.");
   });
 
   it("redirects supplier product actions with product_status feedback", () => {

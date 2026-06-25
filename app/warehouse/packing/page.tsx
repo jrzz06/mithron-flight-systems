@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { ControlShell } from "@/components/admin/control-shell";
-import { OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
-import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { OperationalFeedback } from "@/components/admin/module-panel";
+import { WarehousePackingOrderCard } from "@/components/warehouse/warehouse-packing-order-card";
 import { getWarehouseSnapshot } from "@/services/admin";
-import { createShipmentFormAction, updateWarehouseOrderLifecycleFormAction } from "../actions";
+import { getWarehouseConfiguration } from "@/services/warehouse-config";
+import { listActiveWarehouses } from "@/services/warehouses";
+import { completeWarehousePackingFormAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,13 @@ function text(value: unknown, fallback = "n/a") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
+function orderMetadata(order: Record<string, unknown>) {
+  const metadata = order.metadata;
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Record<string, unknown>
+    : {};
+}
+
 function feedbackPath(status: "success" | "error", message: string) {
   return `/warehouse/packing?operation_status=${status}&operation_message=${encodeURIComponent(message.slice(0, 220))}`;
 }
@@ -26,28 +35,23 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "Packing action failed.";
 }
 
-async function markPacked(formData: FormData) {
+async function completePackingWithFeedback(formData: FormData) {
   "use server";
   try {
-    await updateWarehouseOrderLifecycleFormAction(formData);
+    const result = await completeWarehousePackingFormAction(formData);
+    redirect(feedbackPath("success", `Packed ${result.itemCount} line item(s). Shipment ${result.shipmentNumber} queued for dispatch.`));
   } catch (error) {
     redirect(feedbackPath("error", message(error)));
   }
-  redirect(feedbackPath("success", "Order marked packed with timeline history."));
-}
-
-async function createPackingShipment(formData: FormData) {
-  "use server";
-  try {
-    await createShipmentFormAction(formData);
-  } catch (error) {
-    redirect(feedbackPath("error", message(error)));
-  }
-  redirect(feedbackPath("success", "Shipment created from packing station."));
 }
 
 export default async function PackingStationPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const snapshot = await getWarehouseSnapshot({ scope: "packing" });
+  const [snapshot, warehouses, warehouseConfig] = await Promise.all([
+    getWarehouseSnapshot({ scope: "packing" }),
+    listActiveWarehouses(),
+    getWarehouseConfiguration()
+  ]);
+  const defaultWarehouseCode = warehouseConfig.defaultWarehouseCode;
   const params = searchParams ? await searchParams : {};
   const operationStatus = queryValue(params, "operation_status");
   const operationMessage = queryValue(params, "operation_message");
@@ -58,22 +62,16 @@ export default async function PackingStationPage({ searchParams }: { searchParam
     itemsByOrder.set(orderId, [...(itemsByOrder.get(orderId) ?? []), item]);
   }
   const pickedOrders = snapshot.data.orders.filter((order) => text(order.fulfillment_status, "pending") === "picked").slice(0, 30);
-  const readyShipments = snapshot.data.shipments.filter((shipment) => ["pending", "reserved", "packed"].includes(text(shipment.shipment_status, "pending")));
+  const dispatchQueue = snapshot.data.shipments.filter((shipment) => ["packed", "ready_for_pickup"].includes(text(shipment.shipment_status, "pending")));
 
   return (
     <ControlShell
-      eyebrow="Packing station"
+      eyebrow="Packing"
       title="Verify and pack"
-      description={snapshot.blockedReason ?? "Packing uses existing order items and shipment creation so stock, shipment items, and audit history remain connected."}
-      metrics={[
-        { label: "Picked", value: String(pickedOrders.length) },
-        { label: "Open shipments", value: String(readyShipments.length) },
-        { label: "Items", value: String(snapshot.data.orderItems.length) }
-      ]}
+      description={snapshot.blockedReason ?? "Verify every line item, then create a packed shipment for dispatch."}
       actions={[
         { label: "Picking", href: "/warehouse/picking" },
-        { label: "Dispatch", href: "/warehouse/dispatch" },
-        { label: "Returns", href: "/warehouse/returns" }
+        { label: "Dispatch", href: "/warehouse/dispatch" }
       ]}
     >
       <section data-packing-station className="grid gap-4">
@@ -83,62 +81,25 @@ export default async function PackingStationPage({ searchParams }: { searchParam
             {pickedOrders.length ? pickedOrders.map((order) => {
               const orderId = text(order.id, "");
               const orderItems = itemsByOrder.get(orderId) ?? [];
-              const firstItem = orderItems[0] ?? {};
+              const assignedWarehouse = text(orderMetadata(order).assigned_warehouse_code, defaultWarehouseCode);
               return (
-                <article key={orderId} className="content-visibility-auto rounded-xl border border-white/[0.06] bg-[#10151d] p-4 [contain-intrinsic-size:260px] [content-visibility:auto]">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-100">{text(order.order_number, orderId)}</p>
-                      <p className="mt-1 text-xs text-slate-500">{text(order.customer_email, "No customer email")}</p>
-                    </div>
-                    <StatusBadge status={text(order.fulfillment_status, "picked")} />
-                  </div>
-
-                  <div data-packing-checklist className="mt-4 grid gap-2 text-sm text-slate-300 sm:grid-cols-3">
-                    <span className="rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 py-2">Items verified: {orderItems.length}</span>
-                    <span className="rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 py-2">Slip ready</span>
-                    <span className="rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 py-2">Proof note required</span>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <form action={markPacked} className="grid gap-2 rounded-lg border border-white/[0.06] bg-[#0b1017] p-3">
-                      <input name="order_id" type="hidden" value={orderId} />
-                      <input name="status" type="hidden" value={text(order.status, "assigned")} />
-                      <input name="payment_status" type="hidden" value={text(order.payment_status, "not_required")} />
-                      <input name="fulfillment_status" type="hidden" value="packed" />
-                      <input name="warehouse_code" type="hidden" value="IN-WEST-01" />
-                      <input name="note" type="hidden" value="Packed at warehouse station" />
-                      <input name="change_summary" type="hidden" value={`Pack ${text(order.order_number, orderId)}`} />
-                      <OperationalSubmitButton pendingLabel="Saving" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 text-xs font-semibold text-emerald-100">
-                        Mark packed
-                      </OperationalSubmitButton>
-                    </form>
-
-                    <form action={createPackingShipment} className="grid gap-2 rounded-lg border border-white/[0.06] bg-[#0b1017] p-3">
-                      <input name="order_id" type="hidden" value={orderId} />
-                      <input name="warehouse_id" type="hidden" value="IN-WEST-01" />
-                      <input name="order_item_id" type="hidden" value={text(firstItem.id, "")} />
-                      <input name="shipment_product_id" type="hidden" value={text(firstItem.product_slug, "")} />
-                      <input name="shipment_quantity" type="hidden" value={String(firstItem.quantity ?? 1)} />
-                      <label className="grid gap-1 text-xs font-medium text-slate-500">
-                        Courier
-                        <input name="carrier_name" defaultValue="Mithron Field" className="h-9 rounded-lg border border-white/[0.06] bg-[#10151d] px-3 text-sm text-slate-100" />
-                      </label>
-                      <label className="grid gap-1 text-xs font-medium text-slate-500">
-                        Tracking
-                        <input name="tracking_number" defaultValue="" className="h-9 rounded-lg border border-white/[0.06] bg-[#10151d] px-3 text-sm text-slate-100" />
-                      </label>
-                      <label className="grid gap-1 text-xs font-medium text-slate-500">
-                        Package dimensions, weight, packing notes
-                        <input name="notes" defaultValue="" className="h-9 rounded-lg border border-white/[0.06] bg-[#10151d] px-3 text-sm text-slate-100" />
-                      </label>
-                      <input name="change_summary" type="hidden" value={`Create packing shipment ${text(order.order_number, orderId)}`} />
-                      <OperationalSubmitButton pendingLabel="Creating" className="inline-flex min-h-9 items-center justify-center rounded-lg border border-sky-400/20 bg-sky-400/10 px-3 text-xs font-semibold text-sky-100">
-                        Generate shipment
-                      </OperationalSubmitButton>
-                    </form>
-                  </div>
-                </article>
+                <WarehousePackingOrderCard
+                  key={orderId}
+                  orderId={orderId}
+                  orderNumber={text(order.order_number, orderId)}
+                  warehouseCode={assignedWarehouse}
+                  defaultWarehouseCode={defaultWarehouseCode}
+                  defaultCarrier={warehouseConfig.defaultCarrier}
+                  warehouses={warehouses}
+                  completeAction={completePackingWithFeedback}
+                  items={orderItems.map((item) => ({
+                    id: text(item.id, ""),
+                    sku: text(item.sku, "sku"),
+                    productSlug: text(item.product_slug, "product"),
+                    productName: text(item.product_name, text(item.product_slug, "product")),
+                    quantity: Number(item.quantity ?? 1)
+                  })).filter((item) => item.id)}
+                />
               );
             }) : (
               <div className="rounded-xl border border-white/[0.06] bg-[#10151d] px-4 py-10 text-center text-sm text-slate-500">No picked orders are ready for packing.</div>
@@ -146,14 +107,14 @@ export default async function PackingStationPage({ searchParams }: { searchParam
           </div>
 
           <aside className="grid content-start gap-3 rounded-xl border border-white/[0.06] bg-[#10151d] p-4">
-            <p className="text-sm font-semibold text-slate-100">Packing slip queue</p>
-            {readyShipments.slice(0, 8).map((shipment) => (
+            <p className="text-sm font-semibold text-slate-100">Dispatch queue preview</p>
+            {dispatchQueue.slice(0, 8).map((shipment) => (
               <div key={text(shipment.id, text(shipment.shipment_number, "shipment"))} className="rounded-lg border border-white/[0.06] bg-[#0b1017] p-3 text-sm text-slate-300">
                 <p className="font-semibold text-slate-100">{text(shipment.shipment_number, "Shipment")}</p>
-                <p className="mt-1 text-xs text-slate-500">{text(shipment.shipment_status, "pending")} | {text(shipment.tracking_number, "tracking pending")}</p>
+                <p className="mt-1 text-xs text-slate-500">{text(shipment.shipment_status, "packed")} | {text(shipment.tracking_number, "tracking pending")}</p>
               </div>
             ))}
-            {!readyShipments.length ? <p className="text-sm text-slate-500">No packing slip rows are ready.</p> : null}
+            {!dispatchQueue.length ? <p className="text-sm text-slate-500">Completed packs appear here once shipments are created as packed.</p> : null}
           </aside>
         </div>
       </section>

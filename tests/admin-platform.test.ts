@@ -19,7 +19,6 @@ describe("enterprise admin platform", () => {
       "app/auth/callback/route.ts",
       "app/admin/layout.tsx",
       "app/admin/cms/page.tsx",
-      "app/admin/media/page.tsx",
       "app/admin/products/page.tsx",
       "app/admin/inventory/page.tsx",
       "app/admin/audit/page.tsx",

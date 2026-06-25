@@ -31,7 +31,7 @@ export default function AdminError({ error, reset }: AdminErrorProps) {
           <button
             type="button"
             onClick={() => reset()}
-            className="inline-flex h-10 items-center rounded-[8px] bg-[var(--platform-accent)] px-4 text-sm font-medium text-[var(--platform-surface)] transition hover:bg-[var(--platform-accent-strong)]"
+            className="platform-btn-primary h-10 rounded-[8px] px-4 text-sm font-medium"
           >
             Try again
           </button>

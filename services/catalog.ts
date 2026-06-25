@@ -591,8 +591,7 @@ function normalizeStory(row: MithronProductRow, marketingTagline: string, hero: 
 function resolveProductImage(
   row: Pick<MithronProductRow, "image" | "hero" | "gallery" | "source_images">,
   name: string,
-  linkedMedia?: MediaAsset,
-  slug?: string
+  linkedMedia?: MediaAsset
 ) {
   const rowImage = selectPrimaryProductImage(row, name);
   const supabaseRowImage = rowImage && isSupabaseStorageSrc(rowImage.src) ? rowImage : null;
@@ -633,7 +632,7 @@ function resolveHydratedProductImage(
   linkedPrimaryImage?: MediaAsset,
   slug?: string
 ): MediaAsset {
-  const image = resolveProductImage(row, name, linkedPrimaryImage, slug);
+  const image = resolveProductImage(row, name, linkedPrimaryImage);
   if (!image) {
     throw new Error(`Missing source image for Mithron product ${slug ?? "unknown"}.`);
   }
@@ -720,8 +719,7 @@ function mapEnterpriseMenuProduct(
   const image = resolveProductImage(
     { ...row, hero: null, gallery: null },
     name,
-    linkedPrimaryImage,
-    row.slug
+    linkedPrimaryImage
   );
 
   if (!image) {
@@ -797,7 +795,7 @@ function mapProductShellRowOrNull(row: MithronProductShellRow, linkedPrimaryImag
     tagline: row.tagline,
     sourceDescription: row.source_description
   });
-  const resolved = resolveProductImage(row, name, linkedPrimaryImage, row.slug);
+  const resolved = resolveProductImage(row, name, linkedPrimaryImage);
   if (!resolved) return null;
 
   const interestsValue = row.interests ?? [];
@@ -1122,8 +1120,7 @@ async function mapSearchRowsToCatalogResults(rows: CatalogSearchRow[]): Promise<
         source_images: null
       },
       name,
-      linkedPrimaryImage,
-      row.slug
+      linkedPrimaryImage
     );
 
     if (!resolved) {

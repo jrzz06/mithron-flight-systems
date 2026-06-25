@@ -85,18 +85,23 @@ describe("campaign and category CMS draft forms", () => {
     });
   });
 
-  it("wires the draft-only category form to the server action and admin page without changing storefront loaders", () => {
+  it("wires the draft-only category and campaign forms to the server action and admin CMS workspace", () => {
     const workspaceSource = readFileSync(join(process.cwd(), "features/admin/cms/cms-visual-workspace.tsx"), "utf8");
     const actionSource = readFileSync(join(process.cwd(), "app/admin/cms/actions.ts"), "utf8");
     const pageSource = readFileSync(join(process.cwd(), "app/admin/cms/page.tsx"), "utf8");
 
-    expect(workspaceSource).not.toContain("data-cms-table=\"promotional_campaigns\"");
+    expect(workspaceSource).toContain("data-cms-table=\"promotional_campaigns\"");
+    expect(workspaceSource).toContain("data-cms-table=\"section_visibility\"");
     expect(workspaceSource).toContain("saveCategoryMetadataDraftFormAction");
     expect(workspaceSource).toContain("data-cms-table=\"category_metadata\"");
     expect(pageSource).toContain("categoryRows");
+    expect(pageSource).toContain("campaignSections");
+    expect(pageSource).toContain("visibilitySections");
     expect(pageSource).toContain("stateEntityId: routeKey");
     expect(actionSource).toContain("buildCategoryMetadataDraftFromFormData");
     expect(actionSource).toContain("saveCategoryMetadataDraftFormAction");
+    expect(actionSource).toContain("savePromotionalCampaignDraftFormAction");
+    expect(actionSource).toContain("saveSectionVisibilityDraftFormAction");
     expect(actionSource).not.toContain("getPublicCmsSnapshot");
   });
 });

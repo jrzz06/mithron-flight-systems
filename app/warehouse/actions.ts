@@ -37,7 +37,8 @@ import {
 } from "@/services/inventory-csv";
 import { buildValidatedOrderDraft, buildOrderTimelineEntry, appendOrderTimeline, syncOrderStatusFromFulfillment } from "@/services/orders";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
-import { reserveCheckoutStock } from "@/services/checkout-stock";
+import { reserveCheckoutStock, orderHasCheckoutReservations, releaseCheckoutStock } from "@/services/checkout-stock";
+import { getDefaultWarehouseCode, getWarehouseConfiguration, parseWarehouseConfigurationFormData } from "@/services/warehouse-config";
 import { requirePermission } from "@/services/auth";
 import {
   applyFulfillmentStockMovements,
@@ -52,9 +53,16 @@ import {
   buildShipmentCreateWorkflowFromFormData,
   buildShipmentUpdateWorkflowFromFormData,
   createShipmentWorkflow,
+  fetchShipmentItemsByOrderId,
+  fetchShipmentOrderItems,
   fetchShipmentsByOrderId,
   updateShipmentWorkflow
 } from "@/services/shipments";
+import {
+  assertPackingChecklistComplete,
+  buildPackingChecklistFromFormData,
+  buildRemainingShipmentItems
+} from "@/services/warehouse-packing";
 
 type JsonRecord = Record<string, unknown>;
 type InventorySourceTable = "inventory" | "warehouse_stock";
@@ -190,8 +198,38 @@ async function createOrderLifecycleNotificationIfNeeded(input: {
 
 async function resolveWarehouseCodeFromFormData(formData: FormData) {
   const value = formData.get("warehouse_code");
-  const raw = typeof value === "string" && value.trim() ? value.trim() : "IN-WEST-01";
+  const raw = typeof value === "string" && value.trim()
+    ? value.trim()
+    : await getDefaultWarehouseCode();
   return assertValidWarehouseCode(raw);
+}
+
+async function reserveOrderStockForAllocation(orderId: string, warehouseCode: string) {
+  const config = await getWarehouseConfiguration();
+  if (!config.autoReserveOnAllocate) return 0;
+
+  const hasReservations = await orderHasCheckoutReservations(orderId).catch(() => false);
+  if (hasReservations) return 0;
+
+  const orderItems = await fetchShipmentOrderItems(orderId);
+  const reservationItems = orderItems
+    .map((item) => ({
+      productSlug: String(item.product_slug ?? ""),
+      quantity: Number(item.quantity ?? 0),
+      sku: String(item.sku ?? "").trim() || null
+    }))
+    .filter((item) => item.productSlug && item.sku && item.quantity > 0);
+
+  if (!reservationItems.length) {
+    throw new Error("Cannot allocate order without line items that have SKU and quantity.");
+  }
+
+  const result = await reserveCheckoutStock(orderId, reservationItems, process.env, warehouseCode);
+  const reservedRows = Number(result.rows_reserved ?? reservationItems.length);
+  if (reservedRows <= 0) {
+    throw new Error("Stock reservation failed during allocation. Verify warehouse stock and SKU mappings.");
+  }
+  return reservedRows;
 }
 
 function readInventoryString(formData: FormData, key: string, fallback = "") {
@@ -219,10 +257,20 @@ function readInventoryNumber(formData: FormData, key: string, fallback = 0) {
   return parsed;
 }
 
+function normalizeLinkageStockStatus(
+  status: string,
+  quantity: number
+): "available" | "low_stock" | "out_of_stock" {
+  if (status === "low_stock" || status === "out_of_stock" || status === "available") return status;
+  return quantity <= 0 ? "out_of_stock" : "available";
+}
+
 function readInventoryStatus(formData: FormData, key = "stock_status") {
   const status = readInventoryString(formData, key, "available");
-  if (status === "available" || status === "low_stock" || status === "out_of_stock" || status === "archived") return status;
-  throw new Error(`${key} must be one of: available, low_stock, out_of_stock, archived.`);
+  if (status === "available" || status === "low_stock" || status === "out_of_stock" || status === "archived" || status === "discontinued" || status === "reserved") {
+    return status;
+  }
+  throw new Error(`${key} must be one of: available, low_stock, out_of_stock, archived, discontinued, reserved.`);
 }
 
 function revalidateInventoryPaths() {
@@ -520,7 +568,8 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
 
   const warehouseCode = await resolveWarehouseCodeFromFormData(formData);
   const stockStatus = readInventoryStatus(formData);
-  const quantity = readInventoryInteger(formData, "quantity");
+  const adjustmentType = readInventoryString(formData, "adjustment_type");
+  let quantity = readInventoryInteger(formData, "quantity");
   const category = readInventoryString(formData, "category");
   const price = readInventoryNumber(formData, "price");
   const variantId = readInventoryString(formData, "variant_id") || null;
@@ -532,6 +581,9 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   const previousInventory = await fetchInventoryBySku(productSlug, sku);
   const previousStock = await fetchWarehouseStockBySku(productSlug, sku, warehouseCode);
   const quantityBefore = Number(previousStock?.available_quantity ?? previousInventory?.quantity ?? 0);
+  if (adjustmentType === "decrease") {
+    quantity = Math.max(0, quantityBefore - quantity);
+  }
   const reservedQuantity = Math.min(Number(previousInventory?.reserved_quantity ?? 0), quantity);
   const reorderThreshold = Number(previousInventory?.reorder_threshold ?? 0);
   const committedQuantity = Math.min(Number(previousStock?.committed_quantity ?? reservedQuantity), quantity);
@@ -568,7 +620,7 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
       productSlug,
       sku,
       variantId,
-      stockStatus: persistedStatus,
+      stockStatus: normalizeLinkageStockStatus(persistedStatus, quantity),
       quantity,
       reservedQuantity,
       reorderThreshold,
@@ -1102,8 +1154,24 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
   if (input.fulfillmentStatus) {
     nextStatus = syncOrderStatusFromFulfillment(nextStatus, nextFulfillment);
   }
+
+  let reservedRows = 0;
+  if (previousFulfillment === "pending" && nextFulfillment === "processing") {
+    reservedRows = await reserveOrderStockForAllocation(input.orderId, warehouseCode);
+  }
+
+  if (nextFulfillment === "cancelled" && previousFulfillment !== "cancelled") {
+    const hasReservations = await orderHasCheckoutReservations(input.orderId).catch(() => false);
+    if (hasReservations) {
+      await releaseCheckoutStock(input.orderId, process.env, warehouseCode);
+    }
+  }
+
   const existingShipments = await fetchShipmentsByOrderId(input.orderId);
-  const fulfillmentMovements = existingShipments.length === 0 && shouldDeductFulfillmentStock(previousFulfillment, nextFulfillment)
+  const hasReservations = await orderHasCheckoutReservations(input.orderId).catch(() => false);
+  const fulfillmentMovements = existingShipments.length === 0
+    && !hasReservations
+    && shouldDeductFulfillmentStock(previousFulfillment, nextFulfillment)
     ? await applyFulfillmentStockMovements({
       orderId: input.orderId,
       warehouseCode,
@@ -1125,7 +1193,8 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
         previous_fulfillment_status: previousFulfillment,
         fulfillment_status: nextFulfillment,
         warehouse_code: warehouseCode,
-        inventory_movements: fulfillmentMovements.length
+        inventory_movements: fulfillmentMovements.length,
+        reserved_rows: reservedRows
       },
       at: now
     })
@@ -1162,6 +1231,7 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
         fulfillment_status: nextFulfillment,
         warehouse_code: warehouseCode,
         inventory_movements: fulfillmentMovements.length,
+        reserved_rows: reservedRows,
         note: input.note
       }
     },
@@ -1181,6 +1251,131 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
 
   revalidateWarehouseFulfillmentPaths();
   revalidatePath("/warehouse/inventory");
+}
+
+export async function completeWarehousePackingFormAction(formData: FormData) {
+  const actorId = await currentActorId();
+  const now = new Date().toISOString();
+  const checklist = buildPackingChecklistFromFormData(formData);
+  const requireItemScan = formData.get("require_item_scan") === "on";
+  const order = await fetchOrderRecord(checklist.orderId);
+  const previousFulfillment = String(order.fulfillment_status ?? "pending");
+  if (!["picked", "packed"].includes(previousFulfillment)) {
+    throw new Error(`Order must be picked before packing. Current fulfillment status is "${previousFulfillment}".`);
+  }
+
+  const orderItems = await fetchShipmentOrderItems(checklist.orderId);
+  assertPackingChecklistComplete(checklist, orderItems, { requireItemScan });
+
+  const warehouseId = readInventoryString(formData, "warehouse_id")
+    || await resolveWarehouseCodeFromFormData(formData);
+  const carrierName = readInventoryString(formData, "carrier_name") || null;
+  const trackingNumber = readInventoryString(formData, "tracking_number") || null;
+  const existingShipmentItems = await fetchShipmentItemsByOrderId(checklist.orderId);
+  const items = buildRemainingShipmentItems(orderItems, existingShipmentItems, checklist.verifiedItemIds);
+
+  const result = await createShipmentWorkflow(
+    {
+      orderId: checklist.orderId,
+      warehouseId,
+      carrierName,
+      trackingNumber,
+      notes: checklist.packingNote,
+      items,
+      changeSummary: readInventoryString(formData, "change_summary", `Complete pack for order ${checklist.orderId}`),
+      initialStatus: "packed"
+    },
+    { actorId, at: now }
+  );
+
+  const syncedFulfillment = String((result.order as JsonRecord)?.fulfillment_status ?? "");
+  if (syncedFulfillment !== "packed" && previousFulfillment === "picked") {
+    const nextFulfillment = assertOrderFulfillmentTransition(previousFulfillment, "packed");
+    const nextStatus = syncOrderStatusFromFulfillment(String(order.status ?? "assigned"), nextFulfillment);
+    await updateOrderRecord(
+      checklist.orderId,
+      {
+        status: nextStatus,
+        fulfillment_status: nextFulfillment,
+        updated_at: now
+      },
+      actorId
+    );
+  }
+
+  revalidateWarehouseFulfillmentPaths();
+  revalidatePath("/warehouse/inventory");
+  const shipmentId = String((result.shipment as JsonRecord).id ?? "");
+  if (shipmentId) {
+    revalidatePath(`/warehouse/shipments/${shipmentId}`);
+  }
+
+  return {
+    shipmentId,
+    shipmentNumber: String((result.shipment as JsonRecord).shipment_number ?? ""),
+    itemCount: items.length
+  };
+}
+
+export async function saveWarehouseConfigurationFormAction(formData: FormData) {
+  const actorId = await currentActorId();
+  const input = parseWarehouseConfigurationFormData(formData);
+  if (!input.defaultWarehouseCode) throw new Error("Default warehouse is required.");
+  await assertValidWarehouseCode(input.defaultWarehouseCode);
+  await assertValidWarehouseCode(input.checkoutWarehouseCode);
+  await assertValidWarehouseCode(input.supplierIntakeWarehouseCode);
+
+  const config = assertSupabaseAdminConfig();
+  const payload = {
+    id: "global",
+    default_warehouse_code: input.defaultWarehouseCode,
+    checkout_warehouse_code: input.checkoutWarehouseCode,
+    supplier_intake_warehouse_code: input.supplierIntakeWarehouseCode,
+    auto_reserve_on_allocate: input.autoReserveOnAllocate,
+    default_carrier: input.defaultCarrier,
+    barcode_prefix: input.barcodePrefix,
+    printer_name: input.printerName,
+    label_width_mm: input.labelWidthMm,
+    require_item_scan: input.requireItemScan,
+    updated_at: new Date().toISOString(),
+    updated_by: actorId
+  };
+
+  const response = await fetch(`${config.url}/rest/v1/warehouse_configuration`, {
+    method: "POST",
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Failed to save warehouse configuration (${response.status})${body ? `: ${body.slice(0, 200)}` : ""}`);
+  }
+
+  await createActivityLogRecord(
+    {
+      actor_id: actorId,
+      action: "warehouse.configuration.update",
+      entity_table: "warehouse_configuration",
+      entity_id: "global",
+      severity: "info",
+      metadata: {
+        default_warehouse_code: input.defaultWarehouseCode,
+        checkout_warehouse_code: input.checkoutWarehouseCode,
+        supplier_intake_warehouse_code: input.supplierIntakeWarehouseCode,
+        auto_reserve_on_allocate: input.autoReserveOnAllocate
+      }
+    },
+    actorId
+  );
+
+  revalidatePath("/warehouse/settings");
+  revalidateWarehouseFulfillmentPaths();
 }
 
 export async function createShipmentFormAction(formData: FormData) {
@@ -1214,4 +1409,46 @@ export async function updateShipmentLifecycleFormAction(formData: FormData) {
   revalidateWarehouseFulfillmentPaths();
   revalidatePath("/warehouse/inventory");
   revalidatePath(`/warehouse/shipments/${input.shipmentId}`);
+}
+
+export async function advanceWarehouseOrderStepFormAction(formData: FormData) {
+  await updateWarehouseOrderLifecycleFormAction(formData);
+}
+
+export async function dispatchWarehouseOrderFormAction(formData: FormData) {
+  const orderId = readInventoryString(formData, "order_id");
+  if (!orderId) throw new Error("Order is required for dispatch.");
+
+  const shipments = await fetchShipmentsByOrderId(orderId);
+  const shipment = shipments.find((row) =>
+    ["packed", "ready_for_pickup"].includes(String(row.shipment_status ?? "pending"))
+  ) ?? shipments[0];
+
+  if (!shipment) {
+    throw new Error("No packed shipment is available for this order.");
+  }
+
+  const shipmentId = String(shipment.id ?? "");
+  const carrierName = String(shipment.carrier_name ?? "");
+  const trackingNumber = String(shipment.tracking_number ?? "");
+  const shipmentForm = new FormData();
+  shipmentForm.set("shipment_id", shipmentId);
+  shipmentForm.set("shipment_status", "shipped");
+  shipmentForm.set("carrier_name", carrierName);
+  shipmentForm.set("tracking_number", trackingNumber);
+  shipmentForm.set("notes", "Dispatched from warehouse order queue");
+  shipmentForm.set("change_summary", `Dispatch order ${orderId}`);
+  await updateShipmentLifecycleFormAction(shipmentForm);
+
+  const order = await fetchOrderRecord(orderId);
+  const fulfillment = String(order.fulfillment_status ?? "pending");
+  if (["packed", "ready_to_dispatch"].includes(fulfillment)) {
+    const lifecycleForm = new FormData();
+    lifecycleForm.set("order_id", orderId);
+    lifecycleForm.set("fulfillment_status", "shipped");
+    lifecycleForm.set("warehouse_code", await resolveWarehouseCodeFromFormData(formData));
+    lifecycleForm.set("note", "Order dispatched from warehouse queue");
+    lifecycleForm.set("change_summary", `Dispatch order ${orderId}`);
+    await updateWarehouseOrderLifecycleFormAction(lifecycleForm);
+  }
 }

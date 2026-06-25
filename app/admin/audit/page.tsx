@@ -1,4 +1,5 @@
 import { DataList, ModulePanel } from "@/components/admin/module-panel";
+import { connectivityMessage } from "@/lib/platform/copy";
 import { getAuditObservabilitySnapshot } from "@/services/admin";
 
 export const dynamic = "force-dynamic";
@@ -43,9 +44,9 @@ export default async function AuditPage({ searchParams }: { searchParams?: Promi
   return (
     <div data-admin-audit-route>
       <ModulePanel
-        eyebrow="Audit observability"
-        title="Forensic activity and security timeline."
-        description={snapshot.blockedReason ?? "Auth events, denied actions, product changes, notifications, and audit rows are tracked from protected workflows."}
+        eyebrow="System diagnostics"
+        title="System Diagnostics"
+        description={connectivityMessage(snapshot.blockedReason) || "Security events, auth activity, denied actions, and audit records for technical review."}
         status={snapshot.status}
         metrics={[
           { label: "Audit rows", value: String(metric("audit_logs")?.count ?? 0) },

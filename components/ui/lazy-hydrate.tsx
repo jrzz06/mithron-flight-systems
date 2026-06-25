@@ -18,14 +18,15 @@ export function LazyHydrate({
   className
 }: LazyHydrateProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(
+    () => typeof window !== "undefined" && typeof IntersectionObserver === "undefined"
+  );
 
   useEffect(() => {
     const node = containerRef.current;
-    if (!node) return;
+    if (!node || isVisible) return;
 
     if (typeof IntersectionObserver === "undefined") {
-      setIsVisible(true);
       return;
     }
 
@@ -41,7 +42,7 @@ export function LazyHydrate({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [rootMargin]);
+  }, [rootMargin, isVisible]);
 
   return (
     <div

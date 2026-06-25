@@ -150,7 +150,7 @@ export function ProductDetailEditDialog({
         </div>
 
         <div className="flex justify-end px-5 py-4">
-          <button className="rounded-lg bg-[var(--platform-accent)] px-4 py-2 text-sm font-medium text-[var(--platform-accent-text)] transition hover:bg-[var(--platform-accent-strong)]">
+          <button className="platform-btn-primary rounded-lg px-4 py-2 text-sm font-medium">
             Save changes
           </button>
         </div>

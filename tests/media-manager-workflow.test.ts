@@ -144,22 +144,17 @@ describe("enterprise media manager workflow", () => {
     expect(migration).toContain("public.has_cms_permission('media.write')");
   });
 
-  it("wires the admin media surface with upload, browser, filters, and server action markers", () => {
-    const page = readFileSync(join(process.cwd(), "app/admin/media/page.tsx"), "utf8");
-    const actions = readFileSync(join(process.cwd(), "app/admin/media/actions.ts"), "utf8");
-    const uploadPanel = readFileSync(join(process.cwd(), "app/admin/media/media-upload-panel.tsx"), "utf8");
+  it("wires product media upload with server action markers and validation", () => {
+    const page = readFileSync(join(process.cwd(), "app/admin/products/page.tsx"), "utf8");
+    const actions = readFileSync(join(process.cwd(), "app/admin/products/actions.ts"), "utf8");
 
-    expect(page).toContain("data-media-browser");
-    expect(page).toContain("data-media-folder-filter");
-    expect(page).toContain("data-media-asset-tags");
-    expect(page).toContain("saveMediaUploadFormAction");
-    expect(uploadPanel).toContain("data-media-upload-zone");
-    expect(uploadPanel).toContain("type=\"file\"");
-    expect(uploadPanel).toContain("multiple");
-    expect(uploadPanel).toContain("retry");
-    expect(uploadPanel).toContain("progress");
+    expect(page).toContain("data-product-create-media-fields");
+    expect(page).toContain("data-product-local-image-upload");
+    expect(page).toContain('type="file"');
+    expect(page).toContain("name=\"image_file\"");
     expect(actions).toContain("assertAllowedMediaMimeType");
     expect(actions).toContain("upsertMediaAssetRecord");
+    expect(actions).toContain("createOptimizedImageVariants");
   });
 
   it("keeps remote verification focused on canonical media persistence and Storage probes", () => {

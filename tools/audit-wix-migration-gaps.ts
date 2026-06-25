@@ -62,7 +62,7 @@ async function main() {
   const outputPath = process.argv.find((arg) => arg.startsWith("--out="))?.split("=")[1] ?? defaultReportPath;
   loadProjectEnv();
 
-  let wixCatalogPath = join(root, "data", "wix-catalog.snapshot.json");
+  const wixCatalogPath = join(root, "data", "wix-catalog.snapshot.json");
   if (refreshWix) {
     const client = loadWixClientFromEnv();
     console.log(`Fetching Wix catalog for site ${client.siteId}...`);

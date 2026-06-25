@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { mutationsEnabled } from "./fixtures/auth";
 import {
-  assertCatalogHasVisibleCards,
   assertProductsCatalogShell,
   navigateToFirstProductPdp,
   navigateToKnownProductPdp,

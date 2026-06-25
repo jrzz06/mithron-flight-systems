@@ -12,10 +12,13 @@ export async function GET() {
   if (denied) return denied;
 
   const snapshot = await getWarehouseSnapshot({ scope: "dispatch" });
+  const orderNumberById = new Map(
+    snapshot.data.orders.map((order) => [String(order.id ?? ""), String(order.order_number ?? "")])
+  );
   const headers = ["Shipment", "Order", "Warehouse", "Courier", "Tracking number", "Status", "Updated"];
   const rows = snapshot.data.shipments.map((shipment) => [
     shipment.shipment_number ?? shipment.id ?? "",
-    shipment.order_id ?? "",
+    orderNumberById.get(String(shipment.order_id ?? "")) ?? "",
     shipment.warehouse_id ?? "",
     shipment.carrier_name ?? "",
     shipment.tracking_number ?? "",

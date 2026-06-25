@@ -10,10 +10,9 @@ export function WarehouseFrame({ children }: { children: React.ReactNode }) {
       groups={warehouseNavGroups}
       routeTitles={warehouseRouteTitles}
       searchItems={warehouseNavGroups.flatMap((group) => group.items.map((item) => ({ label: item.label, href: item.href, group: group.label })))}
-      scopeBadge="Warehouse"
       accentClass="bg-[var(--platform-nav-active-bg)] text-[var(--platform-text-primary)]"
       shellDataAttributes={{ "data-warehouse-frame": true }}
-      primaryAction={{ label: "New order", href: "/warehouse/orders#create-order" }}
+      primaryAction={{ label: "Orders", href: "/warehouse/orders" }}
       notificationHref="/warehouse/orders"
       showTopbar
     >

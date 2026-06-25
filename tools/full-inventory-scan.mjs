@@ -178,7 +178,6 @@ async function main() {
   const supabase = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
   const dbRows = await fetchAllDbProducts(supabase);
   const dbVisible = dbRows.filter(isStorefrontVisible);
-  const dbSlugs = new Set(dbRows.map((r) => r.slug));
   const ourSitemapSlugs = new Set(ourSitemap.map((p) => p.slug));
 
   const wixApiSlugs = new Set(wixApi.map((p) => p.wix_slug));

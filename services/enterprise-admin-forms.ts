@@ -339,7 +339,7 @@ export function buildSimpleInventoryUpdateFromFormData(formData: FormData): Simp
   const stockStatus = readRequiredEnum(formData, "stock_status", ["available", "low_stock", "out_of_stock"] as const, "Inventory");
   const quantity = readOptionalInteger(formData, "quantity", "Inventory quantity") ?? 0;
   const variantId = readOptionalString(formData, "variant_id") ?? null;
-  const warehouseCode = readOptionalString(formData, "warehouse_code") ?? "IN-WEST-01";
+  const warehouseCode = readOptionalString(formData, "warehouse_code") ?? "";
   const note = readOptionalString(formData, "note") ?? null;
   const changeSummary = readOptionalString(formData, "change_summary") ?? `Update stock for ${productSlug}:${sku}`;
 

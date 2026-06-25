@@ -85,8 +85,7 @@ export function ProductSimpleRichText({
     if (!editor || !defaultValue) return;
     const current = editor.getHTML();
     if (current === "<p></p>" || !current.trim()) {
-      editor.commands.setContent(defaultValue, { emitUpdate: false });
-      setHtml(defaultValue);
+      editor.commands.setContent(defaultValue, { emitUpdate: true });
     }
   }, [defaultValue, editor]);
 

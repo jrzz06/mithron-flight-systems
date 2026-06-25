@@ -1,5 +1,7 @@
+import { StatusPill } from "@/components/platform";
 import { SupplierEditProductForm } from "@/components/supplier/supplier-edit-product-form";
 import { SupplierSubmitProductButton } from "@/components/supplier/supplier-submit-product-button";
+import { supplierRejectionLabel, supplierStatusExplanation, supplierStatusHint } from "@/lib/platform/copy";
 import { readProductImageSrc } from "@/lib/supplier/product-image";
 import { getCurrentAuthContext } from "@/services/auth";
 import { getSupplierOwnedProduct } from "@/services/supplier-actions";
@@ -18,24 +20,25 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
   const rejectionReason = typeof product.rejection_reason === "string" ? product.rejection_reason : null;
   const canEdit = ["draft", "rejected"].includes(workflowStatus);
   const canSubmit = ["draft", "rejected"].includes(workflowStatus);
+  const statusHint = supplierStatusHint(workflowStatus);
 
   return (
-    <div className="max-w-xl grid gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-100">{String(product.name)}</h1>
-        <p className="mt-1 text-sm capitalize text-slate-400">Status: {workflowStatus}</p>
+    <div className="max-w-xl grid gap-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusPill status={workflowStatus} />
+        {statusHint ? <p className="text-sm text-[var(--platform-text-muted)]">{statusHint}</p> : null}
       </div>
 
       {workflowStatus === "rejected" && rejectionReason ? (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 text-sm text-rose-100">
-          <p className="font-semibold">Rejection reason</p>
+        <div className="rounded-[8px] border border-rose-500/30 bg-rose-950/20 p-4 text-sm text-rose-100">
+          <p className="font-semibold">{supplierRejectionLabel()}</p>
           <p className="mt-1 text-rose-100/90">{rejectionReason}</p>
         </div>
       ) : null}
 
       {workflowStatus === "pending_review" ? (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100">
-          This product is awaiting admin review and cannot be edited until approval completes or it is rejected.
+        <p className="rounded-[8px] border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-100">
+          You cannot edit this product while it is being reviewed.
         </p>
       ) : null}
 
@@ -55,16 +58,18 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
             }}
           />
           {canSubmit ? (
-            <form action={submitSupplierProductFormAction} className="rounded-xl border border-white/[0.08] bg-[#0f141b] p-5">
+            <form action={submitSupplierProductFormAction} className="rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5">
               <input type="hidden" name="slug" value={slug} />
-              <p className="text-sm text-slate-400">Submit this product for admin review. It will not appear on the storefront until approved.</p>
-              <SupplierSubmitProductButton variant="button" />
+              <p className="text-sm text-[var(--platform-text-muted)]">
+                When you are ready, send this product to our team for review. It will not appear on the store until approved.
+              </p>
+              <SupplierSubmitProductButton variant="button" label="Send for review" />
             </form>
           ) : null}
         </>
       ) : (
-        <p className="rounded-xl border border-white/[0.08] bg-[#0f141b] p-5 text-sm text-slate-400">
-          This product is currently {workflowStatus} and cannot be edited here.
+        <p className="rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5 text-sm text-[var(--platform-text-muted)]">
+          {supplierStatusExplanation(workflowStatus)}
         </p>
       )}
     </div>

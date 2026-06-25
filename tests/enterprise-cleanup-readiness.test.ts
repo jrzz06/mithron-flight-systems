@@ -48,7 +48,7 @@ describe("enterprise cleanup readiness", () => {
       "config/storefront-content.ts",
       "data/mithron-supabase-assets.generated.json",
       "components/media/mithron-responsive-image.tsx",
-      "app/admin/media/page.tsx",
+      "app/admin/products/page.tsx",
       "app/warehouse/inventory/page.tsx"
     ]));
     expect(graph.edges).toEqual(expect.arrayContaining([

@@ -2,6 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { redirect } from "next/navigation";
+import { getSiteOrigin } from "@/lib/site-url";
 import { createClient as createSupabaseServiceClient } from "@supabase/supabase-js";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { type CmsRole, normalizeCmsRole } from "@/lib/auth/permissions";
@@ -18,6 +20,11 @@ import {
   upsertUserRoleRecord
 } from "@/services/admin-actions";
 import { recordAuthActivityEvent } from "@/services/security-observability";
+import {
+  assertAdminEmailDomainAllowed,
+  assertPasswordResetPolicyAllowed,
+  getAdminSettingsPolicy
+} from "@/services/admin-settings-policy";
 
 const manageableUserRoles = [
   "admin",
@@ -80,6 +87,28 @@ function readSettingString(formData: FormData, key: string, fallback = "") {
 
 function readSettingBoolean(formData: FormData, key: string) {
   return formData.get(key) === "on";
+}
+
+function settingsRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function existingString(section: JsonRecord, key: string, fallback = "") {
+  const value = section[key];
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function existingBoolean(section: JsonRecord, key: string, fallback = false) {
+  const value = section[key];
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function mergeSettingString(formData: FormData, key: string, existing: string, fallback = "") {
+  return formData.has(key) ? readSettingString(formData, key, fallback) : existing;
+}
+
+function mergeSettingBoolean(formData: FormData, key: string, existing: boolean) {
+  return formData.has(key) ? readSettingBoolean(formData, key) : existing;
 }
 
 function assertEmail(value: string) {
@@ -154,59 +183,130 @@ function serviceClient() {
   });
 }
 
+async function invokeMaintenanceEndpoint(path: string) {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) {
+    throw new Error("CRON_SECRET is not configured for maintenance tasks.");
+  }
+
+  const response = await fetch(`${getSiteOrigin()}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Maintenance task failed (${response.status})${text ? `: ${text.slice(0, 200)}` : ""}`);
+  }
+
+  return response.json().catch(() => null);
+}
+
 export async function saveAdminSettingsFormAction(formData: FormData) {
-  const { actorId, actorRole } = await settingsActor();
+  try {
+    const maintenanceAction = readSettingString(formData, "maintenance_action");
+    if (maintenanceAction) {
+      const { actorId } = await settingsActor();
+
+      if (maintenanceAction === "prune_logs") {
+        await invokeMaintenanceEndpoint("/api/admin/prune-logs");
+      } else if (maintenanceAction === "archive_movements") {
+        await invokeMaintenanceEndpoint("/api/admin/archive-movements");
+      } else {
+        await createActivityLogRecord(
+          {
+            actor_id: actorId,
+            action: `settings.maintenance.${maintenanceAction}`,
+            entity_table: "admin_settings",
+            entity_id: "global",
+            severity: "info",
+            metadata: { maintenance_action: maintenanceAction }
+          },
+          actorId
+        );
+      }
+
+      if (maintenanceAction === "prune_logs" || maintenanceAction === "archive_movements") {
+        await createActivityLogRecord(
+          {
+            actor_id: actorId,
+            action: `settings.maintenance.${maintenanceAction}`,
+            entity_table: "admin_settings",
+            entity_id: "global",
+            severity: "info",
+            metadata: { maintenance_action: maintenanceAction, status: "completed" }
+          },
+          actorId
+        );
+      }
+
+      revalidatePath("/admin/settings");
+      redirect(`/admin/settings?settings_status=success&settings_message=${encodeURIComponent(`Maintenance action "${maintenanceAction.replaceAll("_", " ")}" completed.`)}`);
+    }
+
+    const { actorId, actorRole } = await settingsActor();
   const supabase = serviceClient();
+  const { data: existingRow } = await supabase.from("admin_settings").select("payload").eq("id", "global").maybeSingle();
+  const existingPayload = settingsRecord(existingRow?.payload);
+  const existingGeneral = settingsRecord(existingPayload.general);
+  const existingPerformance = settingsRecord(existingPayload.performance);
+  const existingCms = settingsRecord(existingPayload.cms);
+  const existingFooter = settingsRecord(existingPayload.footer);
+  const existingSecurity = settingsRecord(existingPayload.security);
+  const existingNotifications = settingsRecord(existingPayload.notifications);
   const payload = {
     general: {
-      website_name: readSettingString(formData, "website_name", "Mithron Flight Systems"),
-      brand_logo: readSettingString(formData, "brand_logo"),
-      admin_theme: readSettingString(formData, "admin_theme", "dark"),
-      accent_color: readSettingString(formData, "accent_color", "#10b981"),
-      timezone: readSettingString(formData, "timezone", "Asia/Kolkata"),
-      currency: readSettingString(formData, "currency", "INR"),
-      language: readSettingString(formData, "language", "en")
+      website_name: mergeSettingString(formData, "website_name", existingString(existingGeneral, "website_name", "Mithron Flight Systems"), "Mithron Flight Systems"),
+      brand_logo: mergeSettingString(formData, "brand_logo", existingString(existingGeneral, "brand_logo")),
+      admin_theme: existingString(existingGeneral, "admin_theme", "dark"),
+      accent_color: existingString(existingGeneral, "accent_color", "#10b981"),
+      timezone: mergeSettingString(formData, "timezone", existingString(existingGeneral, "timezone", "Asia/Kolkata"), "Asia/Kolkata"),
+      currency: mergeSettingString(formData, "currency", existingString(existingGeneral, "currency", "INR"), "INR"),
+      language: mergeSettingString(formData, "language", existingString(existingGeneral, "language", "en"), "en")
     },
     performance: {
-      image_compression: readSettingBoolean(formData, "image_compression"),
-      avif_webp_conversion: readSettingBoolean(formData, "avif_webp_conversion"),
-      lazy_loading: readSettingBoolean(formData, "lazy_loading"),
-      cdn_optimization: readSettingBoolean(formData, "cdn_optimization"),
-      thumbnail_mode: readSettingBoolean(formData, "thumbnail_mode"),
-      query_caching: readSettingBoolean(formData, "query_caching"),
-      realtime_updates: readSettingBoolean(formData, "realtime_updates"),
-      low_bandwidth_mode: readSettingBoolean(formData, "low_bandwidth_mode")
+      image_compression: existingBoolean(existingPerformance, "image_compression"),
+      avif_webp_conversion: existingBoolean(existingPerformance, "avif_webp_conversion"),
+      lazy_loading: existingBoolean(existingPerformance, "lazy_loading"),
+      cdn_optimization: existingBoolean(existingPerformance, "cdn_optimization"),
+      thumbnail_mode: existingBoolean(existingPerformance, "thumbnail_mode"),
+      query_caching: existingBoolean(existingPerformance, "query_caching"),
+      realtime_updates: existingBoolean(existingPerformance, "realtime_updates"),
+      low_bandwidth_mode: existingBoolean(existingPerformance, "low_bandwidth_mode")
     },
     cms: {
-      instant_publish: readSettingBoolean(formData, "instant_publish"),
-      draft_mode: readSettingBoolean(formData, "draft_mode"),
-      section_visibility_controls: readSettingBoolean(formData, "section_visibility_controls"),
-      autosave_drafts: readSettingBoolean(formData, "autosave_drafts"),
-      clear_homepage_cache_on_publish: readSettingBoolean(formData, "clear_homepage_cache_on_publish"),
-      visual_editor: readSettingBoolean(formData, "visual_editor"),
-      image_previews: readSettingBoolean(formData, "image_previews")
+      instant_publish: existingBoolean(existingCms, "instant_publish"),
+      draft_mode: existingBoolean(existingCms, "draft_mode"),
+      section_visibility_controls: existingBoolean(existingCms, "section_visibility_controls"),
+      autosave_drafts: existingBoolean(existingCms, "autosave_drafts"),
+      clear_homepage_cache_on_publish: existingBoolean(existingCms, "clear_homepage_cache_on_publish"),
+      visual_editor: existingBoolean(existingCms, "visual_editor"),
+      image_previews: existingBoolean(existingCms, "image_previews")
     },
     footer: {
-      leadTitle: readSettingString(formData, "footer_lead_title"),
-      leadBody: readSettingString(formData, "footer_lead_body"),
-      contactEmail: readSettingString(formData, "footer_contact_email"),
-      contactPhone: readSettingString(formData, "footer_contact_phone"),
-      legalText: readSettingString(formData, "footer_legal_text")
+      leadTitle: existingString(existingFooter, "leadTitle"),
+      leadBody: existingString(existingFooter, "leadBody"),
+      contactEmail: existingString(existingFooter, "contactEmail"),
+      contactPhone: existingString(existingFooter, "contactPhone"),
+      legalText: existingString(existingFooter, "legalText")
     },
     security: {
-      session_timeout_minutes: readSettingString(formData, "session_timeout_minutes", "60"),
-      two_factor_required: readSettingBoolean(formData, "two_factor_required"),
-      login_alerts: readSettingBoolean(formData, "login_alerts"),
-      device_tracking: readSettingBoolean(formData, "device_tracking"),
-      password_reset_enabled: readSettingBoolean(formData, "password_reset_enabled"),
-      allowed_admin_domains: readSettingString(formData, "allowed_admin_domains")
+      session_timeout_minutes: mergeSettingString(formData, "session_timeout_minutes", existingString(existingSecurity, "session_timeout_minutes", "60"), "60"),
+      two_factor_required: mergeSettingBoolean(formData, "two_factor_required", existingBoolean(existingSecurity, "two_factor_required")),
+      login_alerts: mergeSettingBoolean(formData, "login_alerts", existingBoolean(existingSecurity, "login_alerts", true)),
+      device_tracking: existingBoolean(existingSecurity, "device_tracking"),
+      password_reset_enabled: mergeSettingBoolean(formData, "password_reset_enabled", existingBoolean(existingSecurity, "password_reset_enabled", true)),
+      allowed_admin_domains: mergeSettingString(formData, "allowed_admin_domains", existingString(existingSecurity, "allowed_admin_domains"))
     },
     notifications: {
-      order_alerts: readSettingBoolean(formData, "order_alerts"),
-      warehouse_alerts: readSettingBoolean(formData, "warehouse_alerts"),
-      cms_publish_alerts: readSettingBoolean(formData, "cms_publish_alerts"),
-      admin_login_alerts: readSettingBoolean(formData, "admin_login_alerts"),
-      email_notifications: readSettingBoolean(formData, "email_notifications")
+      order_alerts: mergeSettingBoolean(formData, "order_alerts", existingBoolean(existingNotifications, "order_alerts", true)),
+      warehouse_alerts: mergeSettingBoolean(formData, "warehouse_alerts", existingBoolean(existingNotifications, "warehouse_alerts", true)),
+      cms_publish_alerts: existingBoolean(existingNotifications, "cms_publish_alerts"),
+      admin_login_alerts: existingBoolean(existingNotifications, "admin_login_alerts"),
+      email_notifications: mergeSettingBoolean(formData, "email_notifications", existingBoolean(existingNotifications, "email_notifications"))
     },
     updated_by: actorId,
     updated_at: new Date().toISOString()
@@ -229,7 +329,7 @@ export async function saveAdminSettingsFormAction(formData: FormData) {
       severity: "info",
       metadata: {
         actor_role: actorRole,
-        sections: ["general", "performance", "cms", "footer", "security", "notifications"]
+        sections: ["general", "security", "notifications"]
       }
     },
     actorId
@@ -237,6 +337,12 @@ export async function saveAdminSettingsFormAction(formData: FormData) {
 
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
+  redirect(`/admin/settings?settings_status=success&settings_message=${encodeURIComponent("Settings saved successfully.")}`);
+  } catch (error) {
+    if (error instanceof Error && error.message === "NEXT_REDIRECT") throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    redirect(`/admin/settings?settings_status=error&settings_message=${encodeURIComponent(message.slice(0, 240))}`);
+  }
 }
 
 async function ensureCanonicalRoleRecord(role: CmsRole) {
@@ -544,6 +650,8 @@ async function findAuthUserByEmail(supabase: ReturnType<typeof serviceClient>, e
 export async function createManagedUserAction(formData: FormData): Promise<ManagedUserCreateResult> {
   const { actorId, actorRole } = await settingsActor();
   const email = assertEmail(readRequiredString(formData, "email", "User"));
+  const policy = await getAdminSettingsPolicy();
+  assertAdminEmailDomainAllowed(email, policy);
   const displayName = readOptionalString(formData, "display_name");
   const role = assertManageableUserRole(readRequiredString(formData, "role_key", "User"));
   const providedPassword = readOptionalString(formData, "temporary_password");
@@ -631,6 +739,8 @@ export async function createManagedUserAction(formData: FormData): Promise<Manag
 
 export async function resetManagedUserPasswordAction(formData: FormData) {
   const { actorId, actorRole } = await settingsActor();
+  const policy = await getAdminSettingsPolicy();
+  assertPasswordResetPolicyAllowed(policy);
   const userId = readRequiredString(formData, "user_id", "Password reset");
   const email = assertEmail(readRequiredString(formData, "email", "Password reset"));
   const password = assertTemporaryPassword(readOptionalString(formData, "temporary_password"), "New password");

@@ -32,7 +32,8 @@ function product(slug: string, name: string, category = "Accessories"): Product 
     variants: [],
     bundles: [],
     hotspots: [],
-    story: []
+    story: [],
+    anchors: []
   };
 }
 

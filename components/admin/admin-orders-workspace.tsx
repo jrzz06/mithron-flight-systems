@@ -16,6 +16,8 @@ type AdminOrdersWorkspaceProps = {
   orderItems: AdminRow[];
   stock: AdminRow[];
   shipments: AdminRow[];
+  warehouses: Array<{ code: string; name: string }>;
+  defaultWarehouseCode: string;
   selectedOrder: AdminRow | null;
   selectedOrderId: string;
   selectedOrderKey: string;
@@ -27,6 +29,7 @@ type AdminOrdersWorkspaceProps = {
   blockedReason?: string | null;
   confirmAdminOrderAction: (formData: FormData) => Promise<void>;
   rejectAdminOrderAction: (formData: FormData) => Promise<void>;
+  cancelAdminOrderAction: (formData: FormData) => Promise<void>;
   assignAdminWarehouseAction: (formData: FormData) => Promise<void>;
   updateAdminOrderLifecycleAction: (formData: FormData) => Promise<void>;
   confirmAdminWarehouseHandoffAction: (formData: FormData) => Promise<void>;
@@ -45,10 +48,12 @@ const lifecycleStates = [
 ] as const;
 
 const queueDefinitions = [
-  { key: "review", label: "Needs action" },
+  { key: "review", label: "Pending" },
   { key: "confirmed", label: "Confirmed" },
-  { key: "fulfillment", label: "In fulfillment" },
-  { key: "all", label: "All orders" }
+  { key: "fulfillment", label: "Warehouse" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "all", label: "All" }
 ] as const;
 
 function text(value: unknown, fallback = "") {
@@ -86,9 +91,25 @@ function orderPhone(order: AdminRow) {
   return text(orderMetadata(order).customer_phone, "—");
 }
 
+function assignedWarehouseCode(order: AdminRow, fallback: string) {
+  return text(orderMetadata(order).assigned_warehouse_code, fallback);
+}
+
+function paymentLabel(order: AdminRow) {
+  return text(order.payment_status, text(order.status, "pending")).replaceAll("_", " ");
+}
+
 function orderChannel(order: AdminRow) {
   const channel = text(order.channel, "checkout");
   return channel === "enquiry" ? "Enquiry" : "Checkout";
+}
+
+function productSummary(orderId: string, orderItems: AdminRow[]) {
+  const items = orderItems.filter((item) => text(item.order_id) === orderId).slice(0, 2);
+  if (!items.length) return "—";
+  return items
+    .map((item) => `${text(item.product_name, text(item.product_slug, "Item"))} ×${numberText(item.quantity)}`)
+    .join(", ");
 }
 
 function orderStatusLabel(status: string) {
@@ -118,7 +139,21 @@ function orderMatchesQueue(order: AdminRow, queue: string) {
     return ["assigned", "processing", "packed", "dispatched", "in_transit"].includes(status)
       || ["processing", "picked", "packed", "ready_to_dispatch", "shipped"].includes(fulfillment);
   }
+  if (queue === "completed") {
+    return status === "delivered" || fulfillment === "delivered" || fulfillment === "shipped";
+  }
+  if (queue === "cancelled") {
+    return status === "cancelled" || fulfillment === "cancelled" || fulfillment === "returned";
+  }
   return true;
+}
+
+function canCancelOrder(order: AdminRow | null) {
+  if (!order) return false;
+  const status = text(order.status, "pending");
+  const fulfillment = text(order.fulfillment_status, "pending");
+  const terminal = ["cancelled", "delivered", "returned"];
+  return !terminal.includes(status) && !terminal.includes(fulfillment);
 }
 
 function buildOrdersUrl(params: Record<string, string | undefined>) {
@@ -205,6 +240,8 @@ export function AdminOrdersWorkspace({
   orderItems,
   stock,
   shipments,
+  warehouses,
+  defaultWarehouseCode,
   selectedOrder,
   selectedOrderId,
   selectedOrderKey,
@@ -216,6 +253,7 @@ export function AdminOrdersWorkspace({
   blockedReason,
   confirmAdminOrderAction,
   rejectAdminOrderAction,
+  cancelAdminOrderAction,
   assignAdminWarehouseAction,
   updateAdminOrderLifecycleAction,
   confirmAdminWarehouseHandoffAction
@@ -237,9 +275,6 @@ export function AdminOrdersWorkspace({
     ? shipments.filter((shipment) => text(shipment.order_id) === selectedOrderId)
     : [];
   const firstItem = selectedItems[0] ?? null;
-  const firstStock = firstItem
-    ? stock.find((row) => text(row.product_slug) === text(firstItem.product_slug) && text(row.sku) === text(firstItem.sku))
-    : null;
   const timeline = selectedOrder ? orderTimeline(selectedOrder) : [];
   const metadata = selectedOrder ? orderMetadata(selectedOrder) : {};
   const shippingAddress = formatAddress(metadata);
@@ -315,15 +350,15 @@ export function AdminOrdersWorkspace({
       <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
         <AdminTableShell
           title={`Orders (${filteredOrders.length})`}
-          description={blockedReason ?? "Click an order to review details and take action."}
+          description={blockedReason ?? undefined}
         >
           {filteredOrders.length ? (
             <div className="divide-y divide-slate-800">
               {filteredOrders.slice(0, 40).map((order) => {
                 const orderId = text(order.id);
                 const orderNumber = publicOrderLabel(order);
-                const itemCount = orderItems.filter((item) => text(item.order_id) === orderId).length;
                 const isSelected = selectedKey === orderNumber || selectedOrderId === orderId;
+                const warehouse = assignedWarehouseCode(order, defaultWarehouseCode);
                 return (
                   <Link
                     key={orderId || orderNumber}
@@ -335,7 +370,8 @@ export function AdminOrdersWorkspace({
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-slate-100">{orderNumber}</p>
                         <p className="mt-1 truncate text-xs text-slate-500">{text(order.customer_email, "No email")}</p>
-                        <p className="mt-1 text-xs text-slate-600">{orderDate(order)} · {itemCount} item{itemCount === 1 ? "" : "s"}</p>
+                        <p className="mt-1 text-xs text-slate-600">{productSummary(orderId, orderItems)}</p>
+                        <p className="mt-1 text-xs text-slate-600">{orderDate(order)} · {warehouse} · {paymentLabel(order)}</p>
                       </div>
                       <div className="grid shrink-0 justify-items-end gap-1.5">
                         <StatusBadge status={text(order.status, "pending")} />
@@ -451,11 +487,53 @@ export function AdminOrdersWorkspace({
                         </OperationalSubmitButton>
                       </form>
                     ) : null}
-                    {nextStep.action === "assign" ? (
-                      <form action={assignAdminWarehouseAction}>
+                    {canCancelOrder(selectedOrder) && text(selectedOrder.status) !== "admin_review" ? (
+                      <form action={cancelAdminOrderAction} className="flex flex-wrap items-end gap-2">
                         <input type="hidden" name="order_id" value={selectedOrderId} />
                         <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
+                        <label className="grid gap-1 text-xs text-slate-400">
+                          Cancellation reason
+                          <input
+                            name="cancel_reason"
+                            required
+                            placeholder="Reason shared with customer"
+                            className="h-10 min-w-[220px] rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100"
+                          />
+                        </label>
+                        <OperationalSubmitButton
+                          pendingLabel="Cancelling..."
+                          className="h-10 rounded-lg border border-rose-700 bg-rose-900/40 px-4 text-sm font-semibold text-rose-100"
+                        >
+                          Cancel order
+                        </OperationalSubmitButton>
+                      </form>
+                    ) : null}
+                    {nextStep.action === "assign" ? (
+                      <form action={assignAdminWarehouseAction} className="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="order_id" value={selectedOrderId} />
+                        <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
+                        {formContextFields()}
+                        <label className="grid gap-1 text-xs text-slate-400">
+                          Warehouse
+                          <select
+                            name="warehouse_code"
+                            defaultValue={(() => {
+                              const metadata = selectedOrder.metadata;
+                              const assigned = metadata && typeof metadata === "object" && !Array.isArray(metadata)
+                                ? String((metadata as AdminRow).assigned_warehouse_code ?? "")
+                                : "";
+                              return assigned || defaultWarehouseCode;
+                            })()}
+                            className="h-10 min-w-[220px] rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100"
+                          >
+                            {warehouses.map((warehouse) => (
+                              <option key={warehouse.code} value={warehouse.code}>
+                                {warehouse.name} ({warehouse.code})
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                         <OperationalSubmitButton
                           pendingLabel="Assigning..."
                           className="h-10 rounded-lg border border-cyan-600 bg-cyan-600 px-4 text-sm font-semibold text-white"
@@ -468,17 +546,29 @@ export function AdminOrdersWorkspace({
                 </AdminFormSection>
               ) : null}
 
-              <AdminSection title="Activity timeline" description="Latest status changes for this order.">
+              <AdminSection title="Activity timeline">
                 <div data-order-timeline className="grid gap-2">
-                  {timeline.length ? timeline.map((entry, index) => (
-                    <div key={`${text(entry.status, "status")}-${index}`} className="rounded-lg border border-slate-800 bg-[#10151d] px-3 py-2.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge status={text(entry.status) || text(entry.event, "updated")} />
-                        <span className="text-xs text-slate-500">{text(entry.at).slice(0, 19).replace("T", " ")}</span>
+                  {timeline.length ? timeline.map((entry, index) => {
+                    const eventLabel = text(entry.note) || text(entry.event, text(entry.summary, "Updated"));
+                    const eventAt = text(entry.at);
+                    const dateKey = eventAt ? eventAt.slice(0, 10) : "unknown";
+                    const prevDate = index > 0 ? text(timeline[index - 1]?.at).slice(0, 10) : "";
+                    const showDate = dateKey !== prevDate;
+                    return (
+                      <div key={`${text(entry.status, "status")}-${index}`}>
+                        {showDate ? (
+                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{dateKey}</p>
+                        ) : null}
+                        <div className="rounded-lg border border-slate-800 bg-[#10151d] px-3 py-2.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge status={text(entry.status) || text(entry.event, "updated")} />
+                            <span className="text-xs text-slate-500">{eventAt.slice(11, 16) || "—"}</span>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-300">{eventLabel}</p>
+                        </div>
                       </div>
-                      <p className="mt-1 text-sm text-slate-300">{text(entry.note) || text(entry.event, "Updated")}</p>
-                    </div>
-                  )) : (
+                    );
+                  }) : (
                     <p className="text-sm text-slate-500">No timeline events yet.</p>
                   )}
                 </div>
@@ -533,7 +623,20 @@ export function AdminOrdersWorkspace({
                   <form action={confirmAdminWarehouseHandoffAction} data-shipment-actions data-confirm-warehouse-handoff className="grid gap-3">
                     <input type="hidden" name="order_id" value={selectedOrderId} />
                     {formContextFields()}
-                    <input type="hidden" name="warehouse_id" value={text(firstStock?.warehouse_code, "IN-WEST-01")} />
+                    <label className="grid gap-2 text-sm text-slate-300">
+                      Fulfillment warehouse
+                      <select
+                        name="warehouse_id"
+                        defaultValue={assignedWarehouseCode(selectedOrder, defaultWarehouseCode)}
+                        className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-slate-100 outline-none"
+                      >
+                        {warehouses.map((warehouse) => (
+                          <option key={warehouse.code} value={warehouse.code}>
+                            {warehouse.name} ({warehouse.code})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     <input type="hidden" name="order_item_id" value={text(firstItem?.id)} />
                     <input type="hidden" name="shipment_product_id" value={text(firstItem?.product_slug)} />
                     <input type="hidden" name="shipment_quantity" value={numberText(firstItem?.quantity ?? 1)} />

@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { AdminOrdersWorkspace } from "@/components/admin/admin-orders-workspace";
 import { ModulePanel } from "@/components/admin/module-panel";
-import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction, rejectAdminOrderFormAction } from "@/app/admin/orders/actions";
+import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction, cancelAdminOrderFormAction, rejectAdminOrderFormAction } from "@/app/admin/orders/actions";
 import { createShipmentFormAction, updateWarehouseOrderLifecycleFormAction } from "@/app/warehouse/actions";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
+import { listActiveWarehouses } from "@/services/warehouses";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +80,19 @@ async function rejectAdminOrderAction(formData: FormData) {
   redirectWithOrderFeedback(orderId, "success", "Order rejected.", queue, query);
 }
 
+async function cancelAdminOrderAction(formData: FormData) {
+  "use server";
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  const queue = String(formData.get("queue") ?? "review");
+  const query = String(formData.get("q") ?? "");
+  try {
+    await cancelAdminOrderFormAction(formData);
+  } catch (error) {
+    redirectWithOrderFeedback(orderId, "error", orderActionMessage(error).slice(0, 240), queue, query);
+  }
+  redirectWithOrderFeedback(orderId, "success", "Order cancelled.", queue, query);
+}
+
 async function confirmAdminOrderAction(formData: FormData) {
   "use server";
   const orderId = String(formData.get("order_id") ?? "").trim();
@@ -114,7 +129,11 @@ function countNeedsAction(orders: AdminRow[]) {
 }
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const snapshot = await getWarehouseSnapshot({ scope: "orders" });
+  const [snapshot, warehouses, policy] = await Promise.all([
+    getWarehouseSnapshot({ scope: "orders" }),
+    listActiveWarehouses(),
+    getAdminSettingsPolicy()
+  ]);
   const params = searchParams ? await searchParams : {};
   const queue = searchValue(params, "queue") || "review";
   const selectedKey = searchValue(params, "order");
@@ -134,7 +153,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
     <ModulePanel
       eyebrow="Order operations"
       title="Orders"
-      description="Review customer orders, confirm payments and enquiries, then hand confirmed orders to warehouse."
+      description="Review orders that need action, update fulfillment, and manage shipments."
       status={snapshot.status}
       metrics={[
         { label: "Needs action", value: String(needsActionCount), status: needsActionCount ? "warning" : "clear" },
@@ -148,6 +167,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
         orderItems={snapshot.data.orderItems}
         stock={snapshot.data.stock}
         shipments={snapshot.data.shipments}
+        warehouses={warehouses}
+        defaultWarehouseCode={policy.defaultWarehouseCode}
         selectedOrder={selectedOrder}
         selectedOrderId={selectedOrderId}
         selectedOrderKey={selectedOrderKey}
@@ -159,6 +180,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
         blockedReason={snapshot.blockedReason}
         confirmAdminOrderAction={confirmAdminOrderAction}
         rejectAdminOrderAction={rejectAdminOrderAction}
+        cancelAdminOrderAction={cancelAdminOrderAction}
         assignAdminWarehouseAction={assignAdminWarehouseAction}
         updateAdminOrderLifecycleAction={updateAdminOrderLifecycleAction}
         confirmAdminWarehouseHandoffAction={confirmAdminWarehouseHandoffAction}

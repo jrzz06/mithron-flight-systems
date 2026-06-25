@@ -14,28 +14,36 @@ type InventoryAction = (formData: FormData) => void | Promise<void>;
 
 type InventoryManagerProps = {
   rows: SimpleInventoryRow[];
-  action: InventoryAction;
-  importAction: InventoryAction;
-  bulkAction: InventoryAction;
-  deleteAction: InventoryAction;
+  action?: InventoryAction;
+  importAction?: InventoryAction;
+  bulkAction?: InventoryAction;
+  deleteAction?: InventoryAction;
+  readOnly?: boolean;
   exportHref: string;
   title?: string;
   page?: number;
+  totalProductCount?: number;
   hasNextPage?: boolean;
   previousPageHref?: string;
   nextPageHref?: string;
+  allowCsvImport?: boolean;
+  allowDelete?: boolean;
 };
 
 const statusOptions: Array<{ value: SimpleInventoryStatus; label: string }> = [
   { value: "available", label: "In stock" },
   { value: "low_stock", label: "Low stock" },
   { value: "out_of_stock", label: "Out of stock" },
+  { value: "reserved", label: "Reserved" },
+  { value: "discontinued", label: "Discontinued" },
   { value: "archived", label: "Archived" }
 ];
 
 function statusClass(status: SimpleInventoryStatus) {
   if (status === "available") return "bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-400/15";
   if (status === "low_stock") return "bg-amber-500/10 text-amber-200 ring-1 ring-amber-400/15";
+  if (status === "reserved") return "bg-sky-500/10 text-sky-200 ring-1 ring-sky-400/15";
+  if (status === "discontinued") return "bg-slate-500/10 text-slate-300 ring-1 ring-slate-400/15";
   if (status === "out_of_stock" || status === "archived") return "bg-rose-500/10 text-rose-200 ring-1 ring-rose-400/15";
   return "bg-slate-500/10 text-slate-300 ring-1 ring-slate-400/15";
 }
@@ -249,6 +257,8 @@ const InventoryRow = memo(function InventoryRow({
   menuOpen,
   action,
   deleteAction,
+  allowDelete = true,
+  readOnly = false,
   onSelect,
   onEdit,
   onMenuToggle,
@@ -258,8 +268,10 @@ const InventoryRow = memo(function InventoryRow({
   row: SimpleInventoryRow;
   selected: boolean;
   menuOpen: boolean;
-  action: InventoryAction;
-  deleteAction: InventoryAction;
+  action?: InventoryAction;
+  deleteAction?: InventoryAction;
+  allowDelete?: boolean;
+  readOnly?: boolean;
   onSelect: (id: string, selected: boolean) => void;
   onEdit: (row: SimpleInventoryRow) => void;
   onMenuToggle: (id: string) => void;
@@ -269,6 +281,7 @@ const InventoryRow = memo(function InventoryRow({
   return (
     <tr data-inventory-row className={`content-visibility-auto group border-b border-slate-800/70 text-sm [contain-intrinsic-size:72px] [content-visibility:auto] ${menuOpen ? "relative z-30" : ""}`}>
       <td className="w-10 px-3 py-2.5">
+        {!readOnly ? (
         <input
           type="checkbox"
           aria-label={`Select ${row.productName}`}
@@ -276,6 +289,7 @@ const InventoryRow = memo(function InventoryRow({
           onChange={(event) => onSelect(rowKey(row), event.currentTarget.checked)}
           className="h-4 w-4 rounded border-slate-700 bg-[#0b1017]"
         />
+        ) : null}
       </td>
       <td className="w-16 px-2 py-2.5">
         <div className="grid size-11 place-items-center overflow-hidden rounded-lg border border-slate-800 bg-[#0b1017]">
@@ -300,11 +314,16 @@ const InventoryRow = memo(function InventoryRow({
       </td>
       <td className="min-w-[150px] px-3 py-2.5 font-mono text-xs text-slate-300">{row.sku}</td>
       <td className="min-w-[210px] px-3 py-2.5">
-        <InlineStockEditor row={row} action={action} onLocalUpdate={onLocalUpdate} />
+        {readOnly || !action ? (
+          <span className="font-semibold text-slate-100">{formatNumber(row.quantity)}</span>
+        ) : (
+          <InlineStockEditor row={row} action={action} onLocalUpdate={onLocalUpdate} />
+        )}
       </td>
       <td className="min-w-[132px] px-3 py-2.5">
         <InventoryStatusPill status={row.stockStatus} />
       </td>
+      {readOnly ? null : (
       <td className="sticky right-0 min-w-[72px] bg-[#0f141b] px-3 py-2.5">
         <div className="flex items-center justify-end">
           <div className="relative" data-inventory-action-menu>
@@ -317,7 +336,7 @@ const InventoryRow = memo(function InventoryRow({
             >
               <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
             </button>
-            {menuOpen ? (
+            {menuOpen && action && deleteAction ? (
               <div className="absolute right-0 top-9 z-[95] grid w-48 gap-1 rounded-xl border border-slate-800 bg-[#10151d] p-2 text-xs shadow-2xl shadow-black/30">
                 <button
                   type="button"
@@ -337,8 +356,20 @@ const InventoryRow = memo(function InventoryRow({
                   className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  Update stock
+                  Adjust stock
                 </button>
+                <form action={action} onSubmit={() => onLocalUpdate(row.id, { stockStatus: "reserved" })}>
+                  <HiddenInventoryFields row={row} status="reserved" />
+                  <button data-inventory-action="reserve" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100">
+                    Mark reserved
+                  </button>
+                </form>
+                <form action={action} onSubmit={() => onLocalUpdate(row.id, { stockStatus: "discontinued" })}>
+                  <HiddenInventoryFields row={row} status="discontinued" />
+                  <button data-inventory-action="discontinued" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100">
+                    Mark discontinued
+                  </button>
+                </form>
                 <form action={action} onSubmit={() => onLocalUpdate(row.id, { stockStatus: "archived" })}>
                   <HiddenInventoryFields row={row} status="archived" />
                   <button data-inventory-action="archive" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100">
@@ -354,6 +385,7 @@ const InventoryRow = memo(function InventoryRow({
                 >
                   View product
                 </a>
+                {allowDelete ? (
                 <form
                   action={deleteAction}
                   onSubmit={(event) => {
@@ -370,11 +402,13 @@ const InventoryRow = memo(function InventoryRow({
                     Delete
                   </button>
                 </form>
+                ) : null}
               </div>
             ) : null}
           </div>
         </div>
       </td>
+      )}
     </tr>
   );
 });
@@ -385,12 +419,16 @@ export function InventoryManager({
   importAction,
   bulkAction,
   deleteAction,
+  readOnly = false,
   exportHref,
   title = "Inventory",
   page = 1,
+  totalProductCount,
   hasNextPage = false,
   previousPageHref,
-  nextPageHref
+  nextPageHref,
+  allowCsvImport = true,
+  allowDelete = true
 }: InventoryManagerProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -475,7 +513,13 @@ export function InventoryManager({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Stock control</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-100">{title} <span className="text-slate-500">{formatNumber(filteredRows.length)}</span></h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-100">
+            {title}{" "}
+            <span className="text-slate-500">
+              {formatNumber(filteredRows.length)} on this page
+              {typeof totalProductCount === "number" ? ` · ${formatNumber(totalProductCount)} products total` : ""}
+            </span>
+          </h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
@@ -564,6 +608,7 @@ export function InventoryManager({
             <option value="healthy">Healthy</option>
           </select>
         </label>
+        {!readOnly ? (
         <button
           type="button"
           onClick={() => setBulkDrawerOpen(true)}
@@ -571,17 +616,21 @@ export function InventoryManager({
         >
           Bulk actions
         </button>
+        ) : null}
       </div>
 
+      {!readOnly ? (
       <div data-inventory-bulk-bar className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 bg-[#10151d] p-2 text-xs text-slate-400">
         <span className="font-semibold text-slate-300">{selected.size} selected</span>
         <span>Use row checkboxes, then open Bulk actions for a grouped stock update.</span>
       </div>
+      ) : null}
 
       <div className="hidden max-h-[70vh] overflow-auto rounded-xl border border-slate-800 md:block">
         <table data-inventory-table className="min-w-[920px] w-full border-collapse bg-[#0f141b]">
           <thead className="sticky top-0 z-20 bg-[#172131] text-left text-xs font-semibold text-slate-300">
             <tr>
+              {!readOnly ? (
               <th className="w-10 px-3 py-3">
                 <input
                   type="checkbox"
@@ -601,12 +650,15 @@ export function InventoryManager({
                   className="h-4 w-4 rounded border-slate-700 bg-[#0b1017]"
                 />
               </th>
+              ) : null}
               <th className="w-16 px-2 py-3">Product image</th>
               <th className="px-3 py-3">Product name</th>
               <th className="px-3 py-3">SKU</th>
               <th className="px-3 py-3">Stock quantity</th>
               <th className="px-3 py-3">Inventory status</th>
+              {!readOnly ? (
               <th className="sticky right-0 bg-[#172131] px-3 py-3 text-right">Actions</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -618,6 +670,8 @@ export function InventoryManager({
                 menuOpen={openMenuId === row.id}
                 action={action}
                 deleteAction={deleteAction}
+                allowDelete={allowDelete}
+                readOnly={readOnly}
                 onSelect={updateSelected}
                 onEdit={(nextRow) => {
                   setOpenMenuId(null);
@@ -632,7 +686,7 @@ export function InventoryManager({
               />
             )) : (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">No inventory rows match the current filters.</td>
+                <td colSpan={readOnly ? 5 : 7} className="px-4 py-10 text-center text-sm text-slate-500">No inventory rows match the current filters.</td>
               </tr>
             )}
           </tbody>
@@ -667,6 +721,7 @@ export function InventoryManager({
                 <p className="mt-1 truncate font-mono text-[11px] text-slate-500">{row.sku}</p>
                 <p className="mt-1 text-[11px] text-slate-600">{formatUpdated(row.lastUpdated)}</p>
               </div>
+              {!readOnly ? (
               <input
                 type="checkbox"
                 aria-label={`Select ${row.productName}`}
@@ -674,9 +729,11 @@ export function InventoryManager({
                 onChange={(event) => updateSelected(rowKey(row), event.currentTarget.checked)}
                 className="h-4 w-4 rounded border-slate-700 bg-[#0b1017]"
               />
+              ) : null}
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <InventoryStatusPill status={row.stockStatus} />
+              {!readOnly && action ? (
               <button
                 type="button"
                 data-inventory-quick-edit
@@ -686,9 +743,14 @@ export function InventoryManager({
                 <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                 Edit
               </button>
+              ) : null}
             </div>
             <div className="mt-3">
-              <InlineStockEditor row={row} action={action} onLocalUpdate={updateRow} />
+              {readOnly || !action ? (
+                <span className="font-semibold text-slate-100">{formatNumber(row.quantity)}</span>
+              ) : (
+                <InlineStockEditor row={row} action={action} onLocalUpdate={updateRow} />
+              )}
             </div>
                 </article>
               );
@@ -715,6 +777,7 @@ export function InventoryManager({
         </div>
       </div>
 
+      {allowCsvImport ? (
       <details data-advanced-warehouse-details className="rounded-lg border border-slate-800 bg-[#10151d] p-3 text-sm text-slate-400">
         <summary className="cursor-pointer font-semibold text-slate-300">Data tools</summary>
         <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
@@ -735,6 +798,7 @@ export function InventoryManager({
           <span data-inventory-audit-table="inventory_movements" className="self-center text-xs text-slate-500">Reserved and committed stock stay out of the scan table.</span>
         </div>
       </details>
+      ) : null}
 
       {editingRow ? (
         <InventoryDialogPortal onClose={() => setEditingRow(null)}>

@@ -15,14 +15,14 @@ export function SupplierProductImageField({ defaults }: { defaults?: SupplierPro
   const showPreview = useMemo(() => Boolean(previewSrc.trim()), [previewSrc]);
 
   return (
-    <div className="grid gap-3 rounded-lg border border-white/[0.08] bg-[#0c1118]/60 p-3" data-supplier-product-image-field>
+    <div className="grid gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)]/60 p-3" data-supplier-product-image-field>
       <div className="grid gap-1 text-sm">
-        <span className="text-slate-300">Product image</span>
-        <span className="text-xs text-slate-500">Upload a photo or paste a URL. Shown on catalog cards and the product page after approval.</span>
+        <span className="text-[var(--platform-text-secondary)]">Product image</span>
+        <span className="text-xs text-[var(--platform-text-muted)]">Upload a photo or paste a URL. Shown on catalog cards and the product page after approval.</span>
       </div>
 
       {showPreview ? (
-        <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-white/[0.08] bg-[#070b14]">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)]">
           <Image
             src={previewSrc}
             alt={defaults?.imageAlt || "Product preview"}
@@ -36,34 +36,34 @@ export function SupplierProductImageField({ defaults }: { defaults?: SupplierPro
       ) : null}
 
       <label className="grid gap-1 text-sm">
-        <span className="text-slate-400">Upload image</span>
+        <span className="text-[var(--platform-text-muted)]">Upload image</span>
         <input
           type="file"
           name="image_file"
           accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
-          className="block w-full text-sm text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-violet-500 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+          className="platform-file-input block w-full text-sm text-[var(--platform-text-secondary)] file:mr-3"
         />
       </label>
 
       <label className="grid gap-1 text-sm">
-        <span className="text-slate-400">Or image URL</span>
+        <span className="text-[var(--platform-text-muted)]">Or image URL</span>
         <input
           name="image_src"
           type="url"
           defaultValue={initialSrc}
-          placeholder="https://... or /media/mithron/..."
+          placeholder="https://example.com/your-product.jpg"
           onChange={(event) => setPreviewSrc(event.target.value.trim())}
-          className="rounded-lg border border-white/[0.08] bg-[#0b1017] px-3 py-2 text-slate-100"
+          className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
         />
       </label>
 
       <label className="grid gap-1 text-sm">
-        <span className="text-slate-400">Image alt text</span>
+        <span className="text-[var(--platform-text-muted)]">Image description</span>
         <input
           name="image_alt"
           defaultValue={defaults?.imageAlt ?? ""}
           placeholder="Describe the product for accessibility"
-          className="rounded-lg border border-white/[0.08] bg-[#0b1017] px-3 py-2 text-slate-100"
+          className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
         />
       </label>
     </div>

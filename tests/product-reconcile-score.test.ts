@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildProductReconcileReport } from "@/lib/product-reconcile/audit-catalog";
 import type { WixProductSnapshot } from "@/lib/wix/catalog-client";
+import { extractRichProductContent } from "@/lib/wix/catalog-rich";
 import { pickCanonicalSlug, buildWixPatch } from "@/lib/product-reconcile/score-canonical";
 
 const wixProduct: WixProductSnapshot = {
@@ -16,7 +17,8 @@ const wixProduct: WixProductSnapshot = {
   category: "Agri Drones",
   media_urls: [],
   visible: true,
-  updated_at: "2026-06-23T00:00:00.000Z"
+  updated_at: "2026-06-23T00:00:00.000Z",
+  rich: extractRichProductContent({ name: "10L Agri Drone" }, "Agri Drones", [])
 };
 
 describe("product reconcile scoring", () => {

@@ -38,6 +38,8 @@ describe("enterprise user governance workflow", () => {
     expect(userPanel).toContain("data-user-disable-form");
     expect(userPanel).toContain("data-user-reactivate-form");
     expect(userPanel).toContain("data-user-remove-form");
+    expect(userPanel).toContain("data-user-activity-feed");
+    expect(userPanel).toContain("Recent team activity");
     expect(userPanel).toContain("useDeferredValue");
     expect(userPanel).toContain("currentPageUsers");
     expect(userPanel).toContain("All Users");
@@ -50,6 +52,8 @@ describe("enterprise user governance workflow", () => {
     expect(usersPage).toContain("warehouse");
     expect(usersPage).toContain("supplier");
     expect(usersPage).toContain("user");
+    expect(usersPage).toContain("mapUserGovernanceActivity");
+    expect(usersPage).not.toContain("activity={[]}");
     expect(usersPage).not.toContain("User governance");
     expect(usersPage).not.toContain("Governance activity");
     expect(usersPage).not.toContain("unassigned");

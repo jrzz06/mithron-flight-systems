@@ -242,25 +242,25 @@ export const ENTERPRISE_CLEANUP_DEPENDENCIES: CleanupDependencyDefinition[] = [
   },
   {
     id: "admin-media-parity-surface",
-    label: "Admin media parity diagnostics surface",
-    path: "app/admin/media/page.tsx",
+    label: "Product media upload surface",
+    path: "app/admin/products/page.tsx",
     surface: "admin",
     status: "ACTIVE",
     removalGate: "mediaParity",
     safeLaterCandidate: false,
-    runtimeConsumers: ["services/admin.ts"],
-    dependencyReason: "media cleanup observability",
+    runtimeConsumers: ["services/admin.ts", "app/admin/products/actions.ts"],
+    dependencyReason: "product media upload and canonical asset linking",
     blockers: [
-      "Admin must keep detecting empty canonical media rows and active fallback manifests.",
-      "Removing media diagnostics would hide cleanup regressions."
+      "Products must keep uploading canonical media_assets rows during staged cleanup.",
+      "Removing product media upload would block catalog parity work."
     ],
     evidence: [
-      "Admin media page displays media_assets, product_media_assets, primary link coverage, buckets, and fallback manifest state.",
-      "User requested cleanup-safe diagnostics before decommissioning."
+      "Products page hosts local image upload and links media_assets through product_media_assets.",
+      "Media library admin route was removed; product forms are the operator upload surface."
     ],
     rollbackPlan: [
-      "Keep the diagnostics page throughout staged media cleanup.",
-      "Use it to confirm source rows and canonical rows before any media removal."
+      "Keep product media upload throughout staged media cleanup.",
+      "Use product media links to confirm canonical rows before any media removal."
     ]
   },
   {

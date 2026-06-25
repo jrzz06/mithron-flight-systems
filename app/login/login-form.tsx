@@ -129,13 +129,6 @@ export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormP
     window.location.assign(redirectTo);
   }, [redirectTo]);
 
-  useEffect(() => {
-    const urlError = new URLSearchParams(window.location.search).get("auth_error");
-    if (!urlError) return;
-    setStatus("idle");
-    setError(mapAuthErrorForClient(urlError));
-  }, []);
-
   async function authenticateWithCredentials(normalizedEmail: string, credentialPassword: string, redirectNext = nextPath) {
     if (!isMountedRef.current) return;
 

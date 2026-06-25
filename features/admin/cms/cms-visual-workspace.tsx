@@ -13,10 +13,13 @@ import {
   restoreContentRevisionAction,
   saveCmsMediaUploadFormAction,
   saveCategoryMetadataDraftFormAction,
+  saveFaqDraftFormAction,
   saveFooterColumnDraftFormAction,
   saveFooterLinkDraftFormAction,
   saveHeroBannerDraftFormAction,
   saveProductReviewDraftFormAction,
+  savePromotionalCampaignDraftFormAction,
+  saveSectionVisibilityDraftFormAction,
   saveSiteNavigationDraftFormAction
 } from "@/app/admin/cms/actions";
 import { isDeprecatedCmsStorefrontTable } from "@/config/cms-deprecations";
@@ -45,7 +48,7 @@ export type CmsWorkspaceSection = {
   anchor: string;
   routePath: string;
   previewHref: string;
-  kind: "hero" | "homepage" | "product" | "product_review" | "footer" | "navigation" | "category";
+  kind: "hero" | "homepage" | "product" | "product_review" | "footer" | "navigation" | "category" | "faq" | "campaign" | "section_visibility";
   title: string;
   description: string;
   table: string;
@@ -96,6 +99,7 @@ export type CmsWorkspaceSection = {
     compositionMobileMediaPosition: string;
     compositionProductDominance: string;
     routeKey: string;
+    routePath: string;
     showcaseImageSrc: string;
     showcaseImageAlt: string;
     showcaseImageJson: string;
@@ -754,6 +758,53 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
             <Field label="Showcase image URL" name="showcase_image_src_visual" value={fields.showcaseImageSrc} onChange={(value) => updateField("showcaseImageSrc", value)} />
             <Field label="Showcase image description" name="showcase_image_alt_visual" value={fields.showcaseImageAlt} onChange={(value) => updateField("showcaseImageAlt", value)} />
           </EditorGroup>
+          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+        </form>
+      );
+    }
+
+    if (section.kind === "faq") {
+      return (
+        <form action={saveFaqDraftFormAction} onSubmit={markSubmitted} data-cms-table="faqs" className="grid gap-3">
+          <HiddenBase section={section} />
+          <input type="hidden" name="id" value={section.entityId} />
+          <Field label="Scope" name="scope" value={fields.sectionKey || "global"} onChange={(value) => updateField("sectionKey", value)} />
+          <Field label="Product slug" name="product_slug" value={fields.productSlug} onChange={(value) => updateField("productSlug", value)} />
+          <Field label="Question" name="question" value={fields.title} onChange={(value) => updateField("title", value)} />
+          <Field label="Answer" name="answer" value={fields.body} onChange={(value) => updateField("body", value)} multiline />
+          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+        </form>
+      );
+    }
+
+    if (section.kind === "campaign") {
+      return (
+        <form action={savePromotionalCampaignDraftFormAction} onSubmit={markSubmitted} data-cms-table="promotional_campaigns" className="grid gap-3">
+          <HiddenBase section={section} />
+          <input type="hidden" name="id" value={section.entityId} />
+          <Field label="Label" name="label" value={fields.label} onChange={(value) => updateField("label", value)} />
+          <Field label="Headline" name="headline" value={fields.title} onChange={(value) => updateField("title", value)} />
+          <Field label="Body" name="body" value={fields.body} onChange={(value) => updateField("body", value)} multiline />
+          <Field label="CTA label" name="cta_label" value={fields.ctaLabel} onChange={(value) => updateField("ctaLabel", value)} />
+          <Field label="Link" name="href" value={fields.href} onChange={(value) => updateField("href", value)} />
+          <Field label="Media asset id" name="media_asset_id" value={fields.mediaAssetId} onChange={(value) => updateField("mediaAssetId", value)} />
+          <Field label="Starts at" name="starts_at" value={fields.startsAt} onChange={(value) => updateField("startsAt", value)} />
+          <Field label="Ends at" name="ends_at" value={fields.endsAt} onChange={(value) => updateField("endsAt", value)} />
+          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+        </form>
+      );
+    }
+
+    if (section.kind === "section_visibility") {
+      return (
+        <form action={saveSectionVisibilityDraftFormAction} onSubmit={markSubmitted} data-cms-table="section_visibility" className="grid gap-3">
+          <input type="hidden" name="section_key" value={fields.sectionKey} />
+          <input type="hidden" name="route_path" value={fields.routePath || "/"} />
+          <input type="hidden" name="change_summary" value={`Visual edit ${section.title}`} />
+          <VisibilityToggle section={section} />
+          <p className="text-xs text-slate-500">Section `{fields.sectionKey}` on `{fields.routePath || "/"}`</p>
+          <Field label="Starts at" name="starts_at" value={fields.startsAt} onChange={(value) => updateField("startsAt", value)} />
+          <Field label="Ends at" name="ends_at" value={fields.endsAt} onChange={(value) => updateField("endsAt", value)} />
           <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
         </form>
       );

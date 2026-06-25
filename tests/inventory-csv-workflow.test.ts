@@ -9,6 +9,7 @@ import {
   mapInventoryCsvRows,
   parseInventoryCsv
 } from "@/services/inventory-csv";
+import { buildSimpleInventoryRows, resolveStockStatus } from "@/services/simple-inventory-view";
 
 function source(path: string) {
   return readFileSync(join(process.cwd(), path), "utf8");
@@ -122,7 +123,50 @@ describe("inventory CSV workflow", () => {
     expect(csv).toContain("In stock");
   });
 
-  it("uses Supabase inventory rows for admin and warehouse inventory pages", () => {
+  it("builds synthetic inventory rows for catalog products without inventory records", () => {
+    const products = [
+      { slug: "zio", name: "ZIO", category: "Drones", price: 1200, workflow_status: "published" },
+      { slug: "pixy-lr", name: "Pixy LR", category: "Drones", price: 900, workflow_status: "published" }
+    ];
+
+    const rows = buildSimpleInventoryRows(
+      products,
+      [{ product_slug: "zio", sku: "ZIO", stock_status: "available", quantity: 0, reserved_quantity: 0, reorder_threshold: 0 }],
+      [],
+      "IN-WEST-01"
+    );
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      productSlug: "zio",
+      sku: "ZIO",
+      quantity: 0,
+      stockStatus: "out_of_stock"
+    });
+    expect(rows[1]).toMatchObject({
+      productSlug: "pixy-lr",
+      sku: "PIXY-LR",
+      quantity: 0,
+      stockStatus: "out_of_stock"
+    });
+  });
+
+  it("keeps multi-SKU inventory rows and resolves stale available status at zero quantity", () => {
+    const products = [{ slug: "drone-kit", name: "Drone Kit", category: "Kits", price: 500, workflow_status: "published" }];
+    const inventory = [
+      { product_slug: "drone-kit", sku: "KIT-BASE", stock_status: "available", quantity: 3, reserved_quantity: 0, reorder_threshold: 0 },
+      { product_slug: "drone-kit", sku: "KIT-PRO", stock_status: "available", quantity: 0, reserved_quantity: 0, reorder_threshold: 0 }
+    ];
+
+    const rows = buildSimpleInventoryRows(products, inventory, [], "IN-WEST-01");
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ sku: "KIT-BASE", quantity: 3, stockStatus: "available" });
+    expect(rows[1]).toMatchObject({ sku: "KIT-PRO", quantity: 0, stockStatus: "out_of_stock" });
+    expect(resolveStockStatus("available", 0)).toBe("out_of_stock");
+  });
+
+  it("uses the product catalog for admin and warehouse inventory pages", () => {
     const manager = source("components/admin/inventory-manager.tsx");
     const adminPage = source("app/admin/inventory/page.tsx");
     const warehousePage = source("app/warehouse/inventory/page.tsx");
@@ -145,6 +189,8 @@ describe("inventory CSV workflow", () => {
     expect(actions).toContain("fetchInventoryCsvSourceSlugs");
     expect(actions).toContain("CSV_IMPORT_SOURCE_TAG");
     expect(actions).not.toContain("Wix inventory");
+    expect(csvSource).toContain('"mithron_products"');
+    expect(csvSource).toContain("order=sort_order.asc");
     expect(csvSource).toContain('"inventory"');
     expect(csvSource).not.toContain("source_availability=eq.");
     expect(importScript).toContain("fetchInventoryCsvSourceSlugs");

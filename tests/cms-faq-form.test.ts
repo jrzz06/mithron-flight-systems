@@ -39,11 +39,14 @@ describe("FAQ CMS draft form", () => {
     });
   });
 
-  it("wires the draft-only FAQ form to the server action and admin page without changing storefront loaders", () => {
+  it("wires the draft-only FAQ form to the server action and admin CMS workspace", () => {
     const pageSource = readFileSync(join(process.cwd(), "app/admin/cms/page.tsx"), "utf8");
+    const workspaceSource = readFileSync(join(process.cwd(), "features/admin/cms/cms-visual-workspace.tsx"), "utf8");
     const actionSource = readFileSync(join(process.cwd(), "app/admin/cms/actions.ts"), "utf8");
 
-    expect(pageSource).not.toContain("data-cms-table=\"faqs\"");
+    expect(workspaceSource).toContain("data-cms-table=\"faqs\"");
+    expect(pageSource).toContain("faqSections");
+    expect(pageSource).toContain("faqs-page");
     expect(actionSource).toContain("buildFaqDraftFromFormData");
     expect(actionSource).toContain("saveFaqDraftFormAction");
     expect(actionSource).not.toContain("getPublicCmsSnapshot");

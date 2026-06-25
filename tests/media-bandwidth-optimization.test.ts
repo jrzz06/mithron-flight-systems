@@ -46,12 +46,12 @@ describe("safe media bandwidth optimization contract", () => {
     expect(nextConfig).toContain("max-age=31536000, immutable");
   });
 
-  it("keeps admin media upload revalidation scoped to media and product surfaces", () => {
-    const actions = readWorkspaceFile("app/admin/media/actions.ts");
+  it("keeps admin media upload revalidation scoped to product and CMS surfaces", () => {
+    const actions = readWorkspaceFile("app/admin/products/actions.ts");
 
-    expect(actions).toContain('revalidatePath("/admin/media")');
     expect(actions).toContain('revalidatePath("/admin/products")');
-    expect(actions).not.toContain('revalidatePath("/admin/cms")');
+    expect(actions).toContain('revalidatePath("/admin/cms")');
+    expect(actions).not.toContain('revalidatePath("/admin/media")');
   });
 
   it("provides a repeatable read-only media bandwidth audit tool", () => {

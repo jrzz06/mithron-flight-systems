@@ -79,12 +79,14 @@ export function SearchOverlay() {
   useEffect(() => {
     if (open) return;
 
-    setQuery("");
-    setCatalogIndex([]);
-    setIndexReady(false);
-    setFallbackResults([]);
-    setSearchError(null);
-    setIsFallbackSearching(false);
+    queueMicrotask(() => {
+      setQuery("");
+      setCatalogIndex([]);
+      setIndexReady(false);
+      setFallbackResults([]);
+      setSearchError(null);
+      setIsFallbackSearching(false);
+    });
   }, [open]);
 
   useEffect(() => {
@@ -123,8 +125,10 @@ export function SearchOverlay() {
 
     let active = true;
     const controller = new AbortController();
-    setIsFallbackSearching(true);
-    setSearchError(null);
+    queueMicrotask(() => {
+      setIsFallbackSearching(true);
+      setSearchError(null);
+    });
 
     void fetch(`/api/catalog/search?q=${encodeURIComponent(activeQuery)}&limit=24`, {
       signal: controller.signal,

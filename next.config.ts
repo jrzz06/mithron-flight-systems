@@ -80,7 +80,8 @@ const nextConfig: NextConfig = {
       { source: "/mapping", destination: "/category/survey-drones", permanent: true },
       { source: "/surveillance", destination: "/category/surveillance-drones", permanent: true },
       { source: "/accessories", destination: "/category/accessories", permanent: true },
-      { source: "/industrial", destination: "/category/global-products", permanent: true }
+      { source: "/industrial", destination: "/category/global-products", permanent: true },
+      { source: "/supplier/orders", destination: "/supplier", permanent: true }
     ];
   },
   async headers() {

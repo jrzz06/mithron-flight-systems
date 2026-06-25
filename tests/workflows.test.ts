@@ -20,7 +20,6 @@ describe("workflow registry", () => {
     const supplier = getRoleWorkflow("supplier");
     const paths = supplier.pages.map((page) => page.path);
     expect(paths).toContain("/supplier/submissions");
-    expect(paths).toContain("/supplier/orders");
     expect(paths).toContain("/supplier/inventory");
   });
 

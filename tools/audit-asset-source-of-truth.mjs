@@ -12,8 +12,6 @@ const PUBLIC = path.join(ROOT, "public");
 
 const RUNTIME_SOURCE_DIRS = ["app", "components", "config", "features", "lib", "sections", "services"];
 const RUNTIME_EXTENSIONS = new Set([".ts", ".tsx"]);
-const LEGACY_PATTERNS = [/wixstatic\.com/i, /\.bak$/i, /mithron-products-crawled/];
-const PIPELINE_ONLY_DIRS = ["tools", "scripts", "data"];
 
 function walk(dir, extensions, files = []) {
   if (!fs.existsSync(dir)) return files;
@@ -27,14 +25,6 @@ function walk(dir, extensions, files = []) {
     }
   }
   return files;
-}
-
-function flattenRegistryPaths(obj, acc = []) {
-  for (const value of Object.values(obj)) {
-    if (typeof value === "string" && value.startsWith("/")) acc.push(value);
-    else if (value && typeof value === "object") flattenRegistryPaths(value, acc);
-  }
-  return acc;
 }
 
 function loadRegistryPaths() {

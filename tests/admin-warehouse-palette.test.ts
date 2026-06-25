@@ -19,6 +19,8 @@ describe("admin and warehouse dark enterprise palette", () => {
     expect(platformStyles).toContain("--platform-surface: #14161a");
     expect(platformStyles).toContain("--platform-text-primary: #eceef2");
     expect(platformStyles).toContain("--platform-accent: #dce0e6");
+    expect(platformStyles).toContain("--platform-accent-text: #131518");
+    expect(platformStyles).toContain(".platform-btn-primary");
 
     expect(platformShell).toContain('data-control-plane-theme="dark"');
     expect(platformShell).toContain('@/app/platform.css');

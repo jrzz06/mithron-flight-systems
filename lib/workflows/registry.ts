@@ -98,10 +98,9 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
       { path: "/admin/inventory", label: "Inventory", description: "Stock levels and adjustments" },
       { path: "/admin/orders", label: "Orders", description: "Order lifecycle" },
       { path: "/admin/suppliers", label: "Suppliers", description: "Supplier approvals" },
+      { path: "/admin/enquiries", label: "Enquiries", description: "Customer enquiries" },
       { path: "/admin/cms", label: "CMS", description: "Content and merchandising" },
-      { path: "/admin/users", label: "Users", description: "Roles and access" },
-      { path: "/admin/reports", label: "Reports", description: "Analytics" },
-      { path: "/admin/settings", label: "Settings", description: "Platform configuration" }
+      { path: "/admin/audit", label: "System Diagnostics", description: "Operational diagnostics" }
     ],
     actions: [
       { id: "product.approve", label: "Approve supplier product", permission: "products.write", auditEvent: "product.approved", notification: "product.published" },
@@ -135,8 +134,7 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
       { path: "/supplier", label: "Overview", description: "Submission summary" },
       { path: "/supplier/products", label: "Products", description: "Manage listings" },
       { path: "/supplier/submissions", label: "Submissions", description: "Approval inbox" },
-      { path: "/supplier/inventory", label: "Stock levels", description: "View stock and request updates" },
-      { path: "/supplier/orders", label: "Orders", description: "Orders with supplier SKUs" }
+      { path: "/supplier/inventory", label: "Stock levels", description: "View stock and request updates" }
     ],
     actions: [
       { id: "product.create", label: "Create draft", permission: "products.submit", auditEvent: "product.draft_created" },

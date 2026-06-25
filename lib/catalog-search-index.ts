@@ -19,11 +19,10 @@ const MIN_TOKEN_LENGTH = 2;
 
 
 function toSearchResult(entry: CatalogSearchIndexEntry): CatalogSearchResult {
-
-  const { searchText: _searchText, sortOrder: _sortOrder, ...result } = entry;
-
+  const { searchText, sortOrder, ...result } = entry;
+  void searchText;
+  void sortOrder;
   return result;
-
 }
 
 

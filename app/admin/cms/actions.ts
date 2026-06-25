@@ -43,6 +43,11 @@ import {
 import { recordCmsRevision, restoreCmsRevision } from "@/services/cms-crud";
 import { getCurrentAuthContext, requireAdminPermission, requirePermission } from "@/services/auth";
 import {
+  assertCmsPublishPolicyAllowed,
+  assertSectionVisibilityPolicyAllowed,
+  getAdminSettingsPolicy
+} from "@/services/admin-settings-policy";
+import {
   assertAllowedMediaBucket,
   assertAllowedMediaMimeType,
   assertMediaUploadSize,
@@ -473,6 +478,8 @@ export async function archiveCmsWorkflowRecordAction(input: CmsWorkflowStateActi
 }
 
 export async function saveSectionVisibilityDraftFormAction(formData: FormData) {
+  const policy = await getAdminSettingsPolicy();
+  assertSectionVisibilityPolicyAllowed(policy);
   const draftInput = buildSectionVisibilityDraftFromFormData(formData);
   await runCmsFormMutation("section_visibility", "Section visibility draft saved. Publish to update the live website.", async () => {
     await saveCmsWorkflowDraft({
@@ -696,6 +703,8 @@ export async function saveHeroBannerDraftFormAction(formData: FormData) {
 }
 
 export async function publishHeroBannerFormAction(formData: FormData) {
+  const policy = await getAdminSettingsPolicy();
+  assertCmsPublishPolicyAllowed(policy);
   const stateInput = buildHeroBannerStateFromFormData(formData);
   await runCmsFormMutation("hero_banners", "Hero banner published and live website cache invalidated.", async () => {
     await publishHeroBannerWorkflow({
@@ -718,6 +727,8 @@ export async function archiveHeroBannerFormAction(formData: FormData) {
 }
 
 export async function publishCmsWorkspaceRecordFormAction(formData: FormData) {
+  const policy = await getAdminSettingsPolicy();
+  assertCmsPublishPolicyAllowed(policy);
   const table = readText(formData, "entity_table");
   const entityId = readText(formData, "entity_id");
   const requestId = readText(formData, "publish_request_id");

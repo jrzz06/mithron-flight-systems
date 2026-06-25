@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { WarehouseCodeSelect } from "@/components/warehouse/warehouse-code-select";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { getDefaultWarehouseCode } from "@/services/warehouse-config";
+import { listActiveWarehouses } from "@/services/warehouses";
 import { applyWarehouseMovementFormAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +40,11 @@ async function recordTransfer(formData: FormData) {
 }
 
 export default async function TransfersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const snapshot = await getWarehouseSnapshot({ scope: "transfers" });
+  const [snapshot, warehouses, defaultWarehouseCode] = await Promise.all([
+    getWarehouseSnapshot({ scope: "transfers" }),
+    listActiveWarehouses(),
+    getDefaultWarehouseCode()
+  ]);
   const params = searchParams ? await searchParams : {};
   const operationStatus = value(params, "operation_status");
   const operationMessage = value(params, "operation_message");
@@ -88,10 +95,10 @@ export default async function TransfersPage({ searchParams }: { searchParams?: P
             SKU
             <input name="sku" defaultValue={text(stockOptions[0]?.sku, "")} className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100" />
           </label>
-          <label className="grid gap-1 text-xs font-medium text-slate-500">
-            Warehouse code
-            <input name="warehouse_code" defaultValue={text(stockOptions[0]?.warehouse_code, "IN-WEST-01")} className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100" />
-          </label>
+          <WarehouseCodeSelect
+            warehouses={warehouses}
+            defaultValue={text(stockOptions[0]?.warehouse_code, defaultWarehouseCode)}
+          />
           <label className="grid gap-1 text-xs font-medium text-slate-500">
             Quantity delta
             <input name="quantity_delta" defaultValue="-1" inputMode="numeric" className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100" />

@@ -1,24 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 export function useImageReveal(src: string) {
-  const [isRevealed, setIsRevealed] = useState(false);
-
-  useEffect(() => {
-    setIsRevealed(false);
-  }, [src]);
+  const [revealedSrc, setRevealedSrc] = useState<string | null>(null);
+  const isRevealed = revealedSrc === src;
 
   const revealFromImage = useCallback((img: HTMLImageElement | null) => {
     if (!img) return;
     if (img.complete && img.naturalWidth > 0) {
-      setIsRevealed(true);
+      setRevealedSrc(src);
     }
-  }, []);
+  }, [src]);
 
   const handleReveal = useCallback(() => {
-    setIsRevealed(true);
-  }, []);
+    setRevealedSrc(src);
+  }, [src]);
 
   return { isRevealed, revealFromImage, handleReveal };
 }

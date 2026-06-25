@@ -3,6 +3,7 @@ import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { connectivityMessage } from "@/lib/platform/copy";
 import { updateShipmentLifecycleFormAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -67,13 +68,15 @@ export default async function ShipmentDetailPage({ params, searchParams }: Shipm
   const operationMessage = searchValue(query, "operation_message");
   const shipmentStages = ["pending", "reserved", "packed", "ready_for_pickup", "shipped", "in_transit", "delivered"];
   const currentStage = asText(shipment.shipment_status, "pending");
+  const linkedOrder = snapshot.data.orders.find((row) => asText(row.id, "") === asText(shipment.order_id, ""));
+  const linkedOrderNumber = asText(linkedOrder?.order_number, "");
 
   return (
     <div data-shipment-detail-route>
       <ControlShell
       eyebrow="Shipment detail"
       title={asText(shipment.shipment_number, "Shipment")}
-      description={snapshot.blockedReason ?? `${asText(shipment.shipment_status, "pending")} | ${asText(shipment.warehouse_id, "warehouse")} | order ${asText(shipment.order_id, "unknown")}`}
+      description={connectivityMessage(snapshot.blockedReason) || `${asText(shipment.shipment_status, "pending")}${linkedOrderNumber ? ` | Order ${linkedOrderNumber}` : ""}`}
       metrics={[
         { label: "Items", value: String(items.length) },
         { label: "Timeline", value: String(timeline.length) },

@@ -33,7 +33,7 @@ describe("warehouse route snapshot scoping", () => {
     expect(adminService).toContain("type WarehouseSnapshotScope");
     expect(adminService).toContain("const warehouseSnapshotScopes");
     expect(adminService).toContain('picking: new Set(["stock", "orders", "orderItems"])');
-    expect(adminService).toContain('dispatch: new Set(["shipments", "shipmentItems", "shipmentTimeline"])');
+    expect(adminService).toContain('dispatch: new Set(["shipments", "shipmentItems", "shipmentTimeline", "orders", "orderItems"])');
     expect(adminService).toContain("quantity,created_at&order=created_at.desc&limit=120");
     expect(adminService).not.toContain("quantity_packed");
     expect(adminService).toContain('movements: new Set(["movements"])');

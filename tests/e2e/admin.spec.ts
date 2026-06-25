@@ -18,7 +18,7 @@ test.describe("Production admin testing", () => {
     await loginAsRole(page, "admin");
     await expect(page).toHaveURL(/\/admin/);
     await expect(page.locator("[data-admin-dashboard]")).toBeVisible({ timeout: 25_000 });
-    await expect(page.locator("[data-admin-quick-actions]")).toBeVisible();
+    await expect(page.locator("[data-admin-kpi-strip]")).toBeVisible({ timeout: 25_000 });
   });
 
   test("admin products workspace loads", async ({ page }) => {

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/server";
 import { redirect } from "next/navigation";
 import { listCustomerAddresses } from "@/services/customer-addresses";
-import { createAddressFormAction, deleteAddressFormAction } from "./actions";
+import { createAddressFormAction, deleteAddressFormAction, updateAddressFormAction } from "./actions";
 
 export default async function AccountAddressesPage() {
   const supabase = await createClient();
@@ -24,6 +24,18 @@ export default async function AccountAddressesPage() {
                 <br />
                 {String(address.city)}, {String(address.region)} {String(address.postal_code)}
               </p>
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm text-emerald-400">Edit address</summary>
+                <form action={updateAddressFormAction} className="mt-4 grid gap-3 md:grid-cols-2">
+                  <input type="hidden" name="address_id" value={String(address.id)} />
+                  <input name="label" defaultValue={String(address.label ?? "Home")} placeholder="Label" className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white" />
+                  <input name="line1" required defaultValue={String(address.line1)} placeholder="Address line 1" className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white md:col-span-2" />
+                  <input name="city" required defaultValue={String(address.city)} placeholder="City" className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white" />
+                  <input name="region" required defaultValue={String(address.region)} placeholder="Region" className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white" />
+                  <input name="postal_code" required defaultValue={String(address.postal_code)} placeholder="Postal code" className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white md:col-span-2" />
+                  <button type="submit" className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black md:col-span-2">Save changes</button>
+                </form>
+              </details>
               <form action={deleteAddressFormAction} className="mt-4">
                 <input type="hidden" name="address_id" value={String(address.id)} />
                 <button type="submit" className="text-sm text-red-400">Remove</button>

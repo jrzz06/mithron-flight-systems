@@ -39,9 +39,10 @@ export function SupplierFeedbackDialog() {
   if (!open) return null;
 
   const isSuccess = status === "success";
+  const lowerMessage = message.toLowerCase();
   const title = isSuccess
-    ? message.toLowerCase().includes("submitted")
-      ? "Submitted for approval"
+    ? lowerMessage.includes("review") || lowerMessage.includes("submitted")
+      ? "Sent for review"
       : "Product saved"
     : "Could not save product";
 
@@ -57,7 +58,7 @@ export function SupplierFeedbackDialog() {
         aria-labelledby="supplier-feedback-title"
         aria-describedby="supplier-feedback-message"
         data-supplier-feedback-dialog
-        className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-[#0f141b] p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-[var(--platform-border)] bg-[var(--platform-surface)] p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start gap-3">
@@ -67,10 +68,10 @@ export function SupplierFeedbackDialog() {
             <XCircle className="mt-0.5 h-6 w-6 shrink-0 text-rose-400" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <h2 id="supplier-feedback-title" className="text-lg font-semibold text-slate-100">
+            <h2 id="supplier-feedback-title" className="text-lg font-semibold text-[var(--platform-text-primary)]">
               {title}
             </h2>
-            <p id="supplier-feedback-message" className="mt-2 text-sm text-slate-300">
+            <p id="supplier-feedback-message" className="mt-2 text-sm text-[var(--platform-text-secondary)]">
               {message}
             </p>
           </div>

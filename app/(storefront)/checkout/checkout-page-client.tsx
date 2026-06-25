@@ -141,7 +141,7 @@ function CheckoutInvoice({
   );
 }
 
-export function CheckoutPageClient({ auditToken }: { auditToken?: string | null }) {
+export function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const items = useCartStore((state) => state.items);
@@ -211,6 +211,7 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
     orderId: string,
     orderNumber: string
   ) => {
+    clearCart();
     setCheckoutOrderMeta({ orderId });
     setCompleted({
       mode,
@@ -222,7 +223,7 @@ export function CheckoutPageClient({ auditToken }: { auditToken?: string | null 
       isSignedIn
     });
     setError("");
-  }, [setCheckoutOrderMeta, checkout.email, phone, grandTotal, isSignedIn]);
+  }, [setCheckoutOrderMeta, checkout.email, phone, grandTotal, isSignedIn, clearCart]);
 
   useEffect(() => {
     let active = true;

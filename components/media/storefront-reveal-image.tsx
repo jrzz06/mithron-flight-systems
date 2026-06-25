@@ -19,8 +19,10 @@ export function StorefrontRevealImage({
   }, [props.src, revealFromImage]);
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       {...props}
+      alt={props.alt ?? ""}
       ref={imgRef}
       className={cn("mithron-responsive-image", isRevealed && "is-revealed", className)}
       data-image-reveal={isRevealed ? "revealed" : "pending"}

@@ -52,6 +52,37 @@ type CountMetric = {
   status: "LIVE" | "UNAVAILABLE";
 };
 
+export type DashboardOperationalCounts = {
+  pendingOrdersReview: CountMetric;
+  lowStockAlerts: CountMetric;
+  pendingSupplierSubmissions: CountMetric;
+  openEnquiries: CountMetric;
+};
+
+function combineCountMetrics(label: string, left: CountMetric, right: CountMetric): CountMetric {
+  if (left.status === "UNAVAILABLE" && right.status === "UNAVAILABLE") {
+    return { table: label, count: 0, status: "UNAVAILABLE" };
+  }
+  return {
+    table: label,
+    count: (left.status === "LIVE" ? left.count : 0) + (right.status === "LIVE" ? right.count : 0),
+    status: left.status === "LIVE" || right.status === "LIVE" ? "LIVE" : "UNAVAILABLE"
+  };
+}
+
+export function formatDashboardCount(metric: CountMetric) {
+  return metric.status === "LIVE" ? String(metric.count) : "—";
+}
+
+export function orderNeedsAdminReview(order: AdminRow) {
+  const status = String(order.status ?? "pending");
+  const channel = String(order.channel ?? "checkout");
+  return (
+    ["paid", "admin_review", "pending_payment"].includes(status)
+    || (channel === "enquiry" && ["admin_review", "pending_payment"].includes(status))
+  );
+}
+
 const ADMIN_LIST_LIMIT = 80;
 const ADMIN_FETCH_TIMEOUT_MS = 30_000;
 const MEDIA_LIBRARY_LIMIT = 96;
@@ -65,16 +96,18 @@ const warehouseSnapshotScopes: Record<WarehouseSnapshotScope, Set<WarehouseSnaps
   orders: new Set(["products", "stock", "orders", "orderItems", "shipments"]),
   picking: new Set(["stock", "orders", "orderItems"]),
   packing: new Set(["orders", "orderItems", "shipments"]),
-  dispatch: new Set(["shipments", "shipmentItems", "shipmentTimeline"]),
-  returns: new Set(["shipments"]),
+  dispatch: new Set(["shipments", "shipmentItems", "shipmentTimeline", "orders", "orderItems"]),
+  returns: new Set(["shipments", "orders"]),
   transfers: new Set(["stock", "movements"]),
   movements: new Set(["movements"]),
-  activity: new Set(["movements", "shipmentTimeline", "activityLogs"]),
+  activity: new Set(["movements", "shipmentTimeline", "activityLogs", "orders", "shipments"]),
   settings: new Set(["inventory", "stock", "shipments"])
 };
 
 const dashboardQueries = {
-  orders: "select=id,order_number,status,payment_status,fulfillment_status,total,currency,created_at,updated_at&order=created_at.desc&limit=8",
+  orders: "select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,created_at,updated_at&order=created_at.desc&limit=8",
+  ordersNeedingReview:
+    "select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,created_at,updated_at&status=in.(paid,admin_review,pending_payment)&order=created_at.desc&limit=8",
   shipments: "select=id,shipment_number,shipment_status,order_id,warehouse_id,updated_at,created_at&order=updated_at.desc&limit=8",
   inventoryMovements: "select=id,movement_type,product_slug,sku,quantity_delta,created_at&order=created_at.desc&limit=8",
   contentRevisions: "select=id,entity_table,entity_id,revision,change_summary,created_at&order=created_at.desc&limit=8",
@@ -116,7 +149,12 @@ const governanceQueries = {
   userRoles: "select=user_id,role_key,created_at&order=created_at.desc&limit=320",
   roles: "select=key,label,description,sort_order&order=sort_order.asc&limit=40",
   adminInvites: "select=id,email,role_key,status,expires_at,created_at,updated_at&order=created_at.desc&limit=80",
-  activityLogs: "select=id,actor_id,action,entity_table,entity_id,severity,created_at&entity_table=in.(profiles,user_roles,admin_invites)&order=created_at.desc&limit=80"
+  activityLogs: "select=id,actor_id,action,entity_table,entity_id,severity,metadata,created_at&or=(entity_table.in.(profiles,user_roles,admin_invites,auth),action.like.users.%25)&order=created_at.desc&limit=40"
+} as const;
+
+const supplierDirectoryQueries = {
+  supplierRoles: "select=user_id,role_key,created_at&role_key=eq.supplier&order=created_at.desc&limit=160",
+  profiles: "select=id,email,display_name,phone,governance_status,created_at,updated_at&order=updated_at.desc&limit=320"
 } as const;
 
 const adminSettingsQueries = {
@@ -136,8 +174,8 @@ const cmsWorkspaceQueries = {
   footerLinks: "select=id,column_id,label,href,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=20",
   categoryMetadata: "select=route_key,title,subtitle,hero_image,showcase_image,personality,featured_product_slugs,ecosystem_payload,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=20",
   productReviews: "select=id,product_slug,reviewer_name,body,rating,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=20",
-  faqs: "select=id,question,answer,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=20",
-  promotionalCampaigns: "select=id,label,headline,body,cta_label,href,media_asset_id,starts_at,ends_at,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=20",
+  faqs: "select=id,scope,product_slug,question,answer,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=40",
+  promotionalCampaigns: "select=id,label,headline,body,cta_label,href,media_asset_id,starts_at,ends_at,sort_order,is_visible,status,revision,updated_at,created_at&order=sort_order.asc&limit=40",
   mediaAssets: "select=id,public_url,caption,alt,alt_text,width,height,usage_scope,metadata,updated_at&order=updated_at.desc&limit=40",
   contentRevisions: "select=id,entity_table,entity_id,revision,snapshot,change_summary,created_at&order=created_at.desc&limit=20"
 } as const;
@@ -152,6 +190,24 @@ type GovernedUser = {
   created_at: string;
   last_sign_in_at: string | null;
   banned_until: string | null;
+};
+
+export type UserGovernanceActivityItem = {
+  id: string;
+  timestamp: string;
+  actorName: string;
+  actionLabel: string;
+  targetLabel: string;
+};
+
+export type AdminSupplierItem = {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  verificationStatus: string;
+  registeredAt: string;
 };
 
 type SupabaseAuthUser = {
@@ -172,6 +228,116 @@ function blockedSnapshot<T extends Record<string, unknown>>(message: string, dat
     blockedReason: message,
     data
   };
+}
+
+const personalEmailDomains = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "icloud.com",
+  "live.com"
+]);
+
+const userGovernanceActionLabels: Record<string, string> = {
+  "users.create": "Created user",
+  "users.invite": "Sent invite",
+  "users.invite_duplicate": "Blocked duplicate invite",
+  "users.invite_notification": "Logged invite notification",
+  "users.role_assign": "Changed role",
+  "users.role_remove": "Removed role",
+  "users.disable": "Disabled account",
+  "users.reactivate": "Reactivated account",
+  "users.remove": "Removed user",
+  "users.password_reset": "Reset password",
+  "auth.login": "Signed in",
+  "auth.logout": "Signed out",
+  "auth.session_revoked": "Revoked session",
+  "auth.invite_accept": "Accepted invite",
+  "auth.failed_login": "Failed login"
+};
+
+function readActivityMetadata(row: AdminRow) {
+  const metadata = row.metadata;
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Record<string, unknown>
+    : {};
+}
+
+function readActivityStateField(state: unknown, key: string) {
+  if (!state || typeof state !== "object" || Array.isArray(state)) return null;
+  const value = (state as Record<string, unknown>)[key];
+  return value == null ? null : String(value);
+}
+
+function deriveCompanyLabel(email: string, metadata: Record<string, unknown>) {
+  const explicit = metadata.company ?? metadata.company_name ?? metadata.organization;
+  if (typeof explicit === "string" && explicit.trim()) return explicit.trim();
+
+  const domain = email.split("@")[1]?.toLowerCase() ?? "";
+  if (!domain || personalEmailDomains.has(domain)) return "—";
+  const label = domain.split(".")[0] ?? "";
+  if (!label) return "—";
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function userGovernanceActionLabel(action: string) {
+  if (userGovernanceActionLabels[action]) return userGovernanceActionLabels[action];
+  return action.replaceAll(".", " ").replaceAll("_", " ");
+}
+
+export function mapUserGovernanceActivity(
+  activity: AdminRow[],
+  users: GovernedUser[],
+  invites: AdminRow[] = []
+): UserGovernanceActivityItem[] {
+  const userById = new Map(users.map((user) => [user.id, user]));
+  const inviteById = new Map(invites.map((invite) => [String(invite.id ?? ""), invite]));
+
+  return activity.map((row) => {
+    const metadata = readActivityMetadata(row);
+    const actorId = String(row.actor_id ?? "");
+    const actor = userById.get(actorId);
+    const targetUserId = metadata.target_user_id ? String(metadata.target_user_id) : "";
+    const targetUser = targetUserId ? userById.get(targetUserId) : null;
+    const entityTable = String(row.entity_table ?? "");
+    const entityId = String(row.entity_id ?? "");
+    const action = String(row.action ?? "");
+
+    let targetLabel = "—";
+    if (targetUser) {
+      targetLabel = targetUser.display_name || targetUser.email;
+    } else if (entityTable === "admin_invites") {
+      const invite = inviteById.get(entityId);
+      targetLabel = String(invite?.email ?? metadata.email ?? readActivityStateField(metadata.after_state, "email") ?? entityId);
+    } else if (entityTable === "user_roles") {
+      const role = readActivityStateField(metadata.after_state, "role")
+        ?? readActivityStateField(metadata.after_state, "role_key");
+      const roleUserId = readActivityStateField(metadata.after_state, "user_id") ?? targetUserId;
+      const roleUser = roleUserId ? userById.get(roleUserId) : null;
+      if (roleUser && role) targetLabel = `${roleUser.email} → ${role}`;
+      else if (roleUser) targetLabel = roleUser.display_name || roleUser.email;
+      else if (role) targetLabel = role;
+    } else if (entityTable === "profiles") {
+      const profileUser = userById.get(entityId);
+      targetLabel = profileUser
+        ? profileUser.display_name || profileUser.email
+        : String(readActivityStateField(metadata.after_state, "email") ?? metadata.email ?? entityId);
+    } else if (entityTable === "auth") {
+      targetLabel = actor?.email ?? "Auth session";
+    } else if (entityTable && entityId) {
+      targetLabel = entityTable;
+    }
+
+    return {
+      id: String(row.id ?? `${action}-${row.created_at ?? ""}`),
+      timestamp: String(row.created_at ?? ""),
+      actorName: actor?.display_name || actor?.email || (actorId ? "Team member" : "System"),
+      actionLabel: userGovernanceActionLabel(action),
+      targetLabel
+    };
+  });
 }
 
 function isWarehouseSnapshotScope(value: unknown): value is WarehouseSnapshotScope {
@@ -266,9 +432,13 @@ async function fetchAdminRows<T extends AdminRow>(
   }
 }
 
-async function countTable(config: Extract<SupabaseAdminConfig, { configured: true }>, table: string): Promise<CountMetric> {
+async function countTableRows(
+  config: Extract<SupabaseAdminConfig, { configured: true }>,
+  table: string,
+  query = "select=id&limit=1"
+): Promise<CountMetric> {
   try {
-    const response = await fetch(`${config.url}/rest/v1/${table}?select=id&limit=1`, {
+    const response = await fetch(`${config.url}/rest/v1/${table}?${query}`, {
       method: "HEAD",
       headers: {
         ...getAdminHeaders(config),
@@ -288,6 +458,10 @@ async function countTable(config: Extract<SupabaseAdminConfig, { configured: tru
   } catch {
     return { table, count: 0, status: "UNAVAILABLE" };
   }
+}
+
+async function countTable(config: Extract<SupabaseAdminConfig, { configured: true }>, table: string): Promise<CountMetric> {
+  return countTableRows(config, table);
 }
 
 async function fetchStorageBuckets(config: Extract<SupabaseAdminConfig, { configured: true }>) {
@@ -328,36 +502,86 @@ function statusFromMetrics(metrics: CountMetric[]): "LIVE" | "PARTIAL" {
 
 export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
+  const emptyOperationalCounts: DashboardOperationalCounts = {
+    pendingOrdersReview: { table: "orders.pending_review", count: 0, status: "UNAVAILABLE" },
+    lowStockAlerts: { table: "inventory.low_stock", count: 0, status: "UNAVAILABLE" },
+    pendingSupplierSubmissions: { table: "mithron_products.pending_review", count: 0, status: "UNAVAILABLE" },
+    openEnquiries: { table: "enquiries.open", count: 0, status: "UNAVAILABLE" }
+  };
   const emptyData = {
     metrics: [] as CountMetric[],
+    operationalCounts: emptyOperationalCounts,
     recentOrders: [] as AdminRow[],
+    ordersNeedingReview: [] as AdminRow[],
     recentNotifications: [] as AdminRow[],
     recentActivity: [] as AdminRow[],
     lowStockAlerts: [] as AdminRow[]
   };
   if (!config.configured) return blockedSnapshot(config.message, emptyData);
 
-  const [metrics, recentOrders, recentNotifications, recentActivity, lowStockAlerts] = await Promise.all([
+  const [
+    metrics,
+    operationalCounts,
+    recentOrders,
+    ordersNeedingReview,
+    recentNotifications,
+    recentActivity,
+    lowStockAlerts
+  ] = await Promise.all([
     Promise.all([
       countTable(config, "orders"),
       countTable(config, "mithron_products"),
       countTable(config, "inventory"),
       countTable(config, "notifications")
     ]),
+    Promise.all([
+      countTableRows(config, "orders", "select=id&status=in.(paid,admin_review,pending_payment)&limit=1").then((metric) => ({
+        ...metric,
+        table: "orders.pending_review"
+      })),
+      countTableRows(config, "inventory", "select=product_slug&stock_status=in.(low_stock,out_of_stock)&limit=1").then((metric) => ({
+        ...metric,
+        table: "inventory.low_stock"
+      })),
+      countTableRows(config, "mithron_products", "select=slug&workflow_status=eq.pending_review&limit=1").then((metric) => ({
+        ...metric,
+        table: "mithron_products.pending_review"
+      })),
+      Promise.all([
+        countTableRows(config, "enquiries", "select=id&status=eq.new&limit=1"),
+        countTableRows(config, "orders", "select=id&channel=eq.enquiry&status=eq.admin_review&limit=1")
+      ]).then(([contactEnquiries, checkoutEnquiries]) =>
+        combineCountMetrics("enquiries.open", { ...contactEnquiries, table: "enquiries.new" }, { ...checkoutEnquiries, table: "orders.enquiry_review" })
+      )
+    ]).then(([pendingOrdersReview, lowStockAlertsCount, pendingSupplierSubmissions, openEnquiries]) => ({
+      pendingOrdersReview,
+      lowStockAlerts: lowStockAlertsCount,
+      pendingSupplierSubmissions,
+      openEnquiries
+    })),
     fetchAdminRows(config, "orders", dashboardQueries.orders),
+    fetchAdminRows(config, "orders", dashboardQueries.ordersNeedingReview),
     fetchAdminRows(config, "notifications", dashboardQueries.notifications),
     fetchAdminRows(config, "activity_logs", dashboardQueries.activityLogs),
     fetchAdminRows(config, "inventory", dashboardQueries.lowStockInventory)
   ]);
-  const rowTables = [recentOrders, recentNotifications, recentActivity, lowStockAlerts];
+  const rowTables = [recentOrders, ordersNeedingReview, recentNotifications, recentActivity, lowStockAlerts];
+  const operationalMetricList = Object.values(operationalCounts);
 
   return {
-    status: statusFromMetrics(metrics) === "LIVE" && rowTables.every((table) => table.status === "LIVE") ? "LIVE" as const : "PARTIAL" as const,
+    status:
+      statusFromMetrics(metrics) === "LIVE"
+      && operationalMetricList.every((metric) => metric.status === "LIVE")
+      && rowTables.every((table) => table.status === "LIVE")
+        ? "LIVE" as const
+        : "PARTIAL" as const,
     source: "supabase-admin" as const,
     blockedReason: rowTables.find((table) => table.status !== "LIVE")?.error,
     data: {
       metrics,
+      operationalCounts,
       recentOrders: recentOrders.rows,
+      ordersNeedingReview: ordersNeedingReview.rows,
       recentNotifications: recentNotifications.rows,
       recentActivity: recentActivity.rows,
       lowStockAlerts: lowStockAlerts.rows
@@ -529,13 +753,14 @@ export const getUserGovernanceSnapshot = cache(async (env: EnvSource = process.e
   };
   if (!config.configured) return blockedSnapshot(config.message, emptyData);
 
-  const [authUsers, profiles, userRoles, roles, invites, activity] = await Promise.all([
+  const [authUsers, profiles, userRoles, roles, invites, activity, governanceTimeline] = await Promise.all([
     listGovernanceAuthUsers(config),
     fetchAdminRows(config, "profiles", governanceQueries.profiles),
     fetchAdminRows(config, "user_roles", governanceQueries.userRoles),
     fetchAdminRows(config, "roles", governanceQueries.roles),
     fetchAdminRows(config, "admin_invites", governanceQueries.adminInvites),
-    fetchAdminRows(config, "activity_logs", governanceQueries.activityLogs)
+    fetchAdminRows(config, "activity_logs", governanceQueries.activityLogs),
+    fetchAdminRows(config, "activity_logs", auditQueries.governanceTimeline)
   ]);
 
   const profileById = new Map(profiles.rows.map((profile) => [String(profile.id ?? ""), profile]));
@@ -584,15 +809,73 @@ export const getUserGovernanceSnapshot = cache(async (env: EnvSource = process.e
   });
 
   return {
-    status: authUsers.error || [profiles, userRoles, roles, invites, activity].some((table) => table.status !== "LIVE") ? "PARTIAL" as const : "LIVE" as const,
+    status: authUsers.error || [profiles, userRoles, roles, invites, activity, governanceTimeline].some((table) => table.status !== "LIVE") ? "PARTIAL" as const : "LIVE" as const,
     source: "supabase-admin" as const,
     blockedReason: authUsers.error,
     data: {
       users,
       roles: roles.rows,
       invites: invites.rows,
-      activity: activity.rows
+      activity: [...activity.rows, ...governanceTimeline.rows]
+        .filter((row, index, rows) => rows.findIndex((candidate) => String(candidate.id ?? "") === String(row.id ?? "")) === index)
+        .sort((first, second) => Date.parse(String(second.created_at ?? "")) - Date.parse(String(first.created_at ?? "")))
+        .slice(0, 60)
     }
+  };
+});
+
+export const getAdminSuppliersSnapshot = cache(async (env: EnvSource = process.env) => {
+  const config = getSupabaseAdminConfig(env);
+  const emptyData = { suppliers: [] as AdminSupplierItem[] };
+  if (!config.configured) return blockedSnapshot(config.message, emptyData);
+
+  const [authUsers, supplierRoles, profiles] = await Promise.all([
+    listGovernanceAuthUsers(config),
+    fetchAdminRows(config, "user_roles", supplierDirectoryQueries.supplierRoles),
+    fetchAdminRows(config, "profiles", supplierDirectoryQueries.profiles)
+  ]);
+
+  const profileById = new Map(profiles.rows.map((profile) => [String(profile.id ?? ""), profile]));
+  const authById = new Map(authUsers.users.map((user) => [user.id, user]));
+  const roleCreatedAt = new Map(
+    supplierRoles.rows.map((row) => [String(row.user_id ?? ""), String(row.created_at ?? "")])
+  );
+  const supplierIds = [...new Set(supplierRoles.rows.map((row) => String(row.user_id ?? "")).filter(Boolean))];
+
+  const suppliers = supplierIds.map((supplierId) => {
+    const profile = profileById.get(supplierId);
+    const authUser = authById.get(supplierId);
+    const metadata = authUser?.user_metadata ?? {};
+    const email = String(authUser?.email ?? profile?.email ?? "");
+    const name = String(profile?.display_name ?? metadata.display_name ?? email);
+    const company = deriveCompanyLabel(email, metadata);
+    const phone = String(profile?.phone ?? metadata.phone ?? "");
+    const governanceStatus = String(profile?.governance_status ?? "active");
+    const emailVerified = Boolean(authUser?.email_confirmed_at);
+    const verificationStatus = governanceStatus !== "active"
+      ? governanceStatus
+      : emailVerified
+        ? "verified"
+        : "pending";
+    const registeredAt = roleCreatedAt.get(supplierId)
+      || String(profile?.created_at ?? authUser?.created_at ?? "");
+
+    return {
+      id: supplierId,
+      name,
+      company,
+      email,
+      phone,
+      verificationStatus,
+      registeredAt
+    };
+  }).sort((first, second) => second.registeredAt.localeCompare(first.registeredAt));
+
+  return {
+    status: authUsers.error || [supplierRoles, profiles].some((table) => table.status !== "LIVE") ? "PARTIAL" as const : "LIVE" as const,
+    source: "supabase-admin" as const,
+    blockedReason: authUsers.error,
+    data: { suppliers }
   };
 });
 
@@ -617,6 +900,24 @@ export const getCmsCoreSnapshot = cache(async (env: EnvSource = process.env) => 
   };
 });
 
+export const getCmsMarketingWorkspaceSnapshot = cache(async (env: EnvSource = process.env) => {
+  const config = getSupabaseAdminConfig(env);
+  const emptyData = { tables: [] as Array<{ table: string; status: string; rows: AdminRow[] }> };
+  if (!config.configured) return blockedSnapshot(config.message, emptyData);
+
+  const tables = await Promise.all([
+    fetchAdminRows(config, "faqs", cmsWorkspaceQueries.faqs),
+    fetchAdminRows(config, "promotional_campaigns", cmsWorkspaceQueries.promotionalCampaigns)
+  ]);
+
+  return {
+    status: tables.every((table) => table.status === "LIVE") ? "LIVE" as const : "PARTIAL" as const,
+    source: "supabase-admin" as const,
+    blockedReason: tables.find((table) => table.status !== "LIVE")?.error,
+    data: { tables }
+  };
+});
+
 export const getCmsAdvancedWorkspaceSnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
   const emptyData = { tables: [] as Array<{ table: string; status: string; rows: AdminRow[] }> };
@@ -630,6 +931,7 @@ export const getCmsAdvancedWorkspaceSnapshot = cache(async (env: EnvSource = pro
     fetchAdminRows(config, "footer_links", cmsWorkspaceQueries.footerLinks),
     fetchAdminRows(config, "category_metadata", cmsWorkspaceQueries.categoryMetadata),
     fetchAdminRows(config, "faqs", cmsWorkspaceQueries.faqs),
+    fetchAdminRows(config, "promotional_campaigns", cmsWorkspaceQueries.promotionalCampaigns),
     fetchAdminRows(config, "content_revisions", cmsWorkspaceQueries.contentRevisions)
   ]);
 
@@ -818,6 +1120,16 @@ export const getProductManagerSnapshot = cache(async (env: EnvSource = process.e
   };
 });
 
+const WAREHOUSE_SNAPSHOT_ROW_LIMIT = 80;
+
+function warehouseSnapshotLimitWarning(tables: Array<{ table: string; rows: AdminRow[] }>) {
+  const truncated = tables
+    .filter((table) => table.rows.length >= WAREHOUSE_SNAPSHOT_ROW_LIMIT)
+    .map((table) => table.table);
+  if (!truncated.length) return undefined;
+  return `Snapshot capped at ${WAREHOUSE_SNAPSHOT_ROW_LIMIT} rows for: ${truncated.join(", ")}. Older records may be hidden — use filtered views or reports for full history.`;
+}
+
 export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput = process.env) => {
   const { env: resolvedEnv, tables } = resolveWarehouseSnapshotInput(input);
   const config = getSupabaseAdminConfig(resolvedEnv);
@@ -848,25 +1160,38 @@ export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput =
   );
 
   const [products, inventory, stock, movements, orders, orderItems, shipments, shipmentItems, shipmentTimeline, activityLogs] = await Promise.all([
-    maybeFetch("products", "mithron_products", "select=slug,name,category,price,image,hero,workflow_status,archived_at,is_visible,updated_at&order=sort_order.asc&limit=80"),
-    maybeFetch("inventory", "inventory", "select=product_slug,sku,variant_id,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at&order=updated_at.desc&limit=120"),
-    maybeFetch("stock", "warehouse_stock", "select=id,warehouse_code,product_slug,sku,variant_id,available_quantity,committed_quantity,last_counted_at,updated_at&order=updated_at.desc&limit=120"),
-    maybeFetch("movements", "inventory_movements", "select=id,movement_type,product_slug,sku,quantity_before,quantity_after,quantity_delta,reason_code,actor_user_id,related_order_id,related_shipment_id,created_at&order=created_at.desc&limit=80"),
-    maybeFetch("orders", "orders", "select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,metadata,timeline,shipment_tracking,created_at,updated_at&order=created_at.desc&limit=80"),
-    maybeFetch("orderItems", "order_items", "select=id,order_id,product_slug,product_name,sku,quantity,line_total,metadata,created_at&order=created_at.desc&limit=120"),
-    maybeFetch("shipments", "shipments", "select=id,shipment_number,shipment_status,order_id,warehouse_id,carrier_name,tracking_number,updated_at,created_at&order=updated_at.desc&limit=80"),
-    maybeFetch("shipmentItems", "shipment_items", "select=id,shipment_id,order_item_id,product_id,variant_id,quantity,created_at&order=created_at.desc&limit=120"),
-    maybeFetch("shipmentTimeline", "shipment_timeline", "select=id,shipment_id,event_type,previous_status,next_status,actor_user_id,created_at&order=created_at.desc&limit=80"),
-    maybeFetch("activityLogs", "activity_logs", "select=id,actor_id,action,entity_table,entity_id,severity,metadata,created_at&entity_table=in.(orders,shipments,inventory,warehouse_stock,inventory_movements)&order=created_at.desc&limit=80")
+    maybeFetch("products", "mithron_products", `select=slug,name,category,price,image,hero,workflow_status,archived_at,is_visible,updated_at&order=sort_order.asc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
+    maybeFetch("inventory", "inventory", `select=product_slug,sku,variant_id,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at&order=updated_at.desc&limit=120`),
+    maybeFetch("stock", "warehouse_stock", `select=id,warehouse_code,product_slug,sku,variant_id,available_quantity,committed_quantity,last_counted_at,updated_at&order=updated_at.desc&limit=120`),
+    maybeFetch("movements", "inventory_movements", `select=id,movement_type,product_slug,sku,quantity_before,quantity_after,quantity_delta,reason_code,actor_user_id,related_order_id,related_shipment_id,created_at&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
+    maybeFetch("orders", "orders", `select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,metadata,timeline,shipment_tracking,created_at,updated_at&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
+    maybeFetch("orderItems", "order_items", `select=id,order_id,product_slug,product_name,sku,quantity,line_total,metadata,created_at&order=created_at.desc&limit=120`),
+    maybeFetch("shipments", "shipments", `select=id,shipment_number,shipment_status,order_id,warehouse_id,carrier_name,tracking_number,updated_at,created_at&order=updated_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
+    maybeFetch("shipmentItems", "shipment_items", `select=id,shipment_id,order_item_id,product_id,variant_id,quantity,created_at&order=created_at.desc&limit=120`),
+    maybeFetch("shipmentTimeline", "shipment_timeline", `select=id,shipment_id,event_type,previous_status,next_status,actor_user_id,created_at&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
+    maybeFetch("activityLogs", "activity_logs", `select=id,actor_id,action,entity_table,entity_id,severity,metadata,created_at&entity_table=in.(orders,shipments,inventory,warehouse_stock,inventory_movements)&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`)
   ]);
   const fetchedTables = [products, inventory, stock, movements, orders, orderItems, shipments, shipmentItems, shipmentTimeline, activityLogs]
     .filter((table) => table.status !== "SKIPPED");
   const blockedTable = fetchedTables.find((table) => table.status !== "LIVE");
+  const snapshotTables = [
+    { table: "mithron_products", rows: products.rows },
+    { table: "inventory", rows: inventory.rows },
+    { table: "warehouse_stock", rows: stock.rows },
+    { table: "inventory_movements", rows: movements.rows },
+    { table: "orders", rows: orders.rows },
+    { table: "order_items", rows: orderItems.rows },
+    { table: "shipments", rows: shipments.rows },
+    { table: "shipment_items", rows: shipmentItems.rows },
+    { table: "shipment_timeline", rows: shipmentTimeline.rows },
+    { table: "activity_logs", rows: activityLogs.rows }
+  ];
 
   return {
     status: fetchedTables.every((table) => table.status === "LIVE") ? "LIVE" as const : "PARTIAL" as const,
     source: "supabase-admin" as const,
     blockedReason: blockedTable?.error,
+    snapshotLimitWarning: warehouseSnapshotLimitWarning(snapshotTables),
     data: {
       products: products.rows,
       inventory: inventory.rows,
@@ -919,4 +1244,63 @@ export async function getOperationsSnapshot(env: EnvSource = process.env) {
       shipments: shipments.rows
     }
   };
+}
+
+export type PendingSupplierSubmission = {
+  slug: string;
+  name: string;
+  supplierLabel: string;
+  updatedAt: string;
+};
+
+export async function listPendingSupplierSubmissions(env: EnvSource = process.env): Promise<PendingSupplierSubmission[]> {
+  const config = getSupabaseAdminConfig(env);
+  if (!config.configured) return [];
+
+  const response = await fetch(
+    `${config.url}/rest/v1/mithron_products?select=slug,name,supplier_id,updated_at&workflow_status=eq.pending_review&order=updated_at.desc&limit=8`,
+    {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`
+      },
+      cache: "no-store"
+    }
+  );
+  if (!response.ok) return [];
+
+  const products = (await response.json()) as AdminRow[];
+  const supplierIds = [...new Set(products.map((product) => String(product.supplier_id ?? "")).filter(Boolean))];
+  const profileById = new Map<string, string>();
+
+  if (supplierIds.length) {
+    const profilesResponse = await fetch(
+      `${config.url}/rest/v1/profiles?select=id,email,display_name&id=in.(${supplierIds.map(encodeURIComponent).join(",")})`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`
+        },
+        cache: "no-store"
+      }
+    );
+    if (profilesResponse.ok) {
+      const profiles = (await profilesResponse.json()) as AdminRow[];
+      for (const profile of profiles) {
+        const id = String(profile.id ?? "");
+        if (!id) continue;
+        profileById.set(id, String(profile.display_name ?? profile.email ?? id));
+      }
+    }
+  }
+
+  return products.map((product) => {
+    const supplierId = String(product.supplier_id ?? "");
+    return {
+      slug: String(product.slug ?? ""),
+      name: String(product.name ?? product.slug ?? "Product"),
+      supplierLabel: supplierId ? profileById.get(supplierId) ?? "Supplier" : "Supplier",
+      updatedAt: String(product.updated_at ?? "")
+    };
+  });
 }

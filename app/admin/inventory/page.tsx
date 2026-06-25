@@ -3,7 +3,9 @@ import { OperationalFeedback } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { InventoryManager } from "@/components/admin/inventory-manager-loader";
 import { inventoryFeedbackQueryParams } from "@/lib/admin/conflict-handling";
-import { CSV_INVENTORY_PAGE_SIZE, getCsvInventoryRows } from "@/services/csv-inventory-source";
+import { CSV_INVENTORY_PAGE_SIZE, countProductsMissingInventoryRecords, getCsvInventoryRows } from "@/services/csv-inventory-source";
+import { repairMissingProductInventory } from "@/services/product-inventory-sync";
+import { getCurrentAuthContext } from "@/services/auth";
 import { listPendingStockRequests } from "@/services/supplier-stock-requests";
 import {
   deleteInventoryProductFormAction,
@@ -11,7 +13,7 @@ import {
   saveInventoryBulkUpdateFormAction,
   saveInventoryQuickEditFormAction
 } from "@/app/warehouse/actions";
-import { approveStockRequestAction, rejectStockRequestAction } from "./stock-request-actions";
+import { approveStockRequestAction, rejectStockRequestAction, syncMissingInventoryAction } from "./stock-request-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +72,14 @@ async function deleteAdminInventoryWithFeedback(formData: FormData) {
 export default async function AdminInventoryPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const currentPage = Math.max(1, Number.parseInt(searchValue(params, "page"), 10) || 1);
+  const auth = await getCurrentAuthContext();
+  let missingInventoryCount = await countProductsMissingInventoryRecords();
+  if (missingInventoryCount > 0) {
+    await repairMissingProductInventory(auth.userId).catch((error) => {
+      console.error("[mithron-inventory] Auto-repair on inventory page failed.", error);
+    });
+    missingInventoryCount = await countProductsMissingInventoryRecords();
+  }
   const inventorySource = await getCsvInventoryRows({ page: currentPage, pageSize: CSV_INVENTORY_PAGE_SIZE });
   const stockRequests = await listPendingStockRequests();
   const inventoryStatus = searchValue(params, "inventory_status");
@@ -92,6 +102,18 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
       </div>
 
       <OperationalFeedback status={stockStatus} message={stockMessage} context="Supplier stock requests" />
+
+      {missingInventoryCount > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-amber-500/30 bg-amber-950/20 px-4 py-3 text-sm text-amber-100">
+          <p>{missingInventoryCount} product{missingInventoryCount === 1 ? "" : "s"} have no inventory record in the database.</p>
+          <form action={syncMissingInventoryAction}>
+            <OperationalSubmitButton pendingLabel="Syncing" className="platform-btn-primary h-9 rounded-[8px] px-3 text-xs font-medium">
+              Sync missing
+            </OperationalSubmitButton>
+          </form>
+        </div>
+      ) : null}
+
       {stockRequests.length ? (
         <section className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-4">
           <h2 className="text-sm font-semibold text-[var(--platform-text-primary)]">Pending supplier stock requests</h2>
@@ -130,6 +152,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
         exportHref="/admin/inventory/export"
         title="Inventory"
         page={inventorySource.page}
+        totalProductCount={inventorySource.totalProductCount}
         hasNextPage={inventorySource.hasNextPage}
         previousPageHref={previousPageHref}
         nextPageHref={nextPageHref}

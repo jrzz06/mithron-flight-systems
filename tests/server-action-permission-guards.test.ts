@@ -12,9 +12,13 @@ describe("server action permission guards", () => {
     expect(warehouse).toContain('requirePermission("orders.lifecycle")');
   });
 
+  it("requires orders.lifecycle for warehouse return actions", () => {
+    expect(source("app/warehouse/returns/actions.ts")).toContain('requirePermission("orders.lifecycle")');
+  });
+
   it("requires admin role for privileged admin server actions", () => {
     expect(source("app/admin/enquiries/actions.ts")).toContain("requireAdminPermission");
-    expect(source("app/admin/media/actions.ts")).toContain("requireAdminPermission");
+    expect(source("app/admin/products/actions.ts")).toContain("requirePermission");
     expect(source("app/admin/orders/actions.ts")).toContain("requireAdminPermission");
     expect(source("app/operations/actions.ts")).toContain("requireAdminPermission");
     expect(source("app/admin/cms/actions.ts")).toContain("requireAdminPermission");

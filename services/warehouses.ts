@@ -10,24 +10,41 @@ function headers(serviceRoleKey: string) {
 }
 
 export async function getActiveWarehouseCodes(env: EnvSource = process.env): Promise<string[]> {
+  const warehouses = await listActiveWarehouses(env);
+  return warehouses.map((warehouse) => warehouse.code);
+}
+
+export type WarehouseOption = {
+  code: string;
+  name: string;
+};
+
+export async function listActiveWarehouses(env: EnvSource = process.env): Promise<WarehouseOption[]> {
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(
-    `${config.url}/rest/v1/warehouses?select=code&is_active=eq.true&order=code.asc`,
+    `${config.url}/rest/v1/warehouses?select=code,name&is_active=eq.true&order=code.asc`,
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
 
   if (!response.ok) {
     const fallback = env.DEFAULT_WAREHOUSE_CODE?.trim() || "IN-WEST-01";
-    return [fallback];
+    return [{ code: fallback, name: "Primary warehouse" }];
   }
 
-  const rows = (await response.json()) as Array<{ code?: string }>;
-  const codes = rows.map((row) => String(row.code ?? "").trim()).filter(Boolean);
-  if (!codes.length) {
+  const rows = (await response.json()) as Array<{ code?: string; name?: string }>;
+  const warehouses = rows
+    .map((row) => ({
+      code: String(row.code ?? "").trim(),
+      name: String(row.name ?? row.code ?? "").trim()
+    }))
+    .filter((row) => row.code);
+
+  if (!warehouses.length) {
     const fallback = env.DEFAULT_WAREHOUSE_CODE?.trim() || "IN-WEST-01";
-    return [fallback];
+    return [{ code: fallback, name: "Primary warehouse" }];
   }
-  return codes;
+
+  return warehouses;
 }
 
 export async function assertValidWarehouseCode(code: string, env: EnvSource = process.env) {

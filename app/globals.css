@@ -2446,6 +2446,95 @@ canvas {
   object-position: center center;
 }
 
+@media (max-width: 767px) {
+  .TOP_NAVBAR.adaptive-navbar {
+    position: sticky;
+    top: 0;
+    background: #ffffff;
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+  }
+
+  .TOP_NAVBAR.adaptive-navbar .mithron-topbar {
+    background: #ffffff;
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+    color: rgba(10, 12, 16, 0.78);
+    --topbar-ink: rgba(10, 12, 16, 0.92);
+    --topbar-muted: rgba(10, 12, 16, 0.62);
+    --topbar-hover: rgba(10, 12, 16, 0.82);
+    --topbar-border: rgba(15, 23, 42, 0.08);
+  }
+
+  .TOP_NAVBAR.adaptive-navbar .adaptive-navbar__bar {
+    background: #ffffff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: none;
+  }
+
+  .catalog-hero-immersive {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  [data-testid="home-hero"] {
+    height: min(68svh, 560px) !important;
+    min-height: 400px !important;
+  }
+
+  .catalog-product-grid,
+  .catalog-virtualized-row,
+  .catalog-product-grid--continued {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .catalog-grid-section {
+    padding-inline: 12px;
+  }
+
+  .catalog-page-shell .premium-product-card__image {
+    padding: 0.65rem 0.45rem;
+  }
+
+  .catalog-page-shell .premium-product-card__image-asset {
+    max-height: 132px;
+  }
+
+  .catalog-page-shell .premium-product-card__body {
+    gap: 0.3rem;
+    padding: 0.65rem 0.55rem 0.75rem;
+  }
+
+  .catalog-page-shell .premium-product-card__category {
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+  }
+
+  .catalog-page-shell .premium-product-card__title {
+    font-size: 0.8125rem;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .catalog-page-shell .premium-product-card__description {
+    display: none;
+  }
+
+  .catalog-page-shell .premium-product-card__footer {
+    padding-top: 0.15rem;
+  }
+
+  .catalog-page-shell .premium-product-card__price {
+    font-size: 0.8125rem;
+  }
+
+  .catalog-page-shell .premium-product-card__cta-text,
+  .catalog-page-shell .premium-product-card__cta-pill {
+    min-height: 2rem;
+    padding-inline: 0.65rem;
+    font-size: 0.6875rem;
+  }
+}
+
 @media (max-width: 768px) {
   .catalog-hero-section--showcase {
     background: transparent;
@@ -2454,8 +2543,8 @@ canvas {
   .catalog-hero-immersive {
     position: relative;
     width: 100%;
-    margin-top: calc(-1 * var(--store-nav-offset));
-    padding-top: var(--store-nav-offset);
+    margin-top: 0;
+    padding-top: 0;
     box-sizing: border-box;
     overflow: hidden;
     isolation: isolate;

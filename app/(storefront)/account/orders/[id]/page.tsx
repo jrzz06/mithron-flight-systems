@@ -40,6 +40,13 @@ function trackingDetails(tracking: unknown) {
   return { carrier, trackingNumber };
 }
 
+function orderHeading(order: Record<string, unknown>) {
+  const num = String(order.order_number ?? "");
+  if (num.startsWith("ENQ-") && num.includes("-")) return num;
+  if (num.startsWith("MTH-")) return num;
+  return num || `Order ${String(order.id ?? "").slice(0, 8)}`;
+}
+
 export default async function AccountOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -71,7 +78,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
     <div className="rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8">
       <Link href="/account/orders" className="text-sm text-emerald-400">Back to orders</Link>
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <h2 className="type-section">{String(order.order_number ?? order.id)}</h2>
+        <h2 className="type-section">{orderHeading(order)}</h2>
         <StatusBadge status={String(order.status ?? "pending")} />
         <StatusBadge status={fulfillmentStatus} />
       </div>

@@ -9,20 +9,20 @@ type SupplierSubmitProductButtonProps = {
 };
 
 export function SupplierSubmitProductButton({
-  label = "Submit for approval",
+  label = "Send for review",
   className,
   variant = "link"
 }: SupplierSubmitProductButtonProps) {
   const resolvedClassName =
     className ??
     (variant === "button"
-      ? "mt-4 rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+      ? "platform-btn-primary mt-4 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
       : "text-emerald-300 hover:underline");
 
   return (
     <OperationalSubmitButton
-      confirmMessage="Submit this product to admin for approval?"
-      pendingLabel="Submitting"
+      confirmMessage="Send this product to our team for review?"
+      pendingLabel="Sending for review"
       className={resolvedClassName}
     >
       {label}

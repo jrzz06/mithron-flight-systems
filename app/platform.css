@@ -18,6 +18,7 @@
   --platform-text-muted: #6b7280;
   --platform-accent: #4b5d6b;
   --platform-accent-strong: #35424d;
+  --platform-accent-text: #fafaf8;
   --platform-accent-soft: #eef1f3;
   --platform-nav-active-bg: #eceff1;
   --platform-success: #3d6b5a;
@@ -351,6 +352,46 @@
 /* -------------------------------------------------------------------------- */
 /* Platform UX refinements (non-visual polish) */
 /* -------------------------------------------------------------------------- */
+
+[data-control-plane] .platform-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  background-color: var(--platform-accent);
+  color: var(--platform-accent-text);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+  cursor: pointer;
+}
+
+[data-control-plane] a.platform-btn-primary,
+[data-control-plane] button.platform-btn-primary {
+  color: var(--platform-accent-text) !important;
+}
+
+[data-control-plane] .platform-btn-primary:hover {
+  background-color: var(--platform-accent-strong);
+}
+
+[data-control-plane] .platform-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-control-plane] input[type="file"].platform-file-input::file-selector-button {
+  margin-right: 0.75rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background-color: var(--platform-accent);
+  color: var(--platform-accent-text);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
 
 [data-control-plane] {
   -webkit-tap-highlight-color: transparent;

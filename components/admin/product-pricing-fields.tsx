@@ -40,7 +40,7 @@ function toggleClass(active: boolean, variant: "light" | "dark") {
       : "border-slate-200 bg-white text-slate-500";
   }
   return active
-    ? "bg-[var(--platform-accent)] text-[var(--platform-accent-text)]"
+    ? "platform-btn-primary"
     : "bg-[var(--platform-surface)] text-[var(--platform-text-muted)]";
 }
 

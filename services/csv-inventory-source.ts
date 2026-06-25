@@ -1,5 +1,9 @@
 import { getSupabaseAdminConfig } from "@/lib/env";
 import { buildSimpleInventoryRows, type SimpleInventoryRow } from "@/services/simple-inventory-view";
+import { getDefaultWarehouseCode } from "@/services/warehouse-config";
+import { countProductsMissingInventoryRecords as countMissingInventoryRecords } from "@/services/product-inventory-sync";
+
+export { countMissingInventoryRecords as countProductsMissingInventoryRecords };
 
 type EnvSource = Record<string, string | undefined>;
 type AdminRow = Record<string, unknown>;
@@ -10,6 +14,7 @@ type CsvInventoryResult = {
   page: number;
   pageSize: number;
   hasNextPage: boolean;
+  totalProductCount: number;
 };
 
 export const CSV_INVENTORY_PAGE_SIZE = 80;
@@ -20,10 +25,13 @@ type CsvInventoryOptions = {
   page?: number;
   pageSize?: number;
   all?: boolean;
+  publishedOnly?: boolean;
 };
 
+const ACTIVE_PRODUCT_FILTER = "workflow_status=eq.published&is_visible=eq.true&archived_at=is.null&merge_status=neq.archived_merged";
+
 function isOptions(value: EnvSource | CsvInventoryOptions): value is CsvInventoryOptions {
-  return "env" in value || "page" in value || "pageSize" in value || "all" in value;
+  return "env" in value || "page" in value || "pageSize" in value || "all" in value || "publishedOnly" in value;
 }
 
 function positiveInteger(value: unknown, fallback: number) {
@@ -63,6 +71,28 @@ async function fetchRows<T extends AdminRow>(
   return (await response.json()) as T[];
 }
 
+async function countAllProducts(
+  config: Extract<ReturnType<typeof getSupabaseAdminConfig>, { configured: true }>,
+  publishedOnly = false
+) {
+  const query = publishedOnly ? `select=slug&${ACTIVE_PRODUCT_FILTER}` : "select=slug";
+  const response = await fetch(`${config.url}/rest/v1/mithron_products?${query}`, {
+    headers: {
+      ...getAdminHeaders(config),
+      Prefer: "count=exact"
+    },
+    cache: "no-store"
+  });
+  if (!response.ok) return 0;
+  const contentRange = response.headers.get("content-range");
+  if (!contentRange) {
+    const rows = await response.json() as AdminRow[];
+    return rows.length;
+  }
+  const total = contentRange.split("/")[1];
+  return Number(total) || 0;
+}
+
 export async function getCsvInventoryRows(input: EnvSource | CsvInventoryOptions = process.env): Promise<CsvInventoryResult> {
   const options = isOptions(input) ? input : { env: input };
   const env = options.env ?? process.env;
@@ -70,40 +100,53 @@ export async function getCsvInventoryRows(input: EnvSource | CsvInventoryOptions
   const pageSize = options.all ? CSV_INVENTORY_EXPORT_LIMIT : Math.min(positiveInteger(options.pageSize, CSV_INVENTORY_PAGE_SIZE), CSV_INVENTORY_PAGE_SIZE);
   const offset = options.all ? 0 : (page - 1) * pageSize;
   const productLimit = options.all ? CSV_INVENTORY_EXPORT_LIMIT : pageSize + 1;
+  const publishedOnly = options.publishedOnly === true;
   const config = getSupabaseAdminConfig(env);
   if (!config.configured) {
-    return { rows: [], blockedReason: config.message, page, pageSize, hasNextPage: false };
+    return { rows: [], blockedReason: config.message, page, pageSize, hasNextPage: false, totalProductCount: 0 };
   }
 
   try {
-    const inventoryPage = await fetchRows<AdminRow>(
-      config,
-      "inventory",
-      [
-        "select=id,product_slug,sku,variant_id,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at,created_at",
-        "order=updated_at.desc",
-        `limit=${productLimit}`,
-        `offset=${offset}`
-      ].join("&")
-    );
-    const inventory = options.all ? inventoryPage : inventoryPage.slice(0, pageSize);
-    const hasNextPage = !options.all && inventoryPage.length > pageSize;
-    const inventorySlugs = new Set(inventory.map((row) => String(row.product_slug ?? "")).filter(Boolean));
-    if (!inventorySlugs.size) {
-      return { rows: [], page, pageSize, hasNextPage: false };
+    const productQuery = [
+      "select=slug,name,category,price,image,hero,workflow_status,archived_at,is_visible,merge_status,supplier_id,updated_at",
+      publishedOnly ? ACTIVE_PRODUCT_FILTER : "",
+      "order=sort_order.asc",
+      `limit=${productLimit}`,
+      options.all ? "" : `offset=${offset}`
+    ].filter(Boolean).join("&");
+
+    const [productsPage, totalProductCount] = await Promise.all([
+      fetchRows<AdminRow>(config, "mithron_products", productQuery),
+      countAllProducts(config, publishedOnly)
+    ]);
+
+    const activeProducts = publishedOnly
+      ? productsPage
+      : productsPage.filter((row) =>
+        String(row.workflow_status ?? "") === "published"
+        && row.archived_at == null
+        && row.is_visible !== false
+        && String(row.merge_status ?? "") !== "archived_merged"
+      );
+    const products = options.all ? activeProducts : activeProducts.slice(0, pageSize);
+    const hasNextPage = !options.all && activeProducts.length > pageSize;
+    const productSlugs = new Set(products.map((row) => String(row.slug ?? "")).filter(Boolean));
+    if (!productSlugs.size) {
+      return { rows: [], page, pageSize, hasNextPage: false, totalProductCount };
     }
     const relationLimit = options.all ? CSV_INVENTORY_EXPORT_LIMIT : pageSize * 4;
-    const inventorySlugList = Array.from(inventorySlugs);
-    const productSlugFilter = columnInFilter("slug", inventorySlugList);
-    const warehouseSlugFilter = columnInFilter("product_slug", inventorySlugList);
+    const productSlugList = Array.from(productSlugs);
+    const inventorySlugFilter = columnInFilter("product_slug", productSlugList);
+    const warehouseSlugFilter = columnInFilter("product_slug", productSlugList);
 
-    const [products, stock] = await Promise.all([
+    const [inventory, stock, defaultWarehouseCode, suppliers] = await Promise.all([
       fetchRows<AdminRow>(
         config,
-        "mithron_products",
+        "inventory",
         [
-          "select=slug,name,category,price,image,hero,workflow_status,archived_at,is_visible,updated_at",
-          productSlugFilter,
+          "select=id,product_slug,sku,variant_id,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at,created_at",
+          inventorySlugFilter,
+          "order=updated_at.desc",
           `limit=${relationLimit}`
         ].join("&")
       ),
@@ -116,18 +159,25 @@ export async function getCsvInventoryRows(input: EnvSource | CsvInventoryOptions
           "order=updated_at.desc",
           `limit=${relationLimit}`
         ].join("&")
-      )
+      ),
+      getDefaultWarehouseCode(env),
+      fetchRows<AdminRow>(config, "profiles", "select=id,display_name,email&limit=500")
     ]);
+
+    const supplierNameById = new Map(
+      suppliers.map((supplier) => [String(supplier.id ?? ""), String(supplier.display_name ?? supplier.email ?? "Supplier")])
+    );
+    const productsWithSupplier = products.map((product) => ({
+      ...product,
+      supplier_name: supplierNameById.get(String(product.supplier_id ?? "")) ?? ""
+    }));
 
     return {
       page,
       pageSize,
       hasNextPage,
-      rows: buildSimpleInventoryRows(
-        products.filter((row) => inventorySlugs.has(String(row.slug ?? ""))),
-        inventory.filter((row) => inventorySlugs.has(String(row.product_slug ?? ""))),
-        stock.filter((row) => inventorySlugs.has(String(row.product_slug ?? "")))
-      )
+      totalProductCount,
+      rows: buildSimpleInventoryRows(productsWithSupplier, inventory, stock, defaultWarehouseCode)
     };
   } catch (error) {
     return {
@@ -135,7 +185,9 @@ export async function getCsvInventoryRows(input: EnvSource | CsvInventoryOptions
       page,
       pageSize,
       hasNextPage: false,
+      totalProductCount: 0,
       blockedReason: error instanceof Error ? error.message : String(error)
     };
   }
 }
+

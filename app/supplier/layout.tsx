@@ -13,7 +13,9 @@ export default async function SupplierLayout({ children }: { children: React.Rea
   }
   return (
     <Suspense fallback={null}>
-      <SupplierFrame recipientId={context.userId ?? undefined}>{children}</SupplierFrame>
+      <SupplierFrame recipientId={context.userId ?? undefined} role={context.role}>
+        {children}
+      </SupplierFrame>
     </Suspense>
   );
 }

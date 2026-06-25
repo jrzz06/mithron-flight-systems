@@ -1,5 +1,6 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { deriveProductSku } from "@/services/product-inventory-sync";
+import { getCheckoutWarehouseCode } from "@/services/warehouse-config";
 
 type EnvSource = Record<string, string | undefined>;
 
@@ -9,8 +10,6 @@ export type CheckoutStockItem = {
   sku?: string | null;
 };
 
-const DEFAULT_WAREHOUSE_CODE = process.env.DEFAULT_WAREHOUSE_CODE ?? "IN-WEST-01";
-
 function headers(serviceRoleKey: string) {
   return {
     apikey: serviceRoleKey,
@@ -19,17 +18,24 @@ function headers(serviceRoleKey: string) {
   };
 }
 
+async function resolveWarehouseCode(warehouseCode: string | undefined, env: EnvSource) {
+  if (warehouseCode?.trim()) return warehouseCode.trim();
+  return getCheckoutWarehouseCode(env);
+}
+
 export async function resolveCheckoutStockSkus(
   items: Array<{ productSlug: string; quantity: number }>,
-  env: EnvSource = process.env
+  env: EnvSource = process.env,
+  warehouseCode?: string
 ): Promise<CheckoutStockItem[]> {
   const config = assertSupabaseAdminConfig(env);
   if (!items.length) return [];
 
+  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
   const slugs = [...new Set(items.map((item) => item.productSlug))];
   const slugFilter = slugs.map((slug) => encodeURIComponent(slug)).join(",");
   const response = await fetch(
-    `${config.url}/rest/v1/warehouse_stock?select=product_slug,sku,available_quantity&product_slug=in.(${slugFilter})&warehouse_code=eq.${encodeURIComponent(DEFAULT_WAREHOUSE_CODE)}&order=available_quantity.desc`,
+    `${config.url}/rest/v1/warehouse_stock?select=product_slug,sku,available_quantity&product_slug=in.(${slugFilter})&warehouse_code=eq.${encodeURIComponent(resolvedWarehouseCode)}&order=available_quantity.desc`,
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
 
@@ -62,9 +68,10 @@ export async function reserveCheckoutStock(
   orderId: string,
   items: CheckoutStockItem[],
   env: EnvSource = process.env,
-  warehouseCode: string = DEFAULT_WAREHOUSE_CODE
+  warehouseCode?: string
 ) {
   const config = assertSupabaseAdminConfig(env);
+  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
   const payload = items.map((item) => ({
     product_slug: item.productSlug,
     quantity: item.quantity,
@@ -77,7 +84,7 @@ export async function reserveCheckoutStock(
     body: JSON.stringify({
       p_order_id: orderId,
       p_items: payload,
-      p_warehouse_code: warehouseCode
+      p_warehouse_code: resolvedWarehouseCode
     }),
     cache: "no-store"
   });
@@ -99,16 +106,17 @@ export async function fulfillReservedStock(
   orderId: string,
   actorId: string | null,
   env: EnvSource = process.env,
-  warehouseCode: string = DEFAULT_WAREHOUSE_CODE
+  warehouseCode?: string
 ) {
   const config = assertSupabaseAdminConfig(env);
+  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
   const response = await fetch(`${config.url}/rest/v1/rpc/fulfill_reserved_stock`, {
     method: "POST",
     headers: headers(config.serviceRoleKey),
     body: JSON.stringify({
       p_order_id: orderId,
       p_actor_id: actorId,
-      p_warehouse_code: warehouseCode
+      p_warehouse_code: resolvedWarehouseCode
     }),
     cache: "no-store"
   });
@@ -144,15 +152,16 @@ export async function orderHasCheckoutReservations(
 export async function releaseCheckoutStock(
   orderId: string,
   env: EnvSource = process.env,
-  warehouseCode: string = DEFAULT_WAREHOUSE_CODE
+  warehouseCode?: string
 ) {
   const config = assertSupabaseAdminConfig(env);
+  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
   const response = await fetch(`${config.url}/rest/v1/rpc/release_checkout_stock`, {
     method: "POST",
     headers: headers(config.serviceRoleKey),
     body: JSON.stringify({
       p_order_id: orderId,
-      p_warehouse_code: warehouseCode
+      p_warehouse_code: resolvedWarehouseCode
     }),
     cache: "no-store"
   });

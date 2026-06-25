@@ -11,7 +11,7 @@ import {
 } from "@/services/admin-actions";
 import { appendOrderTimeline, buildOrderTimelineEntry } from "@/services/orders";
 import { applyWarehouseStockMovement } from "@/services/warehouse-movements";
-import { fulfillReservedStock, orderHasCheckoutReservations } from "@/services/checkout-stock";
+import { fulfillReservedStock, orderHasCheckoutReservations, releaseCheckoutStock } from "@/services/checkout-stock";
 
 type EnvSource = Record<string, string | undefined>;
 type JsonRecord = Record<string, unknown>;
@@ -54,6 +54,7 @@ export type ShipmentCreateWorkflowInput = {
   notes: string | null;
   items: ShipmentCreateItemInput[];
   changeSummary: string;
+  initialStatus?: ShipmentStatus;
 };
 
 export type ShipmentUpdateWorkflowInput = {
@@ -112,6 +113,35 @@ function assertShipmentStatus(value: string) {
 }
 
 function readShipmentItems(formData: FormData) {
+  const orderItemIds = formData.getAll("order_item_id")
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const productIds = formData.getAll("shipment_product_id")
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean);
+  const quantities = formData.getAll("shipment_quantity")
+    .map((value) => Number(typeof value === "string" ? value.trim() : value));
+
+  if (orderItemIds.length) {
+    if (productIds.length !== orderItemIds.length) {
+      throw new Error("Shipment line items are missing product identifiers.");
+    }
+    return orderItemIds.map((orderItemId, index): ShipmentCreateItemInput => {
+      const productId = productIds[index];
+      const quantity = quantities[index];
+      if (!productId) throw new Error(`Shipment item ${index + 1} is missing productId.`);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        throw new Error(`Shipment item ${index + 1} quantity must be a positive integer.`);
+      }
+      return {
+        orderItemId,
+        productId,
+        variantId: readOptionalString(formData, "variant_id"),
+        quantity
+      };
+    });
+  }
+
   const simpleOrderItemId = readOptionalString(formData, "order_item_id");
   const simpleProductId = readOptionalString(formData, "shipment_product_id") ?? readOptionalString(formData, "product_id");
   if (simpleOrderItemId || simpleProductId) {
@@ -207,6 +237,15 @@ async function fetchOrderItems(orderId: string, env: EnvSource = process.env) {
   );
 }
 
+export async function fetchShipmentOrderItems(orderId: string, env: EnvSource = process.env) {
+  return fetchOrderItems(orderId, env);
+}
+
+export async function fetchShipmentItemsByOrderId(orderId: string, env: EnvSource = process.env) {
+  const shipments = await fetchShipmentsByOrderId(orderId, env);
+  return fetchShipmentItemsForShipments(shipments.map((shipment) => String(shipment.id ?? "")).filter(Boolean), env);
+}
+
 export async function fetchShipmentsByOrderId(orderId: string, env: EnvSource = process.env) {
   return fetchAdminRows<JsonRecord>(
     "shipments",
@@ -282,7 +321,7 @@ export function assertShipmentTransition(previousStatus: string | null | undefin
   const allowed: Record<ShipmentStatus, ShipmentStatus[]> = {
     pending: ["reserved", "packed", "cancelled"],
     reserved: ["packed", "cancelled"],
-    packed: ["ready_for_pickup", "damaged", "cancelled"],
+    packed: ["ready_for_pickup", "shipped", "damaged", "cancelled"],
     ready_for_pickup: ["shipped", "damaged", "cancelled"],
     shipped: ["in_transit", "delivered", "failed", "returned", "damaged"],
     in_transit: ["delivered", "failed", "returned", "damaged"],
@@ -380,6 +419,27 @@ export function deriveOrderFulfillmentStatusFromShipments(
   return "packed";
 }
 
+const fulfillmentProgressRank: Record<string, number> = {
+  pending: 0,
+  processing: 1,
+  picked: 2,
+  packed: 3,
+  ready_to_dispatch: 4,
+  shipped: 5,
+  delivered: 6,
+  fulfilled: 6,
+  cancelled: -1,
+  returned: -1
+};
+
+function mergeFulfillmentStatus(currentStatus: string, derivedStatus: string) {
+  const terminal = new Set(["cancelled", "returned", "delivered"]);
+  if (terminal.has(derivedStatus)) return derivedStatus;
+  const currentRank = fulfillmentProgressRank[currentStatus] ?? 0;
+  const derivedRank = fulfillmentProgressRank[derivedStatus] ?? 0;
+  return currentRank > derivedRank ? currentStatus : derivedStatus;
+}
+
 function timestampFieldsForStatus(status: ShipmentStatus, at: string) {
   if (status === "shipped") return { shipped_at: at };
   if (status === "delivered") return { delivered_at: at };
@@ -396,7 +456,9 @@ async function syncOrderFulfillmentFromShipments(order: JsonRecord, actorId: str
     fetchShipmentsByOrderId(orderId, env)
   ]);
   const shipmentItems = await fetchShipmentItemsForShipments(shipments.map((shipment) => String(shipment.id ?? "")).filter(Boolean), env);
-  const fulfillmentStatus = deriveOrderFulfillmentStatusFromShipments(orderItems, shipmentItems, shipments);
+  const derivedStatus = deriveOrderFulfillmentStatusFromShipments(orderItems, shipmentItems, shipments);
+  const currentStatus = String(order.fulfillment_status ?? "pending");
+  const fulfillmentStatus = mergeFulfillmentStatus(currentStatus, derivedStatus);
   const timeline = appendOrderTimeline(
     order.timeline,
     buildOrderTimelineEntry({
@@ -495,11 +557,12 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
   const existingShipmentItems = await fetchShipmentItemsForShipments(existingShipments.map((shipment) => String(shipment.id ?? "")).filter(Boolean), env);
   validateShipmentItemsAgainstOrder(orderItems, existingShipmentItems, input.items);
 
+  const targetStatus = input.initialStatus ?? "pending";
   const shipment = await createShipmentRecord(
     {
       order_id: input.orderId,
       shipment_number: shipmentNumberFromTimestamp(new Date(at)),
-      shipment_status: "pending",
+      shipment_status: targetStatus,
       warehouse_id: input.warehouseId,
       carrier_name: input.carrierName,
       tracking_number: input.trackingNumber,
@@ -523,6 +586,7 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
     quantity: number;
   }> = [];
   const hasCheckoutReservation = await orderHasCheckoutReservations(input.orderId, env);
+  let fulfilledReservations = false;
 
   try {
     for (const item of input.items) {
@@ -582,6 +646,7 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
 
     if (hasCheckoutReservation) {
       await fulfillReservedStock(input.orderId, options.actorId, env, input.warehouseId);
+      fulfilledReservations = true;
     }
 
     const timeline = await createShipmentTimelineRecord(
@@ -589,7 +654,7 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
         shipmentId,
         eventType: "shipment.created",
         previousStatus: null,
-        nextStatus: "pending",
+        nextStatus: targetStatus,
         notes: input.notes,
         actorUserId: options.actorId,
         at
@@ -603,7 +668,7 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
       shipmentId,
       shipmentNumber,
       orderId: input.orderId,
-      status: "pending",
+      status: targetStatus,
       action: "shipment.created",
       notes: input.notes,
       actorId: options.actorId,
@@ -621,6 +686,7 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
       orderId: input.orderId,
       warehouseCode: input.warehouseId,
       stockDeductions,
+      fulfilledReservations,
       orderItems,
       actorId: options.actorId,
       at,
@@ -637,11 +703,20 @@ async function cancelShipmentAndRestoreStock(input: {
   orderId: string;
   warehouseCode: string;
   stockDeductions: Array<{ productSlug: string; sku: string; variantId: string | null; quantity: number }>;
+  fulfilledReservations?: boolean;
   orderItems: JsonRecord[];
   actorId: string | null;
   at: string;
   env: EnvSource;
 }) {
+  if (input.fulfilledReservations) {
+    try {
+      await releaseCheckoutStock(input.orderId, input.env, input.warehouseCode);
+    } catch {
+      // Best-effort reservation rollback.
+    }
+  }
+
   for (const deduction of input.stockDeductions) {
     try {
       await applyWarehouseStockMovement(

@@ -66,6 +66,8 @@
   scroll-padding-inline: clamp(108px, 8vw, 152px);
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
 }
 
 .miniCarouselRail::-webkit-scrollbar {
@@ -1692,12 +1694,22 @@
     grid-auto-flow: column;
     grid-template-columns: none;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     padding-bottom: 12px;
     scroll-padding-inline: 2px;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+
+  .productShelfSection[data-shelf-tone="world"] .productShelfGrid,
+  .productShelfSection[data-shelf-tone="care"] .productShelfGrid,
+  .productShelfSection[data-shelf-tone="global"] .productShelfGrid {
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
   }
 
   .productShelfGrid::-webkit-scrollbar {
@@ -1707,6 +1719,7 @@
   .productCard,
   .guideCard {
     scroll-snap-align: start;
+    touch-action: pan-x;
   }
 }
 
@@ -2758,9 +2771,9 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    min-height: calc(100svh - var(--store-nav-offset, 64px));
-    height: calc(100svh - var(--store-nav-offset, 64px));
-    max-height: calc(100svh - var(--store-nav-offset, 64px));
+    min-height: max(640px, calc(100svh - var(--store-nav-offset, 64px)));
+    height: max(640px, calc(100svh - var(--store-nav-offset, 64px)));
+    max-height: max(640px, calc(100svh - var(--store-nav-offset, 64px)));
     padding: clamp(24px, 3.5vh, 40px) 0;
     overflow: clip;
   }
@@ -2782,7 +2795,7 @@
 
   .agriGridLayout {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 540px;
     height: 100%;
     gap: 16px;
     align-items: stretch;
@@ -2790,7 +2803,7 @@
 
   .agriLeftColumn {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(200px, 1fr);
     gap: 16px;
     height: 100%;
     min-height: 0;
@@ -2799,14 +2812,14 @@
 
   .agriRightColumn {
     display: grid;
-    grid-template-rows: minmax(0, 2.15fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 2.15fr) minmax(132px, 1fr) minmax(132px, 1fr);
     gap: 16px;
     height: 100%;
     min-height: 0;
   }
 
   .agriMiddleRow {
-    min-height: 0;
+    min-height: 132px;
     gap: 16px;
   }
 
@@ -2826,14 +2839,26 @@
   }
 
   .agriSection .agriCard_tall,
+  .cityBentoGrid .agriCard_tall {
+    min-height: 200px;
+    height: 100%;
+    max-height: 100%;
+    flex-grow: 0;
+  }
+
   .agriSection .agriCard_hero,
+  .cityBentoGrid .agriCard_hero {
+    min-height: 180px;
+    height: 100%;
+    max-height: 100%;
+    flex-grow: 0;
+  }
+
   .agriSection .agriCard_standard,
   .agriSection .agriCard_wide,
-  .cityBentoGrid .agriCard_tall,
-  .cityBentoGrid .agriCard_hero,
   .cityBentoGrid .agriCard_standard,
   .cityBentoGrid .agriCard_wide {
-    min-height: 0;
+    min-height: 132px;
     height: 100%;
     max-height: 100%;
     flex-grow: 0;
@@ -2863,9 +2888,9 @@
 
   .cityBentoGrid {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: 540px;
     height: 100%;
-    grid-template-rows: minmax(0, 2.15fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 2.15fr) minmax(132px, 1fr) minmax(132px, 1fr);
   }
 
   .citySection {
@@ -2963,6 +2988,56 @@
   grid-row: 3;
   height: 100%;
   min-height: 0;
+}
+
+@media (min-width: 1025px) and (max-width: 1360px) {
+  .agriRightColumn {
+    grid-template-rows: minmax(180px, 2.15fr) minmax(148px, 1fr) minmax(148px, 1fr);
+  }
+
+  .agriMiddleRow {
+    min-height: 148px;
+  }
+
+  .agriSection .agriCard_standard,
+  .agriSection .agriCard_wide,
+  .cityBentoGrid .agriCard_standard,
+  .cityBentoGrid .agriCard_wide {
+    min-height: 148px;
+  }
+
+  .cityBentoGrid {
+    grid-template-rows: minmax(180px, 2.15fr) minmax(148px, 1fr) minmax(148px, 1fr);
+  }
+
+  .missionCardFloat {
+    padding: 12px 14px 14px;
+    gap: 8px;
+  }
+
+  .agriCardDevice {
+    font-size: 0.64rem;
+    padding: 5px 12px;
+  }
+
+  .agriCardCopy {
+    gap: 4px;
+  }
+
+  .agriCardCopy strong {
+    font-size: clamp(0.96rem, 1vw, 1.08rem);
+    line-height: 1.14;
+  }
+
+  .agriCardCopy span {
+    font-size: clamp(0.78rem, 0.86vw, 0.88rem);
+    line-height: 1.38;
+  }
+
+  .agriCardArrow {
+    width: 34px;
+    height: 34px;
+  }
 }
 
 /* Responsive Overrides */

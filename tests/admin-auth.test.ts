@@ -31,17 +31,18 @@ describe("admin auth route boundaries", () => {
   it("enforces role permissions by admin section", () => {
     expect(canAccessAdminSection("admin", "cms")).toBe(true);
     expect(canAccessAdminSection("admin", "warehouse")).toBe(true);
-    expect(canAccessAdminSection("admin", "settings")).toBe(true);
+    expect(canAccessAdminSection("admin", "enquiries")).toBe(true);
     expect(canAccessAdminSection("warehouse", "warehouse")).toBe(true);
     expect(canAccessAdminSection("warehouse", "orders")).toBe(true);
     expect(canAccessAdminSection("warehouse", "cms")).toBe(false);
     expect(canAccessAdminSection("user", "warehouse")).toBe(false);
-    expect(canAccessAdminSection("user", "settings")).toBe(false);
+    expect(canAccessAdminSection("user", "enquiries")).toBe(false);
   });
 
   it("maps protected routes to the least-privilege permission section", () => {
     expect(sectionFromPath("/admin/cms")).toBe("cms");
-    expect(sectionFromPath("/admin/media")).toBe("media");
+    expect(sectionFromPath("/admin/media")).toBe("overview");
+    expect(sectionFromPath("/admin/settings")).toBe("overview");
     expect(sectionFromPath("/admin/products")).toBe("products");
     expect(sectionFromPath("/admin/inventory")).toBe("warehouse");
     expect(sectionFromPath("/admin/orders")).toBe("orders");

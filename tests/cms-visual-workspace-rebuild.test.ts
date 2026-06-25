@@ -23,7 +23,9 @@ describe("CMS visual workspace rebuild", () => {
     expect(registry).toContain("Footer");
     expect(registry).toContain("Navigation");
     expect(registry).toContain("Contact");
-    expect(registry).not.toContain("Campaigns");
+    expect(registry).toContain("FAQs");
+    expect(registry).toContain("Promotional Campaigns");
+    expect(registry).toContain("Section Visibility");
     expect(registry).toContain("Product Reviews");
     expect(workspace).toContain("data-cms-section-tree");
     expect(workspace).toContain("data-cms-active-section");

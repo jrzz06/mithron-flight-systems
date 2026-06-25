@@ -8,6 +8,9 @@ import { ProductCatalogGrid, type ProductCatalogGridRow } from "./product-catalo
 import { ProductCategoryField, type ProductCategoryOption } from "./product-category-field";
 import { connectivityMessage, emptyMessage } from "@/lib/platform/copy";
 import { ProductCreateDetailFields } from "./product-create-detail-fields";
+import { WarehouseCodeSelect } from "@/components/warehouse/warehouse-code-select";
+import { getDefaultWarehouseCode } from "@/services/warehouse-config";
+import { listActiveWarehouses } from "@/services/warehouses";
 
 const platformLabelClass = "text-xs text-[var(--platform-text-muted)]";
 const platformFieldClass =
@@ -107,7 +110,11 @@ function readProductTool(value: string): ProductToolKey | "" {
 }
 
 export default async function AdminProductsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const snapshot = await getProductManagerSnapshot();
+  const [snapshot, warehouses, defaultWarehouseCode] = await Promise.all([
+    getProductManagerSnapshot(),
+    listActiveWarehouses(),
+    getDefaultWarehouseCode()
+  ]);
   const params = searchParams ? await searchParams : {};
   const query = searchValue(params, "q").toLowerCase();
   const statusFilter = searchValue(params, "workflow_status");
@@ -233,7 +240,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 <option value="archived">Archived</option>
               </select>
             </label>
-            <button className="h-10 rounded-lg bg-[var(--platform-accent)] px-4 text-sm font-medium text-[var(--platform-accent-text)] transition hover:bg-[var(--platform-accent-strong)]">
+            <button className="platform-btn-primary h-10 rounded-lg px-4 text-sm font-medium">
               Filter
             </button>
           </form>
@@ -308,7 +315,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 </p>
                 <input type="hidden" name="source_availability" value="InStock" />
                 <input type="hidden" name="change_summary" value="Add product from admin catalog" />
-                <OperationalSubmitButton pendingLabel="Adding" className="h-10 rounded-lg bg-[var(--platform-accent)] px-4 text-sm font-medium text-[var(--platform-accent-text)] hover:bg-[var(--platform-accent-strong)]">
+                <OperationalSubmitButton pendingLabel="Adding" className="platform-btn-primary h-10 rounded-lg px-4 text-sm font-medium">
                   Add product
                 </OperationalSubmitButton>
               </div>
@@ -340,7 +347,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                 <input type="hidden" name="sort_order" value={String(nextCategorySortOrder)} />
                 <input type="hidden" name="status" value="published" />
                 <input type="hidden" name="is_visible" value="true" />
-                <OperationalSubmitButton pendingLabel="Adding category" className="h-10 rounded-lg bg-[var(--platform-accent)] px-4 text-sm font-medium text-[var(--platform-accent-text)] hover:bg-[var(--platform-accent-strong)]">
+                <OperationalSubmitButton pendingLabel="Adding category" className="platform-btn-primary h-10 rounded-lg px-4 text-sm font-medium">
                   Add category
                 </OperationalSubmitButton>
               </div>
@@ -503,10 +510,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               <span className={platformLabelClass}>Variant ID</span>
               <input name="variant_id" defaultValue="" placeholder="basic-green" className={platformFieldClass} />
             </label>
-            <label className="grid gap-2 text-sm">
-              <span className={platformLabelClass}>Warehouse code</span>
-              <input name="warehouse_code" defaultValue="IN-WEST-01" placeholder="IN-WEST-01" className={platformFieldClass} />
-            </label>
+            <WarehouseCodeSelect
+              warehouses={warehouses}
+              defaultValue={defaultWarehouseCode}
+              className={platformFieldClass}
+              label="Warehouse code"
+            />
             <label className="grid gap-2 text-sm">
               <span className={platformLabelClass}>Stock status</span>
               <select name="stock_status" defaultValue="available" className={platformFieldClass}>

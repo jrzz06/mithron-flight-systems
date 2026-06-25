@@ -50,6 +50,13 @@ where warehouse_id is not null
   and btrim(warehouse_id) <> ''
 on conflict (code) do nothing;
 
+insert into public.warehouses (code, name)
+select distinct btrim(warehouse_code), btrim(warehouse_code)
+from public.inventory_movements
+where warehouse_code is not null
+  and btrim(warehouse_code) <> ''
+on conflict (code) do nothing;
+
 alter table public.warehouses enable row level security;
 
 drop policy if exists warehouses_read_active on public.warehouses;

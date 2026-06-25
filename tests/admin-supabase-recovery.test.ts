@@ -78,16 +78,17 @@ describe("admin Supabase-only workflow recovery", () => {
 
   it("supports CMS/product video uploads and rejects unsupported files clearly", () => {
     const mediaManager = source("services/media-manager.ts");
-    const uploadPanel = source("app/admin/media/media-upload-panel.tsx");
+    const cmsActions = source("app/admin/cms/actions.ts");
+    const productsActions = source("app/admin/products/actions.ts");
 
     expect(mediaManager).toContain("videoMimeTypes");
     expect(mediaManager).toContain("video/mp4");
     expect(mediaManager).toContain("video/webm");
     expect(mediaManager).toContain("video/quicktime");
-    expect(uploadPanel).toContain("ALLOWED_MEDIA_MIME_TYPES");
-    expect(uploadPanel).toContain("acceptedMimeList");
-    expect(uploadPanel).toContain("VideoIcon");
-    expect(uploadPanel).toContain("file.type.startsWith(\"video/\")");
+    expect(mediaManager).toContain("ALLOWED_MEDIA_MIME_TYPES");
+    expect(cmsActions).toContain("assertAllowedMediaMimeType");
+    expect(productsActions).toContain("assertAllowedMediaMimeType");
+    expect(productsActions).toContain("upsertMediaAssetRecord");
   });
 
   it("makes admin booking confirmation and warehouse handoff visible without JSON-first forms", () => {

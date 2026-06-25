@@ -125,39 +125,24 @@ describe("final CMS cutover and real-data cleanup", () => {
     expect(cmsWorkspace).not.toContain("fallbackPages");
   });
 
-  it("splits users and settings into separate real-data modules", () => {
+  it("retires standalone users and settings admin modules", () => {
     const usersPage = source("app/admin/users/page.tsx");
     const settingsPage = source("app/admin/settings/page.tsx");
-    const frame = source("components/admin/admin-frame.tsx");
 
-    expect(usersPage).toContain("getUserGovernanceSnapshot");
-    expect(usersPage).toContain("UserManagementPanel");
-    expect(usersPage).toContain("hiddenOperatorEmailPatterns");
-    expect(usersPage).toContain("createUserFormAction");
-    expect(usersPage).not.toContain('"demo"');
-    expect(usersPage).toContain("No team members yet");
-    expect(usersPage).not.toContain("redirect(\"/admin/settings");
-    expect(usersPage).not.toContain("getSupabasePublicConfig");
-    expect(usersPage).not.toContain("Global settings");
-
-    expect(settingsPage).toContain("data-admin-settings-route");
-    expect(settingsPage).toContain("saveAdminSettingsFormAction");
-    expect(settingsPage).toContain("Enable image compression");
-    expect(settingsPage).toContain("Allowed admin domains");
-    expect(settingsPage).not.toContain("UserManagementPanel");
-    expect(settingsPage).not.toContain("getUserGovernanceSnapshot");
+    expect(usersPage).toContain('redirect("/admin")');
+    expect(settingsPage).toContain('redirect("/admin")');
 
     const navConfig = source("components/platform/nav-config.ts");
 
-    expect(navConfig).toContain('href: "/admin/users"');
-    expect(navConfig).toContain('href: "/admin/settings"');
+    expect(navConfig).not.toContain('href: "/admin/users"');
+    expect(navConfig).not.toContain('href: "/admin/settings"');
     expect(navConfig).not.toContain('href: "/admin/settings#users"');
   });
 
-  it("keeps orders and media operator-facing without raw internal storage or UUID forms", () => {
+  it("keeps orders and product media operator-facing without raw internal storage or UUID forms", () => {
     const ordersPage = source("app/admin/orders/page.tsx");
     const ordersWorkspace = source("components/admin/admin-orders-workspace.tsx");
-    const mediaPage = source("app/admin/media/page.tsx");
+    const productsPage = source("app/admin/products/page.tsx");
 
     expect(ordersPage).toContain("AdminOrdersWorkspace");
     expect(ordersWorkspace).toContain("data-order-detail-panel");
@@ -167,13 +152,13 @@ describe("final CMS cutover and real-data cleanup", () => {
     expect(ordersPage).not.toContain("Order item ID");
     expect(ordersPage).not.toContain("Product slug");
 
-    expect(mediaPage).toContain("data-media-gallery-mode");
-    expect(mediaPage).toContain("data-media-compact-mode");
-    expect(mediaPage).toContain("Replace image");
-    expect(mediaPage).not.toContain("Storage buckets");
-    expect(mediaPage).not.toContain("storage_path");
-    expect(mediaPage).not.toContain("runtime fallback");
-    expect(mediaPage).not.toContain("mithron_assets");
+    expect(productsPage).toContain("data-product-create-media-fields");
+    expect(productsPage).toContain("data-product-local-image-upload");
+    expect(productsPage).toContain("Upload image");
+    expect(productsPage).not.toContain("Storage buckets");
+    expect(productsPage).not.toContain("storage_path");
+    expect(productsPage).not.toContain("runtime fallback");
+    expect(productsPage).not.toContain("mithron_assets");
   });
 });
 

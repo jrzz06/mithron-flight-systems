@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ImgHTMLAttributes, type SyntheticEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ImgHTMLAttributes, type SyntheticEvent } from "react";
 import type { ResponsiveImageModel } from "@/lib/media/responsive-image-model";
 import { buildImageFallbackChain, isResponsiveVariantSrc } from "@/lib/media/responsive-image-model";
 import { pickResponsiveWidth } from "@/lib/media/responsive-image-utils";
@@ -39,7 +39,9 @@ export function MithronResponsiveImageImg({
   ...props
 }: MithronResponsiveImageImgProps) {
   const fallbackChain = useMemo(() => buildImageFallbackChain(model), [model]);
-  const [fallbackIndex, setFallbackIndex] = useState(0);
+  const chainKey = `${model.primarySrc}::${model.requestedSrc}`;
+  const [fallbackByKey, setFallbackByKey] = useState<Record<string, number>>({});
+  const fallbackIndex = fallbackByKey[chainKey] ?? 0;
   const imgRef = useRef<HTMLImageElement>(null);
   const imageSrc = fallbackChain[fallbackIndex] ?? model.primarySrc;
   const usesPlainDelivery = !isResponsiveVariantSrc(model, imageSrc);
@@ -48,10 +50,6 @@ export function MithronResponsiveImageImg({
   const width = widthProp ?? model.width;
   const height = heightProp ?? model.height;
   const { isRevealed, revealFromImage, handleReveal } = useImageReveal(imageSrc);
-
-  useEffect(() => {
-    setFallbackIndex(0);
-  }, [model.primarySrc, model.requestedSrc]);
 
   useEffect(() => {
     onFallbackActivate?.(usesPlainDelivery);
@@ -64,7 +62,7 @@ export function MithronResponsiveImageImg({
   const handleImageError = (event: SyntheticEvent<HTMLImageElement>) => {
     const nextIndex = fallbackIndex + 1;
     if (nextIndex < fallbackChain.length && process.env.VITEST !== "true") {
-      setFallbackIndex(nextIndex);
+      setFallbackByKey((current) => ({ ...current, [chainKey]: nextIndex }));
       return;
     }
 
@@ -90,6 +88,8 @@ export function MithronResponsiveImageImg({
   };
 
   return (
+    // Responsive delivery intentionally uses native img for srcset/fallback control.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       {...props}
       key={imageSrc}

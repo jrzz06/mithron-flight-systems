@@ -81,6 +81,7 @@ export const ENTERPRISE_REALTIME_SCOPES: Record<EnterpriseRealtimeScope, Enterpr
     tables: [
       "notifications",
       "activity_logs",
+      "enquiries",
       "inventory",
       "warehouse_stock",
       "inventory_movements",
