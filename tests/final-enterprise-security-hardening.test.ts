@@ -26,8 +26,8 @@ describe("final enterprise security hardening", () => {
     expect(proxy).toContain("security.admin_shell_denied");
     expect(proxy).toContain("security.invalid_jwt");
     expect(proxy).toContain("defaultPathForRole");
-    expect(adminLayout).toContain("redirect(defaultPathForRole");
-    expect(adminLayout).toContain("security.admin_shell_denied");
+    expect(adminLayout).toContain("assertRouteAccessOrRedirect");
+    expect(readWorkspaceFile("services/auth.ts")).toContain("security.admin_shell_denied");
   });
 
   it("adds app-level direct REST/RLS denial telemetry without weakening Supabase RLS", () => {

@@ -15,11 +15,9 @@ export const dynamic = "force-dynamic";
 const customerLinks = [
   { href: "/account", label: "Overview" },
   { href: "/account/orders", label: "Orders" },
-  { href: "/track-order", label: "Track order" },
   { href: "/account/addresses", label: "Addresses" },
   { href: "/account/enquiries", label: "Enquiries" },
-  { href: "/account/profile", label: "Profile" },
-  { href: "/account/security", label: "Security" }
+  { href: "/account/profile", label: "Profile & security" }
 ];
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {

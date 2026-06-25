@@ -5,6 +5,7 @@ import { safeSecretEquals } from "@/lib/auth/timing-safe-bearer";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
 import { releaseCheckoutStock } from "@/services/checkout-stock";
+import { notifyAdminsAboutPaidOrder } from "@/services/enquiries";
 import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } from "@/services/orders";
 import { verifyPaymentWebhook } from "@/services/payments/gateway";
 
@@ -207,6 +208,11 @@ export async function POST(request: Request, context: { params: Promise<{ provid
       await createCustomerPaymentNotification({
         recipientId: typeof order.created_by_user_id === "string" ? order.created_by_user_id : null,
         customerEmail: typeof order.customer_email === "string" ? order.customer_email : null,
+        orderId: String(order.id),
+        orderNumber: String(order.order_number ?? order.id)
+      });
+
+      await notifyAdminsAboutPaidOrder({
         orderId: String(order.id),
         orderNumber: String(order.order_number ?? order.id)
       });

@@ -4,11 +4,13 @@ import {
   appendOrderTimelineViaRpc,
   createActivityLogRecord,
   createNotificationRecord,
+  deleteAdminRecord,
   fetchAdminRecordsByColumn,
   transitionOrderWithTimelineViaRpc,
   updateAdminRecord
 } from "@/services/admin-actions";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
+import { orderHasCheckoutReservations, releaseCheckoutStock } from "@/services/checkout-stock";
 import {
   buildOrderTimelineEntry,
   buildWarehouseAssignmentUpdate,
@@ -118,7 +120,7 @@ async function notifyWarehouseAboutOrder(
   }
 }
 
-async function notifyCustomerAboutOrder(
+export async function notifyCustomerAboutOrder(
   order: JsonRecord,
   title: string,
   body: string,
@@ -126,8 +128,13 @@ async function notifyCustomerAboutOrder(
   env: EnvSource
 ) {
   const metadata = isPlainRecord(order.metadata) ? order.metadata : {};
-  const userId = typeof metadata.created_by_user_id === "string" ? metadata.created_by_user_id : null;
-  if (!userId) return;
+  const userId = typeof order.created_by_user_id === "string"
+    ? order.created_by_user_id
+    : typeof metadata.created_by_user_id === "string"
+      ? metadata.created_by_user_id
+      : null;
+  const customerEmail = String(order.customer_email ?? "").trim();
+  if (!userId && !customerEmail) return;
 
   await createNotificationRecord(
     {
@@ -138,7 +145,7 @@ async function notifyCustomerAboutOrder(
       status: "unread",
       entity_table: "orders",
       entity_id: String(order.id ?? ""),
-      metadata: { recipient_email: String(order.customer_email ?? "") }
+      metadata: { recipient_email: customerEmail || undefined }
     },
     actorId,
     env
@@ -433,6 +440,84 @@ export async function appendOrderTimelineEntryWorkflow(
   return appendOrderTimelineViaRpc(input.orderId, input.entry, input.actorId, env, {
     expectedUpdatedAt: input.expectedUpdatedAt
   });
+}
+
+const deletableOrderStatuses = new Set([
+  "draft",
+  "pending_payment",
+  "admin_review",
+  "cancelled"
+]);
+
+export async function deleteAdminOrderWorkflow(
+  input: { orderId: string; actorId: string; reason: string },
+  env: EnvSource = process.env
+) {
+  const rows = await fetchAdminRecordsByColumn("orders", "id", input.orderId, env);
+  const order = rows[0];
+  if (!order) throw new Error("Order not found.");
+
+  const status = String(order.status ?? "");
+  const fulfillmentStatus = String(order.fulfillment_status ?? "");
+  const channel = String(order.channel ?? "checkout");
+  const activeFulfillment = ["processing", "picked", "packed", "ready_to_dispatch", "shipped", "delivered", "assigned"];
+  if (activeFulfillment.includes(fulfillmentStatus) || ["assigned", "processing", "packed", "dispatched", "delivered"].includes(status)) {
+    throw new Error("Orders in active fulfillment cannot be deleted. Cancel the order instead.");
+  }
+  if (!deletableOrderStatuses.has(status) && channel !== "enquiry") {
+    throw new Error(`Order cannot be deleted in its current state (${status}).`);
+  }
+
+  const reason = input.reason.trim();
+  if (!reason) throw new Error("A deletion reason is required.");
+
+  const hasReservations = await orderHasCheckoutReservations(input.orderId, env).catch(() => false);
+  if (hasReservations) {
+    await releaseCheckoutStock(input.orderId, env);
+  }
+
+  const linkedEnquiries = await fetchAdminRecordsByColumn("enquiries", "converted_order_id", input.orderId, env);
+  for (const enquiry of linkedEnquiries) {
+    const enquiryId = String(enquiry.id ?? "");
+    if (!enquiryId) continue;
+    const payload = isPlainRecord(enquiry.payload) ? enquiry.payload : {};
+    await updateAdminRecord(
+      "enquiries",
+      "id",
+      enquiryId,
+      {
+        converted_order_id: null,
+        payload: {
+          ...payload,
+          order_id: null,
+          order_number: null
+        },
+        updated_at: new Date().toISOString()
+      },
+      input.actorId,
+      env
+    );
+  }
+
+  await createActivityLogRecord(
+    {
+      actor_id: input.actorId,
+      action: "admin_delete",
+      entity_table: "orders",
+      entity_id: input.orderId,
+      severity: "warning",
+      metadata: {
+        reason,
+        order_number: String(order.order_number ?? ""),
+        customer_email: String(order.customer_email ?? "")
+      }
+    },
+    input.actorId,
+    env
+  );
+
+  await deleteAdminRecord("orders", "id", input.orderId, input.actorId, env);
+  return { deleted: true, orderId: input.orderId };
 }
 
 export { AdminRecordConflictError };

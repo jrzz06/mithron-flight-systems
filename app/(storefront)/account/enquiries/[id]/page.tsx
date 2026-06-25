@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/server";
 import { redirect, notFound } from "next/navigation";
 import { formatEnquiryReference, getOwnEnquiryById } from "@/services/enquiries";
+import { enquiryCartLines, enquiryMessageText, type AdminEnquiryRow } from "@/lib/enquiries/shared";
 import { humanStatus } from "@/lib/platform/copy";
 
 export default async function AccountEnquiryDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,6 +21,8 @@ export default async function AccountEnquiryDetailPage({ params }: { params: Pro
     : String(enquiry.subject ?? "Enquiry");
   const timeline = Array.isArray(enquiry.timeline) ? enquiry.timeline : [];
   const convertedOrderId = String(enquiry.converted_order_id ?? "");
+  const cartLines = enquiryCartLines(enquiry as AdminEnquiryRow);
+  const message = enquiryMessageText(enquiry as AdminEnquiryRow);
 
   return (
     <div className="rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8">
@@ -29,7 +32,28 @@ export default async function AccountEnquiryDetailPage({ params }: { params: Pro
         <span className="text-xs uppercase tracking-[0.12em] text-emerald-400">{humanStatus(String(enquiry.status))}</span>
       </div>
       <p className="mt-2 text-sm text-white/60">{String(enquiry.subject)}</p>
-      <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-white/80">{String(enquiry.body)}</p>
+
+      {cartLines.length ? (
+        <div className="mt-6 grid gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-white/50">Requested products</h3>
+          {cartLines.map((line) => (
+            <div
+              key={`${line.product_slug}-${line.product_name}`}
+              className="flex items-center justify-between rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] px-4 py-3 text-sm"
+            >
+              <span className="text-white">{line.product_name}</span>
+              <span className="text-white/50">Qty {line.quantity}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-6">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-white/50">Your message</h3>
+        <p className="mt-2 whitespace-pre-wrap rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] px-4 py-3 text-sm leading-relaxed text-white/80">
+          {message || "—"}
+        </p>
+      </div>
 
       {convertedOrderId ? (
         <div className="mt-6">

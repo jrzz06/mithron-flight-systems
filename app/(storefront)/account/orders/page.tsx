@@ -18,7 +18,10 @@ export default async function AccountOrdersPage() {
 
   return (
     <div className="rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8">
-      <h2 className="type-section">Your orders</h2>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="type-section">Your orders</h2>
+        <Link href="/track-order" className="text-sm text-emerald-400">Track order without signing in</Link>
+      </div>
       <div className="mt-6 grid gap-3">
         {orders.length ? orders.map((order) => (
           <Link

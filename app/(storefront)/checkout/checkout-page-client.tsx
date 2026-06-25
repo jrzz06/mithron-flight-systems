@@ -37,6 +37,7 @@ type CompletionState = {
   orderNumber: string;
   email: string;
   phone: string;
+  fullName: string;
   total: number;
   isSignedIn: boolean;
 };
@@ -111,6 +112,7 @@ function CheckoutInvoice({
       </div>
 
       <div className="mt-4 grid gap-2 text-sm text-slate-700">
+        <p><span className="font-medium text-slate-900">Name:</span> {completed.fullName || "—"}</p>
         <p><span className="font-medium text-slate-900">Email:</span> {completed.email}</p>
         <p><span className="font-medium text-slate-900">Phone:</span> {completed.phone}</p>
       </div>
@@ -162,6 +164,8 @@ export function CheckoutPageClient() {
   const [error, setError] = useState("");
   const [enquiryMessage, setEnquiryMessage] = useState("");
   const [phone, setPhone] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [company, setCompany] = useState("");
   const [completed, setCompleted] = useState<CompletionState | null>(null);
   const checkoutIdempotencyKeyRef = useRef<string | null>(null);
 
@@ -181,9 +185,13 @@ export function CheckoutPageClient() {
     const payload: Record<string, unknown> = {
       email: checkout.email,
       phone: phone.trim(),
+      fullName: fullName.trim(),
       region: checkout.region,
       items: items.map((item) => ({ productSlug: item.productSlug, quantity: item.quantity }))
     };
+
+    const companyName = company.trim();
+    if (companyName) payload.company = companyName;
 
     const promoCode = checkout.promoCode.trim();
     if (promoCode) payload.promoCode = promoCode;
@@ -204,7 +212,7 @@ export function CheckoutPageClient() {
     }
 
     return payload;
-  }, [checkout.email, checkout.region, checkout.shippingAddressId, checkout.promoCode, phone, items, usingSavedAddress, guestAddress]);
+  }, [checkout.email, checkout.region, checkout.shippingAddressId, checkout.promoCode, phone, fullName, company, items, usingSavedAddress, guestAddress]);
 
   const markComplete = useCallback((
     mode: CompletionMode,
@@ -219,11 +227,12 @@ export function CheckoutPageClient() {
       orderNumber,
       email: checkout.email.trim(),
       phone: phone.trim(),
+      fullName: fullName.trim(),
       total: grandTotal,
       isSignedIn
     });
     setError("");
-  }, [setCheckoutOrderMeta, checkout.email, phone, grandTotal, isSignedIn, clearCart]);
+  }, [setCheckoutOrderMeta, checkout.email, phone, fullName, grandTotal, isSignedIn, clearCart]);
 
   useEffect(() => {
     let active = true;
@@ -284,6 +293,14 @@ export function CheckoutPageClient() {
   function validateBase(requireAddress: boolean) {
     if (!items.length) {
       setError("Your cart is empty.");
+      return false;
+    }
+    if (!fullName.trim()) {
+      setError("Full name is required.");
+      return false;
+    }
+    if (fullName.trim().length < 2) {
+      setError("Enter your full name.");
       return false;
     }
     if (!checkout.email.trim()) {
@@ -483,7 +500,7 @@ export function CheckoutPageClient() {
       return;
     }
 
-    markComplete("enquiry", payload.orderId, String(payload.orderNumber ?? payload.orderId));
+    markComplete("enquiry", String(payload.enquiryId ?? ""), String(payload.enquiryReference ?? payload.enquiryId ?? "Enquiry"));
     setLoading(null);
   }
 
@@ -519,27 +536,45 @@ export function CheckoutPageClient() {
                 <p className="type-body mt-3 text-slate-600">
                   {completed.mode === "payment"
                     ? `Reference ${completed.orderNumber}. Save this invoice for your records.`
-                    : `Reference ${completed.orderNumber}. Our team will review your cart and contact you on ${completed.phone}.`}
+                    : `${completed.orderNumber} received. Our team will review your cart and contact ${completed.fullName || "you"} at ${completed.phone}.`}
                 </p>
 
                 <CheckoutInvoice completed={completed} items={items} />
 
                 <div className="mt-7 flex flex-wrap gap-3">
-                  {completed.isSignedIn && !isStorefrontGuestOnly() ? (
-                    <Button asChild variant="accent">
-                      <Link href="/account/orders">View orders</Link>
-                    </Button>
-                  ) : !isStorefrontGuestOnly() ? (
-                    <Button asChild variant="accent">
-                      <Link href={`/login?next=${encodeURIComponent("/account/orders")}`}>Create account to track orders</Link>
-                    </Button>
-                  ) : null}
+                  {completed.mode === "payment" ? (
+                    <>
+                      {completed.isSignedIn && !isStorefrontGuestOnly() ? (
+                        <Button asChild variant="accent">
+                          <Link href="/account/orders">View orders</Link>
+                        </Button>
+                      ) : !isStorefrontGuestOnly() ? (
+                        <Button asChild variant="accent">
+                          <Link href={`/login?next=${encodeURIComponent("/account/orders")}`}>Create account to track orders</Link>
+                        </Button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      {completed.isSignedIn && !isStorefrontGuestOnly() ? (
+                        <Button asChild variant="accent">
+                          <Link href="/account/enquiries">View my enquiries</Link>
+                        </Button>
+                      ) : !isStorefrontGuestOnly() ? (
+                        <Button asChild variant="accent">
+                          <Link href={`/login?next=${encodeURIComponent("/account/enquiries")}`}>Create account to track your enquiry</Link>
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => {
                       clearCart();
                       setCompleted(null);
                       setEnquiryMessage("");
+                      setFullName("");
+                      setCompany("");
                       setGuestAddress(emptyGuestAddress());
                     }}
                   >
@@ -559,6 +594,29 @@ export function CheckoutPageClient() {
                   <legend className="type-section mb-1 text-2xl">Contact</legend>
                   <p className="text-sm text-slate-500">{CUSTOMER_CONTACT_REQUIRED_MESSAGE}</p>
                   <div className="grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium text-slate-700">Full name <span className="text-red-600">*</span></span>
+                      <input
+                        required
+                        type="text"
+                        autoComplete="name"
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                        className="type-body h-12 rounded-full border border-slate-200 bg-white px-5 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                        placeholder="Your full name"
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium text-slate-700">Company</span>
+                      <input
+                        type="text"
+                        autoComplete="organization"
+                        value={company}
+                        onChange={(event) => setCompany(event.target.value)}
+                        className="type-body h-12 rounded-full border border-slate-200 bg-white px-5 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                        placeholder="Optional"
+                      />
+                    </label>
                     <label className="grid gap-2">
                       <span className="text-sm font-medium text-slate-700">Email <span className="text-red-600">*</span></span>
                       <input

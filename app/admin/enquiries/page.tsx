@@ -62,8 +62,8 @@ export default async function AdminEnquiriesPage({ searchParams }: { searchParam
           data-enquiry-feedback
           className={`rounded-[8px] border px-4 py-3 text-sm ${
             enquiryStatus === "error"
-              ? "border-rose-500/30 bg-rose-950/20 text-rose-100"
-              : "border-emerald-500/30 bg-emerald-950/20 text-emerald-100"
+              ? "platform-feedback-error"
+              : "platform-feedback-success"
           }`}
         >
           {enquiryMessage}

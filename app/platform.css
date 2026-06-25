@@ -381,6 +381,71 @@
   cursor: not-allowed;
 }
 
+/* Per-portal accent colors (dark theme) */
+[data-control-plane-theme="dark"][data-control-plane-scope="admin"] {
+  --platform-accent: #7c6af7;
+  --platform-accent-strong: #9d8ef9;
+  --platform-accent-text: #ffffff;
+  --platform-accent-soft: #2d2b45;
+  --platform-focus-ring: rgba(124, 106, 247, 0.18);
+  --platform-focus-border: rgba(124, 106, 247, 0.42);
+}
+
+[data-control-plane-theme="dark"][data-control-plane-scope="supplier"] {
+  --platform-accent: #f09a3e;
+  --platform-accent-strong: #f5b468;
+  --platform-accent-text: #1a0e00;
+  --platform-accent-soft: #3a2710;
+  --platform-focus-ring: rgba(240, 154, 62, 0.18);
+  --platform-focus-border: rgba(240, 154, 62, 0.42);
+}
+
+[data-control-plane-theme="dark"][data-control-plane-scope="warehouse"] {
+  --platform-accent: #3ebfb0;
+  --platform-accent-strong: #5ed4c6;
+  --platform-accent-text: #0a1c1a;
+  --platform-accent-soft: #152a28;
+  --platform-focus-ring: rgba(62, 191, 176, 0.18);
+  --platform-focus-border: rgba(62, 191, 176, 0.42);
+}
+
+[data-control-plane] .platform-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--platform-danger);
+  background-color: var(--platform-danger);
+  color: #fff;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+  cursor: pointer;
+}
+
+[data-control-plane] .platform-btn-danger:hover {
+  background-color: var(--platform-danger-soft, #4a1a1a);
+  border-color: var(--platform-danger-soft, #4a1a1a);
+  color: #fff;
+}
+
+[data-control-plane] .platform-btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+[data-control-plane] .platform-feedback-success {
+  border: 1px solid color-mix(in srgb, var(--platform-success) 35%, transparent);
+  background: var(--platform-success-soft);
+  color: var(--platform-success);
+}
+
+[data-control-plane] .platform-feedback-error {
+  border: 1px solid color-mix(in srgb, var(--platform-danger) 35%, transparent);
+  background: var(--platform-danger-soft);
+  color: var(--platform-danger);
+}
+
 [data-control-plane] input[type="file"].platform-file-input::file-selector-button {
   margin-right: 0.75rem;
   border: 0;

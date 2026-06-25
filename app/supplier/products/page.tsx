@@ -74,7 +74,12 @@ export default async function SupplierProductsPage() {
                           Edit
                         </Link>
                       ) : canViewProduct(status) ? (
-                        <Link href={`/supplier/products/${slug}/edit`} className="text-[var(--platform-text-secondary)] hover:underline">
+                        <Link
+                          href={`/product/${encodeURIComponent(slug)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[var(--platform-text-secondary)] hover:underline"
+                        >
                           View listing
                         </Link>
                       ) : status === "pending_review" ? (

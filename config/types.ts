@@ -115,6 +115,7 @@ export type Product = {
   price: number;
   compareAt?: number;
   badge?: string;
+  badgeStyle?: import("@/lib/product-badge").ProductBadgeStyle;
   description?: string;
   sourceDescription?: string;
   onSale?: boolean;

@@ -51,8 +51,18 @@ function supabaseImageHostname() {
   }
 }
 
+function developmentAllowedOrigins() {
+  if (process.env.NODE_ENV !== "development") return undefined;
+  const extras = (process.env.DEV_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return ["127.0.0.1", "localhost", ...extras];
+}
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: developmentAllowedOrigins(),
   turbopack: {
     root: appRoot
   },

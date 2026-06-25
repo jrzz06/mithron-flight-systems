@@ -58,6 +58,7 @@ function buildProductConfiguratorModel(
     tagline: product.tagline,
     category: product.category,
     badge: product.badge,
+    badgeStyle: product.badgeStyle,
     price: product.price,
     compareAt: product.compareAt,
     chargeTax: product.chargeTax,

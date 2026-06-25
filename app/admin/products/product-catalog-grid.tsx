@@ -22,6 +22,9 @@ export type ProductCatalogGridRow = {
   price: string;
   compareAt?: string | null;
   badge?: string | null;
+  badgeEnabled?: boolean;
+  badgeText?: string | null;
+  badgeStyle?: string | null;
   description?: string | null;
   onSale?: boolean;
   discountType?: "percent" | "amount" | null;

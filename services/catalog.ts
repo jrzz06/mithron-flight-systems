@@ -25,6 +25,7 @@ import { customerFacingAvailability } from "@/services/inventory-csv";
 import type { OrderCatalogProduct } from "@/services/orders";
 import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
 import { buildProductResponsiveAsset } from "@/lib/media/product-responsive";
+import { resolveStorefrontBadgeText, resolveStorefrontProductBadge } from "@/lib/product-badge";
 
 export type CatalogDataErrorCode = "missing_source_image";
 
@@ -63,6 +64,9 @@ type MithronProductRow = {
   price: number | string | null;
   compare_at: number | string | null;
   badge: string | null;
+  badge_enabled: boolean | null;
+  badge_text: string | null;
+  badge_style: string | null;
   description: string | null;
   on_sale: boolean | null;
   discount_type: "percent" | "amount" | null;
@@ -98,12 +102,12 @@ type ProductAffinityRow = Pick<MithronProductRow, "slug" | "category" | "interes
 
 type MithronProductShellRow = Pick<
   MithronProductRow,
-  "slug" | "name" | "tagline" | "price" | "badge" | "category" | "interests" | "image" | "hero" | "gallery" | "source_catalog_id" | "source_description" | "source_images"
+  "slug" | "name" | "tagline" | "price" | "badge" | "badge_enabled" | "badge_text" | "badge_style" | "category" | "interests" | "image" | "hero" | "gallery" | "source_catalog_id" | "source_description" | "source_images"
 >;
 
 type EnterpriseMenuProductRow = Pick<
   MithronProductRow,
-  "slug" | "name" | "tagline" | "price" | "badge" | "category" | "interests" | "image" | "source_catalog_id" | "source_description" | "source_images"
+  "slug" | "name" | "tagline" | "price" | "badge" | "badge_enabled" | "badge_text" | "badge_style" | "category" | "interests" | "image" | "source_catalog_id" | "source_description" | "source_images"
 >;
 
 type ProductMediaLinkRow = {
@@ -170,6 +174,9 @@ type CatalogSearchRow = {
   tagline: string | null;
   price: number | string | null;
   badge: string | null;
+  badge_enabled: boolean | null;
+  badge_text: string | null;
+  badge_style: string | null;
   category: string;
   image: JsonRecord | null;
   hero: JsonRecord | null;
@@ -188,6 +195,9 @@ const homepageProductSelect = [
   "price",
   "compare_at",
   "badge",
+  "badge_enabled",
+  "badge_text",
+  "badge_style",
   "category",
   "interests",
   "image",
@@ -207,7 +217,7 @@ const SHELL_PREVIEW_LIMIT = 120;
 const ENTERPRISE_MENU_PER_CATEGORY_LIMIT = 16;
 const PRODUCT_MEDIA_LIMIT = 2000;
 const CHECKOUT_PRICING_SELECT = "slug,name,price,category,charge_tax,tax_group,tax_rate,tax_included";
-const catalogSearchIndexSelect = "slug,name,tagline,price,badge,category,interests,image,hero,source_catalog_id,source_description,sort_order";
+const catalogSearchIndexSelect = "slug,name,tagline,price,badge,badge_enabled,badge_text,badge_style,category,interests,image,hero,source_catalog_id,source_description,sort_order";
 const LEGACY_WIX_INVENTORY_CATEGORY = "Imported Wix Inventory";
 const publishedCatalogFilter = `workflow_status=eq.published&is_visible=eq.true&category=neq.${encodeURIComponent(LEGACY_WIX_INVENTORY_CATEGORY)}&slug=not.like.audit-trace-*`;
 
@@ -217,6 +227,9 @@ const enterpriseMenuSelect = [
   "tagline",
   "price",
   "badge",
+  "badge_enabled",
+  "badge_text",
+  "badge_style",
   "category",
   "interests",
   "image",
@@ -237,6 +250,9 @@ const catalogListSelect = [
   "price",
   "compare_at",
   "badge",
+  "badge_enabled",
+  "badge_text",
+  "badge_style",
   "category",
   "interests",
   "image",
@@ -264,6 +280,9 @@ const productSelect = [
   "price",
   "compare_at",
   "badge",
+  "badge_enabled",
+  "badge_text",
+  "badge_style",
   "description",
   "on_sale",
   "discount_type",
@@ -639,6 +658,14 @@ function resolveHydratedProductImage(
   return enrichImageWithLinkedResponsive(image, linkedPrimaryImage);
 }
 
+function mapStorefrontBadgeFields(row: Pick<MithronProductRow, "badge_enabled" | "badge_text" | "badge_style" | "badge">): Pick<Product, "badge" | "badgeStyle"> {
+  const resolved = resolveStorefrontProductBadge(row);
+  return {
+    badge: resolved?.text,
+    badgeStyle: resolved?.style
+  };
+}
+
 function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset): Product {
   const name = cleanText(row.name);
   const marketingTagline = getProductMarketingTagline({
@@ -674,7 +701,7 @@ function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset):
     ogImage: mediaFromJson(row.og_image, name) ?? undefined,
     price: toNumber(row.price),
     compareAt: row.compare_at ? toNumber(row.compare_at) : undefined,
-    badge: row.badge ?? undefined,
+    ...mapStorefrontBadgeFields(row),
     description: (() => {
       const rawDescription = row.description ? cleanText(row.description) : undefined;
       return rawDescription && !isSpecLikeBlob(rawDescription) ? rawDescription : undefined;
@@ -739,7 +766,7 @@ function mapEnterpriseMenuProduct(
     name,
     tagline: marketingTagline,
     price: toNumber(row.price),
-    badge: row.badge ?? undefined,
+    ...mapStorefrontBadgeFields(row),
     category: row.category,
     interests: row.interests ?? [],
     image: hydratedImage,
@@ -771,7 +798,7 @@ function mapProductShellRow(row: MithronProductShellRow, linkedPrimaryImage?: Me
     name,
     tagline,
     price: toNumber(row.price),
-    badge: row.badge ?? undefined,
+    badge: resolveStorefrontBadgeText(row),
     category: row.category,
     interests: interestsValue,
     image,
@@ -804,7 +831,7 @@ function mapProductShellRowOrNull(row: MithronProductShellRow, linkedPrimaryImag
     name,
     tagline,
     price: toNumber(row.price),
-    badge: row.badge ?? undefined,
+    badge: resolveStorefrontBadgeText(row),
     category: row.category,
     interests: interestsValue,
     image: enrichImageWithLinkedResponsive(resolved, linkedPrimaryImage),
@@ -1054,8 +1081,8 @@ async function fetchCatalogSearchRowsFallback(query: string, limit: number): Pro
   const boundedLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
   const pattern = `"*${token}*"`;
   const orClause = `(name.ilike.${pattern},tagline.ilike.${pattern},slug.ilike.${pattern},category.ilike.${pattern})`;
-  const rows = await fetchCatalogRows<Pick<CatalogSearchRow, "slug" | "name" | "tagline" | "price" | "badge" | "category" | "image" | "hero">>(
-    `select=slug,name,tagline,price,badge,category,image,hero&${publishedCatalogFilter}&or=${orClause}&order=sort_order.asc&limit=${boundedLimit}`
+  const rows = await fetchCatalogRows<Pick<CatalogSearchRow, "slug" | "name" | "tagline" | "price" | "badge" | "badge_enabled" | "badge_text" | "badge_style" | "category" | "image" | "hero">>(
+    `select=slug,name,tagline,price,badge,badge_enabled,badge_text,badge_style,category,image,hero&${publishedCatalogFilter}&or=${orClause}&order=sort_order.asc&limit=${boundedLimit}`
   );
 
   return rows.map((row) => ({ ...row, rank: null }));
@@ -1133,7 +1160,7 @@ async function mapSearchRowsToCatalogResults(rows: CatalogSearchRow[]): Promise<
       name,
       tagline: cleanText(row.tagline),
       price: toNumber(row.price),
-      badge: row.badge ?? undefined,
+      badge: resolveStorefrontBadgeText(row),
       category: row.category,
       image: enrichImageWithLinkedResponsive(resolved, linkedPrimaryImage)
     });
@@ -1566,6 +1593,9 @@ export async function searchProducts(query: string, limit = 24) {
       price: row.price,
       compare_at: null,
       badge: row.badge,
+      badge_enabled: row.badge_enabled ?? Boolean(row.badge),
+      badge_text: row.badge_text ?? row.badge,
+      badge_style: row.badge_style ?? "default",
       description: null,
       on_sale: null,
       discount_type: null,

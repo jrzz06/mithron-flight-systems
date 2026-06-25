@@ -21,11 +21,14 @@ describe("four-role RBAC route guards", () => {
     expect(canAccessProtectedPath("user", "/account/orders")).toBe(true);
     expect(canAccessProtectedPath("user", "/supplier")).toBe(false);
     expect(canAccessProtectedPath("supplier", "/warehouse/dashboard")).toBe(false);
+    expect(canAccessProtectedPath("admin", "/warehouse/dashboard")).toBe(false);
+    expect(canAccessProtectedPath("admin", "/supplier")).toBe(false);
   });
 
   it("ships supplier portal and proxy guard surfaces", () => {
     expect(existsSync(join(root, "app/supplier/layout.tsx"))).toBe(true);
-    expect(readFileSync(join(root, "proxy.ts"), "utf8")).toContain("canAccessProtectedPath(role, pathname)");
+    expect(readFileSync(join(root, "proxy.ts"), "utf8")).toContain("authorizeRoute(role, pathname");
+    expect(readFileSync(join(root, "proxy.ts"), "utf8")).toContain("resolveApiRoutePolicy");
     expect(roleHasPermission("supplier", "products.submit")).toBe(true);
   });
 });

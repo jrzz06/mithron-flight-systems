@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminSection, OperationalFeedback } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { StatusPill } from "@/components/platform";
@@ -64,7 +65,11 @@ export default async function SupplierInventoryPage({ searchParams }: { searchPa
                     key={String(row.id)}
                     className={`border-t border-[var(--platform-border)] ${attention ? "bg-amber-950/10" : ""}`}
                   >
-                    <td className="px-4 py-3 text-[var(--platform-text-primary)]">{productName}</td>
+                    <td className="px-4 py-3 text-[var(--platform-text-primary)]">
+                      <Link href={`/supplier/products/${encodeURIComponent(slug)}/edit`} className="font-medium hover:text-[var(--platform-accent)]">
+                        {productName}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-[var(--platform-text-secondary)]">{String(row.sku ?? "—")}</td>
                     <td className="px-4 py-3 text-[var(--platform-text-secondary)]">{String(row.quantity ?? 0)}</td>
                     <td className="px-4 py-3">

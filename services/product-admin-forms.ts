@@ -1,3 +1,4 @@
+import { readProductBadgeFieldsFromFormData } from "@/lib/product-badge";
 import { resolveProductPricing, type ProductDiscountType } from "@/lib/product-pricing";
 import { getProductTaxGroup, isProductTaxGroupId } from "@/lib/product-tax-groups";
 
@@ -442,6 +443,9 @@ function slugFromCategoryTitle(title: string) {
 type ProductCommerceFields = {
   description?: string | null;
   badge?: string | null;
+  badge_enabled?: boolean;
+  badge_text?: string | null;
+  badge_style?: string;
   price?: number;
   compare_at?: number | null;
   on_sale?: boolean;
@@ -460,8 +464,16 @@ function readProductCommerceFields(formData: FormData): ProductCommerceFields {
   const description = readOptionalString(formData, "description");
   if (description !== undefined) fields.description = description;
 
-  const ribbon = readOptionalString(formData, "ribbon") ?? readOptionalString(formData, "badge");
-  if (ribbon !== undefined) fields.badge = ribbon || null;
+  const badgeFields = readProductBadgeFieldsFromFormData(formData);
+  if (badgeFields) {
+    fields.badge_enabled = badgeFields.badge_enabled;
+    fields.badge_text = badgeFields.badge_text;
+    fields.badge_style = badgeFields.badge_style;
+    fields.badge = badgeFields.badge;
+  } else {
+    const ribbon = readOptionalString(formData, "ribbon") ?? readOptionalString(formData, "badge");
+    if (ribbon !== undefined) fields.badge = ribbon || null;
+  }
 
   const listPrice = readOptionalNumber(formData, "list_price", "Product list price");
   const legacyPrice = readOptionalNumber(formData, "price", "Product price");

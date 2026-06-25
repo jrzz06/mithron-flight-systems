@@ -2,16 +2,12 @@ import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EnquiryForm } from "@/components/contact/enquiry-form";
+import { footerOfficialLinks } from "@/config/footer-links";
 import { createClient } from "@/lib/server";
-
-const contactCards = [
-  { label: "Sales", value: "sales@mithron.com", icon: Mail },
-  { label: "Operations", value: "Request a callback", icon: Phone },
-  { label: "Coverage", value: "India field deployments", icon: MapPin }
-];
+import { getPublicCmsSnapshot } from "@/services/cms";
 
 export default async function ContactPage() {
-  const supabase = await createClient();
+  const [cms, supabase] = await Promise.all([getPublicCmsSnapshot(), createClient()]);
   const { data } = await supabase.auth.getClaims();
   const email = typeof data?.claims?.email === "string" ? data.claims.email : "";
   const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
@@ -26,6 +22,17 @@ export default async function ContactPage() {
     profilePhone = typeof profile?.phone === "string" ? profile.phone.trim() : "";
   }
 
+  const contactEmail = cms.footer.contactEmail?.trim() || footerOfficialLinks.contactEmail;
+  const contactPhone = cms.footer.contactPhone?.trim() || footerOfficialLinks.contactPhone;
+  const intro = cms.footer.leadBody?.trim()
+    || "Submit a deployment enquiry and our team will follow up with product fit, pricing, and rollout guidance.";
+
+  const contactCards = [
+    { label: "Sales", value: contactEmail, icon: Mail },
+    { label: "Operations", value: contactPhone, icon: Phone },
+    { label: "Coverage", value: "India field deployments", icon: MapPin }
+  ];
+
   return (
     <main className="surface-page inner-page min-h-screen">
       <section className="mx-auto max-w-[1180px]">
@@ -33,9 +40,7 @@ export default async function ContactPage() {
         <div className="mt-4 grid gap-8 md:grid-cols-[0.95fr_1.05fr]">
           <div>
             <h1 className="type-page max-w-2xl">Talk to Mithron.</h1>
-            <p className="type-subtitle mt-6 max-w-2xl text-slate-600">
-              Submit a deployment enquiry and our team will follow up with product fit, pricing, and rollout guidance.
-            </p>
+            <p className="type-subtitle mt-6 max-w-2xl text-slate-600">{intro}</p>
             <Button asChild className="mt-8">
               <Link href="/products">Browse systems</Link>
             </Button>

@@ -91,6 +91,8 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
     revalidatePath("/admin/products");
     revalidatePath("/admin/inventory");
     revalidatePath("/warehouse/inventory");
+    revalidatePath("/supplier/submissions");
+    revalidatePath("/supplier/products");
   });
 }
 
@@ -140,5 +142,7 @@ export async function rejectProductSubmissionFormAction(formData: FormData) {
     }
 
     revalidatePath("/admin/suppliers/products");
+    revalidatePath("/supplier/submissions");
+    revalidatePath("/supplier/products");
   });
 }

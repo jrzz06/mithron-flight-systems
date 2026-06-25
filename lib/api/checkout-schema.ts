@@ -33,12 +33,27 @@ function parseGuestAddress(record: Record<string, unknown>): GuestAddress | null
 export type CheckoutRequestBody = {
   email: string;
   phone: string;
+  fullName: string;
+  company?: string;
   items: Array<{ productSlug: string; quantity: number }>;
   addressId?: string;
   guestAddress?: GuestAddress;
   region?: string;
   promoCode?: string;
 };
+
+function parseFullName(record: Record<string, unknown>) {
+  const fullName = typeof record.fullName === "string" ? record.fullName.trim() : "";
+  if (!fullName || fullName.length < 2 || fullName.length > 120) return null;
+  return fullName;
+}
+
+function parseCompany(record: Record<string, unknown>) {
+  const company = typeof record.company === "string" ? record.company.trim() : "";
+  if (!company) return undefined;
+  if (company.length > 160) return null;
+  return company;
+}
 
 export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
@@ -64,6 +79,12 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
     items.push({ productSlug, quantity });
   }
 
+  const fullName = parseFullName(record);
+  if (!fullName) return null;
+
+  const company = parseCompany(record);
+  if (company === null) return null;
+
   const addressId = typeof record.addressId === "string" ? record.addressId.trim() : undefined;
   const guestAddress = parseGuestAddress(record);
   const region = typeof record.region === "string" ? record.region.trim().slice(0, 120) : undefined;
@@ -72,12 +93,54 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
   return {
     email,
     phone,
+    fullName,
     items,
+    ...(company ? { company } : {}),
     ...(addressId ? { addressId } : {}),
     ...(guestAddress ? { guestAddress } : {}),
     ...(region ? { region } : {}),
     ...(promoCode ? { promoCode } : {})
   };
+}
+
+export function validateCheckoutEnquiryRequestBody(body: unknown): { ok: true; data: CheckoutEnquiryRequestBody } | { ok: false; error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { ok: false, error: "Invalid enquiry request." };
+  }
+  const record = body as Record<string, unknown>;
+  const email = typeof record.email === "string" ? record.email.trim() : "";
+  if (!email) return { ok: false, error: "Email is required." };
+  if (!isValidCustomerEmail(email)) return { ok: false, error: "Enter a valid email address." };
+
+  const phone = typeof record.phone === "string" ? record.phone.trim() : "";
+  if (!phone) return { ok: false, error: "Phone number is required." };
+  if (!isValidCustomerPhone(phone) || phone.length > 40) {
+    return { ok: false, error: "Enter a valid phone number (8–15 digits)." };
+  }
+
+  const fullName = typeof record.fullName === "string" ? record.fullName.trim() : "";
+  if (!fullName) return { ok: false, error: "Full name is required." };
+  if (fullName.length < 2 || fullName.length > 120) {
+    return { ok: false, error: "Full name must be between 2 and 120 characters." };
+  }
+
+  const company = typeof record.company === "string" ? record.company.trim() : "";
+  if (company.length > 160) return { ok: false, error: "Company name is too long." };
+
+  if (!Array.isArray(record.items) || record.items.length === 0) {
+    return { ok: false, error: "Add at least one product to your cart before sending an enquiry." };
+  }
+  if (record.items.length > 50) {
+    return { ok: false, error: "Cart is too large for a single enquiry." };
+  }
+
+  const message = typeof record.message === "string" ? record.message.trim() : "";
+  if (!message) return { ok: false, error: "Add a short message about what you need help with." };
+  if (message.length > 5000) return { ok: false, error: "Message is too long." };
+
+  const parsed = parseCheckoutEnquiryRequestBody(body);
+  if (!parsed) return { ok: false, error: "Check your contact details and cart, then try again." };
+  return { ok: true, data: parsed };
 }
 
 export type CheckoutEnquiryRequestBody = CheckoutRequestBody & {

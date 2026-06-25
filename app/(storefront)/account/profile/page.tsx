@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/server";
 import { redirect } from "next/navigation";
 import { updateProfileFormAction } from "./actions";
@@ -73,6 +74,12 @@ export default async function AccountProfilePage() {
           Save profile
         </button>
       </form>
+      <p className="mt-6 text-sm text-white/60">
+        Need to update your password?{" "}
+        <Link href="/account/security" className="text-emerald-400 underline-offset-2 hover:underline">
+          Go to security settings
+        </Link>
+      </p>
     </div>
   );
 }

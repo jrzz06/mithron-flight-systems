@@ -17,8 +17,9 @@ describe("iteration 1 production hardening contracts", () => {
     expect(proxy).toContain("export async function proxy");
     expect(proxy).toContain("current_enterprise_role");
     expect(proxy).toContain("recordSecurityEventFromMiddleware");
-    expect(proxy).toContain("security.admin_shell_denied");
-    expect(proxy).toContain("security.route_denied");
+    expect(proxy).toContain("authorizeRoute(role, pathname");
+    expect(proxy).toContain("resolveApiRoutePolicy");
+    expect(proxy).toContain("authorization.eventType");
     expect(proxy).toContain('matcher: ["/((?!_next/static|_next/image|favicon.ico|api/health).*)"]');
   });
 
@@ -41,10 +42,8 @@ describe("iteration 1 production hardening contracts", () => {
     expect(cmsPage).toContain("hero-banner");
     expect(cmsPage).not.toContain("data-cms-workflow-grid");
     expect(warehousePage).toContain('redirect("/warehouse/dashboard")');
-    expect(warehouseDashboardPage).toContain("data-warehouse-route");
-    expect(warehouseDashboardPage).toContain("data-warehouse-live-dashboard");
-    expect(warehouseShipmentsPage).toContain("data-warehouse-shipments-route");
-    expect(warehouseShipmentsPage).toContain("data-shipments-table");
+    expect(warehouseDashboardPage).toContain("data-warehouse-operational-dashboard");
+    expect(warehouseShipmentsPage).toContain('redirect("/warehouse/dispatch")');
     expect(warehouseShipmentDetailPage).toContain("data-shipment-detail-route");
     expect(warehouseShipmentDetailPage).toContain("data-shipment-timeline");
     expect(operationsPage).toContain("data-operations-route");

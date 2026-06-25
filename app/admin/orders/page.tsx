@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminOrdersWorkspace } from "@/components/admin/admin-orders-workspace";
 import { ModulePanel } from "@/components/admin/module-panel";
-import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction, cancelAdminOrderFormAction, rejectAdminOrderFormAction } from "@/app/admin/orders/actions";
+import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction, cancelAdminOrderFormAction, deleteAdminOrderFormAction, rejectAdminOrderFormAction } from "@/app/admin/orders/actions";
 import { createShipmentFormAction, updateWarehouseOrderLifecycleFormAction } from "@/app/warehouse/actions";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
@@ -93,6 +93,23 @@ async function cancelAdminOrderAction(formData: FormData) {
   redirectWithOrderFeedback(orderId, "success", "Order cancelled.", queue, query);
 }
 
+async function deleteAdminOrderAction(formData: FormData) {
+  "use server";
+  const queue = String(formData.get("queue") ?? "review");
+  const query = String(formData.get("q") ?? "");
+  try {
+    await deleteAdminOrderFormAction(formData);
+  } catch (error) {
+    redirectWithOrderFeedback("", "error", orderActionMessage(error).slice(0, 240), queue, query);
+  }
+  const params = new URLSearchParams();
+  if (queue) params.set("queue", queue);
+  if (query) params.set("q", query);
+  params.set("order_status", "success");
+  params.set("order_message", "Order deleted.");
+  redirect(`/admin/orders?${params.toString()}`);
+}
+
 async function confirmAdminOrderAction(formData: FormData) {
   "use server";
   const orderId = String(formData.get("order_id") ?? "").trim();
@@ -181,6 +198,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
         confirmAdminOrderAction={confirmAdminOrderAction}
         rejectAdminOrderAction={rejectAdminOrderAction}
         cancelAdminOrderAction={cancelAdminOrderAction}
+        deleteAdminOrderAction={deleteAdminOrderAction}
         assignAdminWarehouseAction={assignAdminWarehouseAction}
         updateAdminOrderLifecycleAction={updateAdminOrderLifecycleAction}
         confirmAdminWarehouseHandoffAction={confirmAdminWarehouseHandoffAction}

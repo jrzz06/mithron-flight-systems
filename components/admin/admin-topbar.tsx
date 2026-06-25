@@ -22,7 +22,6 @@ type AdminTopbarProps = {
 const quickActions: AdminSearchItem[] = [
   { label: "Create product", href: "/admin/products?tool=create#create-product", group: "Action" },
   { label: "Create order", href: "/admin/orders#create-order", group: "Action" },
-  { label: "Upload media", href: "/admin/media#upload-media", group: "Action" },
   { label: "Edit hero banner", href: CMS_WORKSPACE_LINKS.hero, group: "Action" },
   { label: "Edit category banners", href: CMS_WORKSPACE_LINKS.categoryBanners, group: "Action" }
 ];
@@ -32,7 +31,6 @@ const routeTitles: Array<{ href: string; title: string; kicker: string }> = [
   { href: "/admin/orders", title: "Orders", kicker: "Order workflow" },
   { href: "/admin/inventory", title: "Inventory", kicker: "Stock visibility" },
   { href: "/admin/cms", title: "CMS", kicker: "Content workspace" },
-  { href: "/admin/media", title: "Media", kicker: "Asset library" },
   { href: "/admin/settings", title: "Settings", kicker: "Access and system" },
   { href: "/admin", title: "Dashboard", kicker: "Operational overview" }
 ];

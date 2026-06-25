@@ -409,7 +409,7 @@ function pickShelfProducts(products: Product[], config: ProductShelfConfig, coun
 }
 
 function compactProductMeta(product: Product) {
-  const label = product.badge || product.category || "Catalog";
+  const label = product.badge?.trim() || "";
   const phrase = product.tagline
     .replace(/\s+/g, " ")
     .split(/[.;\n]/)[0]
@@ -518,10 +518,13 @@ function ProductShelfSection({
                         />
                       </div>
                       <div className={styles.productBody}>
-                        <p className={styles.productKicker}>
-                          <span>{meta.label}</span>
-                          {meta.detail ? ` · ${meta.detail}` : null}
-                        </p>
+                        {meta.label || meta.detail ? (
+                          <p className={styles.productKicker}>
+                            {meta.label ? <span>{meta.label}</span> : null}
+                            {meta.label && meta.detail ? " · " : null}
+                            {meta.detail ? <span>{meta.detail}</span> : null}
+                          </p>
+                        ) : null}
                         <h3 className={styles.productName}>{formatShelfProductName(product.name)}</h3>
                         <div className={styles.productFooter}>
                           <span>{formatINR(product.price)}</span>

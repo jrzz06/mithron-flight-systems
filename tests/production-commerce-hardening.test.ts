@@ -6,6 +6,7 @@ describe("checkout request schema", () => {
     const parsed = parseCheckoutRequestBody({
       email: "buyer@example.com",
       phone: "+919876543210",
+      fullName: "Buyer Example",
       items: [{ productSlug: "drone-x", quantity: 2 }],
       addressId: "addr-1",
       region: "IN-KA"
@@ -14,6 +15,7 @@ describe("checkout request schema", () => {
     expect(parsed).toEqual({
       email: "buyer@example.com",
       phone: "+919876543210",
+      fullName: "Buyer Example",
       items: [{ productSlug: "drone-x", quantity: 2 }],
       addressId: "addr-1",
       region: "IN-KA"
@@ -22,10 +24,10 @@ describe("checkout request schema", () => {
 
   it("rejects invalid quantities, missing email, and invalid phone", () => {
     expect(parseCheckoutRequestBody({ email: "", items: [] })).toBeNull();
-    expect(parseCheckoutRequestBody({ email: "a@b.com", items: [{ productSlug: "x", quantity: 0 }] })).toBeNull();
-    expect(parseCheckoutRequestBody({ email: "a@b.com", items: [{ productSlug: "x", quantity: 100 }] })).toBeNull();
-    expect(parseCheckoutRequestBody({ email: "a@b.com", phone: "123", items: [{ productSlug: "x", quantity: 1 }] })).toBeNull();
-    expect(parseCheckoutRequestBody({ email: "not-an-email", phone: "+919876543210", items: [{ productSlug: "x", quantity: 1 }] })).toBeNull();
+    expect(parseCheckoutRequestBody({ email: "a@b.com", fullName: "A B", items: [{ productSlug: "x", quantity: 0 }] })).toBeNull();
+    expect(parseCheckoutRequestBody({ email: "a@b.com", fullName: "A B", items: [{ productSlug: "x", quantity: 100 }] })).toBeNull();
+    expect(parseCheckoutRequestBody({ email: "a@b.com", phone: "123", fullName: "A B", items: [{ productSlug: "x", quantity: 1 }] })).toBeNull();
+    expect(parseCheckoutRequestBody({ email: "not-an-email", phone: "+919876543210", fullName: "A B", items: [{ productSlug: "x", quantity: 1 }] })).toBeNull();
   });
 });
 

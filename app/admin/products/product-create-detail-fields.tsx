@@ -1,6 +1,7 @@
 "use client";
 
 import { ProductFieldLabel } from "@/components/admin/product-info-tooltip";
+import { ProductBadgeFields } from "@/components/admin/product-badge-fields";
 import { ProductPricingFields } from "@/components/admin/product-pricing-fields";
 import { ProductSimpleRichText } from "@/components/admin/product-simple-rich-text";
 import { ProductTaxFields } from "@/components/admin/product-tax-fields";
@@ -20,17 +21,8 @@ export function ProductCreateDetailFields() {
               className="h-10 w-full rounded-[10px] border-0 bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)] focus:bg-[var(--platform-accent-soft)] focus:ring-2 focus:ring-[var(--platform-focus-ring)]"
             />
           </label>
-          <label className="grid gap-1.5 text-sm">
-            <ProductFieldLabel tooltip="Short label shown on the product card, e.g. New Arrival or Best Seller.">
-              Ribbon
-            </ProductFieldLabel>
-            <input
-              name="ribbon"
-              placeholder="New Arrival"
-              className="h-10 w-full rounded-[10px] border-0 bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)] focus:bg-[var(--platform-accent-soft)] focus:ring-2 focus:ring-[var(--platform-focus-ring)]"
-            />
-          </label>
         </div>
+        <ProductBadgeFields enabled={false} text="" style="default" />
         <label className="grid gap-1.5 text-sm">
           <ProductFieldLabel>Description</ProductFieldLabel>
           <ProductSimpleRichText name="description" variant="dark" placeholder="Describe features, payload, and warranty details..." />

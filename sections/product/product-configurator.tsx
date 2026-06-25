@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Bundle, MediaAsset, ProductVariant } from "@/config/types";
 import type { ProductReviewSummary } from "@/lib/product-reviews/types";
+import { productBadgeCssClass } from "@/lib/product-badge";
 import { isSpecLikeBlob } from "@/lib/product-spec-text";
 import { glassPillClassName } from "@/lib/glass-ui";
 import { cn, formatINR } from "@/lib/utils";
@@ -19,6 +20,7 @@ export type ProductConfiguratorModel = {
   tagline: string;
   category: string;
   badge?: string;
+  badgeStyle?: import("@/lib/product-badge").ProductBadgeStyle;
   price: number;
   compareAt?: number;
   chargeTax?: boolean;
@@ -98,7 +100,11 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
       <div className={styles.buyBoxInner}>
         <div className={styles.badgeRow}>
           <span className={styles.categoryBadge}>{product.category}</span>
-          {product.badge ? <span className={styles.featureBadge}>{product.badge}</span> : null}
+          {product.badge ? (
+            <span className={cn(styles.featureBadge, productBadgeCssClass(product.badgeStyle ?? "default", "pill"))}>
+              {product.badge}
+            </span>
+          ) : null}
         </div>
 
         <h1 className={cn("type-section", styles.productTitle)}>{product.name}</h1>

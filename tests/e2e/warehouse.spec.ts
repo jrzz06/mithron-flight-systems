@@ -53,10 +53,14 @@ test.describe("Production warehouse testing", () => {
     expect(url.searchParams.get("access_status") === "forbidden" || url.pathname.startsWith("/supplier")).toBe(true);
   });
 
-  test("admin can access warehouse dashboard", async ({ page }) => {
+  test("admin role is blocked from warehouse dashboard", async ({ page }) => {
     test.skip(!hasRoleCredentials("admin"), credentialsSkipMessage("admin"));
 
-    await loginAsRole(page, "admin", "/warehouse/dashboard");
-    await expect(page.locator("[data-warehouse-operational-dashboard]")).toBeVisible({ timeout: 25_000 });
+    await loginAsRole(page, "admin");
+    await page.goto("/warehouse/dashboard", { waitUntil: "domcontentloaded" });
+
+    const url = new URL(page.url());
+    expect(url.pathname.startsWith("/warehouse/dashboard")).toBe(false);
+    expect(url.searchParams.get("access_status") === "forbidden" || url.pathname.startsWith("/admin")).toBe(true);
   });
 });

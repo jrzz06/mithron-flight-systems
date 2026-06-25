@@ -54,6 +54,10 @@ function ProductRowLink({
   const slug = productSlug(product);
   const status = productStatus(product);
   const updated = typeof product.updated_at === "string" ? relativeTimeLabel(product.updated_at) : "";
+  const href = actionLabel === "View listing" && status === "published"
+    ? `/product/${encodeURIComponent(slug)}`
+    : `/supplier/products/${encodeURIComponent(slug)}/edit`;
+  const opensStorefront = href.startsWith("/product/");
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-3 py-2.5">
@@ -63,7 +67,12 @@ function ProductRowLink({
       </div>
       <div className="flex items-center gap-2">
         <StatusPill status={status} />
-        <Link href={`/supplier/products/${encodeURIComponent(slug)}/edit`} className="text-sm text-[var(--platform-accent)]">
+        <Link
+          href={href}
+          target={opensStorefront ? "_blank" : undefined}
+          rel={opensStorefront ? "noreferrer" : undefined}
+          className="text-sm text-[var(--platform-accent)]"
+        >
           {actionLabel}
         </Link>
       </div>

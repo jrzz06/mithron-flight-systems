@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { isStrictAdminRole } from "@/lib/auth/access-control";
+import { redirect } from "next/navigation";
+import { authorizeRoute, defaultPathForRole, isStrictAdminRole } from "@/lib/auth/access-control";
 import { assertRolePermission, PermissionDeniedError, normalizeCmsRole, type EnterprisePermission } from "@/lib/auth/permissions";
 import { ProfileDisabledError } from "@/lib/auth/profile-disabled";
 import { createClient } from "@/lib/server";
@@ -139,6 +140,60 @@ export async function requirePermission(permission: EnterprisePermission) {
     }
     throw error;
   }
+  return context;
+}
+
+export async function assertRouteAccessOrRedirect(pathname: string) {
+  const context = await getCurrentAuthContext();
+  const authorization = authorizeRoute(context.role, pathname, { userId: context.userId });
+
+  if (!authorization.allowed) {
+    await recordSecurityEvent({
+      actorUserId: context.userId,
+      actorRole: context.role,
+      eventType: authorization.eventType,
+      attemptedResource: pathname,
+      denialReason: authorization.reason,
+      routePath: pathname,
+      httpStatus: authorization.httpStatus,
+      severity: authorization.eventType === "security.admin_shell_denied" ? "critical" : "warning",
+      source: "route-guard",
+      metadata: {
+        claims_role: context.claimsRole
+      }
+    }).catch((error) => console.error("[mithron-security] Failed to log route denial.", error));
+
+    const destination = authorization.httpStatus === 401
+      ? `/login?next=${encodeURIComponent(pathname)}`
+      : `${defaultPathForRole(context.role)}?${authorization.eventType === "security.admin_shell_denied" ? "admin_status" : "access_status"}=forbidden&next=${encodeURIComponent(pathname)}`;
+    redirect(destination);
+  }
+
+  return context;
+}
+
+export async function requireRouteAccess(pathname: string) {
+  const context = await getCurrentAuthContext();
+  const authorization = authorizeRoute(context.role, pathname, { userId: context.userId });
+
+  if (!authorization.allowed) {
+    await recordSecurityEvent({
+      actorUserId: context.userId,
+      actorRole: context.role,
+      eventType: authorization.eventType,
+      attemptedResource: pathname,
+      denialReason: authorization.reason,
+      routePath: pathname,
+      httpStatus: authorization.httpStatus,
+      severity: authorization.eventType === "security.admin_shell_denied" ? "critical" : "warning",
+      source: "route-guard",
+      metadata: {
+        claims_role: context.claimsRole
+      }
+    }).catch((error) => console.error("[mithron-security] Failed to log route denial.", error));
+    throw new PermissionDeniedError(authorization.reason);
+  }
+
   return context;
 }
 

@@ -94,16 +94,22 @@ export async function convertEnquiryToOrderFormAction(formData: FormData) {
   const queueKind = readString(formData, "queue_kind");
 
   try {
+    let convertedOrderId = orderId;
     if (queueKind === "checkout_order") {
       if (!orderId) throw new Error("Order id is required for checkout enquiries.");
-      await promoteCheckoutOrderEnquiry(orderId, context.userId!);
+      const order = await promoteCheckoutOrderEnquiry(orderId, context.userId!);
+      convertedOrderId = String(order?.id ?? orderId);
     } else {
       if (!enquiryId) throw new Error("Enquiry id is required.");
-      await promoteEnquiryToOrder(enquiryId, context.userId!);
+      const order = await promoteEnquiryToOrder(enquiryId, context.userId!);
+      convertedOrderId = String(order?.id ?? "");
+      if (!convertedOrderId) throw new Error("Converted order id was not returned.");
     }
     revalidatePath("/admin/enquiries");
     revalidatePath("/admin/orders");
-    redirect(feedbackUrl("success", "Enquiry converted to order."));
+    redirect(
+      `/admin/orders?order=${encodeURIComponent(convertedOrderId)}&queue=review&enquiry_status=success&enquiry_message=${encodeURIComponent("Enquiry converted to order.")}`
+    );
   } catch (error) {
     if (error instanceof Error && error.message === "NEXT_REDIRECT") throw error;
     redirect(feedbackUrl("error", actionError(error)));

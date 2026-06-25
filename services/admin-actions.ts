@@ -473,12 +473,19 @@ async function insertActivityLogRecord(payload: JsonRecord, actorId: string | nu
   return record ?? payload;
 }
 
-async function insertNotificationRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
-  await assertAdminMutationAnyPermission(
-    "notifications",
-    actorId,
-    ["notifications.write", "warehouse.write", "orders.write"]
-  );
+async function insertNotificationRecord(
+  payload: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  if (!options.allowSystemActor) {
+    await assertAdminMutationAnyPermission(
+      "notifications",
+      actorId,
+      ["notifications.write", "warehouse.write", "orders.write"]
+    );
+  }
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(`${config.url}/rest/v1/notifications`, {
     method: "POST",
@@ -1098,8 +1105,18 @@ export function updateStaffTaskRecord(taskId: string, payload: JsonRecord, actor
   return updateAdminRecord("staff_tasks", "id", taskId, payload, actorId, env);
 }
 
-export function createNotificationRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
-  return insertNotificationRecord(payload, actorId, env);
+export function createNotificationRecord(
+  payload: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  return insertNotificationRecord(payload, actorId, env, options);
+}
+
+/** Customer checkout notifications — server-side only, no staff permission required. */
+export function createCustomerCheckoutNotificationRecord(payload: JsonRecord, env: EnvSource = process.env) {
+  return insertNotificationRecord(payload, null, env, { allowSystemActor: true });
 }
 
 export function createActivityLogRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {

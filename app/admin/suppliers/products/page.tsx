@@ -16,10 +16,11 @@ type PendingProduct = {
   updated_at: string;
 };
 
-async function fetchPendingProducts(): Promise<PendingProduct[]> {
+async function fetchPendingProducts(supplierId?: string): Promise<PendingProduct[]> {
   const config = assertSupabaseAdminConfig(process.env);
+  const supplierFilter = supplierId ? `&supplier_id=eq.${encodeURIComponent(supplierId)}` : "";
   const response = await fetch(
-    `${config.url}/rest/v1/mithron_products?select=slug,name,category,price,supplier_id,workflow_status,updated_at&workflow_status=eq.pending_review&order=updated_at.desc&limit=100`,
+    `${config.url}/rest/v1/mithron_products?select=slug,name,category,price,supplier_id,workflow_status,updated_at&workflow_status=eq.pending_review${supplierFilter}&order=updated_at.desc&limit=100`,
     {
       headers: {
         apikey: config.serviceRoleKey,
@@ -73,10 +74,14 @@ async function fetchPendingProducts(): Promise<PendingProduct[]> {
 export default async function AdminSupplierProductsPage({
   searchParams
 }: {
-  searchParams: Promise<{ approval_status?: string; approval_message?: string }>;
+  searchParams: Promise<{ approval_status?: string; approval_message?: string; supplier?: string }>;
 }) {
   const params = await searchParams;
-  const [products, pendingCount] = await Promise.all([fetchPendingProducts(), countPendingSupplierProducts()]);
+  const supplierFilter = typeof params.supplier === "string" ? params.supplier.trim() : "";
+  const [products, pendingCount] = await Promise.all([
+    fetchPendingProducts(supplierFilter || undefined),
+    countPendingSupplierProducts()
+  ]);
 
   return (
     <div className="grid gap-5">

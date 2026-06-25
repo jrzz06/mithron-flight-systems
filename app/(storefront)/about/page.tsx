@@ -1,19 +1,34 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getPublicCmsSnapshot } from "@/services/cms";
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const cms = await getPublicCmsSnapshot();
+  const title = cms.footer.leadTitle?.trim() || "Drone systems for operational teams.";
+  const body = cms.footer.leadBody?.trim()
+    || "Mithron builds and supplies agriculture, mapping, surveillance, industrial, and media drone systems with a catalog managed from the Supabase-backed admin platform.";
+  const trustCards = cms.trustCards?.slice(0, 3) ?? [];
+
   return (
     <main className="surface-page inner-page min-h-screen">
       <section className="mx-auto grid max-w-[1180px] gap-10 rounded-[var(--ds-r-xl)] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8 md:grid-cols-[0.9fr_1.1fr] md:p-12">
         <div>
           <p className="type-meta text-slate-500">About Mithron</p>
-          <h1 className="type-page mt-4 max-w-2xl">Drone systems for operational teams.</h1>
+          <h1 className="type-page mt-4 max-w-2xl">{title}</h1>
         </div>
         <div className="grid content-between gap-8">
-          <p className="type-subtitle text-slate-600">
-            Mithron builds and supplies agriculture, mapping, surveillance, industrial, and media drone systems with a catalog managed from the Supabase-backed admin platform.
-          </p>
+          <p className="type-subtitle text-slate-600">{body}</p>
+          {trustCards.length ? (
+            <div className="grid gap-3">
+              {trustCards.map((card) => (
+                <article key={card.id} className="rounded-2xl border border-[var(--surface-border)] bg-white/60 p-4">
+                  <p className="text-sm font-semibold text-slate-900">{card.title}</p>
+                  {card.body ? <p className="mt-2 text-sm leading-6 text-slate-600">{card.body}</p> : null}
+                </article>
+              ))}
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <Button asChild>
               <Link href="/products">

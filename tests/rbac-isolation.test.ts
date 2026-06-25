@@ -16,6 +16,9 @@ describe("RBAC role isolation", () => {
     expect(canAccessProtectedPath("supplier", "/warehouse/dashboard")).toBe(false);
     expect(canAccessProtectedPath("warehouse", "/supplier/products")).toBe(false);
     expect(canAccessProtectedPath("warehouse", "/admin")).toBe(false);
+    expect(canAccessProtectedPath("admin", "/warehouse/dashboard")).toBe(false);
+    expect(canAccessProtectedPath("admin", "/supplier/products")).toBe(false);
+    expect(canAccessProtectedPath("supplier", "/admin")).toBe(false);
     expect(isStrictAdminRole("warehouse")).toBe(false);
   });
 

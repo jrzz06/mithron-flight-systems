@@ -6,6 +6,7 @@ import {
   assignOrderToWarehouseWorkflow,
   cancelAdminOrderWorkflow,
   confirmAdminOrderWorkflow,
+  deleteAdminOrderWorkflow,
   rejectAdminOrderWorkflow
 } from "@/services/order-workflow";
 
@@ -72,6 +73,23 @@ export async function cancelAdminOrderFormAction(formData: FormData) {
     actorId: context.userId!,
     reason,
     expectedUpdatedAt
+  });
+  revalidatePath("/admin/orders");
+  revalidatePath("/warehouse/orders");
+  revalidatePath("/admin/enquiries");
+}
+
+export async function deleteAdminOrderFormAction(formData: FormData) {
+  const context = await requireAdminPermission("orders.write");
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  const reason = String(formData.get("delete_reason") ?? "").trim();
+  if (!orderId) throw new Error("Order id is required.");
+  if (!reason) throw new Error("A deletion reason is required.");
+
+  await deleteAdminOrderWorkflow({
+    orderId,
+    actorId: context.userId!,
+    reason
   });
   revalidatePath("/admin/orders");
   revalidatePath("/warehouse/orders");

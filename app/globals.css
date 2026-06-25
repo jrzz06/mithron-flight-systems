@@ -3361,7 +3361,6 @@ canvas {
   margin: 0.72rem 0.72rem 0;
 }
 
-.home-shelf-badge,
 .home-shelf-favorite {
   position: absolute;
   z-index: 2;
@@ -3375,16 +3374,52 @@ canvas {
   backdrop-filter: none;
 }
 
-.home-shelf-badge {
-  top: 0.82rem;
-  left: 0.82rem;
-  min-height: 28px;
+.product-badge,
+.product-badge-showroom {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
-  padding: 0 0.68rem;
   font-size: 0.66rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   line-height: 1;
+  text-transform: none;
+}
+
+.product-badge {
+  min-height: 28px;
+  padding: 0.35rem 0.75rem;
+}
+
+.product-badge--default,
+.product-badge-showroom--default {
+  background: rgba(15, 23, 42, 0.82);
+  color: #f8fafc;
+}
+
+.product-badge--success,
+.product-badge-showroom--success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.product-badge--warning,
+.product-badge-showroom--warning {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.product-badge--premium,
+.product-badge-showroom--premium {
+  background: #1f2937;
+  color: #f5d0a0;
+}
+
+.product-badge--sale,
+.product-badge-showroom--sale {
+  background: #7f1d1d;
+  color: #fff1f2;
 }
 
 .home-shelf-favorite {

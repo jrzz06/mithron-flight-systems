@@ -888,6 +888,26 @@ export async function saveProductInventoryWorkflowFormAction(formData: FormData)
       }
     );
 
+    const stockStatus = String(records.inventoryRecord.stock_status ?? "");
+    if (["out_of_stock", "low_stock", "available"].includes(stockStatus)) {
+      const availabilityLabel = stockStatus === "out_of_stock"
+        ? "Out of stock"
+        : stockStatus === "low_stock"
+          ? "Low stock"
+          : "In stock";
+      await updateAdminRecord(
+        "mithron_products",
+        "slug",
+        draftInput.productSlug,
+        {
+          source_availability: availabilityLabel,
+          updated_at: now
+        },
+        actorId
+      );
+    }
+
+    revalidateCatalogSurfaces(draftInput.productSlug);
     revalidatePath("/admin/products");
     revalidatePath("/warehouse");
     revalidatePath("/warehouse/inventory");

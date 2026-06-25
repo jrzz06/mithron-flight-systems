@@ -114,7 +114,7 @@ export async function POST(request: Request) {
   const body = parseCheckoutRequestBody(rawBody);
 
   if (!body) {
-    return NextResponse.json({ error: "Valid email, phone, and cart items are required." }, { status: 400 });
+    return NextResponse.json({ error: "Valid full name, email, phone, and cart items are required." }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -188,6 +188,8 @@ export async function POST(request: Request) {
       })),
       metadata: {
         ...buildShippingMetadata(body.addressId, body.guestAddress),
+        customer_full_name: body.fullName,
+        ...(body.company ? { customer_company: body.company } : {}),
         ...(body.promoCode ? { promo_code: body.promoCode } : {}),
         ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {})
       }

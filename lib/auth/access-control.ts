@@ -120,20 +120,131 @@ export function canAccessProtectedPath(role: CmsRole | string | null | undefined
   const normalized = normalizePath(pathname);
   const canonicalRole = normalizeCmsRole(role);
   if (!canonicalRole) return false;
-  if (normalized.startsWith("/admin")) return isStrictAdminRole(role);
-  if (normalized.startsWith("/warehouse")) {
-    return isStrictAdminRole(role) || canonicalRole === "warehouse";
-  }
-  if (normalized.startsWith("/supplier")) {
-    return isStrictAdminRole(role) || canonicalRole === "supplier";
-  }
-  if (normalized.startsWith("/operations")) {
-    return isStrictAdminRole(role);
-  }
+  if (normalized.startsWith("/admin")) return canonicalRole === "admin";
+  if (normalized.startsWith("/warehouse")) return canonicalRole === "warehouse";
+  if (normalized.startsWith("/supplier")) return canonicalRole === "supplier";
+  if (normalized.startsWith("/operations")) return canonicalRole === "admin";
   if (normalized.startsWith("/account")) {
     return Boolean(canonicalRole);
   }
   return false;
+}
+
+export type RouteAuthorizationResult =
+  | { allowed: true }
+  | {
+    allowed: false;
+    httpStatus: 401 | 403;
+    reason: string;
+    eventType: string;
+    redirectPath: string;
+  };
+
+export function authorizeRoute(
+  role: CmsRole | string | null | undefined,
+  pathname: string,
+  options: { userId?: string | null } = {}
+): RouteAuthorizationResult {
+  const normalized = normalizePath(pathname);
+  const requiresAuth = isAdminProtectedPath(normalized) && !isAuthPublicPath(normalized);
+
+  if (requiresAuth && !options.userId) {
+    return {
+      allowed: false,
+      httpStatus: 401,
+      reason: "Protected route requires an authenticated Supabase session.",
+      eventType: "security.auth_required",
+      redirectPath: "/login"
+    };
+  }
+
+  if (!requiresAuth) {
+    return { allowed: true };
+  }
+
+  if (!canAccessProtectedPath(role, normalized)) {
+    const section = sectionFromPath(normalized);
+    const isAdminShell = normalized === "/admin" || normalized.startsWith("/admin/");
+    return {
+      allowed: false,
+      httpStatus: 403,
+      reason: `Role ${role ?? "anonymous"} cannot access ${section}.`,
+      eventType: isAdminShell ? "security.admin_shell_denied" : "security.route_denied",
+      redirectPath: defaultPathForRole(role)
+    };
+  }
+
+  return { allowed: true };
+}
+
+export type ApiRoutePolicy =
+  | { kind: "public" }
+  | { kind: "bearer" }
+  | { kind: "upload_token" }
+  | { kind: "session" }
+  | { kind: "session_or_guest" }
+  | { kind: "admin" }
+  | { kind: "staff" };
+
+function matchesApiPrefix(pathname: string, prefix: string) {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
+  const normalized = normalizePath(pathname);
+  if (!normalized.startsWith("/api")) return null;
+
+  if (
+    normalized === "/api/health"
+    || normalized === "/api/csp-report"
+    || matchesApiPrefix(normalized, "/api/catalog/search")
+    || matchesApiPrefix(normalized, "/api/orders/track")
+    || matchesApiPrefix(normalized, "/api/payments/webhooks")
+    || normalized === "/api/client-verification"
+    || matchesApiPrefix(normalized, "/api/auth/login")
+  ) {
+    return { kind: "public" };
+  }
+
+  if (
+    matchesApiPrefix(normalized, "/api/admin")
+    || normalized === "/api/payments/expire-pending"
+    || normalized === "/api/notifications/dispatch"
+  ) {
+    return { kind: "bearer" };
+  }
+
+  if (normalized === "/api/upload") {
+    return { kind: "upload_token" };
+  }
+
+  if (normalized === "/api/security/denials") {
+    return { kind: "staff" };
+  }
+
+  if (
+    matchesApiPrefix(normalized, "/api/checkout")
+    || normalized === "/api/enquiries"
+  ) {
+    return { kind: "session_or_guest" };
+  }
+
+  if (
+    matchesApiPrefix(normalized, "/api/account")
+    || normalized === "/api/notifications"
+    || normalized === "/api/payments/intent"
+    || matchesApiPrefix(normalized, "/api/auth/audit")
+    || normalized === "/api/auth/provision"
+    || normalized === "/api/checkout/status"
+  ) {
+    return { kind: "session" };
+  }
+
+  if (normalized === "/api/dev/load-test") {
+    return { kind: "public" };
+  }
+
+  return { kind: "session" };
 }
 
 export { normalizeCmsRole };

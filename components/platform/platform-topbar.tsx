@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { CMS_WORKSPACE_LINKS } from "@/config/cms-workspace";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { PlatformRouteTitle, PlatformSearchItem, PlatformScope } from "@/components/platform/types";
+import type { EnterpriseRealtimeScope } from "@/services/enterprise-realtime";
 
 type PlatformTopbarProps = {
   role: string | null;
@@ -27,6 +28,14 @@ const defaultQuickActions: PlatformSearchItem[] = [
 
 function normalizeRole(role: string | null) {
   return role ? role.replaceAll("_", " ") : "Guest";
+}
+
+function realtimeScopeForPlatform(scope?: PlatformScope): EnterpriseRealtimeScope | undefined {
+  if (scope === "admin") return "admin";
+  if (scope === "warehouse") return "warehouse";
+  if (scope === "supplier") return "supplier";
+  if (scope === "operations") return "operations";
+  return undefined;
 }
 
 function titleForPath(pathname: string, routeTitles: PlatformRouteTitle[]) {
@@ -131,7 +140,11 @@ export function PlatformTopbar({
               </Link>
             ) : null}
             {userId ? (
-              <NotificationBell href={notificationHref} recipientId={userId} />
+              <NotificationBell
+                href={notificationHref}
+                recipientId={userId}
+                realtimeScope={realtimeScopeForPlatform(scope)}
+              />
             ) : (
               <Link
                 href={notificationHref}

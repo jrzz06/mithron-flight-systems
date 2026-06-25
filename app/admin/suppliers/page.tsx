@@ -40,8 +40,8 @@ export default async function AdminSuppliersPage({ searchParams }: { searchParam
         <div
           className={`rounded-[8px] border px-4 py-3 text-sm ${
             supplierStatus === "error"
-              ? "border-rose-500/30 bg-rose-950/20 text-rose-100"
-              : "border-emerald-500/30 bg-emerald-950/20 text-emerald-100"
+              ? "platform-feedback-error"
+              : "platform-feedback-success"
           }`}
         >
           {supplierMessage}
@@ -112,7 +112,7 @@ export default async function AdminSuppliersPage({ searchParams }: { searchParam
                     {supplier.verificationStatus !== "disabled" ? (
                       <form action={suspendSupplierFormAction}>
                         <input type="hidden" name="supplier_id" value={supplier.id} />
-                        <OperationalSubmitButton pendingLabel="Suspending" className="h-8 rounded-[8px] border border-rose-500/40 px-3 text-xs font-medium text-rose-200">
+                        <OperationalSubmitButton pendingLabel="Suspending" className="platform-btn-danger h-8 rounded-[8px] px-3 text-xs font-medium">
                           Suspend
                         </OperationalSubmitButton>
                       </form>

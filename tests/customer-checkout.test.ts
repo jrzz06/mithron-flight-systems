@@ -58,11 +58,13 @@ describe("customer checkout workflow", () => {
     expect(parseCheckoutRequestBody({
       email: "buyer@example.com",
       phone: "+919876543210",
+      fullName: "Buyer Example",
       items: [{ productSlug: "ag10", quantity: 1 }]
     })).not.toBeNull();
     expect(parseCheckoutRequestBody({
       email: "invalid-email",
       phone: "+919876543210",
+      fullName: "Buyer Example",
       items: [{ productSlug: "ag10", quantity: 1 }]
     })).toBeNull();
     expect(parseCheckoutRequestBody({
@@ -87,6 +89,7 @@ describe("customer checkout workflow", () => {
     const parsed = parseCheckoutEnquiryRequestBody({
       email: "guest@example.com",
       phone: "+919876543210",
+      fullName: "Guest Buyer",
       message: "Need pricing for bulk order.",
       items: [{ productSlug: "ag10", quantity: 2 }],
       guestAddress: {

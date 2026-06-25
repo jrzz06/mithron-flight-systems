@@ -19,6 +19,7 @@ export function EnquiryForm({
   defaultRegion = "India",
   isGuest = true
 }: EnquiryFormProps) {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState(defaultEmail);
   const [phone, setPhone] = useState(defaultPhone);
   const [subject, setSubject] = useState("");
@@ -28,6 +29,15 @@ export function EnquiryForm({
   const [error, setError] = useState("");
 
   function validateContact() {
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
+      setError("Name is required.");
+      return false;
+    }
+    if (trimmedName.length < 2 || trimmedName.length > 120) {
+      setError("Name must be between 2 and 120 characters.");
+      return false;
+    }
     if (!email.trim()) {
       setError("Email is required.");
       return false;
@@ -66,7 +76,14 @@ export function EnquiryForm({
     const response = await fetch("/api/enquiries", {
       method: "POST",
       headers: guestHeaders?.headers ?? { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), phone: phone.trim(), subject, message, region })
+      body: JSON.stringify({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        subject,
+        message,
+        region
+      })
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -75,6 +92,7 @@ export function EnquiryForm({
       return;
     }
     setStatus("success");
+    setFullName("");
     setSubject("");
     setMessage("");
   }
@@ -94,6 +112,19 @@ export function EnquiryForm({
   return (
     <form data-enquiry-form onSubmit={onSubmit} className="grid gap-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-card)] p-6">
       <p className="text-sm text-slate-500">{CUSTOMER_CONTACT_REQUIRED_MESSAGE}</p>
+      <label className="grid gap-2 text-sm">
+        <span className="font-medium text-slate-600">Name <span className="text-red-600">*</span></span>
+        <input
+          required
+          type="text"
+          autoComplete="name"
+          minLength={2}
+          maxLength={120}
+          value={fullName}
+          onChange={(event) => setFullName(event.target.value)}
+          className="h-12 rounded-xl border border-slate-200 bg-white px-4 outline-none focus:border-slate-400"
+        />
+      </label>
       <label className="grid gap-2 text-sm">
         <span className="font-medium text-slate-600">Email <span className="text-red-600">*</span></span>
         <input

@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import type { Product } from "@/config/types";
+import { productBadgeCssClass } from "@/lib/product-badge";
 import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import { cn, formatINR } from "@/lib/utils";
 import styles from "./product-hover-card.module.css";
@@ -71,7 +72,11 @@ export const ProductHoverCard = memo(function ProductHoverCard({
                 sizes={imageSizes.catalog}
               />
             </div>
-            {product.badge ? <span className={cn(styles.badge, getBadgeToneClass(product.badge))}>{product.badge}</span> : null}
+            {product.badge ? (
+              <span className={cn(styles.badge, productBadgeCssClass(product.badgeStyle ?? "default", "showroom"))}>
+                {product.badge}
+              </span>
+            ) : null}
           </div>
 
           <div className={styles.body}>
@@ -119,7 +124,11 @@ export const ProductHoverCard = memo(function ProductHoverCard({
               sizes={imageSizes[variant]}
             />
           </div>
-          {product.badge ? <Badge className="absolute left-5 top-5 normal-case tracking-normal">{product.badge}</Badge> : null}
+          {product.badge ? (
+            <Badge className={cn("absolute left-5 top-5 normal-case tracking-normal", productBadgeCssClass(product.badgeStyle ?? "default", "pill"))}>
+              {product.badge}
+            </Badge>
+          ) : null}
         </div>
 
         <div
@@ -196,15 +205,4 @@ function getShowroomPreview(product: Product) {
 
 function getCatalogPreview(value: string) {
   return clipProductPreviewText(value, 132);
-}
-
-function getBadgeToneClass(value: string) {
-  const tone = value.trim().toLowerCase();
-
-  if (tone === "featured") return styles.badgeFeatured;
-  if (tone === "pro") return styles.badgePro;
-  if (tone === "enterprise") return styles.badgeEnterprise;
-  if (tone === "new") return styles.badgeNew;
-
-  return undefined;
 }

@@ -27,7 +27,7 @@ export function SupplierFrame({
         accentClass="bg-[var(--platform-nav-active-bg)] text-[var(--platform-text-primary)]"
         shellDataAttributes={{ "data-supplier-frame": true }}
         primaryAction={{ label: "Add product", href: "/supplier/products/new" }}
-        notificationHref="/supplier"
+        notificationHref="/supplier/submissions"
       >
         {children}
       </PlatformShell>

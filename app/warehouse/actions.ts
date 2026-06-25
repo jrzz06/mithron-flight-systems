@@ -1,14 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateCatalogSurfaces } from "@/lib/catalog-cache";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import {
   assertAdminMutationPermission,
   createActivityLogRecord,
   createOrderItemRecord,
   createOrderRecord,
+  createCustomerCheckoutNotificationRecord,
   createNotificationRecord,
   deleteProductRecordSafely,
+  fetchAdminRecordsByColumn,
   recordEntityRevisionSnapshot,
   updateAdminRecord,
   updateOrderRecord,
@@ -68,7 +71,7 @@ type JsonRecord = Record<string, unknown>;
 type InventorySourceTable = "inventory" | "warehouse_stock";
 
 const warehouseActionReadColumns = {
-  orderLifecycle: "select=id,status,payment_status,fulfillment_status,shipment_tracking,timeline"
+  orderLifecycle: "select=id,status,payment_status,fulfillment_status,shipment_tracking,timeline,created_by_user_id,order_number,customer_email"
 };
 
 async function currentActorId() {
@@ -196,6 +199,41 @@ async function createOrderLifecycleNotificationIfNeeded(input: {
   );
 }
 
+async function notifyCustomerAboutFulfillmentIfNeeded(input: {
+  orderId: string;
+  previousFulfillment: string;
+  nextFulfillment: string;
+}) {
+  if (input.previousFulfillment === input.nextFulfillment) return;
+  if (!["shipped", "delivered"].includes(input.nextFulfillment)) return;
+
+  const order = await fetchOrderRecord(input.orderId);
+  const customerUserId = String(order.created_by_user_id ?? "").trim();
+  const customerEmail = String(order.customer_email ?? "").trim();
+  if (!customerUserId && !customerEmail) return;
+
+  const orderNumber = String(order.order_number ?? input.orderId);
+  const title = input.nextFulfillment === "delivered" ? "Order delivered" : "Order shipped";
+  const body = input.nextFulfillment === "delivered"
+    ? `Your order ${orderNumber} has been delivered.`
+    : `Your order ${orderNumber} is on its way.`;
+
+  await createCustomerCheckoutNotificationRecord({
+    recipient_id: customerUserId || null,
+    channel: "customer",
+    title,
+    body,
+    status: "unread",
+    entity_table: "orders",
+    entity_id: input.orderId,
+    metadata: {
+      fulfillment_status: input.nextFulfillment,
+      order_number: orderNumber,
+      recipient_email: customerEmail || undefined
+    }
+  }).catch(() => undefined);
+}
+
 async function resolveWarehouseCodeFromFormData(formData: FormData) {
   const value = formData.get("warehouse_code");
   const raw = typeof value === "string" && value.trim()
@@ -273,7 +311,35 @@ function readInventoryStatus(formData: FormData, key = "stock_status") {
   throw new Error(`${key} must be one of: available, low_stock, out_of_stock, archived, discontinued, reserved.`);
 }
 
-function revalidateInventoryPaths() {
+function availabilityLabelForStockStatus(stockStatus: string) {
+  if (stockStatus === "out_of_stock") return "Out of stock";
+  if (stockStatus === "low_stock") return "Low stock";
+  if (stockStatus === "available") return "In stock";
+  return null;
+}
+
+async function syncProductAvailabilityFromInventoryStatus(
+  productSlug: string,
+  stockStatus: string,
+  actorId: string | null
+) {
+  const label = availabilityLabelForStockStatus(stockStatus);
+  if (!label) return;
+
+  await updateAdminRecord(
+    "mithron_products",
+    "slug",
+    productSlug,
+    {
+      source_availability: label,
+      updated_at: new Date().toISOString()
+    },
+    actorId
+  ).catch(() => undefined);
+}
+
+function revalidateInventoryPaths(productSlug?: string) {
+  revalidateCatalogSurfaces(productSlug);
   revalidatePath("/admin/inventory");
   revalidatePath("/admin/products");
   revalidatePath("/warehouse");
@@ -731,7 +797,12 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
     note ?? `Inventory update for ${productSlug}:${sku}`
   );
 
-  revalidateInventoryPaths();
+  const previousStockStatus = String(previousInventory?.stock_status ?? "");
+  if (previousStockStatus !== stockStatus && ["out_of_stock", "low_stock", "available"].includes(stockStatus)) {
+    await syncProductAvailabilityFromInventoryStatus(productSlug, stockStatus, actorId);
+  }
+
+  revalidateInventoryPaths(productSlug);
 }
 
 async function importInventoryCsvRecord(record: InventoryCsvRecord, actorId: string | null, now: string) {
@@ -1249,6 +1320,12 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
     at: now
   });
 
+  await notifyCustomerAboutFulfillmentIfNeeded({
+    orderId: input.orderId,
+    previousFulfillment,
+    nextFulfillment
+  });
+
   revalidateWarehouseFulfillmentPaths();
   revalidatePath("/warehouse/inventory");
 }
@@ -1400,11 +1477,45 @@ export async function updateShipmentLifecycleFormAction(formData: FormData) {
   const input = buildShipmentUpdateWorkflowFromFormData(formData);
   const actorId = await currentActorId();
   const now = new Date().toISOString();
+  const shipmentRows = await fetchAdminRecordsByColumn("shipments", "id", input.shipmentId);
+  const shipmentBefore = shipmentRows[0];
+  const orderId = String(shipmentBefore?.order_id ?? "");
+  const orderBefore = orderId ? await fetchOrderRecord(orderId) : null;
+  const previousFulfillment = String(orderBefore?.fulfillment_status ?? "pending");
 
-  await updateShipmentWorkflow(input, {
+  const result = await updateShipmentWorkflow(input, {
     actorId,
     at: now
   });
+
+  if (orderId && (input.shipmentStatus === "shipped" || input.shipmentStatus === "delivered")) {
+    const nextFulfillment = String(
+      result.order?.fulfillment_status ?? (input.shipmentStatus === "delivered" ? "delivered" : "shipped")
+    );
+    const currentStatus = String(result.order?.status ?? orderBefore?.status ?? "active");
+    const nextStatus = syncOrderStatusFromFulfillment(currentStatus, nextFulfillment);
+    const carrier = input.carrierName ?? String(shipmentBefore?.carrier_name ?? "");
+    const tracking = input.trackingNumber ?? String(shipmentBefore?.tracking_number ?? "");
+
+    await updateOrderRecord(
+      orderId,
+      {
+        status: nextStatus,
+        shipment_tracking: {
+          carrier,
+          tracking_number: tracking
+        },
+        updated_at: now
+      },
+      actorId
+    );
+
+    await notifyCustomerAboutFulfillmentIfNeeded({
+      orderId,
+      previousFulfillment,
+      nextFulfillment
+    });
+  }
 
   revalidateWarehouseFulfillmentPaths();
   revalidatePath("/warehouse/inventory");
