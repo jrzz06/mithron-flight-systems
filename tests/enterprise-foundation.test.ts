@@ -102,6 +102,20 @@ describe("enterprise foundation completion", () => {
         }
       }
     });
+
+    await assertAdminMutationPermission("inventory", "actor-1", {
+      guard: async (permission) => {
+        if (permission === "products.write" || permission === "warehouse.write") {
+          throw new PermissionDeniedError(`Role supplier cannot perform ${permission}.`);
+        }
+      }
+    });
+
+    await expect(assertAdminMutationPermission("inventory", "actor-1", {
+      guard: async () => {
+        throw new PermissionDeniedError("Denied by test guard.");
+      }
+    })).rejects.toThrow("requires one of: warehouse.write, products.write, products.submit, inventory.update_own");
   });
 
   it("builds secure checkout order drafts without changing product slugs", () => {

@@ -11,6 +11,7 @@ export const ENTERPRISE_PERMISSIONS = [
   "cms.write",
   "products.write",
   "products.submit",
+  "inventory.update_own",
   "media.write",
   "warehouse.write",
   "orders.write",
@@ -39,7 +40,7 @@ export class PermissionDeniedError extends Error {
 const rolePermissions: Record<CmsRole, EnterprisePermission[]> = {
   admin: [...ENTERPRISE_PERMISSIONS],
   warehouse: ["warehouse.write", "orders.write", "orders.lifecycle", "notifications.write"],
-  supplier: ["products.submit", "media.write", "notifications.write"],
+  supplier: ["products.submit", "inventory.update_own", "media.write", "notifications.write"],
   user: ["enquiries.write", "orders.checkout", "payments.write", "account.read.self"]
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { Input } from "@/components/platform/form-field";
 import {
   defaultWarehouseStationConfig,
   parseWarehouseStationConfig,
@@ -8,6 +9,8 @@ import {
   WAREHOUSE_STATION_CONFIG_STORAGE_KEY,
   type WarehouseStationConfig
 } from "@/services/warehouse-station-config";
+
+const fieldLabelClass = "platform-type-label text-sm";
 
 export function WarehouseStationSettingsForm({
   initialCarrierNames,
@@ -41,44 +44,40 @@ export function WarehouseStationSettingsForm({
   }
 
   return (
-    <form onSubmit={save} data-warehouse-station-settings className="grid gap-4">
-      <div className="grid gap-3 md:grid-cols-2">
-        <label className="grid gap-1 text-sm text-slate-300">
-          Printer name
-          <input
+    <form onSubmit={save} data-warehouse-station-settings className="grid gap-5">
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="grid gap-1.5">
+          <span className={fieldLabelClass}>Printer name</span>
+          <Input
             value={config.printerName}
             onChange={(event) => setConfig((current) => ({ ...current, printerName: event.target.value }))}
             placeholder="Warehouse label printer"
-            className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100"
           />
         </label>
-        <label className="grid gap-1 text-sm text-slate-300">
-          Label width (mm)
-          <input
+        <label className="grid gap-1.5">
+          <span className={fieldLabelClass}>Label width (mm)</span>
+          <Input
             type="number"
             min={40}
             max={200}
             value={config.labelWidthMm}
             onChange={(event) => setConfig((current) => ({ ...current, labelWidthMm: Number(event.target.value) || 100 }))}
-            className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100"
           />
         </label>
-        <label className="grid gap-1 text-sm text-slate-300">
-          Barcode prefix
-          <input
+        <label className="grid gap-1.5">
+          <span className={fieldLabelClass}>Barcode prefix</span>
+          <Input
             value={config.barcodePrefix}
             onChange={(event) => setConfig((current) => ({ ...current, barcodePrefix: event.target.value }))}
             placeholder="MTH-"
-            className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100"
           />
         </label>
-        <label className="grid gap-1 text-sm text-slate-300">
-          Default carrier
-          <input
+        <label className="grid gap-1.5">
+          <span className={fieldLabelClass}>Default carrier</span>
+          <Input
             list="warehouse-carrier-options"
             value={config.defaultCarrier}
             onChange={(event) => setConfig((current) => ({ ...current, defaultCarrier: event.target.value }))}
-            className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100"
           />
           <datalist id="warehouse-carrier-options">
             {initialCarrierNames.map((carrier) => <option key={carrier} value={carrier} />)}
@@ -87,31 +86,31 @@ export function WarehouseStationSettingsForm({
       </div>
 
       <div className="grid gap-2">
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 py-2 text-sm text-slate-300">
+        <label className="flex items-center justify-between gap-3 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3 text-sm text-[var(--platform-text-primary)]">
           Require item scan before pack
           <input
             type="checkbox"
             checked={config.requireItemScan}
             onChange={(event) => setConfig((current) => ({ ...current, requireItemScan: event.target.checked }))}
-            className="h-4 w-4 accent-emerald-500"
+            className="h-4 w-4 accent-[var(--platform-accent)]"
           />
         </label>
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 py-2 text-sm text-slate-300">
+        <label className="flex items-center justify-between gap-3 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3 text-sm text-[var(--platform-text-primary)]">
           Auto-open print dialog after slip generation
           <input
             type="checkbox"
             checked={config.autoPrintPackingSlip}
             onChange={(event) => setConfig((current) => ({ ...current, autoPrintPackingSlip: event.target.checked }))}
-            className="h-4 w-4 accent-emerald-500"
+            className="h-4 w-4 accent-[var(--platform-accent)]"
           />
         </label>
       </div>
 
-      <button type="submit" className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 text-sm font-semibold text-emerald-100">
+      <button type="submit" className="platform-btn-primary platform-btn-md">
         Save station settings
       </button>
-      {savedMessage ? <p className="text-xs text-slate-400">{savedMessage}</p> : null}
-      <p className="text-xs text-slate-500">Barcode scans accept order numbers, SKUs, and prefixed labels. Settings persist in this browser for picking and packing stations.</p>
+      {savedMessage ? <p className="platform-type-caption text-[var(--platform-success)]">{savedMessage}</p> : null}
+      <p className="platform-type-caption">Barcode scans accept order numbers, SKUs, and prefixed labels. Settings persist in this browser for picking and packing stations.</p>
     </form>
   );
 }

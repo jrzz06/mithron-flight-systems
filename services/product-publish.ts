@@ -1,5 +1,5 @@
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
-import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
+import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -24,7 +24,7 @@ export async function assertProductCanPublish(slug: string, options?: { requireS
 /** Single publish path: validate, seed Supabase inventory rows, return product snapshot. */
 export async function publishProductToStorefront(slug: string, actorId: string | null) {
   const product = await assertProductCanPublish(slug);
-  await ensureProductInventoryRecord(slug, actorId);
+  await ensureProductCatalogInventoryRecord(slug, actorId);
   return product;
 }
 

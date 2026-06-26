@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { Input } from "@/components/platform/form-field";
 import { matchPickingScan, normalizeBarcodeScan, type PickingScanTarget } from "@/services/warehouse-barcode";
 import { WAREHOUSE_STATION_CONFIG_STORAGE_KEY, parseWarehouseStationConfig } from "@/services/warehouse-station-config";
 
@@ -47,8 +48,11 @@ export function WarehouseBarcodeScanner({
   }
 
   return (
-    <form onSubmit={submit} className="sticky top-3 z-20 grid gap-2 rounded-xl border border-white/[0.06] bg-[#10151d]/95 p-3 backdrop-blur-sm md:grid-cols-[minmax(0,1fr)_180px] md:items-center">
-      <input
+    <form
+      onSubmit={submit}
+      className="sticky top-3 z-20 grid gap-3 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-raised)] p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+    >
+      <Input
         ref={inputRef}
         name="scan"
         aria-label="Scan SKU or order"
@@ -56,15 +60,11 @@ export function WarehouseBarcodeScanner({
         onChange={(event) => setScanValue(event.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70"
       />
-      <button
-        type="submit"
-        className="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-400/15 bg-emerald-400/10 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-200"
-      >
+      <button type="submit" className="platform-btn-primary platform-btn-sm md:min-w-[140px]">
         Scan lookup
       </button>
-      {message ? <p className="md:col-span-2 text-xs text-slate-400">{message}</p> : null}
+      {message ? <p className="platform-type-caption md:col-span-2">{message}</p> : null}
     </form>
   );
 }

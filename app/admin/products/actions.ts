@@ -32,7 +32,7 @@ import {
   setProductMediaPrimaryViaRpc
 } from "@/services/admin-actions";
 import { getCurrentAuthContext, requirePermission } from "@/services/auth";
-import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
+import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
 import { buildInventoryLinkageRecords, buildProductInventoryWorkflowFromFormData } from "@/services/enterprise-admin-forms";
 import {
   assertAllowedMediaMimeType,
@@ -359,7 +359,7 @@ export async function saveProductDraftFormAction(formData: FormData) {
       },
       actorId
     );
-    await ensureProductInventoryRecord(draftInput.identity.slug, actorId);
+    await ensureProductCatalogInventoryRecord(draftInput.identity.slug, actorId);
     if (uploadedProductImage) {
       await upsertProductMediaAssetRecord(
         {
@@ -433,7 +433,7 @@ export async function saveProductDuplicateFormAction(formData: FormData) {
       },
       actorId
     );
-    await ensureProductInventoryRecord(copySlug, actorId);
+    await ensureProductCatalogInventoryRecord(copySlug, actorId);
 
     await recordProductAuditTrail(
       {

@@ -10,7 +10,7 @@ import {
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
-import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
+import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
 import { assertProductCanPublish } from "@/services/product-publish";
 
 async function runSupplierApprovalAction(successMessage: string, action: () => Promise<void>) {
@@ -51,7 +51,7 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
 
     await assertProductCanPublish(slug, { requireSupplier: true });
     const expectedUpdatedAt = readExpectedUpdatedAt(formData, String(product.updated_at ?? ""));
-    await ensureProductInventoryRecord(slug, context.userId);
+    await ensureProductCatalogInventoryRecord(slug, context.userId);
     await updateAdminRecord(
       "mithron_products",
       "slug",

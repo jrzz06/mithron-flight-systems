@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 export function OperationalSubmitButton({
   children,
   pendingLabel = "Saving",
-  className = "ambient-cta inline-flex w-fit items-center justify-center self-start",
+  className = "platform-btn-primary platform-btn-md",
   confirmMessage,
   onClick,
   name,
@@ -41,7 +41,7 @@ export function OperationalSubmitButton({
           event.preventDefault();
         }
       }}
-      className={`${className} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400/55 disabled:cursor-not-allowed disabled:opacity-55`}
+      className={`${className} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--platform-accent)]/40 disabled:cursor-not-allowed`}
     >
       {pending ? pendingLabel : children}
     </button>

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isActionNavigationError } from "@/lib/server-action-errors";
+import { readEditorDocumentFields } from "@/lib/editor/read-form-content";
 import { readExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
 import { parseSupplierProductForm } from "@/lib/supplier/product-form";
 import { logSupplierProductFormDebug } from "@/lib/supplier/product-form-debug";
@@ -104,7 +105,15 @@ async function saveSupplierProductDraft(formData: FormData) {
     story: [],
     specs: {},
     anchors: [],
-    interests: []
+    interests: [],
+    ...(() => {
+      const editor = readEditorDocumentFields(formData, "description_json", "description");
+      if (!editor) return {};
+      return {
+        description: editor.html || null,
+        description_json: editor.json
+      };
+    })()
   };
 
   const { image, hero, gallery, uploadedImage } = await resolveSupplierProductImageFields(formData, {
@@ -254,6 +263,14 @@ export async function updateSupplierProductFormStateAction(
         image,
         hero,
         gallery,
+        ...(() => {
+          const editor = readEditorDocumentFields(formData, "description_json", "description");
+          if (!editor) return {};
+          return {
+            description: editor.html || null,
+            description_json: editor.json
+          };
+        })(),
         updated_at: new Date().toISOString()
       },
       context.userId,

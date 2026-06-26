@@ -1,3 +1,4 @@
+import { readEditorDocumentFields } from "@/lib/editor/read-form-content";
 import { readProductBadgeFieldsFromFormData } from "@/lib/product-badge";
 import { resolveProductPricing, type ProductDiscountType } from "@/lib/product-pricing";
 import { getProductTaxGroup, isProductTaxGroupId } from "@/lib/product-tax-groups";
@@ -18,6 +19,7 @@ type ProductDraftFormInput = {
     compare_at: number | null;
     badge: string | null;
     description: string | null;
+    description_json?: Record<string, unknown> | null;
     on_sale: boolean;
     discount_type: ProductDiscountType | null;
     discount_value: number | null;
@@ -63,6 +65,7 @@ type ProductQuickEditFormInput = {
     compare_at?: number | null;
     badge?: string | null;
     description?: string | null;
+    description_json?: Record<string, unknown> | null;
     on_sale?: boolean;
     discount_type?: ProductDiscountType | null;
     discount_value?: number | null;
@@ -442,6 +445,7 @@ function slugFromCategoryTitle(title: string) {
 
 type ProductCommerceFields = {
   description?: string | null;
+  description_json?: Record<string, unknown> | null;
   badge?: string | null;
   badge_enabled?: boolean;
   badge_text?: string | null;
@@ -461,8 +465,14 @@ type ProductCommerceFields = {
 
 function readProductCommerceFields(formData: FormData): ProductCommerceFields {
   const fields: ProductCommerceFields = {};
-  const description = readOptionalString(formData, "description");
-  if (description !== undefined) fields.description = description;
+  const editorContent = readEditorDocumentFields(formData, "description_json", "description");
+  if (editorContent) {
+    fields.description = editorContent.html || null;
+    fields.description_json = editorContent.json as Record<string, unknown> | null;
+  } else {
+    const description = readOptionalString(formData, "description");
+    if (description !== undefined) fields.description = description;
+  }
 
   const badgeFields = readProductBadgeFieldsFromFormData(formData);
   if (badgeFields) {
@@ -653,6 +663,7 @@ export function buildProductDraftFromFormData(formData: FormData): ProductDraftF
             compare_at: commerce.compare_at ?? readOptionalNumber(formData, "compare_at", "Product compare_at") ?? null,
             badge: commerce.badge ?? readOptionalString(formData, "badge") ?? null,
             description: commerce.description ?? readOptionalString(formData, "description") ?? null,
+            description_json: commerce.description_json ?? null,
             on_sale: commerce.on_sale ?? false,
             discount_type: commerce.discount_type ?? null,
             discount_value: commerce.discount_value ?? null,
@@ -670,6 +681,7 @@ export function buildProductDraftFromFormData(formData: FormData): ProductDraftF
           compare_at: readOptionalNumber(formData, "compare_at", "Product compare_at") ?? null,
           badge: readOptionalString(formData, "badge") ?? null,
           description: readOptionalString(formData, "description") ?? null,
+          description_json: readEditorDocumentFields(formData, "description_json", "description")?.json as Record<string, unknown> | null ?? null,
           on_sale: false,
           discount_type: null,
           discount_value: null,

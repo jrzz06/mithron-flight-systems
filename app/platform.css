@@ -353,17 +353,99 @@
 /* Platform UX refinements (non-visual polish) */
 /* -------------------------------------------------------------------------- */
 
+/* Typography scale */
+[data-control-plane] .platform-type-page-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--platform-text-primary);
+}
+
+[data-control-plane] .platform-type-section-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--platform-text-primary);
+}
+
+[data-control-plane] .platform-type-card-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--platform-text-primary);
+}
+
+[data-control-plane] .platform-type-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--platform-text-primary);
+}
+
+[data-control-plane] .platform-type-body {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--platform-text-secondary);
+}
+
+[data-control-plane] .platform-type-caption {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--platform-text-muted);
+}
+
+[data-control-plane] .platform-type-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--platform-text-muted);
+}
+
+/* Action bar — primary right, secondary grouped, destructive separated left */
+[data-control-plane] .platform-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+[data-control-plane] .platform-action-bar > .platform-action-group:only-child,
+[data-control-plane] .platform-action-bar > .platform-action-group:not(.platform-action-group--destructive):last-child {
+  margin-left: auto;
+}
+
+[data-control-plane] .platform-action-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+[data-control-plane] .platform-action-group--destructive {
+  margin-right: auto;
+}
+
 [data-control-plane] .platform-btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
   border: 0;
+  border-radius: var(--platform-radius);
   background-color: var(--platform-accent);
   color: var(--platform-accent-text);
+  font-size: 0.875rem;
   font-weight: 500;
+  line-height: 1;
   text-decoration: none;
-  transition: background-color 150ms ease;
+  white-space: nowrap;
+  transition: background-color 150ms ease, opacity 150ms ease;
   cursor: pointer;
 }
 
@@ -377,8 +459,86 @@
 }
 
 [data-control-plane] .platform-btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+}
+
+[data-control-plane] .platform-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid var(--platform-border-strong);
+  border-radius: var(--platform-radius);
+  background-color: var(--platform-surface-muted);
+  color: var(--platform-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+}
+
+[data-control-plane] a.platform-btn-secondary,
+[data-control-plane] button.platform-btn-secondary {
+  color: var(--platform-text-primary) !important;
+}
+
+[data-control-plane] .platform-btn-secondary:hover {
+  background-color: var(--platform-accent-soft);
+  border-color: color-mix(in srgb, var(--platform-accent) 35%, var(--platform-border-strong));
+  color: var(--platform-text-primary);
+}
+
+[data-control-plane] .platform-btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+[data-control-plane] .platform-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid transparent;
+  border-radius: var(--platform-radius);
+  background-color: transparent;
+  color: var(--platform-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 150ms ease, color 150ms ease;
+  cursor: pointer;
+}
+
+[data-control-plane] .platform-btn-ghost:hover {
+  background-color: var(--platform-surface-muted);
+  color: var(--platform-text-primary);
+}
+
+[data-control-plane] .platform-btn-ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+[data-control-plane] .platform-btn-sm {
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+}
+
+[data-control-plane] .platform-btn-md {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
 }
 
 /* Per-portal accent colors (dark theme) */
@@ -414,19 +574,30 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid var(--platform-danger);
-  background-color: var(--platform-danger);
-  color: #fff;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid color-mix(in srgb, var(--platform-danger) 55%, transparent);
+  border-radius: var(--platform-radius);
+  background-color: var(--platform-danger-soft);
+  color: var(--platform-danger);
+  font-size: 0.875rem;
   font-weight: 500;
+  line-height: 1;
   text-decoration: none;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
   cursor: pointer;
 }
 
+[data-control-plane] a.platform-btn-danger,
+[data-control-plane] button.platform-btn-danger {
+  color: var(--platform-danger) !important;
+}
+
 [data-control-plane] .platform-btn-danger:hover {
-  background-color: var(--platform-danger-soft, #4a1a1a);
-  border-color: var(--platform-danger-soft, #4a1a1a);
-  color: #fff;
+  background-color: color-mix(in srgb, var(--platform-danger) 18%, var(--platform-surface-muted));
+  border-color: color-mix(in srgb, var(--platform-danger) 65%, transparent);
+  color: var(--platform-danger);
 }
 
 [data-control-plane] .platform-btn-danger:disabled {
@@ -444,6 +615,12 @@
   border: 1px solid color-mix(in srgb, var(--platform-danger) 35%, transparent);
   background: var(--platform-danger-soft);
   color: var(--platform-danger);
+}
+
+[data-control-plane] .platform-feedback-warning {
+  border: 1px solid color-mix(in srgb, var(--platform-warning) 35%, transparent);
+  background: var(--platform-warning-soft);
+  color: var(--platform-warning);
 }
 
 [data-control-plane] input[type="file"].platform-file-input::file-selector-button {

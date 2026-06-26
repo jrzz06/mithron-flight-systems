@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
 import { SupplierFormStatusOverlay } from "@/components/supplier/supplier-form-status-overlay";
 import { SupplierInlineResultDialog } from "@/components/supplier/supplier-inline-result-dialog";
 import { SupplierProductImageField } from "@/components/supplier/supplier-product-image-field";
@@ -15,6 +16,8 @@ export type SupplierProductEditDefaults = {
   category: string;
   price: number;
   tagline: string;
+  description?: string;
+  descriptionJson?: string;
   imageSrc?: string;
   imageAlt?: string;
   updatedAt?: string | null;
@@ -37,7 +40,6 @@ export function SupplierEditProductForm({
     <>
       <form
         action={formAction}
-        encType="multipart/form-data"
         data-supplier-product-edit-form
         className="relative grid gap-3 rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5"
       >
@@ -85,6 +87,17 @@ export function SupplierEditProductForm({
           />
         </label>
 
+        <RichTextEditorField
+          label="Product description"
+          name="description"
+          jsonName="description_json"
+          defaultValue={defaults.description}
+          defaultJson={defaults.descriptionJson}
+          documentType="supplier_product_description"
+          documentId={defaults.slug}
+          placeholder="Describe capabilities, payload, warranty, and documentation..."
+        />
+
         <SupplierProductImageField
           defaults={{
             imageSrc: defaults.imageSrc,
@@ -96,7 +109,7 @@ export function SupplierEditProductForm({
             ref={feedbackRef}
             role="alert"
             data-supplier-product-edit-feedback="error"
-            className="rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2.5 text-sm text-rose-100"
+            className="platform-feedback-error rounded-[var(--platform-radius)] px-3 py-2.5 text-sm"
           >
             {state.message}
           </p>
@@ -105,15 +118,12 @@ export function SupplierEditProductForm({
           <p
             role="status"
             data-supplier-product-edit-feedback="success"
-            className="rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-3 py-2.5 text-sm text-emerald-100"
+            className="platform-feedback-success rounded-[var(--platform-radius)] px-3 py-2.5 text-sm"
           >
             {state.message}
           </p>
         ) : null}
-        <OperationalSubmitButton
-          pendingLabel="Saving changes"
-          className="platform-btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
-        >
+        <OperationalSubmitButton pendingLabel="Saving changes">
           Save changes
         </OperationalSubmitButton>
       </form>

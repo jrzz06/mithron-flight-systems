@@ -13,7 +13,11 @@ vi.mock("@/services/warehouse-config", () => ({
 }));
 
 import { createAdminRecord, fetchAdminRecordsByColumn } from "@/services/admin-actions";
-import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
+import {
+  ensureProductCatalogInventoryRecord,
+  ensureProductInventoryRecord,
+  ensureWarehouseStockRecord
+} from "@/services/product-inventory-sync";
 
 describe("product inventory integrity", () => {
   beforeEach(() => {
@@ -26,11 +30,11 @@ describe("product inventory integrity", () => {
     expect(deriveProductSku("---")).toBe("SKU");
   });
 
-  it("creates inventory and warehouse rows with zero stock defaults", async () => {
+  it("creates catalog inventory rows with zero stock defaults", async () => {
     vi.mocked(fetchAdminRecordsByColumn).mockResolvedValue([]);
     vi.mocked(createAdminRecord).mockResolvedValue({ id: "row-1" });
 
-    await ensureProductInventoryRecord("agri-drone-x1", "actor-1");
+    await ensureProductCatalogInventoryRecord("agri-drone-x1", "actor-1");
 
     expect(createAdminRecord).toHaveBeenCalledWith(
       "inventory",
@@ -42,8 +46,18 @@ describe("product inventory integrity", () => {
         reserved_quantity: 0
       }),
       "actor-1",
-      process.env
+      process.env,
+      {}
     );
+    expect(createAdminRecord).not.toHaveBeenCalledWith("warehouse_stock", expect.anything(), expect.anything(), expect.anything(), expect.anything());
+  });
+
+  it("creates warehouse stock rows separately for warehouse workflows", async () => {
+    vi.mocked(fetchAdminRecordsByColumn).mockResolvedValue([]);
+    vi.mocked(createAdminRecord).mockResolvedValue({ id: "row-1" });
+
+    await ensureWarehouseStockRecord("agri-drone-x1", "actor-1");
+
     expect(createAdminRecord).toHaveBeenCalledWith(
       "warehouse_stock",
       expect.objectContaining({
@@ -54,8 +68,20 @@ describe("product inventory integrity", () => {
         committed_quantity: 0
       }),
       "actor-1",
-      process.env
+      process.env,
+      {}
     );
+    expect(createAdminRecord).not.toHaveBeenCalledWith("inventory", expect.anything(), expect.anything(), expect.anything(), expect.anything());
+  });
+
+  it("creates both catalog and warehouse rows for admin repair", async () => {
+    vi.mocked(fetchAdminRecordsByColumn).mockResolvedValue([]);
+    vi.mocked(createAdminRecord).mockResolvedValue({ id: "row-1" });
+
+    await ensureProductInventoryRecord("agri-drone-x1", "actor-1");
+
+    expect(createAdminRecord).toHaveBeenCalledWith("inventory", expect.anything(), "actor-1", process.env, {});
+    expect(createAdminRecord).toHaveBeenCalledWith("warehouse_stock", expect.anything(), "actor-1", process.env, {});
   });
 
   it("does not overwrite existing canonical inventory rows", async () => {
@@ -88,5 +114,18 @@ describe("product inventory integrity migration", () => {
     expect(migration).toContain("trg_mithron_products_ensure_inventory");
     expect(migration).toContain("stock_status");
     expect(migration).toContain("'out_of_stock'");
+  });
+
+  it("separates catalog inventory seeding from warehouse stock in follow-up migration", () => {
+    const migration = readFileSync(
+      join(process.cwd(), "supabase/migrations/20260630000100_supplier_catalog_inventory_separation.sql"),
+      "utf8"
+    );
+
+    expect(migration).toContain("ensure_product_catalog_inventory_row");
+    expect(migration).toContain("ensure_warehouse_stock_row");
+    expect(migration).toContain("ensure_product_catalog_inventory_row(new.slug)");
+    expect(migration).toContain("inventory.update_own");
+    expect(migration).not.toMatch(/trg_mithron_products_ensure_inventory_fn[\s\S]*ensure_warehouse_stock_row\(new\.slug/);
   });
 });

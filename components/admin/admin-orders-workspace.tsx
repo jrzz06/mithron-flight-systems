@@ -652,7 +652,7 @@ export function AdminOrdersWorkspace({
                     />
                     <OperationalSubmitButton
                       pendingLabel="Updating..."
-                      className="h-10 w-fit rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white"
+                      className="platform-btn-primary platform-btn-md"
                     >
                       Save fulfillment update
                     </OperationalSubmitButton>
@@ -710,7 +710,7 @@ export function AdminOrdersWorkspace({
                     {firstItem ? (
                       <OperationalSubmitButton
                         pendingLabel="Creating..."
-                        className="h-10 w-fit rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white"
+                        className="platform-btn-primary platform-btn-md"
                       >
                         Create shipment handoff
                       </OperationalSubmitButton>

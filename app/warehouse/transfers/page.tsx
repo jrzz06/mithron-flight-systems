@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
 import { WarehouseCodeSelect } from "@/components/warehouse/warehouse-code-select";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { getDefaultWarehouseCode } from "@/services/warehouse-config";
@@ -104,12 +105,17 @@ export default async function TransfersPage({ searchParams }: { searchParams?: P
             <input name="quantity_delta" defaultValue="-1" inputMode="numeric" className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100" />
           </label>
           <input name="reason_code" type="hidden" value="warehouse_transfer" />
-          <label className="grid gap-1 text-xs font-medium text-slate-500">
-            Transfer note
-            <input name="notes" defaultValue="" className="h-10 rounded-lg border border-white/[0.06] bg-[#0b1017] px-3 text-sm text-slate-100" />
-          </label>
+          <RichTextEditorField
+            label="Transfer note"
+            name="notes"
+            jsonName="notes_json"
+            documentType="warehouse_transfer_note"
+            documentId="transfer-form"
+            placeholder="Internal transfer instructions..."
+            minHeight={140}
+          />
           <input name="change_summary" type="hidden" value="Record warehouse stock transfer" />
-          <OperationalSubmitButton pendingLabel="Recording" className="inline-flex min-h-10 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 text-sm font-semibold text-emerald-100">
+          <OperationalSubmitButton pendingLabel="Recording">
             Record transfer
           </OperationalSubmitButton>
         </form>

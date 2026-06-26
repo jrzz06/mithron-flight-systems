@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
 import {
   ArrowUpRight,
   ChevronRight,
@@ -125,13 +126,36 @@ function TextAreaField({
   label,
   name,
   defaultValue,
-  hint
+  hint,
+  richText = false,
+  documentType = "cms_homepage",
+  documentId = name
 }: {
   label: string;
   name: string;
   defaultValue?: string;
   hint?: string;
+  richText?: boolean;
+  documentType?: string;
+  documentId?: string;
 }) {
+  if (richText) {
+    return (
+      <div className="grid gap-1.5">
+        <RichTextEditorField
+          label={label}
+          name={name}
+          jsonName={`${name}_json`}
+          defaultValue={defaultValue}
+          documentType={documentType}
+          documentId={documentId}
+          placeholder={hint}
+        />
+        {hint ? <span className="text-[11px] font-normal text-slate-500">{hint}</span> : null}
+      </div>
+    );
+  }
+
   return (
     <label className="grid gap-1.5 text-xs font-medium text-slate-400">
       {label}
@@ -269,7 +293,7 @@ function MissionEditor({
         <Field label="Section link" name="href" defaultValue={mission.href} />
         <Field label="Primary CTA" name="cta" defaultValue={mission.cta} />
       </div>
-      <TextAreaField label="Intro body" name="body" defaultValue={mission.body} />
+      <TextAreaField label="Intro body" name="body" defaultValue={mission.body} richText documentId="homepage-mission-body" />
       <TextAreaField label="Media note" name="media_note" defaultValue={mission.mediaNote} hint="Shown as the fallback disclaimer under the mission copy." />
       <div className="grid gap-3">
         {mission.tiles.map((tile, index) => (
@@ -527,7 +551,7 @@ function renderSectionEditor(
             <Field label="Secondary button" name="secondary_label" defaultValue={homepageContent.about.secondaryLabel} />
             <Field label="Secondary link" name="secondary_href" defaultValue={homepageContent.about.secondaryHref} />
           </div>
-          <TextAreaField label="Body copy" name="body" defaultValue={homepageContent.about.body} />
+          <TextAreaField label="Body copy" name="body" defaultValue={homepageContent.about.body} richText documentId="homepage-about-body" />
           <AdminStickyActionFooter>
             <button type="submit" className="inline-flex h-9 items-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-500">
               Save about band

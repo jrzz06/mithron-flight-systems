@@ -14,7 +14,8 @@ import {
   type WarehouseOrderRow
 } from "@/lib/warehouse/order-helpers";
 
-const actionButtonClass = "inline-flex min-h-9 items-center rounded-md border border-[var(--platform-border)] px-3 text-xs font-semibold text-[var(--platform-text-primary)] transition hover:border-[var(--platform-accent)]/40";
+const actionButtonClass = "platform-btn-secondary platform-btn-sm";
+const primaryActionClass = "platform-btn-primary platform-btn-sm";
 
 type OrderItemRow = {
   id: string;
@@ -92,7 +93,8 @@ export function WarehouseOrderDetail({
             {fulfillmentStepLabel(step)} · {paymentStatusLabel(orderRow.paymentStatusRaw)} · Priority {orderRow.priority}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="platform-action-bar w-auto shrink-0">
+          <div className="platform-action-group">
           <Link href="/warehouse/orders" className={actionButtonClass}>Back to queue</Link>
           {step === "pending" ? (
             <AdvanceButton order={orderRow} nextStatus="processing" label="Reserve Stock" advanceAction={advanceAction} />
@@ -113,11 +115,12 @@ export function WarehouseOrderDetail({
             <form action={dispatchAction}>
               <input name="order_id" type="hidden" value={orderRow.orderId} />
               <input name="warehouse_code" type="hidden" value={orderRow.warehouseCode} />
-              <OperationalSubmitButton pendingLabel="Dispatching" className={`${actionButtonClass} border-emerald-400/30 text-emerald-200`}>
+              <OperationalSubmitButton pendingLabel="Dispatching" className={primaryActionClass}>
                 Dispatch
               </OperationalSubmitButton>
             </form>
           ) : null}
+          </div>
         </div>
       </section>
 

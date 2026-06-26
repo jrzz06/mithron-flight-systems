@@ -165,6 +165,12 @@ const contentRevisionPermissions: EnterprisePermission[] = [
   "audit.read"
 ];
 const supplierProductMutationPermissions: EnterprisePermission[] = ["products.write", "products.submit"];
+const catalogInventoryMutationPermissions: EnterprisePermission[] = [
+  "warehouse.write",
+  "products.write",
+  "products.submit",
+  "inventory.update_own"
+];
 const maxRevisionAttempts = 3;
 
 function logCmsRevisionDebug(message: string, payload: Record<string, unknown>) {
@@ -267,6 +273,9 @@ export async function assertAdminMutationPermission(table: string, actorId: stri
   }
   if (table === "mithron_products" || table === "product_media_assets") {
     return assertAdminMutationAnyPermission(table, actorId, supplierProductMutationPermissions, options);
+  }
+  if (table === "inventory") {
+    return assertAdminMutationAnyPermission(table, actorId, catalogInventoryMutationPermissions, options);
   }
   const permission = getRequiredPermissionForAdminTable(table);
   await (options.guard ?? requirePermission)(permission);

@@ -1,5 +1,9 @@
 import { assertSupabaseAdminConfig, getSupabaseAdminConfig } from "@/lib/env";
-import { createAdminRecord, fetchAdminRecordsByColumn } from "@/services/admin-actions";
+import {
+  createAdminRecord,
+  fetchAdminRecordsByColumn,
+  type AdminMutationOptions
+} from "@/services/admin-actions";
 import { getDefaultWarehouseCode } from "@/services/warehouse-config";
 
 type EnvSource = Record<string, string | undefined>;
@@ -93,70 +97,101 @@ export async function countProductsMissingInventoryRecords(env: EnvSource = proc
   return missing.length;
 }
 
-export async function ensureProductInventoryRecord(
+/** Seeds the supplier/catalog inventory row only — never touches warehouse_stock. */
+export async function ensureProductCatalogInventoryRecord(
   slug: string,
   actorId: string | null,
-  env: EnvSource = process.env
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
 ) {
   const normalizedSlug = slug.trim();
   if (!normalizedSlug) {
-    throw new Error("Product slug is required to seed inventory.");
+    throw new Error("Product slug is required to seed catalog inventory.");
+  }
+
+  const sku = deriveProductSku(normalizedSlug);
+  const timestamp = new Date().toISOString();
+
+  const existingInventory = await fetchAdminRecordsByColumn("inventory", "product_slug", normalizedSlug, env);
+  const hasInventory = existingInventory.some((row) => String(row.sku ?? "") === sku);
+  if (hasInventory) return;
+
+  await createAdminRecord(
+    "inventory",
+    {
+      product_slug: normalizedSlug,
+      sku,
+      stock_status: "out_of_stock",
+      quantity: 0,
+      reserved_quantity: 0,
+      reorder_threshold: 0,
+      updated_by: actorId,
+      updated_at: timestamp
+    },
+    actorId,
+    env,
+    options
+  );
+}
+
+/** Seeds warehouse_stock for fulfillment workflows — requires warehouse.write. */
+export async function ensureWarehouseStockRecord(
+  slug: string,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  const normalizedSlug = slug.trim();
+  if (!normalizedSlug) {
+    throw new Error("Product slug is required to seed warehouse stock.");
   }
 
   const sku = deriveProductSku(normalizedSlug);
   const warehouseCode = await getDefaultWarehouseCode(env);
   const timestamp = new Date().toISOString();
 
-  const existingInventory = await fetchAdminRecordsByColumn("inventory", "product_slug", normalizedSlug, env);
-  const hasInventory = existingInventory.some((row) => String(row.sku ?? "") === sku);
-  if (!hasInventory) {
-    await createAdminRecord(
-      "inventory",
-      {
-        product_slug: normalizedSlug,
-        sku,
-        stock_status: "out_of_stock",
-        quantity: 0,
-        reserved_quantity: 0,
-        reorder_threshold: 0,
-        updated_by: actorId,
-        updated_at: timestamp
-      },
-      actorId,
-      env
-    );
-  }
-
   const existingStock = await fetchAdminRecordsByColumn("warehouse_stock", "product_slug", normalizedSlug, env);
   const hasWarehouseStock = existingStock.some(
     (row) => String(row.sku ?? "") === sku && String(row.warehouse_code ?? "") === warehouseCode
   );
-  if (!hasWarehouseStock) {
-    await createAdminRecord(
-      "warehouse_stock",
-      {
-        warehouse_code: warehouseCode,
-        product_slug: normalizedSlug,
-        sku,
-        available_quantity: 0,
-        committed_quantity: 0,
-        updated_by: actorId,
-        updated_at: timestamp
-      },
-      actorId,
-      env
-    );
-  }
+  if (hasWarehouseStock) return;
+
+  await createAdminRecord(
+    "warehouse_stock",
+    {
+      warehouse_code: warehouseCode,
+      product_slug: normalizedSlug,
+      sku,
+      available_quantity: 0,
+      committed_quantity: 0,
+      updated_by: actorId,
+      updated_at: timestamp
+    },
+    actorId,
+    env,
+    options
+  );
 }
 
-/** @deprecated Use ensureProductInventoryRecord */
+/** Admin/warehouse repair path: ensures both catalog inventory and warehouse stock rows. */
+export async function ensureProductInventoryRecord(
+  slug: string,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  await ensureProductCatalogInventoryRecord(slug, actorId, env, options);
+  await ensureWarehouseStockRecord(slug, actorId, env, options);
+}
+
+/** @deprecated Use ensureProductCatalogInventoryRecord or ensureProductInventoryRecord */
 export async function ensureInventoryForPublishedProduct(slug: string, actorId: string | null) {
-  return ensureProductInventoryRecord(slug, actorId);
+  return ensureProductCatalogInventoryRecord(slug, actorId);
 }
 
-/** @deprecated Use ensureProductInventoryRecord */
+/** @deprecated Use ensureProductCatalogInventoryRecord or ensureProductInventoryRecord */
 export async function ensureInventoryForProduct(slug: string, actorId: string | null) {
-  return ensureProductInventoryRecord(slug, actorId);
+  return ensureProductCatalogInventoryRecord(slug, actorId);
 }
 
 export type RepairMissingInventoryResult = {
@@ -179,7 +214,7 @@ export async function repairMissingProductInventory(
 
   for (const slug of missing) {
     try {
-      await ensureProductInventoryRecord(slug, actorId, env);
+      await ensureProductCatalogInventoryRecord(slug, actorId, env);
       created += 1;
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));

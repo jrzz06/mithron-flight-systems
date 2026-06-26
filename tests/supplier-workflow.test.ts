@@ -15,6 +15,9 @@ describe("supplier workflow guards", () => {
     expect(supplierActions).toContain("supplierProductMutationOptions");
     expect(supplierActions).toContain("provisionAuthenticatedUser");
     expect(supplierActions).toContain("ensureSupplierProfile");
+    expect(supplierActions).not.toContain("ensureProductInventoryRecord");
+    expect(supplierActions).not.toContain("ensureWarehouseStockRecord");
+    expect(supplierActions).not.toContain("warehouse.write");
   });
 
   it("limits supplier edits to owned draft or rejected products", () => {

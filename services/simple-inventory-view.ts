@@ -164,7 +164,7 @@ export function buildSimpleInventoryRows(
   }
 
   const slugsWithRows = new Set(Array.from(rows.values()).map((row) => row.productSlug));
-  // Read-time fallback only: persisted inventory rows are created by ensureProductInventoryRecord and the DB trigger.
+  // Read-time fallback only: persisted inventory rows are created by ensureProductCatalogInventoryRecord and the DB trigger.
   for (const product of products) {
     const productSlug = asText(product.slug, "");
     if (!productSlug || slugsWithRows.has(productSlug)) continue;

@@ -3,8 +3,8 @@
 import { ProductFieldLabel } from "@/components/admin/product-info-tooltip";
 import { ProductBadgeFields } from "@/components/admin/product-badge-fields";
 import { ProductPricingFields } from "@/components/admin/product-pricing-fields";
-import { ProductSimpleRichText } from "@/components/admin/product-simple-rich-text";
 import { ProductTaxFields } from "@/components/admin/product-tax-fields";
+import { RichTextEditor } from "@/components/editor/RichTextEditor/lazy";
 
 export function ProductCreateDetailFields() {
   return (
@@ -25,7 +25,13 @@ export function ProductCreateDetailFields() {
         <ProductBadgeFields enabled={false} text="" style="default" />
         <label className="grid gap-1.5 text-sm">
           <ProductFieldLabel>Description</ProductFieldLabel>
-          <ProductSimpleRichText name="description" variant="dark" placeholder="Describe features, payload, and warranty details..." />
+          <RichTextEditor
+            name="description"
+            jsonName="description_json"
+            placeholder="Describe features, payload, and warranty details..."
+            documentType="product_description"
+            documentId="create"
+          />
         </label>
       </section>
 

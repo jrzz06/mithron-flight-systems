@@ -2,8 +2,8 @@
 
 import { ProductFieldLabel } from "@/components/admin/product-info-tooltip";
 import { ProductPricingFields } from "@/components/admin/product-pricing-fields";
-import { ProductSimpleRichText } from "@/components/admin/product-simple-rich-text";
 import { ProductTaxFields } from "@/components/admin/product-tax-fields";
+import { RichTextEditor } from "@/components/editor/RichTextEditor/lazy";
 import type { ProductCatalogGridRow } from "@/app/admin/products/product-catalog-grid";
 import { saveProductQuickEditFormAction } from "@/app/admin/products/actions";
 import type { ProductDiscountType } from "@/lib/product-pricing";
@@ -100,11 +100,13 @@ export function ProductDetailEditDialog({
 
             <label className="grid gap-1.5 text-sm">
               <ProductFieldLabel>Description</ProductFieldLabel>
-              <ProductSimpleRichText
+              <RichTextEditor
                 name="description"
-                variant="dark"
+                jsonName="description_json"
                 defaultValue={product.description ?? ""}
                 placeholder="Describe features, payload, and warranty details..."
+                documentType="product_description"
+                documentId={product.id}
               />
             </label>
           </section>

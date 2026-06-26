@@ -101,7 +101,7 @@ export function WarehouseInventoryAdjustmentPanel({
             </select>
           </label>
 
-          <OperationalSubmitButton pendingLabel="Saving" className="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-400/30 bg-emerald-400/10 px-4 text-sm font-semibold text-emerald-100">
+          <OperationalSubmitButton pendingLabel="Saving">
             Save adjustment
           </OperationalSubmitButton>
         </form>

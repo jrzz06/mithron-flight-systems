@@ -6,6 +6,7 @@ import { Copy, Crop, Eye, EyeOff, GripVertical, History, ImageIcon, ImagePlus, M
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
 import { StatusBadge } from "@/components/admin/module-panel";
 import {
   archiveCmsWorkspaceRecordFormAction,
@@ -265,7 +266,7 @@ function VisibilityToggle({ section }: { section: CmsWorkspaceSection }) {
         <span className="block text-xs font-semibold text-slate-100">Visible on site</span>
         <span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Hide this section without deleting its draft.</span>
       </span>
-      <input name="is_visible" type="checkbox" defaultChecked={section.isVisible} className="mt-1 h-4 w-4 accent-emerald-500" />
+      <input name="is_visible" type="checkbox" defaultChecked={section.isVisible} className="mt-1 h-4 w-4 accent-[var(--platform-accent)]" />
       <input type="hidden" name="is_visible" value="off" />
     </label>
   );
@@ -308,6 +309,9 @@ function Field({
   onChange,
   name,
   multiline = false,
+  richText = false,
+  documentType = "cms_section",
+  documentId = name,
   placeholder
 }: {
   label: string;
@@ -315,8 +319,25 @@ function Field({
   onChange: (value: string) => void;
   name: string;
   multiline?: boolean;
+  richText?: boolean;
+  documentType?: string;
+  documentId?: string;
   placeholder?: string;
 }) {
+  if (richText) {
+    return (
+      <RichTextEditorField
+        label={label}
+        name={name}
+        jsonName={`${name}_json`}
+        defaultValue={value}
+        documentType={documentType}
+        documentId={documentId}
+        placeholder={placeholder}
+      />
+    );
+  }
+
   return (
     <label className="grid gap-1.5 text-xs font-medium text-slate-400">
       {label}
@@ -479,7 +500,7 @@ function SectionCard({
       onDragStart={(event) => event.dataTransfer.setData("text/plain", section.id)}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => onReorder(event.dataTransfer.getData("text/plain"), section.id)}
-      className={`rounded-xl border p-2 transition ${isActive ? "border-emerald-400/30 bg-emerald-500/10" : "border-slate-800 bg-[#0b1017] hover:border-slate-700 hover:bg-[#111827]"}`}
+      className={`rounded-[var(--platform-radius)] border p-2 transition ${isActive ? "border-[color-mix(in_srgb,var(--platform-accent)_35%,transparent)] bg-[var(--platform-accent-soft)]" : "border-[var(--platform-border)] bg-[var(--platform-surface-muted)] hover:border-[var(--platform-border-strong)] hover:bg-[var(--platform-surface-raised)]"}`}
     >
       <button type="button" data-cms-section-quick-edit onClick={onSelect} className="grid w-full grid-cols-[48px_minmax(0,1fr)] gap-3 text-left">
         <span className="relative block h-12 overflow-hidden rounded-lg border border-slate-800 bg-[#10151d]">
@@ -517,7 +538,7 @@ function SectionCard({
           <OperationalSubmitButton
             pendingLabel="Publishing"
             confirmMessage={`Publish ${section.title} to the live website?`}
-            className="inline-flex h-7 items-center rounded-lg border border-emerald-500/50 bg-emerald-500/15 px-2 text-[11px] font-semibold text-emerald-100 hover:bg-emerald-500/20"
+            className="platform-btn-primary platform-btn-sm !min-h-7 !px-2 !text-[11px]"
           >
             Publish
           </OperationalSubmitButton>
@@ -677,7 +698,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
             <Field label="Button destination" name="href" value={fields.href} onChange={(value) => updateField("href", value)} />
           </div>
           <MediaPicker section={section} media={media} onChange={updateField} />
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700">
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">
             <Save className="h-4 w-4" aria-hidden="true" />
             Save Draft
           </OperationalSubmitButton>
@@ -694,7 +715,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
             <input type="hidden" name="change_summary" value="Visual footer column edit" />
             <VisibilityToggle section={section} />
             <Field label="Footer group" name="title" value={fields.footerColumnTitle} onChange={(value) => updateField("footerColumnTitle", value)} />
-            <OperationalSubmitButton className="inline-flex h-9 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 text-xs font-semibold text-white">Save group</OperationalSubmitButton>
+            <OperationalSubmitButton className="platform-btn-primary platform-btn-sm">Save group</OperationalSubmitButton>
           </form>
           <form action={saveFooterLinkDraftFormAction} onSubmit={markSubmitted} data-cms-table="footer_links" className="grid gap-3 rounded-xl border border-slate-800 bg-[#10151d] p-3">
             <input type="hidden" name="id" value={fields.footerLinkId} />
@@ -704,7 +725,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
             <VisibilityToggle section={section} />
             <Field label="Link label" name="label" value={fields.footerLinkLabel} onChange={(value) => updateField("footerLinkLabel", value)} />
             <Field label="Link destination" name="href" value={fields.footerLinkHref} onChange={(value) => updateField("footerLinkHref", value)} />
-            <OperationalSubmitButton className="inline-flex h-9 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 text-xs font-semibold text-white">Save link</OperationalSubmitButton>
+            <OperationalSubmitButton className="platform-btn-primary platform-btn-sm">Save link</OperationalSubmitButton>
           </form>
         </div>
       );
@@ -719,7 +740,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
           <input type="hidden" name="required_role" value="" />
           <Field label="Menu label" name="label" value={fields.label} onChange={(value) => updateField("label", value)} />
           <Field label="Link destination" name="href" value={fields.href} onChange={(value) => updateField("href", value)} />
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">Save Draft</OperationalSubmitButton>
         </form>
       );
     }
@@ -730,9 +751,9 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
           <HiddenBase section={section} />
           <Field label="Reviewer name" name="reviewer_name" value={fields.title} onChange={(value) => updateField("title", value)} />
           <Field label="Product slug" name="product_slug" value={fields.productSlug} onChange={(value) => updateField("productSlug", value)} />
-          <Field label="Review" name="body" value={fields.body} onChange={(value) => updateField("body", value)} multiline />
+          <Field label="Review" name="body" value={fields.body} onChange={(value) => updateField("body", value)} richText documentId={`review-${activeSection?.id ?? "draft"}`} />
           <Field label="Rating" name="rating" value={fields.rating} onChange={(value) => updateField("rating", value)} />
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">Save Draft</OperationalSubmitButton>
         </form>
       );
     }
@@ -758,7 +779,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
             <Field label="Showcase image URL" name="showcase_image_src_visual" value={fields.showcaseImageSrc} onChange={(value) => updateField("showcaseImageSrc", value)} />
             <Field label="Showcase image description" name="showcase_image_alt_visual" value={fields.showcaseImageAlt} onChange={(value) => updateField("showcaseImageAlt", value)} />
           </EditorGroup>
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">Save Draft</OperationalSubmitButton>
         </form>
       );
     }
@@ -771,8 +792,8 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
           <Field label="Scope" name="scope" value={fields.sectionKey || "global"} onChange={(value) => updateField("sectionKey", value)} />
           <Field label="Product slug" name="product_slug" value={fields.productSlug} onChange={(value) => updateField("productSlug", value)} />
           <Field label="Question" name="question" value={fields.title} onChange={(value) => updateField("title", value)} />
-          <Field label="Answer" name="answer" value={fields.body} onChange={(value) => updateField("body", value)} multiline />
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+          <Field label="Answer" name="answer" value={fields.body} onChange={(value) => updateField("body", value)} richText documentId={`faq-${activeSection?.id ?? "draft"}`} />
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">Save Draft</OperationalSubmitButton>
         </form>
       );
     }
@@ -784,13 +805,13 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
           <input type="hidden" name="id" value={section.entityId} />
           <Field label="Label" name="label" value={fields.label} onChange={(value) => updateField("label", value)} />
           <Field label="Headline" name="headline" value={fields.title} onChange={(value) => updateField("title", value)} />
-          <Field label="Body" name="body" value={fields.body} onChange={(value) => updateField("body", value)} multiline />
+          <Field label="Body" name="body" value={fields.body} onChange={(value) => updateField("body", value)} richText documentId={`campaign-${activeSection?.id ?? "draft"}`} />
           <Field label="CTA label" name="cta_label" value={fields.ctaLabel} onChange={(value) => updateField("ctaLabel", value)} />
           <Field label="Link" name="href" value={fields.href} onChange={(value) => updateField("href", value)} />
           <Field label="Media asset id" name="media_asset_id" value={fields.mediaAssetId} onChange={(value) => updateField("mediaAssetId", value)} />
           <Field label="Starts at" name="starts_at" value={fields.startsAt} onChange={(value) => updateField("startsAt", value)} />
           <Field label="Ends at" name="ends_at" value={fields.endsAt} onChange={(value) => updateField("endsAt", value)} />
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">Save Draft</OperationalSubmitButton>
         </form>
       );
     }
@@ -805,7 +826,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
           <p className="text-xs text-slate-500">Section `{fields.sectionKey}` on `{fields.routePath || "/"}`</p>
           <Field label="Starts at" name="starts_at" value={fields.startsAt} onChange={(value) => updateField("startsAt", value)} />
           <Field label="Ends at" name="ends_at" value={fields.endsAt} onChange={(value) => updateField("endsAt", value)} />
-          <OperationalSubmitButton className="inline-flex h-10 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Save Draft</OperationalSubmitButton>
+          <OperationalSubmitButton className="platform-btn-primary platform-btn-md">Save Draft</OperationalSubmitButton>
         </form>
       );
     }
@@ -943,7 +964,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
             <input name="files" type="file" accept="image/*" className="sr-only" />
           </label>
           <input name="alt_text" placeholder="Image description" className={inputClass()} />
-          <OperationalSubmitButton pendingLabel="Uploading" className="inline-flex h-9 w-fit items-center rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-sm font-semibold text-white">Upload image</OperationalSubmitButton>
+          <OperationalSubmitButton pendingLabel="Uploading" className="platform-btn-primary platform-btn-sm">Upload image</OperationalSubmitButton>
         </form>
 
         <div data-cms-unsaved-warning className="rounded-xl border border-amber-500/20 bg-amber-950/20 px-4 py-3 text-sm text-amber-100">
@@ -988,7 +1009,7 @@ export function CmsVisualWorkspace({ pages, sections, media, restoreRevision }: 
           </Link>
           <form action={publishCmsWorkspaceRecordFormAction} data-cms-publish-confirmation>
             <PublishRecordFields section={activeSection} />
-            <OperationalSubmitButton pendingLabel="Publishing" confirmMessage={`Publish ${activeSection.title} to the live website?`} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700">
+            <OperationalSubmitButton pendingLabel="Publishing" confirmMessage={`Publish ${activeSection.title} to the live website?`} className="platform-btn-primary platform-btn-sm">
               <Send className="h-3.5 w-3.5" aria-hidden="true" />
               Publish
             </OperationalSubmitButton>

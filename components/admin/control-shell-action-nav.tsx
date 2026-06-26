@@ -26,10 +26,10 @@ export function ControlShellActionNav({ actions }: { actions: ControlShellAction
             key={action.href}
             href={action.href}
             aria-current={active ? "page" : undefined}
-            className={`rounded-[10px] border px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-[var(--platform-radius)] border px-3 py-1.5 text-sm font-medium transition-colors ${
               active
-                ? "border-teal-200 bg-teal-50 text-teal-900"
-                : "border-[var(--platform-border)] bg-[var(--platform-surface)] text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-muted)]"
+                ? "border-[color-mix(in_srgb,var(--platform-accent)_40%,transparent)] bg-[var(--platform-accent-soft)] text-[var(--platform-text-primary)]"
+                : "border-[var(--platform-border)] bg-[var(--platform-surface)] text-[var(--platform-text-secondary)] hover:border-[var(--platform-border-strong)] hover:bg-[var(--platform-surface-muted)] hover:text-[var(--platform-text-primary)]"
             }`}
           >
             {action.label}

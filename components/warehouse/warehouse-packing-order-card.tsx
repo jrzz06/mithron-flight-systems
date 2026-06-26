@@ -150,15 +150,15 @@ export function WarehousePackingOrderCard({
 
   return (
 
-    <article className="content-visibility-auto rounded-xl border border-white/[0.06] bg-[#10151d] p-4 [contain-intrinsic-size:320px] [content-visibility:auto]">
+    <article className="content-visibility-auto rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface)] p-4 [contain-intrinsic-size:320px] [content-visibility:auto]">
 
       <div className="flex flex-wrap items-start justify-between gap-3">
 
         <div>
 
-          <p className="text-sm font-semibold text-slate-100">{orderNumber}</p>
+          <p className="text-sm font-medium text-[var(--platform-text-primary)]">{orderNumber}</p>
 
-          <p className="mt-1 text-xs text-slate-500">{items.length} line item{items.length === 1 ? "" : "s"}</p>
+          <p className="mt-1 platform-type-caption">{items.length} line item{items.length === 1 ? "" : "s"}</p>
 
         </div>
 
@@ -204,7 +204,7 @@ export function WarehousePackingOrderCard({
 
               onClick={verifyAll}
 
-              className="inline-flex h-9 items-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 text-xs font-semibold text-emerald-100"
+              className="platform-btn-secondary platform-btn-sm"
 
             >
 
@@ -228,7 +228,7 @@ export function WarehousePackingOrderCard({
 
                   key={item.id}
 
-                  className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm ${verified ? "border-emerald-400/20 bg-emerald-400/5 text-emerald-100" : "border-white/[0.06] bg-[#0b1017] text-slate-300"}`}
+                  className={`flex items-center justify-between gap-3 rounded-[var(--platform-radius)] border px-3 py-2.5 text-sm ${verified ? "border-[color-mix(in_srgb,var(--platform-success)_35%,transparent)] bg-[var(--platform-success-soft)] text-[var(--platform-text-primary)]" : "border-[var(--platform-border)] bg-[var(--platform-surface-muted)] text-[var(--platform-text-secondary)]"}`}
 
                 >
 
@@ -240,7 +240,7 @@ export function WarehousePackingOrderCard({
 
                     {item.productName || item.productSlug}
 
-                    <span className="ml-2 text-xs text-slate-500">qty {item.quantity}</span>
+                    <span className="ml-2 platform-type-caption">qty {item.quantity}</span>
 
                   </span>
 
@@ -252,7 +252,7 @@ export function WarehousePackingOrderCard({
 
                     onChange={(event) => toggleVerified(item.id, event.target.checked)}
 
-                    className="h-4 w-4 accent-emerald-500"
+                    className="h-4 w-4 accent-[var(--platform-accent)]"
 
                   />
 
@@ -278,7 +278,7 @@ export function WarehousePackingOrderCard({
 
               onClick={handlePrintSlip}
 
-              className="inline-flex h-9 items-center rounded-lg border border-white/[0.08] px-3 text-xs font-semibold text-slate-200 hover:bg-white/[0.04]"
+              className="platform-btn-ghost platform-btn-sm"
 
             >
 
@@ -286,7 +286,7 @@ export function WarehousePackingOrderCard({
 
             </button>
 
-            <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+            <label className="inline-flex items-center gap-2 text-sm text-[var(--platform-text-secondary)]">
 
               <input
 
@@ -298,7 +298,7 @@ export function WarehousePackingOrderCard({
 
                 onChange={(event) => setSlipConfirmed(event.target.checked)}
 
-                className="h-4 w-4 accent-emerald-500"
+                className="h-4 w-4 accent-[var(--platform-accent)]"
 
               />
 
@@ -326,7 +326,7 @@ export function WarehousePackingOrderCard({
 
           pendingLabel="Completing pack"
 
-          className="inline-flex min-h-10 w-fit items-center justify-center rounded-lg border border-sky-400/20 bg-sky-400/10 px-4 text-sm font-semibold text-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="platform-btn-primary platform-btn-md disabled:cursor-not-allowed"
 
         >
 
@@ -336,7 +336,7 @@ export function WarehousePackingOrderCard({
 
         {!canSubmit ? (
 
-          <p className="text-xs text-slate-500">Verify every line item and confirm the packing slip before completing.</p>
+          <p className="platform-type-caption">Verify every line item and confirm the packing slip before completing.</p>
 
         ) : null}
 

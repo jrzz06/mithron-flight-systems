@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { MetricGrid, Card } from "@/components/platform";
+import { PlatformActionBar, PlatformActionGroup } from "@/components/platform/action-bar";
 import { EmptyState } from "@/components/platform/empty-state";
 import { FeedbackBanner } from "@/components/platform/feedback-banner";
 import { StatusPill } from "@/components/platform/status-pill";
@@ -16,11 +17,11 @@ type ModulePanelProps = {
 
 export function ModulePanel({ eyebrow, title, description, status, metrics = [], children }: ModulePanelProps) {
   return (
-    <section data-module-panel className="grid gap-5">
-      <div className="grid gap-1">
-        <p className="text-xs text-[var(--platform-text-muted)]">{eyebrow}</p>
-        <h2 className="text-base font-medium text-[var(--platform-text-primary)]">{title}</h2>
-        {description ? <p className="max-w-3xl text-sm text-[var(--platform-text-muted)]">{description}</p> : null}
+    <section data-module-panel className="grid gap-6">
+      <div className="grid gap-1.5">
+        <p className="platform-type-eyebrow">{eyebrow}</p>
+        <h2 className="platform-type-page-title">{title}</h2>
+        {description ? <p className="platform-type-body max-w-3xl">{description}</p> : null}
       </div>
       {status ? (
         <div>
@@ -68,14 +69,18 @@ export function AdminSection({
   className?: string;
 }) {
   return (
-    <section data-admin-section className={`grid gap-4 ${className}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section data-admin-section className={`grid gap-5 ${className}`}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          {eyebrow ? <p className="mb-1 text-xs text-[var(--platform-text-muted)]">{eyebrow}</p> : null}
-          <h3 className="text-sm font-medium text-[var(--platform-text-primary)]">{title}</h3>
-          {description ? <p className="mt-1 max-w-2xl text-sm text-[var(--platform-text-muted)]">{description}</p> : null}
+          {eyebrow ? <p className="platform-type-eyebrow mb-1">{eyebrow}</p> : null}
+          <h3 className="platform-type-section-title">{title}</h3>
+          {description ? <p className="platform-type-caption mt-1.5 max-w-2xl">{description}</p> : null}
         </div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
+        {actions ? (
+          <PlatformActionBar className="w-auto shrink-0">
+            <PlatformActionGroup>{actions}</PlatformActionGroup>
+          </PlatformActionBar>
+        ) : null}
       </div>
       {children}
     </section>
@@ -99,12 +104,16 @@ export function AdminTableShell({
     <section
       className={`mithron-elevated-card overflow-hidden rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface)] ${className}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3.5">
         <div>
-          <h2 className="text-sm font-medium text-[var(--platform-text-primary)]">{title}</h2>
-          {description ? <p className="mt-0.5 text-xs text-[var(--platform-text-muted)]">{description}</p> : null}
+          <h2 className="platform-type-card-title">{title}</h2>
+          {description ? <p className="platform-type-caption mt-1">{description}</p> : null}
         </div>
-        {action}
+        {action ? (
+          <PlatformActionBar className="w-auto shrink-0">
+            <PlatformActionGroup>{action}</PlatformActionGroup>
+          </PlatformActionBar>
+        ) : null}
       </div>
       <div className="overflow-x-auto">{children}</div>
     </section>
@@ -131,8 +140,10 @@ export function AdminFormSection({
 
 export function AdminStickyActionFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 mt-2 flex flex-wrap items-center justify-end gap-2 border-t border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-3 md:-mx-5 md:px-5">
-      {children}
+    <div className="sticky bottom-0 z-10 -mx-4 mt-4 border-t border-[var(--platform-border)] bg-[var(--platform-surface)] px-4 py-3.5 md:-mx-5 md:px-5">
+      <PlatformActionBar>
+        <PlatformActionGroup>{children}</PlatformActionGroup>
+      </PlatformActionBar>
     </div>
   );
 }

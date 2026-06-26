@@ -63,15 +63,15 @@ export function SupplierFeedbackDialog() {
       >
         <div className="flex items-start gap-3">
           {isSuccess ? (
-            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-400" aria-hidden="true" />
+            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[var(--platform-success)]" aria-hidden="true" />
           ) : (
-            <XCircle className="mt-0.5 h-6 w-6 shrink-0 text-rose-400" aria-hidden="true" />
+            <XCircle className="mt-0.5 h-6 w-6 shrink-0 text-[var(--platform-danger)]" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <h2 id="supplier-feedback-title" className="text-lg font-semibold text-[var(--platform-text-primary)]">
+            <h2 id="supplier-feedback-title" className="platform-type-section-title text-base">
               {title}
             </h2>
-            <p id="supplier-feedback-message" className="mt-2 text-sm text-[var(--platform-text-secondary)]">
+            <p id="supplier-feedback-message" className="platform-type-body mt-2">
               {message}
             </p>
           </div>
@@ -79,9 +79,7 @@ export function SupplierFeedbackDialog() {
         <button
           type="button"
           onClick={dismiss}
-          className={`mt-6 w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${
-            isSuccess ? "bg-emerald-500 hover:bg-emerald-400" : "bg-rose-500 hover:bg-rose-400"
-          }`}
+          className={`mt-6 w-full platform-btn-md ${isSuccess ? "platform-btn-primary" : "platform-btn-danger"}`}
         >
           OK
         </button>

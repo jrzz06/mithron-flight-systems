@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, XCircle } from "lucide-react";
+import { PlatformActionBar, PlatformActionGroup } from "@/components/platform/action-bar";
 
 export function SupplierInlineResultDialog({
   open,
@@ -37,44 +38,40 @@ export function SupplierInlineResultDialog({
         aria-labelledby="supplier-inline-result-title"
         aria-describedby="supplier-inline-result-message"
         data-supplier-inline-result-dialog
-        className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-[#0f141b] p-6 shadow-2xl"
+        className="w-full max-w-md rounded-[var(--platform-radius)] border border-[var(--platform-border-strong)] bg-[var(--platform-surface-raised)] p-6 shadow-[var(--platform-shadow-md)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start gap-3">
           {isSuccess ? (
-            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-emerald-400" aria-hidden="true" />
+            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[var(--platform-success)]" aria-hidden="true" />
           ) : (
-            <XCircle className="mt-0.5 h-6 w-6 shrink-0 text-rose-400" aria-hidden="true" />
+            <XCircle className="mt-0.5 h-6 w-6 shrink-0 text-[var(--platform-danger)]" aria-hidden="true" />
           )}
           <div className="min-w-0">
-            <h2 id="supplier-inline-result-title" className="text-lg font-semibold text-slate-100">
+            <h2 id="supplier-inline-result-title" className="platform-type-section-title text-base">
               {title}
             </h2>
-            <p id="supplier-inline-result-message" className="mt-2 text-sm text-slate-300">
+            <p id="supplier-inline-result-message" className="platform-type-body mt-2">
               {message}
             </p>
           </div>
         </div>
-        <div className={`mt-6 grid gap-2 ${secondaryLabel ? "grid-cols-2" : "grid-cols-1"}`}>
-          {secondaryLabel && onSecondary ? (
+        <PlatformActionBar className="mt-6">
+          <PlatformActionGroup>
+            {secondaryLabel && onSecondary ? (
+              <button type="button" onClick={onSecondary} className="platform-btn-secondary platform-btn-md">
+                {secondaryLabel}
+              </button>
+            ) : null}
             <button
               type="button"
-              onClick={onSecondary}
-              className="rounded-lg border border-white/[0.12] px-4 py-2.5 text-sm font-semibold text-slate-200 hover:bg-white/[0.04]"
+              onClick={onPrimary}
+              className={isSuccess ? "platform-btn-primary platform-btn-md" : "platform-btn-danger platform-btn-md"}
             >
-              {secondaryLabel}
+              {primaryLabel}
             </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onPrimary}
-            className={`rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${
-              isSuccess ? "bg-emerald-500 hover:bg-emerald-400" : "bg-rose-500 hover:bg-rose-400"
-            }`}
-          >
-            {primaryLabel}
-          </button>
-        </div>
+          </PlatformActionGroup>
+        </PlatformActionBar>
       </div>
     </div>
   );

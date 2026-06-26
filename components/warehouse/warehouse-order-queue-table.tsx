@@ -3,7 +3,8 @@ import { OperationalSubmitButton } from "@/components/admin/operational-submit-b
 import { fulfillmentStepLabel } from "@/lib/warehouse/operational-labels";
 import type { WarehouseOrderRow } from "@/lib/warehouse/order-helpers";
 
-const actionButtonClass = "inline-flex min-h-8 items-center rounded-md border border-[var(--platform-border)] px-2.5 text-[11px] font-semibold text-[var(--platform-text-primary)] transition hover:border-[var(--platform-accent)]/40 disabled:cursor-not-allowed disabled:opacity-55";
+const actionButtonClass = "platform-btn-secondary platform-btn-sm";
+const primaryActionClass = "platform-btn-primary platform-btn-sm";
 
 type WarehouseOrderQueueTableProps = {
   rows: WarehouseOrderRow[];
@@ -49,7 +50,7 @@ function DispatchButton({
     <form action={dispatchAction} className="contents">
       <input name="order_id" type="hidden" value={order.orderId} />
       <input name="warehouse_code" type="hidden" value={order.warehouseCode} />
-      <OperationalSubmitButton pendingLabel="Dispatching" className={`${actionButtonClass} border-emerald-400/30 text-emerald-200`}>
+      <OperationalSubmitButton pendingLabel="Dispatching" className={primaryActionClass}>
         Dispatch
       </OperationalSubmitButton>
     </form>
@@ -91,7 +92,7 @@ export function WarehouseOrderQueueTable({ rows, advanceAction, dispatchAction }
                 <td className="px-3 py-3">{order.assignedPicker}</td>
                 <td className="px-3 py-3">{order.estimatedDispatch}</td>
                 <td className="px-3 py-3">
-                  <div className="flex min-w-[320px] flex-wrap gap-2">
+                  <div className="platform-action-group min-w-[320px]">
                     <Link href={`/warehouse/orders/${order.orderId}`} className={actionButtonClass}>
                       View Order
                     </Link>

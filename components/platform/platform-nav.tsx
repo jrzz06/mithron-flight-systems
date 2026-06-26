@@ -105,17 +105,22 @@ export function PlatformNav({ groups, dataAttribute = "data-platform-nav" }: Pla
                   aria-current={active ? "page" : undefined}
                   className={`relative flex min-h-9 items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--platform-accent)]/30 ${
                     active
-                      ? "bg-[var(--platform-nav-active-bg)] text-[var(--platform-text-primary)]"
+                      ? "bg-[var(--platform-nav-active-bg)] text-[var(--platform-text-primary)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--platform-accent)_18%,transparent)]"
                       : "text-[var(--platform-text-secondary)] hover:bg-[var(--platform-surface-muted)] hover:text-[var(--platform-text-primary)]"
                   }`}
                 >
                   {active ? (
                     <span
-                      className="absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full bg-[var(--platform-accent)]"
+                      className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-[var(--platform-accent)]"
                       aria-hidden="true"
                     />
                   ) : null}
-                  {Icon ? <Icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" /> : null}
+                  {Icon ? (
+                    <Icon
+                      className={`h-4 w-4 shrink-0 ${active ? "text-[var(--platform-accent)]" : "text-[var(--platform-text-muted)]"}`}
+                      aria-hidden="true"
+                    />
+                  ) : null}
                   <span className="flex-1">{item.label}</span>
                   {item.badgeCount && item.badgeCount > 0 ? (
                     <span className="rounded-md bg-[var(--platform-warning-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--platform-warning)]">

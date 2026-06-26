@@ -23,7 +23,7 @@ export function ProductOverview({ product }: { product: Product }) {
         </h2>
         <div className={styles.overviewBody}>
           {overviewHtml ? (
-            <div dangerouslySetInnerHTML={{ __html: overviewHtml }} />
+            <div className="editor-rendered-content" dangerouslySetInnerHTML={{ __html: overviewHtml }} />
           ) : (
             paragraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>

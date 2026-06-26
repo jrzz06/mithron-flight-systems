@@ -6,7 +6,6 @@ import {
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
-import { ensureProductInventoryRecord } from "@/services/product-inventory-sync";
 
 type JsonRecord = Record<string, unknown>;
 type EnvSource = Record<string, string | undefined>;
@@ -95,10 +94,6 @@ export async function createSupplierProductDraft(
       env,
       supplierProductMutationOptions
     );
-    const slug = String(record.slug ?? payload.slug ?? "").trim();
-    if (slug) {
-      await ensureProductInventoryRecord(slug, actorId, env);
-    }
     return record;
   } catch (error) {
     throw mapSupplierProductError(error);

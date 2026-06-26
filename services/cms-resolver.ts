@@ -4,6 +4,7 @@ import {
   defaultHomepageContentSources,
   type CmsDomainContentSource
 } from "@/config/cms-resolver-registry";
+import { isCmsStrictMode } from "@/lib/cms/strict-mode";
 import { getSupabaseAdminConfig } from "@/lib/env";
 
 /** Always loaded on `/` because `app/page.tsx` renders HomeLandingComposite unconditionally. */
@@ -30,18 +31,26 @@ function publishedSection(row: CmsOrchestrationRow) {
   return status === "published" && row.is_visible !== false;
 }
 
+const cmsFetchAttempts = 3;
+const CMS_FETCH_TIMEOUT_MS = 30_000;
+
+function isRetryableCmsStatus(status: number) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchAdminRows(table: string, query: string, env: EnvSource = process.env) {
   const config = getSupabaseAdminConfig(env);
   if (!config.configured) return null;
 
-  try {
-    // Validate URL format to catch malformed URLs early
-    new URL(`${config.url}/rest/v1/${table}?${query}`);
+  // Validate URL format to catch malformed URLs early
+  new URL(`${config.url}/rest/v1/${table}?${query}`);
 
-    // Create abort controller with 30s timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= cmsFetchAttempts; attempt += 1) {
     try {
       const response = await fetch(`${config.url}/rest/v1/${table}?${query}`, {
         headers: {
@@ -49,22 +58,34 @@ async function fetchAdminRows(table: string, query: string, env: EnvSource = pro
           Authorization: `Bearer ${config.serviceRoleKey}`
         },
         cache: "no-store",
-        signal: controller.signal
+        signal: AbortSignal.timeout(CMS_FETCH_TIMEOUT_MS)
       });
 
       if (!response.ok) {
-        console.warn(`Supabase API returned ${response.status} for table ${table}`);
+        const error = new Error(`Supabase API returned ${response.status} for table ${table}`);
+        if (attempt < cmsFetchAttempts && isRetryableCmsStatus(response.status)) {
+          lastError = error;
+          await wait(250 * attempt * attempt);
+          continue;
+        }
+        if (isCmsStrictMode(env)) {
+          throw error;
+        }
         return null;
       }
       return (await response.json()) as CmsOrchestrationRow[];
-    } finally {
-      clearTimeout(timeout);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= cmsFetchAttempts) break;
+      await wait(250 * attempt * attempt);
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`Failed to fetch CMS data from ${table}:`, errorMessage);
-    return null;
   }
+
+  if (isCmsStrictMode(env)) {
+    const message = lastError instanceof Error ? lastError.message : String(lastError);
+    throw new Error(`Failed to fetch CMS data from ${table} after ${cmsFetchAttempts} attempts: ${message}`);
+  }
+  return null;
 }
 
 function resolveContentSources(sections: CmsOrchestrationRow[]): CmsDomainContentSource[] {

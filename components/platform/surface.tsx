@@ -33,12 +33,12 @@ type CardProps = {
 export function Card({ title, description, actions, children, className = "" }: CardProps) {
   return (
     <Surface className={className}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="text-sm font-medium text-[var(--platform-text-primary)]">{title}</h3>
-          {description ? <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--platform-text-muted)]">{description}</p> : null}
+          <h3 className="platform-type-card-title">{title}</h3>
+          {description ? <p className="platform-type-caption mt-1.5 max-w-2xl">{description}</p> : null}
         </div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
+        {actions ? <div className="platform-action-bar w-auto shrink-0">{actions}</div> : null}
       </div>
       {children}
     </Surface>

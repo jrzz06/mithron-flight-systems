@@ -3,6 +3,8 @@
 import { useActionState, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { PlatformActionBar, PlatformActionGroup } from "@/components/platform/action-bar";
+import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
 import { SupplierFormDebugPanel } from "@/components/supplier/supplier-form-debug-panel";
 import { SupplierFormStatusOverlay } from "@/components/supplier/supplier-form-status-overlay";
 import { SupplierInlineResultDialog } from "@/components/supplier/supplier-inline-result-dialog";
@@ -84,7 +86,6 @@ export function SupplierNewProductForm({
         action={formAction}
         onInvalid={handleInvalid}
         onSubmit={handleSubmit}
-        encType="multipart/form-data"
         data-supplier-product-create-form
         className="relative grid gap-3 rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5"
       >
@@ -125,11 +126,20 @@ export function SupplierNewProductForm({
           <span className="text-xs text-[var(--platform-text-muted)]">Shown on catalog cards — defaults to product name if empty</span>
           <textarea
             name="tagline"
-            rows={3}
+            rows={2}
             placeholder="Brief summary for shoppers"
             className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
           />
         </label>
+
+        <RichTextEditorField
+          label="Product description"
+          name="description"
+          jsonName="description_json"
+          documentType="supplier_product_description"
+          documentId="new"
+          placeholder="Describe capabilities, payload, warranty, and documentation..."
+        />
 
         <SupplierProductImageField />
 
@@ -137,7 +147,7 @@ export function SupplierNewProductForm({
           <p
             role="alert"
             data-supplier-product-create-feedback="validation"
-            className="rounded-lg border border-amber-500/30 bg-amber-950/30 px-3 py-2.5 text-sm text-amber-100"
+            className="platform-feedback-error rounded-[var(--platform-radius)] px-3 py-2.5 text-sm"
           >
             {clientValidationError}
           </p>
@@ -148,33 +158,34 @@ export function SupplierNewProductForm({
             ref={feedbackRef}
             role="alert"
             data-supplier-product-create-feedback="error"
-            className="rounded-lg border border-rose-500/30 bg-rose-950/30 px-3 py-2.5 text-sm text-rose-100"
+            className="platform-feedback-error rounded-[var(--platform-radius)] px-3 py-2.5 text-sm"
           >
             {state.message}
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          <OperationalSubmitButton
-            pendingLabel="Saving draft"
-            name="submit_for_approval"
-            value="0"
-            onClick={() => setPendingLabel("Saving draft")}
-            className="platform-btn-primary rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-60"
-          >
-            Save draft
-          </OperationalSubmitButton>
-          <OperationalSubmitButton
-            pendingLabel="Sending for review"
-            confirmMessage="Save this product and send it to our team for review?"
-            name="submit_for_approval"
-            value="1"
-            onClick={() => setPendingLabel("Saving and sending for review")}
-            className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 disabled:opacity-60"
-          >
-            Save and send for review
-          </OperationalSubmitButton>
-        </div>
+        <PlatformActionBar>
+          <PlatformActionGroup>
+            <OperationalSubmitButton
+              pendingLabel="Saving draft"
+              name="submit_for_approval"
+              value="0"
+              onClick={() => setPendingLabel("Saving draft")}
+              className="platform-btn-secondary platform-btn-md"
+            >
+              Save draft
+            </OperationalSubmitButton>
+            <OperationalSubmitButton
+              pendingLabel="Sending for review"
+              confirmMessage="Save this product and send it to our team for review?"
+              name="submit_for_approval"
+              value="1"
+              onClick={() => setPendingLabel("Saving and sending for review")}
+            >
+              Save and send for review
+            </OperationalSubmitButton>
+          </PlatformActionGroup>
+        </PlatformActionBar>
       </form>
 
       <SupplierInlineResultDialog
