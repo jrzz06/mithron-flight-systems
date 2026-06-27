@@ -27,6 +27,8 @@ function buildImageSrcDirective(env: EnvSource) {
     "data:",
     "blob:",
     "https://checkout.razorpay.com",
+    "https://sdk.cashfree.com",
+    "https://payments.cashfree.com",
     ...(supabaseOrigin ? [supabaseOrigin] : [])
   ].join(" ");
 }
@@ -39,6 +41,8 @@ export function buildContentSecurityPolicy(nonce: string, env: EnvSource = proce
     `'nonce-${nonce}'`,
     ...devScriptDirectives,
     "https://checkout.razorpay.com",
+    "https://sdk.cashfree.com",
+    "https://payments.cashfree.com",
     "https://www.gstatic.com",
     "https://www.google.com",
     "https://apis.google.com"
@@ -50,10 +54,14 @@ export function buildContentSecurityPolicy(nonce: string, env: EnvSource = proce
     "https://www.googleapis.com",
     "https://www.google.com",
     "https://*.googleapis.com",
+    "https://api.razorpay.com",
+    "https://api.cashfree.com",
+    "https://sandbox.cashfree.com",
     ...devConnectDirectives
   ].join(" ");
   const frameSrc = [
     "https://*.razorpay.com",
+    "https://*.cashfree.com",
     "https://www.google.com",
     "https://accounts.google.com"
   ].join(" ");

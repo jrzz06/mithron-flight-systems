@@ -63,15 +63,15 @@ describe("commerce lifecycle hardening", () => {
   });
 
   it("releases stock on payment webhook failure", () => {
-    const webhook = source("app/api/payments/webhooks/[provider]/route.ts");
-    expect(webhook).toContain('event.status === "failed"');
-    expect(webhook).toContain("releaseCheckoutStock");
+    const confirm = source("services/payments/confirm-payment.ts");
+    expect(confirm).toContain('event.status === "failed"');
+    expect(confirm).toContain("releaseCheckoutStock");
   });
 
   it("handles payment refunds with stock release and order status update", () => {
-    const webhook = source("app/api/payments/webhooks/[provider]/route.ts");
-    expect(webhook).toContain('event.status === "refunded"');
-    expect(webhook).toContain('payment_status: "refunded"');
+    const confirm = source("services/payments/confirm-payment.ts");
+    expect(confirm).toContain('event.status === "refunded"');
+    expect(confirm).toContain('payment_status: "refunded"');
   });
 
   it("defines idempotent reservation migration", () => {

@@ -22,18 +22,20 @@ import {
   recordEntityRevisionSnapshot,
   upsertAdminRecord,
   upsertMediaAssetRecord,
-  upsertInventoryRecord,
   AdminRecordConflictError,
   updateAdminRecord,
   updateProductPublicationRecord,
   upsertProductMediaAssetRecord,
-  upsertWarehouseStockRecord,
   upsertProductRecord,
   setProductMediaPrimaryViaRpc
 } from "@/services/admin-actions";
 import { getCurrentAuthContext, requirePermission } from "@/services/auth";
 import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
-import { buildInventoryLinkageRecords, buildProductInventoryWorkflowFromFormData } from "@/services/enterprise-admin-forms";
+import {
+  parseProductCreateInventoryFromFormData,
+  syncProductInventoryWorkflow
+} from "@/services/product-inventory-workflow";
+import { buildProductInventoryWorkflowFromFormData } from "@/services/enterprise-admin-forms";
 import {
   assertAllowedMediaMimeType,
   buildMediaAssetId,
@@ -51,7 +53,6 @@ import {
 } from "@/services/media-optimization";
 import { markProductPublished } from "@/services/product-publish";
 import { revalidateCatalogSurfaces } from "@/lib/catalog-cache";
-import { fetchWarehouseStockBySku, recordInventoryMovementForStockChange } from "@/services/warehouse-movements";
 import { autoCutoutIfNeeded } from "@/lib/catalog/auto-cutout";
 
 async function currentActorContext() {
@@ -360,6 +361,14 @@ export async function saveProductDraftFormAction(formData: FormData) {
       actorId
     );
     await ensureProductCatalogInventoryRecord(draftInput.identity.slug, actorId);
+    const inventoryInput = parseProductCreateInventoryFromFormData(formData, draftInput.identity.slug);
+    if (inventoryInput && inventoryInput.quantity > 0) {
+      if (!actorId) throw new Error("Authentication required.");
+      await syncProductInventoryWorkflow(inventoryInput, actorId, {
+        actorRole,
+        auditAction: "products.inventory_init"
+      });
+    }
     if (uploadedProductImage) {
       await upsertProductMediaAssetRecord(
         {
@@ -793,77 +802,11 @@ export async function saveProductInventoryWorkflowFormAction(formData: FormData)
   await runProductAction("Product inventory linkage saved.", async () => {
     const draftInput = buildProductInventoryWorkflowFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
-    const now = new Date().toISOString();
-    const previousStock = await fetchWarehouseStockBySku(draftInput.productSlug, draftInput.sku, draftInput.warehouseCode);
-    const quantityBefore = Number(previousStock?.available_quantity ?? 0);
-    const records = buildInventoryLinkageRecords(draftInput, { actorId, at: now });
-
-    const inventoryRecord = await upsertInventoryRecord(
-      records.inventoryRecord,
-      actorId
-    );
-
-    const stockRecord = await upsertWarehouseStockRecord(
-      records.warehouseStockRecord,
-      actorId
-    );
-    const warehouseStockId = String((stockRecord as Record<string, unknown>).id ?? previousStock?.id ?? "") || null;
-
-    await recordInventoryMovementForStockChange(
-      {
-        productId: draftInput.productSlug,
-        sku: draftInput.sku,
-        variantId: draftInput.variantId,
-        warehouseCode: draftInput.warehouseCode,
-        warehouseStockId,
-        movementType: "adjustment",
-        quantityBefore,
-        quantityAfter: draftInput.availableQuantity,
-        reasonCode: "admin_inventory_edit",
-        notes: draftInput.changeSummary,
-        actorUserId: actorId,
-        relatedOrderId: null,
-        relatedShipmentId: null,
-        at: now
-      },
-      actorId
-    );
-
-    await recordEntityRevisionSnapshot(
-      "inventory",
-      `${draftInput.productSlug}:${draftInput.sku}`,
-      {
-        inventory: inventoryRecord,
-        warehouse_stock: stockRecord,
-        variant_id: draftInput.variantId
-      },
-      actorId,
-      draftInput.changeSummary
-    );
-
-    await createActivityLogRecord(
-      {
-        actor_id: actorId,
-        action: "inventory.sync",
-        entity_table: "inventory",
-        entity_id: `${draftInput.productSlug}:${draftInput.sku}`,
-        severity: records.lowStock ? "warning" : "info",
-        metadata: {
-          product_slug: draftInput.productSlug,
-          sku: draftInput.sku,
-          variant_id: draftInput.variantId,
-          warehouse_code: draftInput.warehouseCode,
-          stock_status: records.inventoryRecord.stock_status,
-          quantity: draftInput.quantity,
-          reserved_quantity: draftInput.reservedQuantity,
-          reorder_threshold: draftInput.reorderThreshold,
-          available_quantity: draftInput.availableQuantity,
-          committed_quantity: draftInput.committedQuantity
-        }
-      },
-      actorId
-    );
-
+    if (!actorId) throw new Error("Authentication required.");
+    await syncProductInventoryWorkflow(draftInput, actorId, {
+      actorRole,
+      auditAction: "products.inventory_link"
+    });
     await recordProductAuditTrail(
       {
         action: "products.inventory_link",
@@ -873,8 +816,9 @@ export async function saveProductInventoryWorkflowFormAction(formData: FormData)
           product_slug: draftInput.productSlug,
           sku: draftInput.sku,
           variant_id: draftInput.variantId,
-          inventory: inventoryRecord,
-          warehouse_stock: stockRecord
+          warehouse_code: draftInput.warehouseCode,
+          quantity: draftInput.quantity,
+          available_quantity: draftInput.availableQuantity
         },
         actorId,
         actorRole,
@@ -887,27 +831,6 @@ export async function saveProductInventoryWorkflowFormAction(formData: FormData)
         }
       }
     );
-
-    const stockStatus = String(records.inventoryRecord.stock_status ?? "");
-    if (["out_of_stock", "low_stock", "available"].includes(stockStatus)) {
-      const availabilityLabel = stockStatus === "out_of_stock"
-        ? "Out of stock"
-        : stockStatus === "low_stock"
-          ? "Low stock"
-          : "In stock";
-      await updateAdminRecord(
-        "mithron_products",
-        "slug",
-        draftInput.productSlug,
-        {
-          source_availability: availabilityLabel,
-          updated_at: now
-        },
-        actorId
-      );
-    }
-
-    revalidateCatalogSurfaces(draftInput.productSlug);
     revalidatePath("/admin/products");
     revalidatePath("/warehouse");
     revalidatePath("/warehouse/inventory");

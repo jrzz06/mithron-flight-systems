@@ -11,6 +11,11 @@ import {
   updateAdminRecord
 } from "@/services/admin-actions";
 import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
+import {
+  parseApprovalInventoryFromFormData,
+  syncProductInventoryWorkflow,
+  type SupplierInventoryInit
+} from "@/services/product-inventory-workflow";
 import { assertProductCanPublish } from "@/services/product-publish";
 
 async function runSupplierApprovalAction(successMessage: string, action: () => Promise<void>) {
@@ -35,6 +40,8 @@ async function runSupplierApprovalAction(successMessage: string, action: () => P
 export async function approveProductSubmissionFormAction(formData: FormData) {
   await runSupplierApprovalAction("Product approved and published.", async () => {
     const context = await requirePermission("products.write");
+    if (!context.userId) throw new Error("Authentication required.");
+    const actorId = context.userId;
     const slug = String(formData.get("slug") ?? "").trim();
     if (!slug) throw new Error("Product slug is required.");
     const rows = await fetchAdminRecordsByColumn("mithron_products", "slug", slug);
@@ -51,7 +58,19 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
 
     await assertProductCanPublish(slug, { requireSupplier: true });
     const expectedUpdatedAt = readExpectedUpdatedAt(formData, String(product.updated_at ?? ""));
-    await ensureProductCatalogInventoryRecord(slug, context.userId);
+    const inventoryInit = product.inventory_init && typeof product.inventory_init === "object"
+      ? product.inventory_init as SupplierInventoryInit
+      : null;
+    const inventoryInput = parseApprovalInventoryFromFormData(formData, slug, inventoryInit);
+
+    if (inventoryInput && inventoryInput.quantity > 0 && inventoryInput.warehouseCode) {
+      await syncProductInventoryWorkflow(inventoryInput, actorId, {
+        auditAction: "supplier.approval_inventory_init"
+      });
+    } else {
+      await ensureProductCatalogInventoryRecord(slug, actorId);
+    }
+
     await updateAdminRecord(
       "mithron_products",
       "slug",
@@ -60,12 +79,13 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
         workflow_status: "published",
         is_visible: true,
         approved_at: new Date().toISOString(),
-        approved_by: context.userId,
+        approved_by: actorId,
         rejection_reason: null,
         published_at: new Date().toISOString(),
+        inventory_init: null,
         updated_at: new Date().toISOString()
       },
-      context.userId,
+      actorId,
       process.env,
       { expectedUpdatedAt }
     );
@@ -77,12 +97,12 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
           recipient_id: supplierId,
           channel: "supplier",
           title: "Product approved",
-          body: `${String(product.name)} is now published on the storefront and seeded into inventory.`,
+          body: `${String(product.name)} is now published on the storefront${inventoryInput && inventoryInput.quantity > 0 ? " with initial inventory applied" : " and seeded into inventory"}.`,
           status: "unread",
           entity_table: "mithron_products",
           entity_id: slug
         },
-        context.userId
+        actorId
       );
     }
 

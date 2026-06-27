@@ -45,6 +45,9 @@ type CompletionState = {
 declare global {
   interface Window {
     Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+    Cashfree?: (config: { mode: "sandbox" | "production" }) => {
+      checkout: (options: { paymentSessionId: string; redirectTarget?: string }) => Promise<{ error?: unknown }>;
+    };
   }
 }
 
@@ -55,6 +58,25 @@ const emptyGuestAddress = (): GuestAddressForm => ({
   region: "India",
   postalCode: ""
 });
+
+function loadCashfreeScript() {
+  return new Promise<boolean>((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    if (window.Cashfree) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.async = true;
+    script.onload = () => resolve(Boolean(window.Cashfree));
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 function loadRazorpayScript() {
   return new Promise<boolean>((resolve) => {
@@ -167,6 +189,8 @@ export function CheckoutPageClient() {
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
   const [completed, setCompleted] = useState<CompletionState | null>(null);
+  const [paymentProviders, setPaymentProviders] = useState<string[]>([]);
+  const [paymentProvider, setPaymentProvider] = useState("");
   const checkoutIdempotencyKeyRef = useRef<string | null>(null);
 
   const getCheckoutIdempotencyKey = useCallback(() => {
@@ -195,6 +219,7 @@ export function CheckoutPageClient() {
 
     const promoCode = checkout.promoCode.trim();
     if (promoCode) payload.promoCode = promoCode;
+    if (paymentProvider) payload.paymentProvider = paymentProvider;
 
     if (usingSavedAddress) {
       payload.addressId = checkout.shippingAddressId;
@@ -212,7 +237,7 @@ export function CheckoutPageClient() {
     }
 
     return payload;
-  }, [checkout.email, checkout.region, checkout.shippingAddressId, checkout.promoCode, phone, fullName, company, items, usingSavedAddress, guestAddress]);
+  }, [checkout.email, checkout.region, checkout.shippingAddressId, checkout.promoCode, phone, fullName, company, items, usingSavedAddress, guestAddress, paymentProvider]);
 
   const markComplete = useCallback((
     mode: CompletionMode,
@@ -267,6 +292,22 @@ export function CheckoutPageClient() {
   }, [checkout.shippingAddressId, setShippingAddressId]);
 
   useEffect(() => {
+    let active = true;
+    fetch("/api/payments/providers", { cache: "no-store" })
+      .then(async (response) => (response.ok ? response.json() : { providers: [] }))
+      .then((payload) => {
+        if (!active) return;
+        const providers = Array.isArray(payload.providers) ? payload.providers.filter((value: unknown) => typeof value === "string") : [];
+        setPaymentProviders(providers);
+        setPaymentProvider((current) => current || providers[0] || "");
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!stubOrderId || stubFlag !== "1" || completed) return;
 
     let active = true;
@@ -289,6 +330,37 @@ export function CheckoutPageClient() {
       active = false;
     };
   }, [stubOrderId, stubFlag, completed, checkout.paymentIntentId, grandTotal, markComplete, router]);
+
+  const cashfreeReturnOrderId = searchParams.get("order");
+  const cashfreeReturnFlag = searchParams.get("cashfree_return");
+
+  useEffect(() => {
+    if (!cashfreeReturnOrderId || cashfreeReturnFlag !== "1" || completed) return;
+
+    let active = true;
+    (async () => {
+      setLoading("payment");
+      const paid = await verifyPaymentOnServer({
+        orderId: cashfreeReturnOrderId,
+        provider: "cashfree",
+        email: checkout.email,
+        signedIn: isSignedIn,
+        cashfreeOrderId: checkout.paymentIntentId ?? undefined
+      });
+      if (!active) return;
+      if (paid) {
+        markComplete("payment", cashfreeReturnOrderId, cashfreeReturnOrderId);
+        router.replace("/checkout", { scroll: false });
+      } else {
+        setError("Payment could not be confirmed yet. Please wait a moment and refresh.");
+      }
+      setLoading(null);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [cashfreeReturnOrderId, cashfreeReturnFlag, completed, checkout.email, checkout.paymentIntentId, isSignedIn, markComplete, router]);
 
   function validateBase(requireAddress: boolean) {
     if (!items.length) {
@@ -358,6 +430,45 @@ export function CheckoutPageClient() {
     return false;
   }
 
+  async function verifyPaymentOnServer(input: {
+    orderId: string;
+    provider: string;
+    email: string;
+    signedIn: boolean;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+    razorpaySignature?: string;
+    cashfreeOrderId?: string;
+  }) {
+    const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
+    if (!input.signedIn && !guestHeaders?.token) return false;
+
+    const response = await fetch("/api/payments/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(input.signedIn ? {} : (guestHeaders!.headers as Record<string, string>))
+      },
+      body: JSON.stringify({
+        orderId: input.orderId,
+        provider: input.provider,
+        email: input.email,
+        razorpayOrderId: input.razorpayOrderId,
+        razorpayPaymentId: input.razorpayPaymentId,
+        razorpaySignature: input.razorpaySignature,
+        cashfreeOrderId: input.cashfreeOrderId
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return false;
+    if (payload.paid) return true;
+    return waitForCheckoutPaymentConfirmation({
+      orderId: input.orderId,
+      email: input.email,
+      signedIn: input.signedIn
+    });
+  }
+
   async function openRazorpayCheckout(input: {
     key: string;
     orderId: string;
@@ -383,12 +494,20 @@ export function CheckoutPageClient() {
         order_id: input.razorpayOrderId,
         prefill: { email: input.email, contact: phone.trim() },
         theme: { color: "#174d33" },
-        handler: async () => {
+        handler: async (response: {
+          razorpay_order_id?: string;
+          razorpay_payment_id?: string;
+          razorpay_signature?: string;
+        }) => {
           setLoading("payment");
-          const paid = await waitForCheckoutPaymentConfirmation({
+          const paid = await verifyPaymentOnServer({
             orderId: input.orderId,
+            provider: "razorpay",
             email: input.email,
-            signedIn: input.signedIn
+            signedIn: input.signedIn,
+            razorpayOrderId: response.razorpay_order_id ?? input.razorpayOrderId,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature
           });
           setLoading(null);
           if (paid) {
@@ -405,6 +524,48 @@ export function CheckoutPageClient() {
       });
       rzp.open();
     });
+  }
+
+  async function openCashfreeCheckout(input: {
+    orderId: string;
+    orderNumber: string;
+    paymentSessionId: string;
+    cashfreeOrderId: string;
+    cashfreeMode: "sandbox" | "production";
+    email: string;
+    signedIn: boolean;
+  }) {
+    const loaded = await loadCashfreeScript();
+    if (!loaded || !window.Cashfree) {
+      setError("Payment gateway failed to load. Please refresh and try again.");
+      return false;
+    }
+
+    const cashfree = window.Cashfree({ mode: input.cashfreeMode });
+    const result = await cashfree.checkout({
+      paymentSessionId: input.paymentSessionId,
+      redirectTarget: "_modal"
+    });
+
+    if (result?.error) {
+      return false;
+    }
+
+    setLoading("payment");
+    const paid = await verifyPaymentOnServer({
+      orderId: input.orderId,
+      provider: "cashfree",
+      email: input.email,
+      signedIn: input.signedIn,
+      cashfreeOrderId: input.cashfreeOrderId
+    });
+    setLoading(null);
+    if (paid) {
+      markComplete("payment", input.orderId, input.orderNumber);
+      return true;
+    }
+    setError("Payment is still processing. Refresh this page shortly or check your email for confirmation.");
+    return false;
   }
 
   async function placeOrder() {
@@ -444,6 +605,21 @@ export function CheckoutPageClient() {
 
     if (payload.checkoutUrl) {
       window.location.href = payload.checkoutUrl;
+      return;
+    }
+
+    if (payload.provider === "cashfree" && payload.paymentSessionId) {
+      const paid = await openCashfreeCheckout({
+        orderId: payload.orderId,
+        orderNumber,
+        paymentSessionId: String(payload.paymentSessionId),
+        cashfreeOrderId: String(payload.paymentIntentId),
+        cashfreeMode: payload.cashfreeMode === "sandbox" ? "sandbox" : "production",
+        email: checkout.email,
+        signedIn: isSignedIn
+      });
+      setLoading(null);
+      if (!paid) setError("Payment was not completed.");
       return;
     }
 
@@ -737,6 +913,26 @@ export function CheckoutPageClient() {
                 </fieldset>
 
                 {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+                {paymentProviders.length > 1 ? (
+                  <fieldset className="grid gap-3 border-0 p-0">
+                    <legend className="type-section mb-1 text-2xl">Payment method</legend>
+                    <div className="flex flex-wrap gap-3">
+                      {paymentProviders.map((provider) => (
+                        <label key={provider} className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm">
+                          <input
+                            type="radio"
+                            name="paymentProvider"
+                            value={provider}
+                            checked={paymentProvider === provider}
+                            onChange={() => setPaymentProvider(provider)}
+                          />
+                          <span className="capitalize">{provider}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                ) : null}
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <Button type="submit" variant="accent" disabled={Boolean(loading) || !items.length}>

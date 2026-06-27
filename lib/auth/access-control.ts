@@ -201,6 +201,7 @@ export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
     || matchesApiPrefix(normalized, "/api/catalog/search")
     || matchesApiPrefix(normalized, "/api/orders/track")
     || matchesApiPrefix(normalized, "/api/payments/webhooks")
+    || normalized === "/api/payments/providers"
     || normalized === "/api/client-verification"
     || matchesApiPrefix(normalized, "/api/auth/login")
     || normalized === "/api/auth/signup"
@@ -229,6 +230,7 @@ export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
     matchesApiPrefix(normalized, "/api/checkout")
     || normalized === "/api/enquiries"
     || normalized === "/api/contact-requests"
+    || normalized === "/api/payments/verify"
   ) {
     return { kind: "session_or_guest" };
   }

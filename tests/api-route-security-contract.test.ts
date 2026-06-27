@@ -21,6 +21,8 @@ const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
   "app/api/auth/audit/route.ts": "public_rate_limited",
   "app/api/csp-report/route.ts": "public_rate_limited",
   "app/api/payments/webhooks/[provider]/route.ts": "public_rate_limited",
+  "app/api/payments/providers/route.ts": "public_rate_limited",
+  "app/api/payments/verify/route.ts": "public_rate_limited",
   "app/api/account/addresses/route.ts": "session_auth",
   "app/api/notifications/route.ts": "session_auth",
   "app/api/payments/intent/route.ts": "session_auth",

@@ -9,6 +9,7 @@ import { SupplierFormDebugPanel } from "@/components/supplier/supplier-form-debu
 import { SupplierFormStatusOverlay } from "@/components/supplier/supplier-form-status-overlay";
 import { SupplierInlineResultDialog } from "@/components/supplier/supplier-inline-result-dialog";
 import { SupplierProductImageField } from "@/components/supplier/supplier-product-image-field";
+import { SupplierInventoryInitFields } from "@/components/supplier/supplier-inventory-init-fields";
 import { isSupplierProductFormDebugEnabled } from "@/lib/supplier/product-form-debug";
 
 export type SupplierProductFormState = {
@@ -28,9 +29,11 @@ function fieldLabelFromInvalidTarget(target: EventTarget | null) {
 }
 
 export function SupplierNewProductForm({
-  action
+  action,
+  assignedWarehouseCode = null
 }: {
   action: (prevState: SupplierProductFormState, formData: FormData) => Promise<SupplierProductFormState>;
+  assignedWarehouseCode?: string | null;
 }) {
   const searchParams = useSearchParams();
   const debugEnabled = isSupplierProductFormDebugEnabled(searchParams);
@@ -131,6 +134,8 @@ export function SupplierNewProductForm({
         />
 
         <SupplierProductImageField />
+
+        <SupplierInventoryInitFields assignedWarehouseCode={assignedWarehouseCode} />
 
         {clientValidationError ? (
           <p

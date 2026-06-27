@@ -7,6 +7,8 @@ import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-tex
 import { SupplierFormStatusOverlay } from "@/components/supplier/supplier-form-status-overlay";
 import { SupplierInlineResultDialog } from "@/components/supplier/supplier-inline-result-dialog";
 import { SupplierProductImageField } from "@/components/supplier/supplier-product-image-field";
+import { SupplierInventoryInitFields } from "@/components/supplier/supplier-inventory-init-fields";
+import type { SupplierInventoryInitInput } from "@/lib/supplier/product-form";
 import type { SupplierProductFormState } from "@/components/supplier/supplier-new-product-form";
 
 const initialState: SupplierProductFormState = { status: "idle", message: "" };
@@ -21,6 +23,8 @@ export type SupplierProductEditDefaults = {
   imageSrc?: string;
   imageAlt?: string;
   updatedAt?: string | null;
+  inventoryInit?: SupplierInventoryInitInput | null;
+  assignedWarehouseCode?: string | null;
 };
 
 export function SupplierEditProductForm({
@@ -93,6 +97,18 @@ export function SupplierEditProductForm({
             imageAlt: defaults.imageAlt || defaults.name
           }}
         />
+
+        <SupplierInventoryInitFields
+          assignedWarehouseCode={defaults.assignedWarehouseCode}
+          defaults={{
+            sku: defaults.inventoryInit?.sku,
+            initialQuantity: defaults.inventoryInit?.initial_quantity,
+            warehouseCode: defaults.inventoryInit?.warehouse_code,
+            stockNotes: defaults.inventoryInit?.stock_notes,
+            trackInventory: defaults.inventoryInit?.track_inventory
+          }}
+        />
+
         {state.status === "error" ? (
           <p
             ref={feedbackRef}

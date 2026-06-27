@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { isActionNavigationError } from "@/lib/server-action-errors";
 import { readEditorDocumentFields } from "@/lib/editor/read-form-content";
 import { readExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
-import { parseSupplierProductForm } from "@/lib/supplier/product-form";
+import { parseSupplierProductForm, parseSupplierInventoryInit } from "@/lib/supplier/product-form";
 import { logSupplierProductFormDebug } from "@/lib/supplier/product-form-debug";
 import type { SupplierProductFormState } from "@/components/supplier/supplier-new-product-form";
 import { createNotificationRecord, fetchAdminRecordsByColumn, upsertProductMediaAssetRecord } from "@/services/admin-actions";
@@ -100,6 +100,7 @@ async function saveSupplierProductDraft(formData: FormData) {
     rawPrice: String(formData.get("price") ?? "")
   });
 
+  const inventoryInit = parseSupplierInventoryInit(formData);
   const insertPayload = {
     slug,
     name,
@@ -114,7 +115,8 @@ async function saveSupplierProductDraft(formData: FormData) {
     specs: {},
     anchors: [],
     interests: [],
-    ...readSupplierProductDescriptionFields(formData)
+    ...readSupplierProductDescriptionFields(formData),
+    ...(inventoryInit ? { inventory_init: inventoryInit } : {})
   };
 
   const { image, hero, gallery, uploadedImage } = await resolveSupplierProductImageFields(formData, {
@@ -253,6 +255,7 @@ export async function updateSupplierProductFormStateAction(
       requireImage: false
     });
 
+    const inventoryInit = parseSupplierInventoryInit(formData);
     await updateSupplierOwnedProduct(
       context.userId,
       slug,
@@ -264,6 +267,7 @@ export async function updateSupplierProductFormStateAction(
         hero,
         gallery,
         ...readSupplierProductDescriptionFields(formData),
+        inventory_init: inventoryInit,
         updated_at: new Date().toISOString()
       },
       context.userId,

@@ -45,16 +45,16 @@ describe("payment webhook hardening", () => {
   });
 
   it("handles refunded webhook with stock release and timeline update", () => {
-    const webhook = source("app/api/payments/webhooks/[provider]/route.ts");
-    expect(webhook).toContain('event.status === "refunded"');
-    expect(webhook).toContain("releaseCheckoutStock");
-    expect(webhook).toContain('payment_status: "refunded"');
-    expect(webhook).toContain("payment.refunded");
+    const confirm = source("services/payments/confirm-payment.ts");
+    expect(confirm).toContain('event.status === "refunded"');
+    expect(confirm).toContain("releaseCheckoutStock");
+    expect(confirm).toContain('payment_status: "refunded"');
+    expect(confirm).toContain("payment.refunded");
   });
 
   it("skips duplicate webhook events", () => {
-    const webhook = source("app/api/payments/webhooks/[provider]/route.ts");
-    expect(webhook).toContain("duplicate_event");
-    expect(webhook).toContain("payment_webhook_events");
+    const confirm = source("services/payments/confirm-payment.ts");
+    expect(confirm).toContain("duplicate_event");
+    expect(confirm).toContain("payment_webhook_events");
   });
 });

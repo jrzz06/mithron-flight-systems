@@ -1,17 +1,11 @@
 // Inline payment gateway check to avoid importing server-only modules
 // (prevents bundlers from pulling `node:crypto` into Edge runtime)
 function isPaymentGatewayConfigured(env: Record<string, string | undefined> = process.env) {
+  const hasRazorpay = Boolean(env.RAZORPAY_KEY_ID?.trim() && env.RAZORPAY_KEY_SECRET?.trim());
+  const hasCashfree = Boolean(env.CASHFREE_APP_ID?.trim() && env.CASHFREE_SECRET_KEY?.trim());
+  if (hasRazorpay || hasCashfree) return true;
   const provider = (env.PAYMENT_PROVIDER ?? "stub").toLowerCase();
-  if (provider === "stub") {
-    return env.NODE_ENV !== "production";
-  }
-  if (provider === "stripe") {
-    return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-  }
-  if (provider === "razorpay") {
-    return Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET && env.RAZORPAY_WEBHOOK_SECRET);
-  }
-  return false;
+  return provider === "stub" && env.NODE_ENV !== "production";
 }
 
 type EnvSource = Record<string, string | undefined>;
@@ -124,17 +118,12 @@ export function assertProductionRuntimeConfig(env: EnvSource = process.env) {
   if (!paymentProvider) {
     missing.push("PAYMENT_PROVIDER");
   } else if (!isPaymentGatewayConfigured(env)) {
-    const provider = paymentProvider.toLowerCase();
-    if (provider === "razorpay") {
-      if (!env.RAZORPAY_KEY_ID?.trim()) missing.push("RAZORPAY_KEY_ID");
-      if (!env.RAZORPAY_KEY_SECRET?.trim()) missing.push("RAZORPAY_KEY_SECRET");
-      if (!env.RAZORPAY_WEBHOOK_SECRET?.trim()) missing.push("RAZORPAY_WEBHOOK_SECRET");
-    } else if (provider === "stripe") {
-      if (!env.STRIPE_SECRET_KEY?.trim()) missing.push("STRIPE_SECRET_KEY");
-      if (!env.STRIPE_WEBHOOK_SECRET?.trim()) missing.push("STRIPE_WEBHOOK_SECRET");
-    } else {
-      missing.push(`PAYMENT_PROVIDER credentials for ${provider}`);
-    }
+    missing.push("PAYMENT_PROVIDER credentials");
+  } else {
+    const hasRazorpay = Boolean(env.RAZORPAY_KEY_ID?.trim() && env.RAZORPAY_KEY_SECRET?.trim());
+    const hasCashfree = Boolean(env.CASHFREE_APP_ID?.trim() && env.CASHFREE_SECRET_KEY?.trim());
+    if (hasRazorpay && !env.RAZORPAY_WEBHOOK_SECRET?.trim()) missing.push("RAZORPAY_WEBHOOK_SECRET");
+    if (hasCashfree && !env.CASHFREE_WEBHOOK_SECRET?.trim()) missing.push("CASHFREE_WEBHOOK_SECRET");
   }
 
   if (!env.UPSTASH_REDIS_REST_URL?.trim() || !env.UPSTASH_REDIS_REST_TOKEN?.trim()) {

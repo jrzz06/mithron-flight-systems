@@ -1,13 +1,33 @@
-import type { PaymentGateway } from "./types";
 import { isInternetDeployedEnvironment } from "@/lib/auth/deploy-environment";
+import {
+  isPaymentGatewayConfigured as isConfigured,
+  isPaymentProviderId,
+  listEnabledPaymentProviders,
+  resolveCheckoutPaymentProvider
+} from "./config";
+import { createCashfreeGateway } from "./cashfree";
 import { createRazorpayGateway } from "./razorpay";
+import type { CreateIntentInput, PaymentGateway, PaymentProviderId } from "./types";
 
 export { RazorpayGateway, createRazorpayGateway } from "./razorpay";
+export { CashfreeGateway, createCashfreeGateway } from "./cashfree";
+export {
+  cashfreeApiBase,
+  cashfreeCheckoutMode,
+  isCashfreeConfigured,
+  isCashfreeProductionReady,
+  isPaymentGatewayProductionReady,
+  isPaymentProviderId,
+  isRazorpayConfigured,
+  isRazorpayProductionReady,
+  listEnabledPaymentProviders,
+  resolveCheckoutPaymentProvider
+} from "./config";
 
 class StubPaymentGateway implements PaymentGateway {
   id = "stub" as const;
 
-  async createIntent(input: import("./types").CreateIntentInput) {
+  async createIntent(input: CreateIntentInput) {
     return {
       intentId: `stub_intent_${input.orderId}`,
       checkoutUrl: `/checkout?order=${input.orderId}&stub=1`
@@ -33,7 +53,7 @@ class StubPaymentGateway implements PaymentGateway {
 }
 
 class UnconfiguredGateway implements PaymentGateway {
-  constructor(public id: import("./types").PaymentProviderId) {}
+  constructor(public id: PaymentProviderId) {}
 
   async createIntent(): Promise<never> {
     throw new Error(`${this.id} payment gateway is not configured. Set provider credentials in environment variables.`);
@@ -49,40 +69,73 @@ class UnconfiguredGateway implements PaymentGateway {
 }
 
 export function isPaymentGatewayConfigured(env: Record<string, string | undefined> = process.env) {
-  const provider = (env.PAYMENT_PROVIDER ?? "stub").toLowerCase();
-  if (provider === "stub") {
-    return !isInternetDeployedEnvironment(env);
-  }
-  if (provider === "stripe") {
-    return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET);
-  }
-  if (provider === "razorpay") {
-    return Boolean(env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET && env.RAZORPAY_WEBHOOK_SECRET);
-  }
-  return false;
+  return isConfigured(env);
 }
 
-export function getPaymentGateway(env: Record<string, string | undefined> = process.env): PaymentGateway {
-  const provider = (env.PAYMENT_PROVIDER ?? "stub").toLowerCase() as import("./types").PaymentProviderId;
-  if (provider === "stub") {
+export function getPaymentGateway(
+  provider?: PaymentProviderId,
+  env: Record<string, string | undefined> = process.env
+): PaymentGateway {
+  const resolved = provider ?? resolveCheckoutPaymentProvider(undefined, env);
+
+  if (resolved === "stub") {
     if (isInternetDeployedEnvironment(env)) {
       return new UnconfiguredGateway("stub");
     }
     return new StubPaymentGateway();
   }
-  if (provider === "razorpay") {
-    if (!isPaymentGatewayConfigured(env)) {
+
+  if (resolved === "razorpay") {
+    if (!env.RAZORPAY_KEY_ID?.trim() || !env.RAZORPAY_KEY_SECRET?.trim()) {
       return new UnconfiguredGateway("razorpay");
     }
     return createRazorpayGateway(env);
   }
-  return new UnconfiguredGateway(provider);
+
+  if (resolved === "cashfree") {
+    if (!env.CASHFREE_APP_ID?.trim() || !env.CASHFREE_SECRET_KEY?.trim()) {
+      return new UnconfiguredGateway("cashfree");
+    }
+    return createCashfreeGateway(env);
+  }
+
+  return new UnconfiguredGateway(resolved);
 }
 
-export async function createPaymentIntent(input: import("./types").CreateIntentInput) {
-  return getPaymentGateway().createIntent(input);
+export async function createPaymentIntent(
+  input: CreateIntentInput,
+  provider?: PaymentProviderId,
+  env: Record<string, string | undefined> = process.env
+) {
+  const resolved = provider ?? resolveCheckoutPaymentProvider(undefined, env);
+  return getPaymentGateway(resolved, env).createIntent(input);
 }
 
-export async function verifyPaymentWebhook(payload: unknown, signature: string, rawBody?: string) {
-  return getPaymentGateway().verifyWebhook(payload, signature, rawBody);
+export async function verifyPaymentWebhook(
+  provider: PaymentProviderId,
+  payload: unknown,
+  signature: string,
+  rawBody?: string,
+  env: Record<string, string | undefined> = process.env
+) {
+  if (!isPaymentProviderId(provider)) {
+    throw new Error("Unsupported payment provider.");
+  }
+  return getPaymentGateway(provider, env).verifyWebhook(payload, signature, rawBody);
+}
+
+export async function verifyClientPayment(
+  provider: PaymentProviderId,
+  input: Parameters<NonNullable<PaymentGateway["verifyClientPayment"]>>[0],
+  env: Record<string, string | undefined> = process.env
+) {
+  const gateway = getPaymentGateway(provider, env);
+  if (!gateway.verifyClientPayment) {
+    throw new Error(`${provider} does not support client payment verification.`);
+  }
+  return gateway.verifyClientPayment(input);
+}
+
+export function listPublicPaymentProviders(env: Record<string, string | undefined> = process.env) {
+  return listEnabledPaymentProviders(env).filter((provider) => provider !== "stub");
 }

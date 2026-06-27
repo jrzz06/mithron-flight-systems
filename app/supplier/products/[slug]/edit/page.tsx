@@ -2,10 +2,12 @@ import type { JSONContent } from "@tiptap/core";
 import { StatusPill } from "@/components/platform";
 import { SupplierEditProductForm } from "@/components/supplier/supplier-edit-product-form";
 import { SupplierSubmitProductButton } from "@/components/supplier/supplier-submit-product-button";
+import type { SupplierInventoryInitInput } from "@/lib/supplier/product-form";
 import { supplierRejectionLabel, supplierStatusExplanation, supplierStatusHint } from "@/lib/platform/copy";
 import { readProductImageSrc } from "@/lib/supplier/product-image";
 import { getCurrentAuthContext } from "@/services/auth";
 import { getSupplierOwnedProduct } from "@/services/supplier-actions";
+import { getAssignedWarehouseCodeForUser } from "@/services/warehouse-scope";
 import { submitSupplierProductFormAction, updateSupplierProductFormStateAction } from "../../actions";
 import { notFound } from "next/navigation";
 
@@ -16,6 +18,10 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
 
   const product = await getSupplierOwnedProduct(context.userId, slug);
   if (!product) notFound();
+  const assignedWarehouseCode = await getAssignedWarehouseCodeForUser(context.userId);
+  const inventoryInit = product.inventory_init && typeof product.inventory_init === "object"
+    ? product.inventory_init as SupplierInventoryInitInput
+    : null;
 
   const workflowStatus = String(product.workflow_status ?? "draft");
   const rejectionReason = typeof product.rejection_reason === "string" ? product.rejection_reason : null;
@@ -60,7 +66,9 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
               descriptionJson: descriptionJson ?? undefined,
               imageSrc,
               imageAlt: String(product.name ?? ""),
-              updatedAt: typeof product.updated_at === "string" ? product.updated_at : null
+              updatedAt: typeof product.updated_at === "string" ? product.updated_at : null,
+              inventoryInit,
+              assignedWarehouseCode
             }}
           />
           {canSubmit ? (

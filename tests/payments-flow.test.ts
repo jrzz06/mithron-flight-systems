@@ -3,8 +3,10 @@ import { canTransitionOrderStatus, transitionOrderStatus } from "@/services/orde
 import { getPaymentGateway } from "@/services/payments/gateway";
 
 describe("payments flow", () => {
+  const stubEnv = { PAYMENT_PROVIDER: "stub", NODE_ENV: "development" };
+
   it("uses stub gateway by default", async () => {
-    const gateway = getPaymentGateway();
+    const gateway = getPaymentGateway("stub", stubEnv);
     const intent = await gateway.createIntent({
       orderId: "order-1",
       amount: 1200,
@@ -21,7 +23,7 @@ describe("payments flow", () => {
   });
 
   it("verifies stub webhook events", async () => {
-    const gateway = getPaymentGateway();
+    const gateway = getPaymentGateway("stub", stubEnv);
     const event = await gateway.verifyWebhook({ intentId: "stub_intent_1", amount: 100, currency: "INR" }, "stub");
     expect(event.status).toBe("succeeded");
   });

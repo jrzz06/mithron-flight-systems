@@ -291,7 +291,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               </div>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="grid gap-4">
-                  <ProductCreateDetailFields />
+                  <ProductCreateDetailFields warehouses={warehouses} defaultWarehouseCode={defaultWarehouseCode} />
                   <div data-product-create-primary-fields className="grid gap-3">
                     <ProductCategoryField
                       categories={categoryOptions}

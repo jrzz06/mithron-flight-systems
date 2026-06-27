@@ -11,7 +11,6 @@ import { getCurrentAuthContext } from "@/services/auth";
 import { AdminStockRequestReviewPanel } from "@/components/admin/admin-stock-request-review-panel";
 import { listPendingStockRequestsForReview } from "@/services/supplier-stock-request-review";
 import {
-  deleteInventoryProductFormAction,
   importInventoryCsvFormAction,
   saveInventoryBulkUpdateFormAction,
   saveInventoryQuickEditFormAction
@@ -29,6 +28,17 @@ function searchValue(params: SearchParams, key: string) {
 
 function inventoryActionMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function saveInventoryAdjustmentWithFeedback(formData: FormData) {
+  "use server";
+  try {
+    await saveInventoryQuickEditFormAction(formData);
+  } catch (error) {
+    const params = inventoryFeedbackQueryParams(error);
+    redirect(`/admin/inventory?${params.toString()}`);
+  }
+  redirect("/admin/inventory?inventory_status=success&inventory_message=Stock%20adjusted.");
 }
 
 async function saveAdminInventoryWithFeedback(formData: FormData) {
@@ -60,16 +70,6 @@ async function bulkAdminInventoryWithFeedback(formData: FormData) {
     redirect(`/admin/inventory?inventory_status=error&inventory_message=${encodeURIComponent(inventoryActionMessage(error).slice(0, 240))}`);
   }
   redirect("/admin/inventory?inventory_status=success&inventory_message=Bulk%20inventory%20updated.");
-}
-
-async function deleteAdminInventoryWithFeedback(formData: FormData) {
-  "use server";
-  try {
-    await deleteInventoryProductFormAction(formData);
-  } catch (error) {
-    redirect(`/admin/inventory?inventory_status=error&inventory_message=${encodeURIComponent(inventoryActionMessage(error).slice(0, 240))}`);
-  }
-  redirect("/admin/inventory?inventory_status=success&inventory_message=Product%20archived.");
 }
 
 function readCatalogFilter(value: string): CatalogFilter {
@@ -132,9 +132,9 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
       <InventoryManager
         rows={rows}
         action={saveAdminInventoryWithFeedback}
+        adjustAction={saveInventoryAdjustmentWithFeedback}
         importAction={importAdminInventoryWithFeedback}
         bulkAction={bulkAdminInventoryWithFeedback}
-        deleteAction={deleteAdminInventoryWithFeedback}
         exportHref={`/admin/inventory/export?catalog=${catalogFilter}`}
         title="Inventory"
         page={inventorySource.page}

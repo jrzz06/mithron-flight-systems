@@ -42,3 +42,40 @@ export function parseSupplierProductForm(formData: FormData) {
   const slug = resolveProductSlug(name, slugInput);
   return { name, category, price, slug };
 }
+
+export type SupplierInventoryInitInput = {
+  sku?: string;
+  initial_quantity?: number;
+  warehouse_code?: string;
+  reorder_threshold?: number;
+  track_inventory?: boolean;
+  stock_notes?: string;
+};
+
+function readOptionalInventoryInteger(formData: FormData, key: string) {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+export function parseSupplierInventoryInit(formData: FormData): SupplierInventoryInitInput | null {
+  const sku = String(formData.get("inventory_sku") ?? "").trim();
+  const initialQuantity = readOptionalInventoryInteger(formData, "inventory_initial_quantity") ?? 0;
+  const warehouseCode = String(formData.get("inventory_warehouse_code") ?? "").trim();
+  const stockNotes = String(formData.get("inventory_stock_notes") ?? "").trim();
+  const trackInventory = String(formData.get("inventory_track") ?? "on").trim().toLowerCase() !== "off";
+
+  if (!sku && initialQuantity === 0 && !warehouseCode && !stockNotes) return null;
+  if (initialQuantity < 0) {
+    throw new Error("Initial quantity cannot be negative.");
+  }
+
+  return {
+    ...(sku ? { sku } : {}),
+    initial_quantity: initialQuantity,
+    ...(warehouseCode ? { warehouse_code: warehouseCode } : {}),
+    track_inventory: trackInventory,
+    ...(stockNotes ? { stock_notes: stockNotes } : {})
+  };
+}

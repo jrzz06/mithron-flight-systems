@@ -27,6 +27,10 @@ function isAllowedRemoteImageUrl(parsed: URL, env: Record<string, string | undef
     return true;
   }
 
+  if (parsed.hostname === "media.gettyimages.com") {
+    return true;
+  }
+
   return false;
 }
 

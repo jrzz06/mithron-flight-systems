@@ -45,12 +45,16 @@ describe("inventory dialog and stock workflow UX", () => {
 
     expect(manager).toContain("createPortal");
     expect(manager).toContain("data-inventory-dialog-portal");
-    expect(manager).toContain("data-inventory-edit-dialog");
+    expect(manager).toContain("data-inventory-adjust-dialog");
+    expect(manager).toContain("data-inventory-adjust-form");
+    expect(manager).toContain("adjustment_mode");
+    expect(manager).toContain("reason_code");
     expect(manager).toContain("document.body.style.overflow");
     expect(manager).toContain("keydown");
     expect(manager).toContain("Escape");
     expect(manager).toContain("fixed inset-0");
     expect(manager).not.toContain("absolute-position");
+    expect(manager).not.toContain("data-inventory-edit-dialog");
   });
 
   it("reduces table clutter and moves row operations into a single action menu", () => {
@@ -62,8 +66,10 @@ describe("inventory dialog and stock workflow UX", () => {
     expect(manager).toContain("data-inventory-action=\"stock\"");
     expect(manager).toContain("data-inventory-action=\"archive\"");
     expect(manager).toContain("data-inventory-action=\"view\"");
-    expect(manager).toContain("data-inventory-action=\"archive-product\"");
-    expect(manager).toContain("data-inventory-status-pill");
+    expect(manager).toContain("<StatusPill");
+    expect(manager).not.toContain("data-inventory-action=\"archive-product\"");
+    expect(manager).not.toContain("data-inventory-action=\"reserve\"");
+    expect(manager).not.toContain("data-inventory-action=\"discontinued\"");
     expect(manager).not.toContain(">Stock update</button>");
   });
 
@@ -91,33 +97,33 @@ describe("inventory dialog and stock workflow UX", () => {
     expect(warehouseExport).toContain("all: true");
   });
 
-  it("renders the edit dialog in a body-level fixed portal and releases scroll lock on escape", async () => {
+  it("renders the adjust stock dialog in a body-level fixed portal and releases scroll lock on escape", async () => {
     const action = vi.fn();
 
     render(createElement(InventoryManager, {
       rows: [inventoryRow],
       action,
+      adjustAction: action,
       importAction: action,
       bulkAction: action,
-      deleteAction: action,
       exportHref: "/admin/inventory/export"
     }));
 
     fireEvent.click(screen.getByLabelText("More actions for HPC-3 Power Cube"));
-    fireEvent.click(screen.getByRole("button", { name: "Stock update" }));
+    fireEvent.click(screen.getByRole("button", { name: "Adjust stock" }));
 
     const portal = document.body.querySelector("[data-inventory-dialog-portal]");
     expect(portal).toBeInTheDocument();
     expect(portal?.parentElement).toBe(document.body);
     expect(portal).toHaveClass("fixed");
     expect(portal).toHaveClass("inset-0");
-    expect(document.body.querySelector("[data-inventory-edit-dialog]")).toBeInTheDocument();
+    expect(document.body.querySelector("[data-inventory-adjust-dialog]")).toBeInTheDocument();
     expect(document.body.style.overflow).toBe("hidden");
 
     fireEvent.keyDown(document, { key: "Escape" });
 
     await waitFor(() => {
-      expect(document.body.querySelector("[data-inventory-edit-dialog]")).not.toBeInTheDocument();
+      expect(document.body.querySelector("[data-inventory-adjust-dialog]")).not.toBeInTheDocument();
     });
     expect(document.body.style.overflow).toBe("");
   });

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Archive, Download, MoreHorizontal, Pencil, Plus, Search, Upload, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { memo, type ReactNode, useDeferredValue, useEffect, useMemo, useState } from "react";
@@ -17,9 +16,9 @@ type InventoryAction = (formData: FormData) => void | Promise<void>;
 type InventoryManagerProps = {
   rows: SimpleInventoryRow[];
   action?: InventoryAction;
+  adjustAction?: InventoryAction;
   importAction?: InventoryAction;
   bulkAction?: InventoryAction;
-  deleteAction?: InventoryAction;
   readOnly?: boolean;
   exportHref: string;
   title?: string;
@@ -31,8 +30,15 @@ type InventoryManagerProps = {
   previousPageHref?: string;
   nextPageHref?: string;
   allowCsvImport?: boolean;
-  allowDelete?: boolean;
 };
+
+const adjustmentReasonOptions = [
+  { value: "stock_in", label: "Stock in" },
+  { value: "stock_out", label: "Stock out" },
+  { value: "adjustment", label: "Adjustment" },
+  { value: "correction", label: "Correction" },
+  { value: "damaged", label: "Damaged" }
+] as const;
 
 const statusOptions: Array<{ value: SimpleInventoryStatus; label: string }> = [
   { value: "available", label: "In stock" },
@@ -243,27 +249,21 @@ const InventoryRow = memo(function InventoryRow({
   selected,
   menuOpen,
   action,
-  deleteAction,
-  allowDelete = true,
   readOnly = false,
   onSelect,
-  onEdit,
+  onAdjustStock,
   onMenuToggle,
-  onLocalUpdate,
-  onLocalDelete
+  onLocalUpdate
 }: {
   row: SimpleInventoryRow;
   selected: boolean;
   menuOpen: boolean;
   action?: InventoryAction;
-  deleteAction?: InventoryAction;
-  allowDelete?: boolean;
   readOnly?: boolean;
   onSelect: (id: string, selected: boolean) => void;
-  onEdit: (row: SimpleInventoryRow) => void;
+  onAdjustStock: (row: SimpleInventoryRow) => void;
   onMenuToggle: (id: string) => void;
   onLocalUpdate: (id: string, fields: Partial<SimpleInventoryRow>) => void;
-  onLocalDelete: (id: string) => void;
 }) {
   return (
     <tr data-inventory-row className={`content-visibility-auto group border-b border-slate-800/70 text-sm [contain-intrinsic-size:72px] [content-visibility:auto] ${menuOpen ? "relative z-30" : ""}`}>
@@ -312,41 +312,38 @@ const InventoryRow = memo(function InventoryRow({
             >
               <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
             </button>
-            {menuOpen && action && deleteAction ? (
+            {menuOpen && action ? (
               <div className="absolute right-0 top-9 z-[95] grid w-48 gap-1 rounded-xl border border-slate-800 bg-[#10151d] p-2 text-xs shadow-2xl shadow-black/30">
-                <button
-                  type="button"
-                  data-inventory-quick-edit
+                <Link
+                  href={`/admin/products?product_slug=${encodeURIComponent(row.productSlug)}`}
                   data-inventory-action="edit"
-                  onClick={() => onEdit(row)}
-                  className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100"
+                  className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100"
+                  onClick={() => onMenuToggle(row.id)}
                 >
                   <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                   Edit
-                </button>
+                </Link>
                 <button
                   type="button"
                   data-inventory-action="stock"
-                  aria-label="Stock update"
-                  onClick={() => onEdit(row)}
+                  aria-label="Adjust stock"
+                  onClick={() => onAdjustStock(row)}
                   className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                   Adjust stock
                 </button>
-                <form action={action} onSubmit={() => onLocalUpdate(row.id, { stockStatus: "reserved" })}>
-                  <HiddenInventoryFields row={row} status="reserved" />
-                  <button data-inventory-action="reserve" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100">
-                    Mark reserved
-                  </button>
-                </form>
-                <form action={action} onSubmit={() => onLocalUpdate(row.id, { stockStatus: "discontinued" })}>
-                  <HiddenInventoryFields row={row} status="discontinued" />
-                  <button data-inventory-action="discontinued" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100">
-                    Mark discontinued
-                  </button>
-                </form>
-                <form action={action} onSubmit={() => onLocalUpdate(row.id, { stockStatus: "archived" })}>
+                <div className="my-0.5 border-t border-slate-800" aria-hidden="true" />
+                <form
+                  action={action}
+                  onSubmit={(event) => {
+                    if (!window.confirm(`Archive ${row.productName}? Stock history and warehouse data will be preserved.`)) {
+                      event.preventDefault();
+                      return;
+                    }
+                    onLocalUpdate(row.id, { stockStatus: "archived", isArchived: true });
+                  }}
+                >
                   <HiddenInventoryFields row={row} status="archived" />
                   <button data-inventory-action="archive" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100">
                     <Archive className="h-3.5 w-3.5" aria-hidden="true" />
@@ -357,28 +354,11 @@ const InventoryRow = memo(function InventoryRow({
                   data-inventory-action="view"
                   href={`/product/${row.productSlug}`}
                   target="_blank"
+                  rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 font-semibold text-slate-300 hover:bg-[#151c26] hover:text-slate-100"
                 >
                   View product
                 </a>
-                {allowDelete && !row.isArchived ? (
-                <form
-                  action={deleteAction}
-                  onSubmit={(event) => {
-                    if (!window.confirm(`Archive ${row.productName}? Stock history and warehouse data will be preserved.`)) {
-                      event.preventDefault();
-                      return;
-                    }
-                    onLocalDelete(row.id);
-                  }}
-                >
-                  <HiddenInventoryFields row={row} />
-                  <button data-inventory-action="archive-product" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-rose-300 hover:bg-rose-950/35">
-                    <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-                    Archive product
-                  </button>
-                </form>
-                ) : null}
               </div>
             ) : null}
           </div>
@@ -392,9 +372,9 @@ const InventoryRow = memo(function InventoryRow({
 export function InventoryManager({
   rows,
   action,
+  adjustAction,
   importAction,
   bulkAction,
-  deleteAction,
   readOnly = false,
   exportHref,
   title = "Inventory",
@@ -405,8 +385,7 @@ export function InventoryManager({
   hasNextPage = false,
   previousPageHref,
   nextPageHref,
-  allowCsvImport = true,
-  allowDelete = true
+  allowCsvImport = true
 }: InventoryManagerProps) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -414,7 +393,8 @@ export function InventoryManager({
   const [stockRangeFilter, setStockRangeFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [editingRow, setEditingRow] = useState<SimpleInventoryRow | null>(null);
+  const [adjustingRow, setAdjustingRow] = useState<SimpleInventoryRow | null>(null);
+  const [adjustmentMode, setAdjustmentMode] = useState<"increase" | "decrease" | "replace">("increase");
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, Partial<SimpleInventoryRow>>>({});
   const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
@@ -465,21 +445,29 @@ export function InventoryManager({
     }));
   }
 
-  function applyQuickEdit(form: HTMLFormElement) {
-    if (!editingRow) return;
+  function applyAdjustStock(form: HTMLFormElement) {
+    if (!adjustingRow) return;
     const formData = new FormData(form);
-    const quantity = Number(formData.get("quantity") ?? editingRow.quantity);
-    const price = Number(formData.get("price") ?? editingRow.price);
-    const nextStatus = String(formData.get("stock_status") ?? editingRow.stockStatus) as SimpleInventoryStatus;
-    const category = String(formData.get("category") ?? editingRow.category);
-    updateRow(editingRow.id, {
-      quantity: Number.isFinite(quantity) ? quantity : editingRow.quantity,
-      price: Number.isFinite(price) ? price : editingRow.price,
-      inventoryValue: Number.isFinite(quantity) && Number.isFinite(price) ? quantity * price : editingRow.inventoryValue,
-      stockStatus: nextStatus,
-      category
+    const mode = String(formData.get("adjustment_mode") ?? "replace") as "increase" | "decrease" | "replace";
+    const adjustmentQuantity = Number(formData.get("adjustment_quantity") ?? 0);
+    const currentQuantity = adjustingRow.quantity;
+    let nextQuantity = currentQuantity;
+
+    if (mode === "increase") {
+      nextQuantity = currentQuantity + adjustmentQuantity;
+    } else if (mode === "decrease") {
+      nextQuantity = Math.max(0, currentQuantity - adjustmentQuantity);
+    } else {
+      nextQuantity = adjustmentQuantity;
+    }
+
+    updateRow(adjustingRow.id, {
+      quantity: nextQuantity,
+      availableQuantity: nextQuantity,
+      inventoryValue: nextQuantity * adjustingRow.price,
+      stockStatus: nextQuantity <= 0 ? "out_of_stock" : adjustingRow.stockStatus === "out_of_stock" ? "available" : adjustingRow.stockStatus
     });
-    setEditingRow(null);
+    setAdjustingRow(null);
   }
 
   return (
@@ -647,20 +635,15 @@ export function InventoryManager({
                 selected={selected.has(rowKey(row))}
                 menuOpen={openMenuId === row.id}
                 action={action}
-                deleteAction={deleteAction}
-                allowDelete={allowDelete}
                 readOnly={readOnly}
                 onSelect={updateSelected}
-                onEdit={(nextRow) => {
+                onAdjustStock={(nextRow) => {
                   setOpenMenuId(null);
-                  setEditingRow(nextRow);
+                  setAdjustmentMode("increase");
+                  setAdjustingRow(nextRow);
                 }}
                 onMenuToggle={(id) => setOpenMenuId((current) => current === id ? null : id)}
                 onLocalUpdate={updateRow}
-                onLocalDelete={(id) => {
-                  setOpenMenuId(null);
-                  setDeletedIds((current) => new Set([...current, id]));
-                }}
               />
             )) : (
               <tr>
@@ -705,16 +688,15 @@ export function InventoryManager({
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <StatusPill status={row.stockStatus} />
-              {!readOnly && action ? (
-              <button
-                type="button"
+              {!readOnly ? (
+              <Link
+                href={`/admin/products?product_slug=${encodeURIComponent(row.productSlug)}`}
                 data-inventory-quick-edit
-                onClick={() => setEditingRow(row)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-700 bg-[#151c26] px-2.5 text-xs font-semibold text-slate-100 hover:border-slate-600"
               >
                 <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                 Edit
-              </button>
+              </Link>
               ) : null}
             </div>
             <div className="mt-3">
@@ -772,101 +754,106 @@ export function InventoryManager({
       </details>
       ) : null}
 
-      {editingRow ? (
-        <InventoryDialogPortal onClose={() => setEditingRow(null)}>
+      {adjustingRow && adjustAction ? (
+        <InventoryDialogPortal onClose={() => setAdjustingRow(null)}>
           <div
-            data-inventory-edit-dialog
+            data-inventory-adjust-dialog
             role="dialog"
             aria-modal="true"
-            aria-label={`Edit inventory for ${editingRow.productName}`}
-            className="w-full max-w-3xl scale-100 rounded-xl border border-slate-800 bg-[#0f141b] p-4 shadow-2xl shadow-black/40 transition duration-150 ease-out"
+            aria-label={`Adjust stock for ${adjustingRow.productName}`}
+            className="w-full max-w-2xl scale-100 rounded-xl border border-slate-800 bg-[#0f141b] p-4 shadow-2xl shadow-black/40 transition duration-150 ease-out"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Quick stock edit</p>
-                <h3 className="mt-1 text-lg font-semibold text-slate-100">{editingRow.productName}</h3>
-                <p className="mt-1 text-xs text-slate-500">{editingRow.sku}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Adjust stock</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-100">{adjustingRow.productName}</h3>
+                <p className="mt-1 text-xs text-slate-500">{adjustingRow.sku} · {adjustingRow.warehouseCode || "No warehouse"}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setEditingRow(null)}
-                aria-label="Close inventory editor"
+                onClick={() => setAdjustingRow(null)}
+                aria-label="Close stock adjustment"
                 className="grid h-8 w-8 place-items-center rounded-lg border border-slate-700 text-slate-300 hover:bg-[#151c26]"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
+            <div className="mt-4 grid gap-3 rounded-xl border border-slate-800 bg-[#0b1017] p-3 text-xs text-slate-500 sm:grid-cols-3">
+              <p className="flex items-center justify-between gap-3 sm:block"><span>Current stock</span><strong className="text-slate-100">{formatNumber(adjustingRow.quantity)}</strong></p>
+              <p className="flex items-center justify-between gap-3 sm:block"><span>Reserved</span><strong className="text-slate-100">{formatNumber(adjustingRow.reservedQuantity)}</strong></p>
+              <p className="flex items-center justify-between gap-3 sm:block"><span>Available</span><strong className="text-slate-100">{formatNumber(adjustingRow.availableQuantity)}</strong></p>
+            </div>
             <form
-              action={action}
-              data-inventory-quick-edit-form
-              onSubmit={(event) => applyQuickEdit(event.currentTarget)}
-              className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]"
+              action={adjustAction}
+              data-inventory-adjust-form
+              onSubmit={(event) => applyAdjustStock(event.currentTarget)}
+              className="mt-4 grid gap-4"
             >
-              <input type="hidden" name="product_slug" value={editingRow.productSlug} />
-              <input type="hidden" name="sku" value={editingRow.sku} />
-              <input type="hidden" name="variant_id" value={editingRow.variantId ?? ""} />
-              <input type="hidden" name="warehouse_code" value={editingRow.warehouseCode} />
-              <div className="rounded-xl border border-slate-800 bg-[#0b1017] p-3">
-                <div className="relative mx-auto aspect-square w-full max-w-[180px] overflow-hidden rounded-xl border border-slate-800 bg-[#10151d]">
-                  {editingRow.productImage ? (
-                    <Image src={editingRow.productImage} alt="" fill sizes="180px" loading="lazy" className="object-contain p-3" />
-                  ) : (
-                    <div className="grid h-full place-items-center text-xl font-semibold text-slate-600">{editingRow.productName.slice(0, 1).toUpperCase()}</div>
-                  )}
+              <input type="hidden" name="product_slug" value={adjustingRow.productSlug} />
+              <input type="hidden" name="sku" value={adjustingRow.sku} />
+              <input type="hidden" name="variant_id" value={adjustingRow.variantId ?? ""} />
+              <input type="hidden" name="warehouse_code" value={adjustingRow.warehouseCode} />
+              <input type="hidden" name="category" value={adjustingRow.category} />
+              <input type="hidden" name="price" value={adjustingRow.price} />
+              <input type="hidden" name="stock_status" value={adjustingRow.stockStatus} />
+              {adjustingRow.warehouseUpdatedAt ? <input type="hidden" name="expected_updated_at" value={adjustingRow.warehouseUpdatedAt} /> : null}
+              {adjustingRow.inventoryUpdatedAt ? <input type="hidden" name="expected_inventory_updated_at" value={adjustingRow.inventoryUpdatedAt} /> : null}
+              <fieldset className="grid gap-2">
+                <legend className="text-xs font-medium text-slate-500">Adjustment mode</legend>
+                <div className="flex flex-wrap gap-2">
+                  {(["increase", "decrease", "replace"] as const).map((mode) => (
+                    <label key={mode} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-xs font-semibold text-slate-300">
+                      <input
+                        type="radio"
+                        name="adjustment_mode"
+                        value={mode}
+                        checked={adjustmentMode === mode}
+                        onChange={() => setAdjustmentMode(mode)}
+                        className="h-3.5 w-3.5 border-slate-700 bg-[#0b1017]"
+                      />
+                      {mode === "increase" ? "Increase" : mode === "decrease" ? "Decrease" : "Replace"}
+                    </label>
+                  ))}
                 </div>
-                <div className="mt-3 grid gap-2 text-xs text-slate-500">
-                  <p className="flex items-center justify-between gap-3"><span>Current stock</span><strong className="text-slate-100">{formatNumber(editingRow.quantity)}</strong></p>
-                  <p className="flex items-center justify-between gap-3"><span>Available</span><strong className="text-slate-100">{formatNumber(editingRow.availableQuantity)}</strong></p>
-                  <p className="flex items-center justify-between gap-3"><span>Committed</span><strong className="text-slate-100">{formatNumber(editingRow.committedQuantity)}</strong></p>
-                </div>
-              </div>
-              <div className="grid gap-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="grid gap-1 text-xs font-medium text-slate-500">
-                    Stock quantity
-                    <input name="quantity" type="number" min={0} defaultValue={editingRow.quantity} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70" />
-                  </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500">
-                    Reserved quantity
-                    <input name="reserved_quantity" type="number" min={0} defaultValue={editingRow.reservedQuantity} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70" />
-                  </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500">
-                    Reorder level
-                    <input name="reorder_threshold" type="number" min={0} defaultValue={editingRow.reorderThreshold} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70" />
-                  </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500">
-                    Status
-                    <select name="stock_status" defaultValue={editingRow.stockStatus} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70">
-                      {statusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500 sm:col-span-2">
-                    SKU
-                    <input value={editingRow.sku} readOnly className="h-10 rounded-lg border border-slate-800 bg-[#0b1017] px-3 font-mono text-xs text-slate-300" />
-                  </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500 sm:col-span-2">
-                    Warehouse location
-                    <input value={editingRow.warehouseCode} readOnly className="h-10 rounded-lg border border-slate-800 bg-[#0b1017] px-3 text-sm text-slate-300" />
-                  </label>
-                </div>
-                <input type="hidden" name="category" value={editingRow.category} />
-                <input type="hidden" name="price" value={editingRow.price} />
-                <label className="grid gap-1 text-xs font-medium text-slate-500">
-                  Note
-                  <input name="note" placeholder="Optional reason for this stock change" className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-400/70" />
-                </label>
-                <input type="hidden" name="change_summary" value={`Quick edit ${editingRow.productSlug}:${editingRow.sku}`} />
-                <div className="flex justify-end gap-2 border-t border-slate-800 pt-3">
-                  <button type="button" onClick={() => setEditingRow(null)} className="h-9 rounded-lg border border-slate-700 px-3 text-xs font-semibold text-slate-300 hover:bg-[#151c26]">Cancel</button>
-                  <OperationalSubmitButton
-                    pendingLabel="Saving"
-                    className="inline-flex h-9 items-center rounded-lg border border-emerald-500/30 bg-emerald-950/40 px-4 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/45"
-                  >
-                    Save stock
-                  </OperationalSubmitButton>
-                </div>
+              </fieldset>
+              <label className="grid gap-1 text-xs font-medium text-slate-500">
+                Quantity
+                <input
+                  name="adjustment_quantity"
+                  type="number"
+                  min={0}
+                  required
+                  defaultValue={adjustmentMode === "replace" ? adjustingRow.quantity : 0}
+                  key={`${adjustingRow.id}:${adjustmentMode}`}
+                  className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70"
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-medium text-slate-500">
+                Reason
+                <select name="reason_code" required defaultValue="adjustment" className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70">
+                  {adjustmentReasonOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium text-slate-500">
+                Internal notes
+                <textarea
+                  name="note"
+                  rows={3}
+                  placeholder="Optional notes for the audit trail"
+                  className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-emerald-400/70"
+                />
+              </label>
+              <input type="hidden" name="change_summary" value={`Adjust stock ${adjustingRow.productSlug}:${adjustingRow.sku}`} />
+              <div className="flex justify-end gap-2 border-t border-slate-800 pt-3">
+                <button type="button" onClick={() => setAdjustingRow(null)} className="h-9 rounded-lg border border-slate-700 px-3 text-xs font-semibold text-slate-300 hover:bg-[#151c26]">Cancel</button>
+                <OperationalSubmitButton
+                  pendingLabel="Saving"
+                  className="inline-flex h-9 items-center rounded-lg border border-emerald-500/30 bg-emerald-950/40 px-4 text-xs font-semibold text-emerald-100 hover:bg-emerald-900/45"
+                >
+                  Apply adjustment
+                </OperationalSubmitButton>
               </div>
             </form>
           </div>

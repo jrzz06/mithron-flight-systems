@@ -14,17 +14,19 @@ import {
 } from "@/services/admin-actions";
 import { buildCustomerCheckoutDraft } from "@/services/orders";
 import { releaseCheckoutStock, reserveCheckoutStock, resolveCheckoutStockSkus, verifyCheckoutStockAvailability } from "@/services/checkout-stock";
-import { createPaymentIntent, isPaymentGatewayConfigured } from "@/services/payments/gateway";
+import {
+  buildCheckoutPaymentResponse,
+  markCheckoutPaymentInitiated
+} from "@/services/payments/confirm-payment";
+import {
+  createPaymentIntent,
+  isPaymentGatewayConfigured,
+  isPaymentProviderId,
+  resolveCheckoutPaymentProvider
+} from "@/services/payments/gateway";
+import { logPaymentError } from "@/services/payments/logger";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
-
-type CheckoutResponse = {
-  ok: true;
-  orderId: string;
-  orderNumber: string;
-  paymentIntentId: string;
-  checkoutUrl: string | null;
-  clientSecret: string | null;
-};
+import type { CheckoutPaymentResponse, PaymentProviderId } from "@/services/payments/types";
 
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -39,7 +41,7 @@ function buildShippingMetadata(addressId?: string, guestAddress?: GuestAddress) 
 async function findCheckoutByIdempotencyKey(
   idempotencyKey: string,
   scope: { userId: string } | { guestEmail: string; guestPhone: string }
-): Promise<CheckoutResponse | null> {
+): Promise<CheckoutPaymentResponse | null> {
   const config = assertSupabaseAdminConfig(process.env);
   const filter =
     "userId" in scope
@@ -47,7 +49,7 @@ async function findCheckoutByIdempotencyKey(
       : `created_by_user_id=is.null&customer_email=eq.${encodeURIComponent(scope.guestEmail.trim())}&metadata->>customer_phone=eq.${encodeURIComponent(scope.guestPhone.trim())}`;
 
   const response = await fetch(
-    `${config.url}/rest/v1/orders?select=id,order_number,metadata&${filter}&metadata->>idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`,
+    `${config.url}/rest/v1/orders?select=id,order_number,total,currency,status,payment_status,metadata&${filter}&metadata->>idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`,
     {
       headers: {
         apikey: config.serviceRoleKey,
@@ -61,20 +63,37 @@ async function findCheckoutByIdempotencyKey(
   const rows = (await response.json()) as Array<Record<string, unknown>>;
   const order = rows[0];
   if (!order?.id) return null;
+  if (String(order.status ?? "") === "cancelled" || String(order.payment_status ?? "") === "succeeded") {
+    return null;
+  }
 
   const orderId = String(order.id);
   const payments = await fetchAdminRecordsByColumn("payments", "order_id", orderId);
   const payment = payments.find((row) => !["failed", "cancelled"].includes(String(row.status ?? ""))) ?? payments[0];
   if (!payment?.provider_intent_id) return null;
 
-  return {
-    ok: true,
+  const provider = String(payment.provider ?? process.env.PAYMENT_PROVIDER ?? "razorpay");
+  if (!isPaymentProviderId(provider)) return null;
+
+  const webhookPayload =
+    payment.webhook_payload && typeof payment.webhook_payload === "object" && !Array.isArray(payment.webhook_payload)
+      ? (payment.webhook_payload as Record<string, unknown>)
+      : {};
+  const paymentSessionId =
+    typeof webhookPayload.payment_session_id === "string" ? webhookPayload.payment_session_id : null;
+
+  return buildCheckoutPaymentResponse({
     orderId,
     orderNumber: String(order.order_number ?? orderId),
-    paymentIntentId: String(payment.provider_intent_id),
-    checkoutUrl: null,
-    clientSecret: null
-  };
+    provider,
+    intent: {
+      intentId: String(payment.provider_intent_id),
+      clientSecret: provider === "cashfree" ? paymentSessionId ?? String(payment.provider_intent_id) : String(payment.provider_intent_id),
+      paymentSessionId: paymentSessionId ?? undefined
+    },
+    amount: Number(payment.amount ?? order.total ?? 0),
+    currency: String(payment.currency ?? order.currency ?? "INR")
+  });
 }
 
 function isDuplicateIdempotencyError(error: unknown) {
@@ -136,9 +155,16 @@ export async function POST(request: Request) {
 
   if (process.env.NODE_ENV === "production" && !isPaymentGatewayConfigured()) {
     return NextResponse.json(
-      { error: "Payments are not configured. Set PAYMENT_PROVIDER and provider credentials before accepting checkout." },
+      { error: "Payments are not configured. Set payment provider credentials before accepting checkout." },
       { status: 503 }
     );
+  }
+
+  let paymentProvider: PaymentProviderId;
+  try {
+    paymentProvider = resolveCheckoutPaymentProvider(body.paymentProvider);
+  } catch {
+    return NextResponse.json({ error: "No payment provider is available for checkout." }, { status: 503 });
   }
 
   if (!body.addressId && !body.guestAddress) {
@@ -172,7 +198,7 @@ export async function POST(request: Request) {
     stockItems = await resolveCheckoutStockSkus(body.items);
   } catch (error) {
     const internal = error instanceof Error ? error.message : "Unable to resolve product inventory.";
-    console.error("[checkout] Stock verification failed:", internal);
+    logPaymentError("checkout_stock_verification_failed", error);
     const isStockError = /insufficient stock|out of stock/i.test(internal);
     return NextResponse.json(
       { error: isStockError ? "One or more items are out of stock or unavailable." : "Unable to process your order at this time." },
@@ -197,7 +223,8 @@ export async function POST(request: Request) {
         customer_full_name: body.fullName,
         ...(body.company ? { customer_company: body.company } : {}),
         ...(body.promoCode ? { promo_code: body.promoCode } : {}),
-        ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {})
+        ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+        payment_provider: paymentProvider
       }
     },
     catalog,
@@ -238,7 +265,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "order_items_failed");
-    console.error("[checkout] Order line items creation failed:", error instanceof Error ? error.message : error);
+    logPaymentError("checkout_order_items_failed", error, { orderId });
     return NextResponse.json({ error: "Unable to process your order at this time." }, { status: 500 });
   }
 
@@ -246,22 +273,26 @@ export async function POST(request: Request) {
     await reserveCheckoutStock(orderId, stockItems);
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "stock_reservation_failed");
-    console.error("[checkout] Stock reservation failed:", error instanceof Error ? error.message : error);
+    logPaymentError("checkout_stock_reservation_failed", error, { orderId });
     return NextResponse.json({ error: "One or more items are no longer available." }, { status: 409 });
   }
 
   let intent;
   try {
-    intent = await createPaymentIntent({
-      orderId,
-      amount: draft.order.total,
-      currency: draft.order.currency,
-      customerEmail: body.email,
-      metadata: { address_id: body.addressId ?? "", phone: body.phone }
-    });
+    intent = await createPaymentIntent(
+      {
+        orderId,
+        amount: draft.order.total,
+        currency: draft.order.currency,
+        customerEmail: body.email,
+        customerPhone: body.phone,
+        metadata: { address_id: body.addressId ?? "", phone: body.phone }
+      },
+      paymentProvider
+    );
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "payment_intent_failed");
-    console.error("[checkout] Payment initialization failed:", error instanceof Error ? error.message : error);
+    logPaymentError("checkout_payment_intent_failed", error, { orderId, provider: paymentProvider });
     return NextResponse.json({ error: "Payment service is unavailable. Please try again shortly." }, { status: 503 });
   }
 
@@ -269,32 +300,37 @@ export async function POST(request: Request) {
     await createCustomerCheckoutPaymentRecord(
       {
         order_id: orderId,
-        provider: process.env.PAYMENT_PROVIDER ?? "stub",
+        provider: paymentProvider,
         provider_intent_id: intent.intentId,
         amount: draft.order.total,
         currency: draft.order.currency,
-        status: "requires_payment"
+        status: "requires_payment",
+        webhook_payload: intent.paymentSessionId
+          ? { payment_session_id: intent.paymentSessionId }
+          : {}
       },
       userId
     );
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "payment_record_failed");
-    console.error("[checkout] Payment record creation failed:", error instanceof Error ? error.message : error);
+    logPaymentError("checkout_payment_record_failed", error, { orderId, provider: paymentProvider });
     return NextResponse.json({ error: "Unable to process your order at this time." }, { status: 500 });
   }
 
-  const paymentProvider = (process.env.PAYMENT_PROVIDER ?? "stub").toLowerCase();
-  const razorpayKeyId = paymentProvider === "razorpay" ? process.env.RAZORPAY_KEY_ID?.trim() ?? null : null;
-
-  return NextResponse.json({
-    ok: true,
+  await markCheckoutPaymentInitiated({
     orderId,
-    orderNumber,
-    paymentIntentId: intent.intentId,
-    checkoutUrl: intent.checkoutUrl ?? null,
-    clientSecret: intent.clientSecret ?? null,
-    amount: draft.order.total,
-    currency: draft.order.currency,
-    razorpayKeyId
+    provider: paymentProvider,
+    intentId: intent.intentId
   });
+
+  return NextResponse.json(
+    buildCheckoutPaymentResponse({
+      orderId,
+      orderNumber,
+      provider: paymentProvider,
+      intent,
+      amount: draft.order.total,
+      currency: draft.order.currency
+    })
+  );
 }

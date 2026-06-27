@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type {
+  ClientPaymentVerificationInput,
   CreateIntentInput,
   PaymentEvent,
   PaymentGateway,
@@ -32,11 +33,18 @@ type RazorpayWebhookPayload = {
 function envCredentials(env: Record<string, string | undefined>) {
   const keyId = env.RAZORPAY_KEY_ID?.trim() ?? "";
   const keySecret = env.RAZORPAY_KEY_SECRET?.trim() ?? "";
-  const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "";
-  if (!keyId || !keySecret || !webhookSecret) {
-    throw new Error("Razorpay credentials are not fully configured.");
+  if (!keyId || !keySecret) {
+    throw new Error("Razorpay API credentials are not configured.");
   }
-  return { keyId, keySecret, webhookSecret };
+  return { keyId, keySecret };
+}
+
+function envWebhookSecret(env: Record<string, string | undefined>) {
+  const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "";
+  if (!webhookSecret) {
+    throw new Error("Razorpay webhook secret is not configured.");
+  }
+  return webhookSecret;
 }
 
 function mapRazorpayStatus(event: string, paymentStatus?: string): PaymentEvent["status"] {
@@ -92,8 +100,96 @@ export class RazorpayGateway implements PaymentGateway {
     };
   }
 
+  async verifyClientPayment(input: ClientPaymentVerificationInput): Promise<PaymentEvent> {
+    const { keySecret } = envCredentials(this.env);
+    const orderId = input.intentId.trim();
+    const paymentId = input.paymentId?.trim() ?? "";
+    const signature = input.signature?.trim() ?? "";
+    if (!orderId || !paymentId || !signature) {
+      throw new Error("Razorpay payment verification payload is incomplete.");
+    }
+
+    const expected = createHmac("sha256", keySecret).update(`${orderId}|${paymentId}`).digest("hex");
+    const expectedBuf = Buffer.from(expected, "utf8");
+    const providedBuf = Buffer.from(signature, "utf8");
+    if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
+      throw new Error("Invalid Razorpay payment signature.");
+    }
+
+    const { keyId } = envCredentials(this.env);
+    const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+    const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+      method: "GET",
+      headers: { Authorization: `Basic ${auth}` },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Razorpay payment lookup failed (${response.status}).`);
+    }
+
+    const payment = (await response.json()) as {
+      id?: string;
+      order_id?: string;
+      amount?: number;
+      currency?: string;
+      status?: string;
+    };
+
+    if (String(payment.order_id ?? "") !== orderId) {
+      throw new Error("Razorpay payment does not match the checkout order.");
+    }
+
+    return {
+      provider: "razorpay",
+      intentId: orderId,
+      paymentId: String(payment.id ?? paymentId),
+      status: mapRazorpayStatus("", payment.status),
+      amount: Number(payment.amount ?? 0) / 100,
+      currency: String(payment.currency ?? "INR"),
+      raw: payment
+    };
+  }
+
+  async fetchPaymentStatus(intentId: string): Promise<PaymentEvent> {
+    const { keyId, keySecret } = envCredentials(this.env);
+    const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+    const response = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(intentId)}/payments`, {
+      method: "GET",
+      headers: { Authorization: `Basic ${auth}` },
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Razorpay order lookup failed (${response.status}).`);
+    }
+
+    const body = (await response.json()) as { items?: Array<{ id?: string; amount?: number; currency?: string; status?: string }> };
+    const payment = body.items?.[0];
+    if (!payment) {
+      return {
+        provider: "razorpay",
+        intentId,
+        status: "requires_payment",
+        amount: 0,
+        currency: "INR",
+        raw: body
+      };
+    }
+
+    return {
+      provider: "razorpay",
+      intentId,
+      paymentId: payment.id ? String(payment.id) : undefined,
+      status: mapRazorpayStatus("", payment.status),
+      amount: Number(payment.amount ?? 0) / 100,
+      currency: String(payment.currency ?? "INR"),
+      raw: payment
+    };
+  }
+
   async verifyWebhook(payload: unknown, signature: string, rawBody?: string): Promise<PaymentEvent> {
-    const { webhookSecret } = envCredentials(this.env);
+    const webhookSecret = envWebhookSecret(this.env);
     const body = rawBody ?? JSON.stringify(payload);
     const expected = createHmac("sha256", webhookSecret).update(body).digest("hex");
     const provided = signature.replace(/^sha256=/, "").trim();

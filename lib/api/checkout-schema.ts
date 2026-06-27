@@ -40,6 +40,7 @@ export type CheckoutRequestBody = {
   guestAddress?: GuestAddress;
   region?: string;
   promoCode?: string;
+  paymentProvider?: string;
 };
 
 function parseFullName(record: Record<string, unknown>) {
@@ -89,6 +90,7 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
   const guestAddress = parseGuestAddress(record);
   const region = typeof record.region === "string" ? record.region.trim().slice(0, 120) : undefined;
   const promoCode = typeof record.promoCode === "string" ? record.promoCode.trim().slice(0, 80) : undefined;
+  const paymentProvider = typeof record.paymentProvider === "string" ? record.paymentProvider.trim().toLowerCase() : undefined;
 
   return {
     email,
@@ -99,7 +101,8 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
     ...(addressId ? { addressId } : {}),
     ...(guestAddress ? { guestAddress } : {}),
     ...(region ? { region } : {}),
-    ...(promoCode ? { promoCode } : {})
+    ...(promoCode ? { promoCode } : {}),
+    ...(paymentProvider ? { paymentProvider } : {})
   };
 }
 

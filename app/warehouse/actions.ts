@@ -631,12 +631,15 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
 
   const warehouseCode = await resolveWarehouseCodeFromFormData(formData);
   const stockStatus = readInventoryStatus(formData);
-  const adjustmentType = readInventoryString(formData, "adjustment_type");
+  const adjustmentMode = readInventoryString(formData, "adjustment_mode")
+    || (readInventoryString(formData, "adjustment_type") === "decrease" ? "decrease" : "replace");
+  const adjustmentQuantity = readInventoryInteger(formData, "adjustment_quantity");
   let quantity = readInventoryInteger(formData, "quantity");
   const category = readInventoryString(formData, "category");
   const price = readInventoryNumber(formData, "price");
   const variantId = readInventoryString(formData, "variant_id") || null;
   const note = readInventoryString(formData, "note") || null;
+  const reasonCode = readInventoryString(formData, "reason_code") || "warehouse_quick_edit";
   const expectedWarehouseUpdatedAt = readExpectedUpdatedAt(formData);
   const expectedInventoryUpdatedAt = readOptionalExpectedUpdatedAt(formData, "expected_inventory_updated_at");
   const actorId = await currentActorId();
@@ -644,8 +647,17 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   const previousInventory = await fetchInventoryBySku(productSlug, sku);
   const previousStock = await fetchWarehouseStockBySku(productSlug, sku, warehouseCode);
   const quantityBefore = Number(previousStock?.available_quantity ?? previousInventory?.quantity ?? 0);
-  if (adjustmentType === "decrease") {
-    quantity = Math.max(0, quantityBefore - quantity);
+
+  if (adjustmentMode === "increase") {
+    quantity = quantityBefore + (adjustmentQuantity ?? quantity);
+  } else if (adjustmentMode === "decrease") {
+    quantity = quantityBefore - (adjustmentQuantity ?? quantity);
+  } else if (adjustmentMode === "replace") {
+    quantity = adjustmentQuantity ?? quantity;
+  }
+
+  if (quantity < 0) {
+    throw new Error("Stock cannot go below zero.");
   }
   const reservedQuantity = Math.min(Number(previousInventory?.reserved_quantity ?? 0), quantity);
   const reorderThreshold = Number(previousInventory?.reorder_threshold ?? 0);
@@ -657,16 +669,25 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
 
   let movement: JsonRecord | null = null;
   if (quantityDelta !== 0) {
+    const movementType = reasonCode === "stock_in"
+      ? "stock_in"
+      : reasonCode === "stock_out"
+        ? "stock_out"
+        : reasonCode === "damaged"
+          ? "damaged"
+          : reasonCode === "adjustment"
+            ? "adjustment"
+            : "correction";
     const adjustment = await applyWarehouseStockMovement(
       {
         productSlug,
         sku,
         variantId,
         warehouseCode,
-        movementType: "correction",
+        movementType,
         quantityDelta,
         targetQuantity: null,
-        reasonCode: "warehouse_quick_edit",
+        reasonCode,
         notes: note,
         relatedOrderId: null,
         relatedShipmentId: null,
