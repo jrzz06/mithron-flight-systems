@@ -7,10 +7,13 @@ import {
 import { isCmsStrictMode } from "@/lib/cms/strict-mode";
 import { getSupabaseAdminConfig } from "@/lib/env";
 
-/** Always loaded on `/` because `app/page.tsx` renders HomeLandingComposite unconditionally. */
-const HOMEPAGE_PINNED_SOURCES: CmsDomainContentSource[] = ["admin_settings"];
-
-export type CmsOrchestrationRow = Record<string, unknown>;
+/** Baseline sources for `/` so HomeBelowHero can resolve CMS even when cms_pages orchestration is partial. */
+function pinHomepageSources(routePath: string, sources: CmsDomainContentSource[]) {
+  if (routePath !== "/") return sources;
+  const set = new Set<CmsDomainContentSource>(sources);
+  for (const source of defaultHomepageContentSources()) set.add(source);
+  return Array.from(set);
+}
 
 export type CmsPageOrchestration = {
   routePath: string;
@@ -100,12 +103,8 @@ function resolveContentSources(sections: CmsOrchestrationRow[]): CmsDomainConten
   return Array.from(set);
 }
 
-function pinHomepageSources(routePath: string, sources: CmsDomainContentSource[]) {
-  if (routePath !== "/") return sources;
-  const set = new Set(sources);
-  for (const source of HOMEPAGE_PINNED_SOURCES) set.add(source);
-  return Array.from(set);
-}
+
+export type CmsOrchestrationRow = Record<string, unknown>;
 
 export async function resolveCmsPageOrchestration(
   routePath: string,
