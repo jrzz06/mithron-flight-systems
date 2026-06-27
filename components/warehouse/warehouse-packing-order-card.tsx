@@ -48,13 +48,24 @@ type WarehousePackingOrderCardProps = {
 
 
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function printPackingSlip(lines: string[]) {
 
   const popup = window.open("", "_blank", "noopener,noreferrer,width=720,height=900");
 
   if (!popup) return;
 
-  popup.document.write(`<!doctype html><html><head><title>Packing slip</title></head><body><pre style="font:14px/1.5 monospace;padding:24px;">${lines.join("\n")}</pre><script>window.onload=function(){window.print();};</script></body></html>`);
+  const escapedContent = lines.map(escapeHtml).join("\n");
+
+  popup.document.write(`<!doctype html><html><head><title>Packing slip</title></head><body><pre style="font:14px/1.5 monospace;padding:24px;">${escapedContent}</pre><script>window.onload=function(){window.print();};<\/script></body></html>`);
 
   popup.document.close();
 

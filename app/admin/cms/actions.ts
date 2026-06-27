@@ -424,6 +424,7 @@ export async function saveHomepageFooterLeadFormAction(formData: FormData) {
 }
 
 export async function saveHeroBannerDraftAction(input: HeroBannerDraftActionInput) {
+  await requirePermission("cms.write");
   const record = await saveHeroBannerDraftWorkflow({
     ...input,
     actorId: await currentActorId()
@@ -433,6 +434,7 @@ export async function saveHeroBannerDraftAction(input: HeroBannerDraftActionInpu
 }
 
 export async function publishHeroBannerAction(input: HeroBannerStateActionInput) {
+  await requirePermission("cms.write");
   const record = await publishHeroBannerWorkflow({
     ...input,
     actorId: await currentActorId()
@@ -442,6 +444,7 @@ export async function publishHeroBannerAction(input: HeroBannerStateActionInput)
 }
 
 export async function archiveHeroBannerAction(input: HeroBannerStateActionInput) {
+  await requirePermission("cms.write");
   const record = await archiveHeroBannerWorkflow({
     ...input,
     actorId: await currentActorId()
@@ -451,6 +454,7 @@ export async function archiveHeroBannerAction(input: HeroBannerStateActionInput)
 }
 
 export async function saveCmsWorkflowDraftAction(input: CmsWorkflowDraftActionInput) {
+  await requirePermission("cms.write");
   const record = await saveCmsWorkflowDraft({
     ...input,
     actorId: await currentActorId()
@@ -460,6 +464,7 @@ export async function saveCmsWorkflowDraftAction(input: CmsWorkflowDraftActionIn
 }
 
 export async function publishCmsWorkflowRecordAction(input: CmsWorkflowStateActionInput) {
+  await requirePermission("cms.write");
   const record = await publishCmsWorkflowRecord({
     ...input,
     actorId: await currentActorId()
@@ -469,6 +474,7 @@ export async function publishCmsWorkflowRecordAction(input: CmsWorkflowStateActi
 }
 
 export async function archiveCmsWorkflowRecordAction(input: CmsWorkflowStateActionInput) {
+  await requirePermission("cms.write");
   const record = await archiveCmsWorkflowRecord({
     ...input,
     actorId: await currentActorId()

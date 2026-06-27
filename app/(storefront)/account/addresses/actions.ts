@@ -39,6 +39,13 @@ export async function deleteAddressFormAction(formData: FormData) {
   revalidatePath("/account/addresses");
 }
 
+export async function setDefaultAddressFormAction(formData: FormData) {
+  const userId = await currentUserId();
+  const addressId = String(formData.get("address_id") ?? "");
+  await updateCustomerAddress(userId, addressId, { isDefault: true }, userId);
+  revalidatePath("/account/addresses");
+}
+
 export async function updateAddressFormAction(formData: FormData) {
   const userId = await currentUserId();
   const addressId = String(formData.get("address_id") ?? "");

@@ -297,16 +297,16 @@ test.describe("Mithron cinematic storefront", () => {
     await expect(composite.locator("[data-testid='agri-community-world-section'] [data-tile-size='hero']")).toHaveCount(1);
     await expect(composite.locator("[data-testid='city-drone-world-section'] [data-tile-size='hero']")).toHaveCount(1);
     for (const missionLabel of [
-      "AGRONE Pilot Registration",
-      "AGRONE Drone Owner Registration",
+      "Pilot Registration",
+      "Drone Owner Registration",
       "Smart Farmer Registration",
-      "Agri Drone Loan & EMI Check",
-      "All India Farmer Drone Booking",
-      "Smart City Monitoring",
-      "Traffic Analytics",
-      "Infrastructure Inspection",
-      "Emergency Response",
-      "Crowd Monitoring"
+      "Drone Loan and EMI",
+      "Farmer Drone Booking",
+      "Dronelancer Model",
+      "Drone Rental App",
+      "Drone Academic",
+      "FranchiseCare Center",
+      "Technician Network"
     ]) {
       await expect(composite.getByText(missionLabel, { exact: true }).first()).toBeVisible();
     }

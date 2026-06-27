@@ -115,7 +115,7 @@ export function AdminTableShell({
           </PlatformActionBar>
         ) : null}
       </div>
-      <div className="overflow-x-auto">{children}</div>
+      <div className="platform-table-shell overflow-x-auto">{children}</div>
     </section>
   );
 }

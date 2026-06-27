@@ -30,7 +30,10 @@ const adminNavGroups: AdminNavGroupDef[] = [
   },
   {
     label: "Fulfillment",
-    items: [{ label: "Orders", href: "/admin/orders", section: "orders", icon: "orders" }]
+    items: [
+      { label: "Orders", href: "/admin/orders", section: "orders", icon: "orders" },
+      { label: "Contact Requests", href: "/admin/contact-requests", section: "enquiries", icon: "enquiries" }
+    ]
   },
   {
     label: "Partners",
@@ -80,6 +83,7 @@ export function buildAdminSearchItems(groups: PlatformNavGroup[]): PlatformSearc
 export const adminRouteTitles: PlatformRouteTitle[] = [
   { href: "/admin/products", title: "Products", kicker: "Catalog" },
   { href: "/admin/orders", title: "Orders", kicker: "Fulfillment" },
+  { href: "/admin/contact-requests", title: "Contact Requests", kicker: "Fulfillment" },
   { href: "/admin/inventory", title: "Inventory", kicker: "Catalog" },
   { href: "/admin/cms", title: "Website", kicker: "Content" },
   { href: "/admin/suppliers", title: "Suppliers", kicker: "Partners" },

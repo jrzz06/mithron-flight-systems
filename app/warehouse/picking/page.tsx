@@ -3,6 +3,7 @@ import { ControlShell } from "@/components/admin/control-shell";
 import { OperationalFeedback } from "@/components/admin/module-panel";
 import { WarehousePickingTable, type PickingLineRow } from "@/components/warehouse/warehouse-picking-table";
 import { WarehousePickingBarcodePanel } from "@/components/warehouse/warehouse-picking-barcode-panel";
+import { WarehouseOpsLiveSync } from "@/components/warehouse/warehouse-ops-live-sync";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
@@ -119,6 +120,7 @@ export default async function PickingQueuePage({ searchParams }: { searchParams?
         { label: "Packing", href: "/warehouse/packing" }
       ]}
     >
+      <WarehouseOpsLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <section data-picking-queue data-barcode-ready className="grid gap-4">
         <WarehousePickingBarcodePanel targets={scanTargets} />
         <OperationalFeedback status={operationStatus} message={operationMessage} context="Picking" idle="Picking updates and validation errors appear here." />

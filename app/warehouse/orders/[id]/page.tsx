@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ControlShell } from "@/components/admin/control-shell";
 import { OperationalFeedback } from "@/components/admin/module-panel";
+import { Breadcrumb } from "@/components/platform/breadcrumb";
 import { WarehouseOrderDetail } from "@/components/warehouse/warehouse-order-detail";
 import { fulfillmentStepLabel } from "@/lib/warehouse/operational-labels";
 import {
@@ -158,6 +159,11 @@ export default async function WarehouseOrderDetailPage({ params, searchParams }:
   ].sort((a, b) => b.sortKey.localeCompare(a.sortKey));
 
   return (
+    <>
+      <Breadcrumb items={[
+        { label: "Orders", href: "/warehouse/orders" },
+        { label: orderRow.orderNumber }
+      ]} />
     <ControlShell
       eyebrow=""
       title={orderRow.orderNumber}
@@ -184,5 +190,6 @@ export default async function WarehouseOrderDetailPage({ params, searchParams }:
         dispatchAction={dispatchOrderWithFeedback}
       />
     </ControlShell>
+    </>
   );
 }

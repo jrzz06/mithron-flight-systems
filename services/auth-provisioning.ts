@@ -231,6 +231,7 @@ export async function provisionAuthenticatedUser(input: {
 export async function provisionAuthenticatedUserIfMissing(input: {
   userId: string;
   email?: string | null;
+  emailConfirmedAt?: string | null;
   displayName?: string | null;
   preferredRole?: string | null;
   firebaseUid?: string | null;
@@ -267,7 +268,7 @@ export async function provisionAuthenticatedUserIfMissing(input: {
       firebaseUid: input.firebaseUid,
       phone: input.phone
     });
-    if (input.email?.trim()) {
+    if (input.email?.trim() && input.emailConfirmedAt) {
       await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
         console.warn("[mithron-auth] Guest order linking failed.", error);
       });
@@ -276,7 +277,7 @@ export async function provisionAuthenticatedUserIfMissing(input: {
   }
 
   const provisioned = await provisionAuthenticatedUser(input, env);
-  if (input.email?.trim()) {
+  if (input.email?.trim() && input.emailConfirmedAt) {
     await linkGuestOrdersToUser(input.userId, input.email, env).catch((error) => {
       console.warn("[mithron-auth] Guest order linking failed.", error);
     });

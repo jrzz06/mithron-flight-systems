@@ -27,7 +27,7 @@ export function WarehousePickingTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface)]">
-      <table className="min-w-[1080px] w-full border-collapse text-left text-sm">
+      <table className="platform-table min-w-[1080px] w-full border-collapse text-left text-sm">
         <thead>
           <tr>
             <th className="px-4 py-3">Order</th>

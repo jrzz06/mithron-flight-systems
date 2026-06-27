@@ -15,7 +15,7 @@ function headers(serviceRoleKey: string) {
 export async function listCustomerOrders(userId: string, env: EnvSource = process.env) {
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(
-    `${config.url}/rest/v1/orders?select=id,order_number,status,payment_status,fulfillment_status,total,currency,created_at,updated_at&created_by_user_id=eq.${userId}&order=created_at.desc&limit=50`,
+    `${config.url}/rest/v1/orders?select=id,order_number,status,payment_status,fulfillment_status,total,currency,created_at,updated_at,order_items(count)&created_by_user_id=eq.${userId}&order=created_at.desc&limit=50`,
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
   if (!response.ok) return [];

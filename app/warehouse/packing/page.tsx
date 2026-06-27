@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { ControlShell } from "@/components/admin/control-shell";
 import { OperationalFeedback } from "@/components/admin/module-panel";
 import { WarehousePackingOrderCard } from "@/components/warehouse/warehouse-packing-order-card";
+import { WarehouseOpsLiveSync } from "@/components/warehouse/warehouse-ops-live-sync";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getWarehouseConfiguration } from "@/services/warehouse-config";
 import { listActiveWarehouses } from "@/services/warehouses";
 import { getCurrentAuthContext } from "@/services/auth";
@@ -48,10 +50,11 @@ async function completePackingWithFeedback(formData: FormData) {
 }
 
 export default async function PackingStationPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const [snapshot, warehouses, warehouseConfig, auth] = await Promise.all([
+  const [snapshot, warehouses, warehouseConfig, policy, auth] = await Promise.all([
     getWarehouseSnapshot({ scope: "packing" }),
     listActiveWarehouses(),
     getWarehouseConfiguration(),
+    getAdminSettingsPolicy(),
     getCurrentAuthContext()
   ]);
   const scope = await resolveWarehouseScope({ userId: auth.userId, role: auth.role });
@@ -81,6 +84,7 @@ export default async function PackingStationPage({ searchParams }: { searchParam
         { label: "Dispatch", href: "/warehouse/dispatch" }
       ]}
     >
+      <WarehouseOpsLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <section data-packing-station className="grid gap-4">
         <OperationalFeedback status={operationStatus} message={operationMessage} context="Packing" idle="Packing, shipment creation, and validation messages appear here." />
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">

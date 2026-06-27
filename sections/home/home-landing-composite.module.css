@@ -285,6 +285,14 @@
   padding-top: clamp(40px, 4.5vh, 56px);
 }
 
+.productShelfSection+.agriSection:not(.citySection) {
+  margin-top: clamp(64px, 9vw, 120px);
+}
+
+.agriSection:not(.citySection)+.agriSection.citySection {
+  margin-top: clamp(28px, 4vh, 52px);
+}
+
 .productShelfHeader {
   display: flex;
   flex-wrap: wrap;
@@ -1734,9 +1742,35 @@
     grid-auto-columns: minmax(224px, 72vw);
   }
 
-  .agriGridLayout {
+  .missionWorldBento {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: clamp(20px, 4vw, 32px);
+  }
+
+  .missionWorldLeftRail {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--mission-bento-gap);
+  }
+
+  .missionWorldRightRail {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--mission-bento-gap);
+  }
+
+  .missionWorldTextHeader {
+    grid-row: 1;
+  }
+
+  .missionWorldSlotTall {
+    grid-row: 2;
+  }
+
+  .missionWorldSlotHero {
+    grid-row: 1;
+  }
+
+  .missionWorldSupportGrid {
+    grid-row: 2;
   }
 }
 
@@ -1854,6 +1888,10 @@
 
   .productShelfSection+.missionWorldSection {
     padding-top: clamp(36px, 7vh, 52px);
+  }
+
+  .productShelfSection+.agriSection:not(.citySection) {
+    margin-top: clamp(32px, 6vw, 60px);
   }
 
   .productShelfHero {
@@ -2082,71 +2120,265 @@
    AGRI COMMUNITY WORLD REDESIGN
    ========================================== */
 
+@keyframes missionAuroraDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  40% {
+    transform: translate3d(1.1%, -0.7%, 0) scale(1.015);
+  }
+
+  70% {
+    transform: translate3d(-0.8%, 0.9%, 0) scale(1.008);
+  }
+}
+
+@keyframes missionAuroraDriftReverse {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.02);
+    opacity: 0.88;
+  }
+
+  50% {
+    transform: translate3d(-1.2%, 0.5%, 0) scale(1.035);
+    opacity: 1;
+  }
+}
+
 .agriSection {
-  background: var(--home-page);
-  padding: clamp(48px, 6vh, 72px) 0;
+  --mission-section-ink: #f5f5f7;
+  --mission-section-muted: rgba(245, 245, 247, 0.62);
+  --mission-aurora-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --mission-bento-gap: clamp(22px, 2.6vw, 36px);
+  --mission-card-inset: clamp(10px, 1.2vw, 18px);
+  --mission-row-primary: minmax(0, 1.55fr);
+  --mission-row-secondary: minmax(0, 1fr);
+  --mission-col-left: minmax(0, 35fr);
+  --mission-col-right: minmax(0, 65fr);
+  --mission-glass-surface: rgba(255, 255, 255, 0.05);
+  --mission-glass-surface-raised: rgba(248, 250, 252, 0.08);
+  --mission-glass-border: rgba(255, 255, 255, 0.12);
+  --mission-glass-border-soft: rgba(255, 255, 255, 0.08);
+  --mission-glass-blur: blur(40px) saturate(180%);
+  --mission-glass-shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
+  --mission-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  --mission-card-glass-surface: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.52) 0%,
+    rgba(255, 255, 255, 0.36) 52%,
+    rgba(248, 250, 252, 0.42) 100%
+  );
+  --mission-card-glass-border: rgba(255, 255, 255, 0.4);
+  --mission-card-glass-blur: blur(80px) saturate(210%);
+  --mission-card-glass-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+  --mission-card-glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  min-height: clamp(620px, 92svh, 105svh);
+  padding: clamp(40px, 5vh, 64px) 0;
+  background-color: #02040a;
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(15, 66, 108, 0.2) 0%, transparent 65%),
+    radial-gradient(circle at 25% 45%, rgba(10, 34, 64, 0.24) 0%, transparent 70%),
+    radial-gradient(circle at 80% 85%, rgba(46, 43, 84, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(7, 17, 38, 0.28) 0%, transparent 80%),
+    radial-gradient(circle at 90% 15%, rgba(28, 27, 56, 0.12) 0%, transparent 50%);
   content-visibility: auto;
   contain-intrinsic-size: auto 100svh;
+  scroll-margin-top: 0;
+}
+
+.agriSection.chapter {
+  padding: clamp(40px, 5vh, 64px) 0;
+}
+
+.agriSection::before,
+.agriSection::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.agriSection:not(.citySection)::before {
+  inset: 0;
+  opacity: 0.42;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(15, 66, 108, 0.14) 0%, transparent 65%),
+    radial-gradient(circle at 80% 85%, rgba(46, 43, 84, 0.1) 0%, transparent 60%);
+  filter: none;
+  animation: none;
+  will-change: auto;
+}
+
+.citySection.agriSection::before {
+  inset: 0;
+  opacity: 0.42;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(15, 66, 108, 0.12) 0%, transparent 65%),
+    radial-gradient(circle at 84% 24%, rgba(30, 79, 255, 0.08) 0%, transparent 70%),
+    radial-gradient(circle at 80% 85%, rgba(46, 43, 84, 0.1) 0%, transparent 60%);
+  filter: none;
+  animation: none;
+  will-change: auto;
+}
+
+.agriSection::after {
+  inset: 0;
+  opacity: 0.022;
+  mix-blend-mode: soft-light;
+  background-image: var(--mission-aurora-noise);
+  background-size: 160px 160px;
 }
 
 .agriContainer {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
   width: min(100%, 1740px);
   margin: 0 auto;
-  padding: 0 clamp(24px, 4vw, 72px);
-}
-
-.agriGridLayout {
-  display: grid;
-  grid-template-columns: 35% 65%;
-  gap: 24px;
-  align-items: stretch;
-}
-
-.agriLeftColumn {
+  padding: 0 clamp(11px, 2.9vw, 40px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 24px;
+  min-height: 0;
+  height: 100%;
 }
 
-.agriTextHeader {
+/* Shared mission-world bento template (Agri + City) */
+.missionWorldBento {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: var(--mission-col-left) var(--mission-col-right);
+  gap: var(--mission-bento-gap);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.missionWorldLeftRail {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--mission-bento-gap);
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.missionWorldRightRail {
+  display: grid;
+  grid-template-rows: var(--mission-row-primary) var(--mission-row-secondary);
+  gap: var(--mission-bento-gap);
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.missionWorldTextHeader {
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  align-self: start;
   text-align: left;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.missionWorldSlotTall {
+  grid-row: 2;
+}
+
+.missionWorldSlotHero {
+  grid-row: 1;
+}
+
+.missionWorldSupportGrid {
+  grid-row: 2;
+}
+
+.missionWorldSlotTall,
+.missionWorldSlotHero {
+  box-sizing: border-box;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  padding: var(--mission-card-inset);
+  display: flex;
+}
+
+.missionWorldSlotTall > .agriCard,
+.missionWorldSlotHero > .agriCard {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.missionWorldSupportGrid {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--mission-bento-gap);
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  padding: var(--mission-card-inset);
+  align-items: end;
+  align-content: stretch;
+}
+
+.missionWorldSupportGrid > .agriCard {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  align-self: end;
+  justify-self: stretch;
 }
 
 .agriEyebrowRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: clamp(10px, 1.2vh, 14px);
 }
 
 .agriEyebrow {
   margin: 0;
-  color: var(--home-muted);
+  color: rgba(245, 245, 247, 0.48);
   font-family: var(--type-technical);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: var(--tracking-label);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .agriLeafIcon {
-  color: #15803d;
-  width: 14px;
-  height: 14px;
+  color: #4ade80;
+  width: 13px;
+  height: 13px;
+  opacity: 0.8;
 }
 
 .agriHeadline {
-  margin: 0 0 16px 0;
-  color: var(--home-ink);
+  margin: 0 0 clamp(12px, 1.5vh, 18px) 0;
+  color: var(--mission-section-ink);
   font-family: var(--type-mission-heading);
-  font-size: clamp(2.4rem, 3.6vw, 4.2rem);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.35rem, 3.85vw, 3.75rem);
+  font-weight: 650;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
   text-wrap: balance;
 }
 
@@ -2154,31 +2386,32 @@
   margin: 0;
 }
 
-.agriIntroBody p {
+.missionWorldTextHeader .agriIntroBody p {
   margin: 0;
-  color: var(--home-muted);
+  color: rgba(245, 245, 247, 0.9);
   font-family: var(--type-mission-body);
-  font-size: 0.98rem;
-  line-height: 1.5;
-  max-width: 480px;
+  font-size: clamp(1.06rem, 1.55vw, 1.2rem);
+  font-weight: 500;
+  line-height: 1.62;
+  max-width: 42ch;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.04) 48%,
+    rgba(248, 250, 252, 0.07) 100%
+  );
+  border: 1px solid var(--mission-glass-border-soft);
+  backdrop-filter: var(--mission-glass-blur);
+  -webkit-backdrop-filter: var(--mission-glass-blur);
+  box-shadow: var(--mission-glass-shadow), var(--mission-glass-inset);
 }
 
 .agriFallbackNote {
   margin-top: 10px !important;
   font-size: 0.74rem !important;
   line-height: 1.4 !important;
-}
-
-.agriRightColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.agriMiddleRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
 }
 
 /* Card Styling — full-bleed product storytelling */
@@ -2195,7 +2428,7 @@
   text-decoration: none;
   cursor: pointer;
   isolation: isolate;
-  contain: layout paint;
+  contain: layout;
   transition:
     box-shadow 420ms var(--ease-cinematic),
     transform 420ms var(--ease-cinematic);
@@ -2207,9 +2440,9 @@
   z-index: 4;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 20px 22px 22px;
+  justify-content: flex-end;
+  gap: clamp(5px, 0.65vh, 8px);
+  padding: clamp(10px, 1.1vh, 14px) clamp(12px, 1.2vh, 16px) clamp(12px, 1.2vh, 16px);
   pointer-events: none;
 }
 
@@ -2275,7 +2508,7 @@
     --rental-object-position: 45% 38%;
   }
 
-  .citySection .citySlotHero.agriCard[data-logo-cover="true"] {
+  .citySection .missionWorldSlotHero .agriCard[data-logo-cover="true"] {
     --logo-cover-x: 55.5%;
     --logo-cover-y: 25%;
     --logo-cover-w: 32px;
@@ -2313,11 +2546,18 @@
 
 .agriSection .agriCard,
 .citySection .agriCard {
-  border: none;
   background: #0c1218;
   box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.04),
-    0 2px 10px rgba(0, 0, 0, 0.02);
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.agriSection:not(.citySection) .agriCard {
+  border: 1px solid rgba(52, 211, 153, 0.04);
+}
+
+.citySection .agriCard {
+  border: 1px solid rgba(59, 130, 246, 0.04);
 }
 
 .agriSection .agriCard:hover,
@@ -2325,8 +2565,8 @@
 .citySection .agriCard:hover,
 .citySection .agriCard:focus-visible {
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.08),
-    0 8px 20px rgba(0, 0, 0, 0.04);
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 16px 32px rgba(0, 0, 0, 0.1);
   transform: translateY(var(--elevation-card-lift, -2px));
 }
 
@@ -2406,29 +2646,39 @@
   transform-origin: center center;
 }
 
-.agriShowcaseStage,
-.cityShowcaseStage {
+.missionWorldShowcaseStage {
   position: relative;
   isolation: isolate;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Section-level wash removed — lighting originates from card content zones only */
-.agriShowcaseAtmosphere,
-.cityShowcaseAtmosphere {
-  display: none;
+.missionWorldShowcaseAtmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background:
+    radial-gradient(ellipse 70% 56% at 30% 42%, rgba(15, 66, 108, 0.08) 0%, transparent 68%),
+    radial-gradient(ellipse 58% 50% at 68% 58%, rgba(52, 211, 153, 0.04) 0%, transparent 70%);
+  animation: none;
+  will-change: auto;
 }
 
-.agriGridLayout,
-.cityBentoGrid {
-  position: relative;
-  z-index: 1;
+.citySection .missionWorldShowcaseAtmosphere {
+  background:
+    radial-gradient(ellipse 70% 56% at 30% 42%, rgba(15, 66, 108, 0.08) 0%, transparent 68%),
+    radial-gradient(ellipse 58% 50% at 68% 58%, rgba(30, 79, 255, 0.05) 0%, transparent 70%);
 }
 
 /* Per-card atmospheric lighting — soft organic blobs, high image visibility */
 .agriSection .agriCard,
 .citySection .agriCard {
   --mission-asset-stage-height: 100%;
-  --mission-text-scrim-height: 42%;
+  --mission-text-scrim-height: 30%;
 }
 
 .agriCardAmbient,
@@ -2451,12 +2701,12 @@
   background:
     radial-gradient(
       ellipse 65% 55% at var(--zone-4-x, 90%) var(--zone-4-y, 8%),
-      rgba(var(--zone-4-color), 0.14) 0%,
-      rgba(var(--zone-4-color), 0.04) 50%,
+      rgba(var(--zone-4-color), 0.1) 0%,
+      rgba(var(--zone-4-color), 0.03) 50%,
       transparent 85%
     );
   filter: blur(54px);
-  opacity: 0.28;
+  opacity: 0.26;
   mix-blend-mode: soft-light;
 }
 
@@ -2473,12 +2723,12 @@
   background:
     radial-gradient(
       ellipse 100% 80% at var(--zone-1-x, 52%) var(--zone-1-y, 40%),
-      rgba(var(--zone-1-color), 0.18) 0%,
-      rgba(var(--zone-1-color), 0.06) 45%,
+      rgba(var(--zone-1-color), 0.14) 0%,
+      rgba(var(--zone-1-color), 0.05) 45%,
       transparent 80%
     );
-  filter: blur(64px);
-  opacity: 0.28;
+  filter: blur(54px);
+  opacity: 0.26;
 }
 
 .agriCardAmbientWash,
@@ -2486,12 +2736,12 @@
   background:
     radial-gradient(
       ellipse 90% 75% at var(--zone-2-x, 22%) var(--zone-2-y, 62%),
-      rgba(var(--zone-2-color), 0.16) 0%,
-      rgba(var(--zone-2-color), 0.05) 42%,
+      rgba(var(--zone-2-color), 0.12) 0%,
+      rgba(var(--zone-2-color), 0.04) 42%,
       transparent 78%
     );
-  filter: blur(60px);
-  opacity: 0.26;
+  filter: blur(54px);
+  opacity: 0.24;
 }
 
 .agriCardAmbientAccent,
@@ -2499,101 +2749,104 @@
   background:
     radial-gradient(
       ellipse 85% 70% at var(--zone-3-x, 74%) var(--zone-3-y, 42%),
-      rgba(var(--zone-3-color), 0.16) 0%,
-      rgba(var(--zone-3-color), 0.05) 45%,
+      rgba(var(--zone-3-color), 0.12) 0%,
+      rgba(var(--zone-3-color), 0.04) 45%,
       transparent 80%
     );
-  filter: blur(56px);
-  opacity: 0.26;
+  filter: blur(54px);
+  opacity: 0.24;
 }
 
-/* Localized readability scrim — only behind floating copy */
+/* Localized readability scrim — diffuse white glow behind floating copy */
 .agriCardTextProtection,
 .cityCardTextProtection {
   position: absolute;
-  left: -22px;
-  bottom: -22px;
-  right: -24px;
-  top: -88px;
+  left: -28px;
+  bottom: -28px;
+  right: -30px;
+  top: -48px;
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(
     to top,
-    rgba(255, 253, 251, 0.98) 0%,
-    rgba(255, 253, 251, 0.92) 16%,
-    rgba(255, 253, 251, 0.78) 34%,
-    rgba(255, 253, 251, 0.52) 52%,
-    rgba(255, 253, 251, 0.24) 72%,
-    rgba(255, 253, 251, 0.08) 88%,
+    rgba(255, 253, 251, 0.96) 0%,
+    rgba(255, 253, 251, 0.88) 14%,
+    rgba(255, 253, 251, 0.72) 28%,
+    rgba(255, 253, 251, 0.48) 46%,
+    rgba(255, 253, 251, 0.26) 64%,
+    rgba(255, 253, 251, 0.1) 82%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to right,
     black 0%,
-    black 72%,
-    rgba(0, 0, 0, 0.55) 88%,
+    black 68%,
+    rgba(0, 0, 0, 0.5) 84%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     black 0%,
-    black 72%,
-    rgba(0, 0, 0, 0.55) 88%,
+    black 68%,
+    rgba(0, 0, 0, 0.5) 84%,
     transparent 100%
   );
-  filter: blur(4px);
+  filter: blur(6px);
+  box-shadow:
+    0 8px 24px 6px rgba(255, 255, 255, 0.14),
+    0 -2px 16px 4px rgba(255, 255, 255, 0.08);
 }
 
 .agriCard[data-scrim="cool"] .agriCardTextProtection,
 .citySection .agriCard[data-scrim="cool"] .cityCardTextProtection {
   background: linear-gradient(
     to top,
-    rgba(248, 252, 255, 0.98) 0%,
-    rgba(248, 252, 255, 0.92) 16%,
-    rgba(248, 252, 255, 0.78) 34%,
-    rgba(248, 252, 255, 0.52) 52%,
-    rgba(248, 252, 255, 0.24) 72%,
-    rgba(248, 252, 255, 0.08) 88%,
+    rgba(248, 252, 255, 0.96) 0%,
+    rgba(248, 252, 255, 0.88) 14%,
+    rgba(248, 252, 255, 0.72) 28%,
+    rgba(248, 252, 255, 0.48) 46%,
+    rgba(248, 252, 255, 0.26) 64%,
+    rgba(248, 252, 255, 0.1) 82%,
     transparent 100%
   );
+  box-shadow:
+    0 8px 24px 6px rgba(248, 252, 255, 0.16),
+    0 -2px 16px 4px rgba(248, 252, 255, 0.1);
 }
 
 .agriCard[data-scrim="warm"] .agriCardTextProtection,
 .citySection .agriCard[data-scrim="warm"] .cityCardTextProtection {
   background: linear-gradient(
     to top,
-    rgba(255, 251, 245, 0.98) 0%,
-    rgba(255, 251, 245, 0.92) 16%,
-    rgba(255, 251, 245, 0.78) 34%,
-    rgba(255, 251, 245, 0.54) 52%,
-    rgba(255, 251, 245, 0.26) 72%,
-    rgba(255, 251, 245, 0.08) 88%,
+    rgba(255, 251, 245, 0.96) 0%,
+    rgba(255, 251, 245, 0.88) 14%,
+    rgba(255, 251, 245, 0.72) 28%,
+    rgba(255, 251, 245, 0.48) 46%,
+    rgba(255, 251, 245, 0.26) 64%,
+    rgba(255, 251, 245, 0.1) 82%,
     transparent 100%
   );
+  box-shadow:
+    0 8px 24px 6px rgba(255, 251, 245, 0.14),
+    0 -2px 16px 4px rgba(255, 251, 245, 0.08);
 }
 
 /* Hero vs supporting hierarchy */
 .agriSection:not(.citySection) .agriCard_hero,
-.citySection .citySlotHero.agriCard {
+.citySection .missionWorldSlotHero .agriCard {
   box-shadow:
-    0 10px 32px rgba(0, 0, 0, 0.05),
-    0 3px 12px rgba(0, 0, 0, 0.03);
-}
-
-.citySection .citySlotHero.agriCard {
-  box-shadow:
-    0 10px 32px rgba(0, 0, 0, 0.05),
-    0 3px 12px rgba(0, 0, 0, 0.03);
+    0 3px 10px rgba(0, 0, 0, 0.07),
+    0 12px 28px rgba(0, 0, 0, 0.09);
 }
 
 .agriSection:not(.citySection) .agriCard_standard .agriCardAmbientLayer,
 .agriSection:not(.citySection) .agriCard_wide .agriCardAmbientLayer {
-  opacity: 0.92;
+  opacity: 0.72;
 }
 
 .citySection .agriCard_standard .cityCardAmbientLayer,
 .citySection .agriCard_wide .cityCardAmbientLayer {
-  opacity: 0.92;
+  opacity: 0.72;
 }
 
 .agriSection:not(.citySection) .agriCard_standard .agriCardAmbientBeam,
@@ -2603,8 +2856,8 @@
   background:
     radial-gradient(
       ellipse 88% 66% at var(--zone-1-x, 52%) var(--zone-1-y, 40%),
-      rgba(var(--zone-1-color), 0.36) 0%,
-      rgba(var(--zone-1-color), 0.14) 42%,
+      rgba(var(--zone-1-color), 0.22) 0%,
+      rgba(var(--zone-1-color), 0.08) 42%,
       transparent 78%
     );
 }
@@ -2612,65 +2865,97 @@
 /* Hero — medium emission */
 .agriCardAmbientDominant .agriCardAmbientBeam,
 .cityCardAmbientDominant .cityCardAmbientBeam {
-  opacity: 0.36;
+  opacity: 0.32;
   filter: blur(46px);
   background:
     radial-gradient(
       ellipse 96% 74% at var(--zone-1-x, 52%) var(--zone-1-y, 40%),
-      rgba(var(--zone-1-color), 0.22) 0%,
-      rgba(var(--zone-1-color), 0.09) 38%,
+      rgba(var(--zone-1-color), 0.16) 0%,
+      rgba(var(--zone-1-color), 0.06) 38%,
       transparent 72%
     );
 }
 
 .agriCardAmbientDominant .agriCardAmbientWash,
 .cityCardAmbientDominant .cityCardAmbientWash {
-  opacity: 0.32;
+  opacity: 0.28;
   filter: blur(44px);
 }
 
 .agriCardAmbientDominant .agriCardAmbientAccent,
 .cityCardAmbientDominant .cityCardAmbientAccent {
-  opacity: 0.32;
+  opacity: 0.28;
   filter: blur(40px);
 }
 
 .agriCardAmbientDominant::after,
 .cityCardAmbientDominant::after {
-  opacity: 0.28;
+  opacity: 0.24;
   filter: blur(48px);
 }
 
 .agriSection:not(.citySection) .agriCard_tall .agriCardAmbientBeam,
 .citySection .agriCard_tall .cityCardAmbientBeam {
-  opacity: 0.34;
+  opacity: 0.28;
 }
 
 .agriCardCopy {
   position: relative;
+  z-index: 0;
   flex: 1 1 auto;
   min-width: 0;
+  width: fit-content;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   pointer-events: none;
+  padding: 14px 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.agriCardCopy::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--mission-card-glass-surface);
+  border: 1px solid var(--mission-card-glass-border);
+  backdrop-filter: var(--mission-card-glass-blur);
+  -webkit-backdrop-filter: var(--mission-card-glass-blur);
+  box-shadow: var(--mission-card-glass-shadow), var(--mission-card-glass-inset);
+  transform: translateZ(0);
+}
+
+.agriCardCopy .agriCardTextProtection,
+.agriCardCopy .cityCardTextProtection {
+  display: none;
 }
 
 .agriCardCopy strong {
-  color: var(--home-ink);
+  position: relative;
+  z-index: 1;
+  color: rgba(15, 23, 42, 0.94);
   font-family: var(--type-mission-heading);
-  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.022em;
+  font-size: clamp(1.22rem, 1.62vw, 1.56rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.024em;
 }
 
-.agriCardCopy span {
-  color: var(--home-ink);
-  font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+.agriCardCopy strong + span {
+  position: relative;
+  z-index: 1;
+  color: rgba(15, 23, 42, 0.82);
+  font-size: clamp(0.98rem, 1.22vw, 1.08rem);
   font-weight: 500;
-  line-height: 1.45;
-  opacity: 0.88;
+  line-height: 1.46;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -2678,32 +2963,12 @@
   overflow: hidden;
 }
 
-.agriCardCopy small {
-  color: color-mix(in srgb, var(--home-muted) 70%, var(--home-ink));
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
-.agriCardDevice {
-  position: relative;
-  align-self: flex-start;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  color: var(--home-ink);
-  font-family: var(--type-technical);
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 6px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  letter-spacing: 0.05em;
-  box-shadow: 
-    0 2px 6px rgba(15, 23, 42, 0.06),
-    0 1px 2px rgba(15, 23, 42, 0.04);
-  text-transform: uppercase;
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .agriCardCopy::before {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 .agriCardArrow {
@@ -2747,35 +3012,29 @@
   transform: scale(1.04);
 }
 
-/* Card sizes — mobile / fluid defaults */
-.agriCard_tall {
-  flex-grow: 1;
-  min-height: 380px;
+/* Card sizes — grid-driven, compact within viewport */
+.agriSection .agriCard_tall,
+.agriSection .agriCard_hero,
+.agriSection .agriCard_standard,
+.agriSection .agriCard_wide,
+.citySection .agriCard_tall,
+.citySection .agriCard_hero,
+.citySection .agriCard_standard,
+.citySection .agriCard_wide {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
 }
 
-.agriCard_hero {
-  min-height: clamp(300px, 34vh, 380px);
+.agriSection .agriCard_tall {
+  flex: 1 1 auto;
 }
 
-.agriCard_standard {
-  min-height: clamp(260px, 28vh, 320px);
-}
-
-.agriCard_wide {
-  min-height: clamp(260px, 27vh, 310px);
-}
-
-/* Desktop: one-viewport mission showcases */
+/* Desktop: one-viewport mission worlds */
 @media (min-width: 1025px) {
   .agriSection {
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    min-height: max(640px, calc(100svh - var(--store-nav-offset, 64px)));
-    height: max(640px, calc(100svh - var(--store-nav-offset, 64px)));
-    max-height: max(640px, calc(100svh - var(--store-nav-offset, 64px)));
-    padding: clamp(24px, 3.5vh, 40px) 0;
-    overflow: clip;
+    min-height: clamp(95svh, 100svh, 105svh);
+    height: clamp(95svh, 100svh, 105svh);
   }
 
   .agriSection .agriContainer {
@@ -2785,131 +3044,69 @@
     flex-direction: column;
   }
 
-  .agriShowcaseStage,
-  .cityShowcaseStage {
+  .missionWorldShowcaseStage {
     flex: 1 1 auto;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
   }
 
-  .agriGridLayout {
-    flex: 1 1 auto;
-    min-height: 540px;
-    height: 100%;
-    gap: 16px;
-    align-items: stretch;
-  }
-
-  .agriLeftColumn {
-    display: grid;
-    grid-template-rows: auto minmax(200px, 1fr);
-    gap: 16px;
-    height: 100%;
+  .missionWorldBento {
     min-height: 0;
-    justify-content: stretch;
-  }
-
-  .agriRightColumn {
-    display: grid;
-    grid-template-rows: minmax(180px, 2.15fr) minmax(132px, 1fr) minmax(132px, 1fr);
-    gap: 16px;
-    height: 100%;
-    min-height: 0;
-  }
-
-  .agriMiddleRow {
-    min-height: 132px;
-    gap: 16px;
   }
 
   .agriSection .agriHeadline {
-    font-size: clamp(1.85rem, 3.4vh, 3rem);
-    margin-bottom: 10px;
+    font-size: clamp(2.3rem, 3.95vw, 3.65rem);
+    margin-bottom: clamp(10px, 1.2vh, 16px);
     line-height: 1.04;
   }
 
-  .agriSection .agriIntroBody p {
-    font-size: clamp(0.86rem, 1.55vh, 0.94rem);
-    line-height: 1.42;
+  .missionWorldTextHeader .agriIntroBody p {
+    font-size: clamp(1rem, 1.45vh, 1.12rem);
+    line-height: 1.58;
+    padding: 12px 14px;
   }
 
   .agriSection .agriEyebrowRow {
-    margin-bottom: 8px;
+    margin-bottom: clamp(8px, 1vh, 12px);
   }
 
-  .agriSection .agriCard_tall,
-  .cityBentoGrid .agriCard_tall {
-    min-height: 200px;
-    height: 100%;
-    max-height: 100%;
-    flex-grow: 0;
+  .missionWorldSupportGrid .agriCard_standard .agriCardCopy,
+  .missionWorldSupportGrid .agriCard_wide .agriCardCopy {
+    max-width: min(100%, 48ch);
   }
 
-  .agriSection .agriCard_hero,
-  .cityBentoGrid .agriCard_hero {
-    min-height: 180px;
-    height: 100%;
-    max-height: 100%;
-    flex-grow: 0;
+  .agriSection .agriCardCopy strong,
+  .citySection .agriCardCopy strong {
+    font-size: clamp(1.14rem, 1.45vh, 1.38rem);
+    font-weight: 800;
   }
 
-  .agriSection .agriCard_standard,
-  .agriSection .agriCard_wide,
-  .cityBentoGrid .agriCard_standard,
-  .cityBentoGrid .agriCard_wide {
-    min-height: 132px;
-    height: 100%;
-    max-height: 100%;
-    flex-grow: 0;
-  }
-
-  .missionCardFloat {
-    padding: 14px 16px 16px;
-    gap: 10px;
-  }
-
-  .agriSection .agriCard_standard .agriCardCopy,
-  .agriSection .agriCard_wide .agriCardCopy,
-  .cityBentoGrid .agriCard_standard .agriCardCopy,
-  .cityBentoGrid .agriCard_wide .agriCardCopy {
-    max-width: min(100%, 52ch);
-  }
-
-  .agriSection .agriCardCopy strong {
-    font-size: clamp(0.92rem, 1.45vh, 1.12rem);
-  }
-
-  .agriSection .agriCardCopy span {
-    font-size: clamp(0.74rem, 1.2vh, 0.8rem);
+  .agriSection .agriCardCopy strong + span,
+  .citySection .agriCardCopy strong + span {
+    font-size: clamp(0.92rem, 1.18vh, 1.04rem);
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
 
-  .cityBentoGrid {
-    flex: 1 1 auto;
-    min-height: 540px;
-    height: 100%;
-    grid-template-rows: minmax(180px, 2.15fr) minmax(132px, 1fr) minmax(132px, 1fr);
-  }
-
-  .citySection {
-    padding-bottom: clamp(24px, 3.5vh, 40px);
+  .agriSection .agriCardCopy,
+  .citySection .agriCardCopy {
+    padding: 12px 14px;
   }
 }
 
-/* City Drone World — bento grid (distinct from Agri side-column layout) */
+/* City section — accent only (layout shared via missionWorldBento) */
 .citySection {
   content-visibility: auto;
   contain-intrinsic-size: auto 100svh;
+  --mission-card-glass-surface: linear-gradient(
+    145deg,
+    rgba(248, 252, 255, 0.52) 0%,
+    rgba(241, 248, 255, 0.36) 52%,
+    rgba(236, 242, 248, 0.42) 100%
+  );
 }
 
-.citySection .citySlotWide .agriCardCopy {
-  max-width: min(100%, 58ch);
-}
-
-.citySection .agriCardCopy {
-  gap: 4px;
+.missionWorldSupportGrid .agriCardCopy {
+  max-width: min(100%, 52ch);
 }
 
 .citySection .agriCardArrow {
@@ -2924,280 +3121,140 @@
   transform: scale(1.04);
 }
 
-.cityBentoGrid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-template-rows:
-    minmax(280px, 34vh)
-    minmax(0, 1fr)
-    minmax(0, 1fr);
-  gap: 16px;
-  align-items: stretch;
-}
-
-.cityTextHeader {
-  grid-column: 9 / -1;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  text-align: left;
-  padding: 4px 0 4px 8px;
-}
-
-.cityTextHeader .agriEyebrowRow {
-  justify-content: flex-start;
-}
-
-.cityTextHeader .agriIntroBody p {
-  margin-left: 0;
-  max-width: 34ch;
-}
-
-.citySlotHero {
-  grid-column: 1 / span 8;
-  grid-row: 1;
-  height: 100%;
-  min-height: 0;
-}
-
-.citySlotTall {
-  grid-column: 1 / span 4;
-  grid-row: 2 / span 2;
-  height: 100%;
-  min-height: 0;
-}
-
-.citySlotStandardLeft {
-  grid-column: 5 / span 4;
-  grid-row: 2;
-  height: 100%;
-  min-height: 0;
-}
-
-.citySlotStandardRight {
-  grid-column: 9 / span 4;
-  grid-row: 2;
-  height: 100%;
-  min-height: 0;
-}
-
-.citySlotWide {
-  grid-column: 5 / span 8;
-  grid-row: 3;
-  height: 100%;
-  min-height: 0;
-}
-
 @media (min-width: 1025px) and (max-width: 1360px) {
-  .agriRightColumn {
-    grid-template-rows: minmax(180px, 2.15fr) minmax(148px, 1fr) minmax(148px, 1fr);
-  }
-
-  .agriMiddleRow {
-    min-height: 148px;
-  }
-
-  .agriSection .agriCard_standard,
-  .agriSection .agriCard_wide,
-  .cityBentoGrid .agriCard_standard,
-  .cityBentoGrid .agriCard_wide {
-    min-height: 148px;
-  }
-
-  .cityBentoGrid {
-    grid-template-rows: minmax(180px, 2.15fr) minmax(148px, 1fr) minmax(148px, 1fr);
-  }
-
   .missionCardFloat {
-    padding: 12px 14px 14px;
-    gap: 8px;
-  }
-
-  .agriCardDevice {
-    font-size: 0.64rem;
-    padding: 5px 12px;
+    padding: clamp(9px, 1vh, 12px) clamp(10px, 1.1vh, 13px) clamp(10px, 1.1vh, 13px);
+    gap: 6px;
   }
 
   .agriCardCopy {
-    gap: 4px;
+    gap: 6px;
+    padding: 11px 13px;
   }
 
   .agriCardCopy strong {
-    font-size: clamp(0.96rem, 1vw, 1.08rem);
-    line-height: 1.14;
+    font-size: clamp(1.1rem, 1.42vh, 1.32rem);
+    line-height: 1.12;
   }
 
-  .agriCardCopy span {
-    font-size: clamp(0.78rem, 0.86vw, 0.88rem);
-    line-height: 1.38;
+  .agriCardCopy strong + span {
+    font-size: clamp(0.9rem, 1.14vh, 1rem);
+    line-height: 1.4;
   }
 
   .agriCardArrow {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
   }
 }
 
-/* Responsive Overrides */
+/* Tablet + mobile — shared mission-world bento */
 @media (max-width: 1024px) {
   .agriSection {
-    min-height: 0;
-    height: auto;
-    max-height: none;
-    overflow: visible;
-    display: block;
+    --mission-col-left: minmax(0, 36fr);
+    --mission-col-right: minmax(0, 64fr);
+    --mission-bento-gap: clamp(18px, 2.2vw, 28px);
+    --mission-card-inset: clamp(8px, 1vw, 14px);
+    --mission-row-primary: minmax(0, 1.48fr);
+    --mission-row-secondary: minmax(0, 1fr);
   }
 
   .agriSection .agriContainer,
-  .agriShowcaseStage,
-  .cityShowcaseStage {
-    display: block;
-    height: auto;
+  .missionWorldShowcaseStage {
+    flex: 1 1 auto;
     min-height: 0;
-    flex: none;
-  }
-
-  .agriGridLayout {
-    height: auto;
-    flex: none;
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-
-  .agriLeftColumn,
-  .agriRightColumn {
     display: flex;
     flex-direction: column;
-    height: auto;
   }
 
-  .agriLeftColumn {
-    gap: 24px;
-  }
-  .agriCard_tall {
-    min-height: 380px;
-  }
-
-  .cityBentoGrid {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+  .missionWorldBento {
+    height: 100%;
+    flex: 1 1 auto;
     min-height: 0;
   }
 
-  .cityTextHeader,
-  .citySlotHero,
-  .citySlotTall,
-  .citySlotStandardLeft,
-  .citySlotStandardRight,
-  .citySlotWide {
-    grid-column: auto;
-    grid-row: auto;
-    width: 100%;
-    height: auto;
+  .agriSection .agriHeadline {
+    font-size: clamp(1.7rem, 4.6vw, 2.5rem);
+    margin-bottom: 6px;
+    line-height: 1.05;
   }
 
-  .cityTextHeader {
-    order: -1;
-    align-items: flex-start;
-    text-align: left;
-    padding: 0;
+  .missionWorldTextHeader .agriIntroBody p {
+    font-size: clamp(0.96rem, 2.75vw, 1.08rem);
+    line-height: 1.52;
+    max-width: none;
+    padding: 12px 14px;
   }
 
-  .cityTextHeader .agriEyebrowRow {
-    justify-content: flex-start;
+  .agriSection .agriEyebrowRow {
+    margin-bottom: 5px;
   }
 
-  .cityTextHeader .agriIntroBody p {
-    margin-left: 0;
+  .agriSection .agriEyebrow {
+    font-size: 0.66rem;
   }
 
-  .cityBentoGrid .agriCard_tall,
-  .cityBentoGrid .agriCard_hero,
-  .cityBentoGrid .agriCard_standard,
-  .cityBentoGrid .agriCard_wide {
-    width: 100%;
-    height: auto;
-    min-height: clamp(240px, 58vw, 320px);
+  .agriSection .agriCardCopy strong,
+  .citySection .agriCardCopy strong {
+    font-size: clamp(1.06rem, 2.85vw, 1.28rem);
+    line-height: 1.12;
   }
 
-  .cityBentoGrid .agriCard_hero {
-    min-height: clamp(280px, 64vw, 360px);
+  .agriSection .agriCardCopy strong + span,
+  .citySection .agriCardCopy strong + span {
+    font-size: clamp(0.9rem, 2.35vw, 1.02rem);
+    line-height: 1.38;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
-  .cityBentoGrid .agriCard_tall {
-    min-height: clamp(300px, 70vw, 420px);
+  .agriSection .agriCardCopy,
+  .citySection .agriCardCopy {
+    padding: 10px 12px;
   }
 
-  .cityBentoGrid .agriCard_standard {
-    min-height: clamp(230px, 54vw, 280px);
-  }
-
-  .cityBentoGrid .agriCard_wide {
-    min-height: clamp(250px, 58vw, 300px);
+  .agriCardArrow {
+    width: 32px;
+    height: 32px;
   }
 }
 
 @media (max-width: 768px) {
-  .agriMiddleRow {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .agriCard_tall {
-    min-height: 340px;
+  .agriSection {
+    --mission-col-left: minmax(0, 1fr);
+    --mission-col-right: minmax(0, 1fr);
+    --mission-bento-gap: clamp(14px, 1.8vw, 22px);
+    --mission-row-primary: minmax(0, 1.4fr);
+    --mission-row-secondary: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 640px) {
   .agriSection {
-    padding: 48px 0 56px;
+    padding: clamp(32px, 5vh, 48px) 0;
+    min-height: clamp(560px, 88svh, 100svh);
+    --mission-bento-gap: clamp(14px, 1.8vw, 20px);
+    --mission-card-inset: clamp(6px, 0.8vw, 10px);
   }
 
   .agriContainer {
-    padding: 0 16px;
-  }
-
-  .agriGridLayout {
-    gap: 24px;
-  }
-
-  .agriLeftColumn {
-    gap: 20px;
+    padding: 0 clamp(11px, 2.9vw, 40px);
   }
 
   .agriHeadline {
-    font-size: clamp(1.65rem, 7.6vw, 2.35rem);
-    line-height: 1.1;
-    letter-spacing: -0.03em;
-    margin-bottom: 12px;
+    font-size: clamp(1.55rem, 6.8vw, 1.95rem);
+    line-height: 1.08;
+    letter-spacing: -0.028em;
+    margin-bottom: 4px;
   }
 
-  .agriIntroBody p {
+  .agriIntroBody p,
+  .missionWorldTextHeader .agriIntroBody p {
     max-width: none;
-    color: #475569;
-    font-size: 0.94rem;
-    line-height: 1.55;
-  }
-
-  .agriCard_hero {
-    min-height: 240px;
-    height: auto;
-  }
-
-  .agriCard_tall {
-    min-height: 300px;
-  }
-
-  .agriCard_standard {
-    min-height: 220px;
-    height: auto;
-  }
-
-  .agriCard_wide {
-    min-height: 230px;
-    height: auto;
+    color: rgba(245, 245, 247, 0.86);
+    font-size: clamp(0.92rem, 3.4vw, 1.04rem);
+    line-height: 1.48;
+    padding: 10px 12px;
   }
 
   .agriFallbackNote {
@@ -3205,31 +3262,50 @@
   }
 
   .missionCardFloat {
-    padding: 12px 14px 14px;
-    gap: 8px;
+    padding: 8px 10px 10px;
+    gap: 5px;
   }
 
   .agriCardCopy {
-    gap: 4px;
+    gap: 6px;
+    padding: 9px 11px;
   }
 
   .agriCardArrow {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
   }
 
   .agriCardCopy strong {
-    font-size: 1.12rem;
-    line-height: 1.2;
+    font-size: clamp(1.04rem, 4vw, 1.2rem);
+    line-height: 1.12;
   }
 
-  .agriCardCopy span {
-    font-size: 0.82rem;
-    line-height: 1.45;
+  .agriCardCopy strong + span {
+    font-size: clamp(0.86rem, 3.2vw, 0.98rem);
+    line-height: 1.36;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .agriSection:not(.citySection)::before,
+  .citySection.agriSection::before {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+
+  .agriShowcaseAtmosphere,
+  .cityShowcaseAtmosphere,
+  .missionWorldShowcaseAtmosphere {
+    animation: none;
+    transform: none;
+    opacity: 1;
+    will-change: auto;
+  }
+
   .agriCard,
   .agriCardImage,
   .agriCardArrow {

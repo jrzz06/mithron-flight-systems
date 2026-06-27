@@ -1,14 +1,13 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LogoutForm } from "@/components/auth/logout-form";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { Button } from "@/components/ui/button";
+import { AccountNav } from "@/components/account";
 import {
   defaultPathForRole,
   isControlPanelRole,
   workspaceLabelForRole
 } from "@/lib/auth/access-control";
 import { getCurrentAuthContext } from "@/services/auth";
+import "@/app/account.css";
 
 export const dynamic = "force-dynamic";
 
@@ -28,44 +27,44 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const userId = context.userId;
   const isStaff = isControlPanelRole(role);
   const workspaceHref = isStaff ? defaultPathForRole(role) : null;
-  const hubLabel = workspaceLabelForRole(role);
+  const hubLabel = isStaff ? workspaceLabelForRole(role) : "My Account";
   const navLinks = isStaff
     ? [{ href: "/account/security", label: "Security" }]
     : customerLinks;
 
   return (
-    <main className="surface-page min-h-screen px-6 py-28 md:px-16">
+    <main className="account-hub surface-page min-h-screen px-4 py-20 sm:px-6 md:py-24 lg:px-8">
       <div className="mx-auto max-w-[1180px]">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="type-meta text-white/50">{isStaff ? "Workspace access" : "Account"}</p>
-            <h1 className="type-section mt-2">{hubLabel}</h1>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 md:mb-8">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--account-ink-muted)]">
+              {isStaff ? "Workspace access" : "Account"}
+            </p>
+            <h1 className="type-section mt-2 text-[var(--account-ink)]">{hubLabel}</h1>
             {isStaff ? (
-              <p className="mt-2 max-w-2xl text-sm text-white/60">
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--account-ink-muted)]">
                 Signed in as {role}. Use your workspace for day-to-day operations. This area is only for security settings.
               </p>
             ) : null}
           </div>
-          {userId ? <NotificationBell recipientId={userId} href={workspaceHref ?? "/account"} /> : null}
+          <div className="flex shrink-0 items-center gap-2">
+            <AccountNav
+              mode="mobile"
+              links={navLinks}
+              workspaceHref={workspaceHref}
+              workspaceLabel={isStaff ? workspaceLabelForRole(role) : undefined}
+            />
+            {userId ? <NotificationBell recipientId={userId} href={workspaceHref ?? "/account"} /> : null}
+          </div>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <aside className="grid h-fit gap-2 rounded-[24px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-4">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="rounded-xl px-4 py-3 text-sm font-medium text-white/80 transition hover:bg-white/5">
-                {link.label}
-              </Link>
-            ))}
-            {workspaceHref ? (
-              <Button asChild className="mt-2">
-                <Link href={workspaceHref}>Open workspace</Link>
-              </Button>
-            ) : null}
-            <LogoutForm
-              buttonClassName="inline-flex min-h-10 w-full items-center justify-center rounded-xl border border-[var(--surface-border)] bg-transparent px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/5"
-            />
-          </aside>
-          <section>{children}</section>
+        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8">
+          <AccountNav
+            links={navLinks}
+            workspaceHref={workspaceHref}
+            workspaceLabel={isStaff ? workspaceLabelForRole(role) : undefined}
+          />
+          <section className="min-w-0">{children}</section>
         </div>
       </div>
     </main>

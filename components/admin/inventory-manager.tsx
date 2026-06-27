@@ -1,14 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
-import { Archive, Download, MoreHorizontal, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import { Archive, Download, MoreHorizontal, Pencil, Plus, Search, Upload, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { memo, type ReactNode, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { StatusPill } from "@/components/platform/status-pill";
 import type { SimpleInventoryRow, SimpleInventoryStatus } from "@/services/simple-inventory-view";
-import { buildInventorySnapshot } from "@/services/inventory-csv";
-import { formatINR } from "@/lib/utils";
+import type { InventoryStockMetrics } from "@/services/inventory-metrics";
+import type { CatalogFilter } from "@/services/csv-inventory-source";
 
 type InventoryAction = (formData: FormData) => void | Promise<void>;
 
@@ -23,6 +25,8 @@ type InventoryManagerProps = {
   title?: string;
   page?: number;
   totalProductCount?: number;
+  inventoryMetrics?: InventoryStockMetrics;
+  catalogFilter?: CatalogFilter;
   hasNextPage?: boolean;
   previousPageHref?: string;
   nextPageHref?: string;
@@ -38,15 +42,6 @@ const statusOptions: Array<{ value: SimpleInventoryStatus; label: string }> = [
   { value: "discontinued", label: "Discontinued" },
   { value: "archived", label: "Archived" }
 ];
-
-function statusClass(status: SimpleInventoryStatus) {
-  if (status === "available") return "bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-400/15";
-  if (status === "low_stock") return "bg-amber-500/10 text-amber-200 ring-1 ring-amber-400/15";
-  if (status === "reserved") return "bg-sky-500/10 text-sky-200 ring-1 ring-sky-400/15";
-  if (status === "discontinued") return "bg-slate-500/10 text-slate-300 ring-1 ring-slate-400/15";
-  if (status === "out_of_stock" || status === "archived") return "bg-rose-500/10 text-rose-200 ring-1 ring-rose-400/15";
-  return "bg-slate-500/10 text-slate-300 ring-1 ring-slate-400/15";
-}
 
 function statusLabel(status: SimpleInventoryStatus) {
   return statusOptions.find((option) => option.value === status)?.label ?? "In stock";
@@ -73,7 +68,7 @@ function rowSearchText(row: SimpleInventoryRow) {
 }
 
 function rowKey(row: SimpleInventoryRow) {
-  return `${row.warehouseCode}::${row.productSlug}::${row.sku}`;
+  return row.productSlug;
 }
 
 function HiddenInventoryFields({
@@ -143,14 +138,6 @@ function InventoryDialogPortal({
       {children}
     </div>,
     document.body
-  );
-}
-
-function InventoryStatusPill({ status }: { status: SimpleInventoryStatus }) {
-  return (
-    <span data-inventory-status-pill className={`inline-flex h-7 items-center rounded-full px-2.5 text-xs font-semibold ${statusClass(status)}`}>
-      {statusLabel(status)}
-    </span>
   );
 }
 
@@ -291,38 +278,27 @@ const InventoryRow = memo(function InventoryRow({
         />
         ) : null}
       </td>
-      <td className="w-16 px-2 py-2.5">
-        <div className="grid size-11 place-items-center overflow-hidden rounded-lg border border-slate-800 bg-[#0b1017]">
-          {row.productImage ? (
-            <Image
-              src={row.productImage}
-              alt=""
-              width={44}
-              height={44}
-              sizes="44px"
-              loading="lazy"
-              className="h-full w-full object-contain p-1"
-            />
-          ) : (
-            <span className="text-xs font-semibold text-slate-500">{row.productName.slice(0, 1).toUpperCase()}</span>
-          )}
-        </div>
-      </td>
-      <td className="min-w-[260px] px-3 py-2.5">
-        <p className="max-w-[360px] truncate font-semibold text-slate-100">{row.productName}</p>
-        <p className="mt-0.5 truncate text-xs text-slate-500">{row.productSlug}</p>
-      </td>
       <td className="min-w-[150px] px-3 py-2.5 font-mono text-xs text-slate-300">{row.sku}</td>
-      <td className="min-w-[210px] px-3 py-2.5">
-        {readOnly || !action ? (
-          <span className="font-semibold text-slate-100">{formatNumber(row.quantity)}</span>
-        ) : (
-          <InlineStockEditor row={row} action={action} onLocalUpdate={onLocalUpdate} />
-        )}
+      <td className="min-w-[220px] px-3 py-2.5">
+        <Link href={`/admin/products?product_slug=${encodeURIComponent(row.productSlug)}`} className="max-w-[320px] truncate font-semibold text-slate-100 hover:text-emerald-200">
+          {row.productName}
+        </Link>
+        <p className="mt-0.5 truncate text-xs text-slate-500">{row.productSlug}</p>
+        {row.isArchived ? (
+          <span className="mt-1 inline-flex rounded-md bg-rose-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200 ring-1 ring-rose-400/20">
+            Archived
+          </span>
+        ) : null}
       </td>
+      <td className="min-w-[120px] px-3 py-2.5 text-xs text-slate-400">{row.warehouseCode || "—"}</td>
+      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-200">{formatNumber(row.quantity)}</td>
+      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-300">{formatNumber(row.reservedQuantity)}</td>
+      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-300">{formatNumber(row.availableQuantity)}</td>
+      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-300">{formatNumber(row.reorderThreshold)}</td>
       <td className="min-w-[132px] px-3 py-2.5">
-        <InventoryStatusPill status={row.stockStatus} />
+        <StatusPill status={row.stockStatus} />
       </td>
+      <td className="min-w-[140px] px-3 py-2.5 text-xs text-slate-500">{formatUpdated(row.lastUpdated)}</td>
       {readOnly ? null : (
       <td className="sticky right-0 min-w-[72px] bg-[#0f141b] px-3 py-2.5">
         <div className="flex items-center justify-end">
@@ -385,11 +361,11 @@ const InventoryRow = memo(function InventoryRow({
                 >
                   View product
                 </a>
-                {allowDelete ? (
+                {allowDelete && !row.isArchived ? (
                 <form
                   action={deleteAction}
                   onSubmit={(event) => {
-                    if (!window.confirm(`Delete ${row.productName}? Protected items are kept automatically.`)) {
+                    if (!window.confirm(`Archive ${row.productName}? Stock history and warehouse data will be preserved.`)) {
                       event.preventDefault();
                       return;
                     }
@@ -397,9 +373,9 @@ const InventoryRow = memo(function InventoryRow({
                   }}
                 >
                   <HiddenInventoryFields row={row} />
-                  <button data-inventory-action="delete" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-rose-300 hover:bg-rose-950/35">
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Delete
+                  <button data-inventory-action="archive-product" className="inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left font-semibold text-rose-300 hover:bg-rose-950/35">
+                    <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                    Archive product
                   </button>
                 </form>
                 ) : null}
@@ -424,6 +400,8 @@ export function InventoryManager({
   title = "Inventory",
   page = 1,
   totalProductCount,
+  inventoryMetrics,
+  catalogFilter = "active",
   hasNextPage = false,
   previousPageHref,
   nextPageHref,
@@ -433,7 +411,6 @@ export function InventoryManager({
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [statusFilter, setStatusFilter] = useState<"all" | SimpleInventoryStatus>("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockRangeFilter, setStockRangeFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -452,7 +429,6 @@ export function InventoryManager({
     return mergedRows.filter((row) => {
       const matchesSearch = normalizedQuery ? rowSearchText(row).includes(normalizedQuery) : true;
       const matchesStatus = statusFilter === "all" ? true : row.stockStatus === statusFilter;
-      const matchesCategory = categoryFilter === "all" ? true : row.category === categoryFilter;
       const matchesRange = stockRangeFilter === "all"
         ? true
         : stockRangeFilter === "zero"
@@ -460,12 +436,10 @@ export function InventoryManager({
           : stockRangeFilter === "low"
             ? row.quantity > 0 && row.quantity <= Math.max(5, row.reorderThreshold)
             : row.quantity > 10;
-      return matchesSearch && matchesStatus && matchesCategory && matchesRange;
+      return matchesSearch && matchesStatus && matchesRange;
     });
-  }, [categoryFilter, deferredQuery, mergedRows, statusFilter, stockRangeFilter]);
+  }, [deferredQuery, mergedRows, statusFilter, stockRangeFilter]);
   const visibleRows = filteredRows;
-  const inventorySummary = useMemo(() => buildInventorySnapshot(filteredRows), [filteredRows]);
-  const categoryOptions = useMemo(() => Array.from(new Set(mergedRows.map((row) => row.category).filter(Boolean))).sort(), [mergedRows]);
   const mobileRowVirtualizer = useWindowVirtualizer({
     count: visibleRows.length,
     estimateSize: () => 220,
@@ -532,30 +506,43 @@ export function InventoryManager({
         </div>
       </div>
 
-      <div data-inventory-source-report className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+      <div data-inventory-source-report className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
-          <p className="text-xs text-slate-500">Products</p>
-          <p className="mt-1 text-lg font-semibold text-slate-100">{formatNumber(inventorySummary.productCount)}</p>
+          <p className="text-xs text-slate-500">Total inventory items</p>
+          <p className="mt-1 text-lg font-semibold text-slate-100">{formatNumber(inventoryMetrics?.totalInventoryItems ?? totalProductCount ?? 0)}</p>
         </div>
         <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
-          <p className="text-xs text-slate-500">Stock units</p>
-          <p className="mt-1 text-lg font-semibold text-slate-100">{formatNumber(inventorySummary.stockUnits)}</p>
-        </div>
-        <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
-          <p className="text-xs text-slate-500">Inventory value</p>
-          <p className="mt-1 text-lg font-semibold text-slate-100">{formatINR(inventorySummary.totalValue)}</p>
+          <p className="text-xs text-slate-500">In stock</p>
+          <p className="mt-1 text-lg font-semibold text-emerald-200">{formatNumber(inventoryMetrics?.inStock ?? 0)}</p>
         </div>
         <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Low stock</p>
-          <p className="mt-1 text-lg font-semibold text-amber-200">{formatNumber(inventorySummary.lowStockCount)}</p>
+          <p className="mt-1 text-lg font-semibold text-amber-200">{formatNumber(inventoryMetrics?.lowStock ?? 0)}</p>
         </div>
         <div className="mithron-elevated-card rounded-lg border border-slate-800 bg-[#10151d] p-3">
           <p className="text-xs text-slate-500">Out of stock</p>
-          <p className="mt-1 text-lg font-semibold text-rose-200">{formatNumber(inventorySummary.outOfStockCount)}</p>
+          <p className="mt-1 text-lg font-semibold text-rose-200">{formatNumber(inventoryMetrics?.outOfStock ?? 0)}</p>
         </div>
       </div>
 
-      <div data-inventory-sticky-toolbar className="sticky top-0 z-20 grid gap-2 rounded-xl border border-slate-800 bg-[#10151d]/95 p-2 backdrop-blur-sm md:grid-cols-[minmax(220px,1fr)_160px_170px_160px_auto]">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-slate-500">Catalog:</span>
+        {(["active", "archived", "all"] as const).map((filter) => (
+          <Link
+            key={filter}
+            href={`/admin/inventory?catalog=${filter}`}
+            className={`inline-flex h-8 items-center rounded-lg border px-3 font-semibold capitalize ${
+              catalogFilter === filter
+                ? "border-emerald-400/30 bg-emerald-950/30 text-emerald-100"
+                : "border-slate-700 bg-[#151c26] text-slate-300 hover:border-slate-600"
+            }`}
+          >
+            {filter}
+          </Link>
+        ))}
+      </div>
+
+      <div data-inventory-sticky-toolbar className="sticky top-0 z-20 grid gap-2 rounded-xl border border-slate-800 bg-[#10151d]/95 p-2 backdrop-blur-sm md:grid-cols-[minmax(220px,1fr)_160px_160px_auto]">
         <label className="grid gap-1 text-xs font-medium text-slate-500">
           <span className="sr-only">Search</span>
           <span className="flex items-center gap-1 text-slate-400">
@@ -565,12 +552,12 @@ export function InventoryManager({
           <input
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
-            placeholder="Search product, SKU, category"
+            placeholder="Search product or SKU"
             className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-slate-500"
           />
         </label>
         <label className="grid gap-1 text-xs font-medium text-slate-500">
-          Status
+          Stock status
           <select
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.currentTarget.value as typeof statusFilter)}
@@ -579,19 +566,6 @@ export function InventoryManager({
             <option value="all">All</option>
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-medium text-slate-500">
-          Category
-          <select
-            value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.currentTarget.value)}
-            className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-slate-500"
-          >
-            <option value="all">All categories</option>
-            {categoryOptions.map((category) => (
-              <option key={category} value={category}>{category}</option>
             ))}
           </select>
         </label>
@@ -627,7 +601,7 @@ export function InventoryManager({
       ) : null}
 
       <div className="hidden max-h-[70vh] overflow-auto rounded-xl border border-slate-800 md:block">
-        <table data-inventory-table className="min-w-[920px] w-full border-collapse bg-[#0f141b]">
+        <table data-inventory-table className="platform-table min-w-[1100px] w-full border-collapse bg-[var(--platform-surface)]">
           <thead className="sticky top-0 z-20 bg-[#172131] text-left text-xs font-semibold text-slate-300">
             <tr>
               {!readOnly ? (
@@ -651,11 +625,15 @@ export function InventoryManager({
                 />
               </th>
               ) : null}
-              <th className="w-16 px-2 py-3">Product image</th>
-              <th className="px-3 py-3">Product name</th>
               <th className="px-3 py-3">SKU</th>
-              <th className="px-3 py-3">Stock quantity</th>
-              <th className="px-3 py-3">Inventory status</th>
+              <th className="px-3 py-3">Product</th>
+              <th className="px-3 py-3">Warehouse</th>
+              <th className="px-3 py-3">Qty</th>
+              <th className="px-3 py-3">Reserved</th>
+              <th className="px-3 py-3">Available</th>
+              <th className="px-3 py-3">Reorder</th>
+              <th className="px-3 py-3">Status</th>
+              <th className="px-3 py-3">Updated</th>
               {!readOnly ? (
               <th className="sticky right-0 bg-[#172131] px-3 py-3 text-right">Actions</th>
               ) : null}
@@ -686,7 +664,7 @@ export function InventoryManager({
               />
             )) : (
               <tr>
-                <td colSpan={readOnly ? 5 : 7} className="px-4 py-10 text-center text-sm text-slate-500">No inventory rows match the current filters.</td>
+                <td colSpan={readOnly ? 9 : 11} className="px-4 py-10 text-center text-sm text-slate-500">No inventory rows match the current filters.</td>
               </tr>
             )}
           </tbody>
@@ -708,18 +686,12 @@ export function InventoryManager({
                   className="content-visibility-auto absolute left-0 top-0 w-full rounded-xl border border-slate-800 bg-[#10151d] p-3 [contain-intrinsic-size:220px] [content-visibility:auto]"
                   style={{ transform: `translateY(${virtualRow.start}px)` }}
                 >
-            <div className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-start gap-3">
-              <div className="grid size-12 place-items-center overflow-hidden rounded-lg border border-slate-800 bg-[#0b1017]">
-                {row.productImage ? (
-                  <Image src={row.productImage} alt="" width={48} height={48} sizes="48px" loading="lazy" className="h-full w-full object-contain p-1" />
-                ) : (
-                  <span className="text-xs font-semibold text-slate-500">{row.productName.slice(0, 1).toUpperCase()}</span>
-                )}
-              </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-100">{row.productName}</p>
                 <p className="mt-1 truncate font-mono text-[11px] text-slate-500">{row.sku}</p>
                 <p className="mt-1 text-[11px] text-slate-600">{formatUpdated(row.lastUpdated)}</p>
+                {row.isArchived ? <p className="mt-1 text-[10px] font-semibold uppercase text-rose-300">Archived</p> : null}
               </div>
               {!readOnly ? (
               <input
@@ -732,7 +704,7 @@ export function InventoryManager({
               ) : null}
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <InventoryStatusPill status={row.stockStatus} />
+              <StatusPill status={row.stockStatus} />
               {!readOnly && action ? (
               <button
                 type="button"
@@ -855,6 +827,14 @@ export function InventoryManager({
                     <input name="quantity" type="number" min={0} defaultValue={editingRow.quantity} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70" />
                   </label>
                   <label className="grid gap-1 text-xs font-medium text-slate-500">
+                    Reserved quantity
+                    <input name="reserved_quantity" type="number" min={0} defaultValue={editingRow.reservedQuantity} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70" />
+                  </label>
+                  <label className="grid gap-1 text-xs font-medium text-slate-500">
+                    Reorder level
+                    <input name="reorder_threshold" type="number" min={0} defaultValue={editingRow.reorderThreshold} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70" />
+                  </label>
+                  <label className="grid gap-1 text-xs font-medium text-slate-500">
                     Status
                     <select name="stock_status" defaultValue={editingRow.stockStatus} className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 outline-none focus:border-emerald-400/70">
                       {statusOptions.map((option) => (
@@ -862,11 +842,11 @@ export function InventoryManager({
                       ))}
                     </select>
                   </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500">
+                  <label className="grid gap-1 text-xs font-medium text-slate-500 sm:col-span-2">
                     SKU
                     <input value={editingRow.sku} readOnly className="h-10 rounded-lg border border-slate-800 bg-[#0b1017] px-3 font-mono text-xs text-slate-300" />
                   </label>
-                  <label className="grid gap-1 text-xs font-medium text-slate-500">
+                  <label className="grid gap-1 text-xs font-medium text-slate-500 sm:col-span-2">
                     Warehouse location
                     <input value={editingRow.warehouseCode} readOnly className="h-10 rounded-lg border border-slate-800 bg-[#0b1017] px-3 text-sm text-slate-300" />
                   </label>
@@ -924,8 +904,8 @@ export function InventoryManager({
               </select>
             </label>
             <label className="grid gap-1 text-xs font-medium text-slate-500">
-              Category
-              <input name="bulk_category" placeholder="Optional category" className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 placeholder:text-slate-600" />
+              Reorder level
+              <input name="bulk_reorder_threshold" type="number" min={0} placeholder="Optional reorder level" className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 placeholder:text-slate-600" />
             </label>
             <OperationalSubmitButton
               pendingLabel="Updating"

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import {
   defaultPathForRole,
   isControlPanelRole,
@@ -9,12 +10,17 @@ import { SecurityPanel } from "./security-panel";
 
 export default async function AccountSecurityPage() {
   const context = await getCurrentAuthContext();
+  const role = context.role ?? "user";
+  const isStaff = isControlPanelRole(role);
+
+  if (!isStaff) {
+    redirect("/account/profile#security");
+  }
+
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const email = typeof data?.claims?.email === "string" ? data.claims.email : null;
-  const role = context.role ?? "user";
-  const isStaff = isControlPanelRole(role);
-  const workspaceHref = isStaff ? defaultPathForRole(role) : null;
+  const workspaceHref = defaultPathForRole(role);
   const workspaceLabel = workspaceLabelForRole(role);
 
   return (

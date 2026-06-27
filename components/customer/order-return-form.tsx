@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AccountField, AccountTextarea } from "@/components/account";
+import { Button } from "@/components/ui/button";
 
 export function OrderReturnForm({ orderId, orderItemId, disabled }: { orderId: string; orderItemId?: string; disabled?: boolean }) {
   const [reason, setReason] = useState("");
@@ -19,43 +21,37 @@ export function OrderReturnForm({ orderId, orderItemId, disabled }: { orderId: s
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       setStatus("error");
-      setMessage(typeof payload.error === "string" ? payload.error : "Return request failed.");
+      setMessage(typeof payload.error === "string" ? payload.error : "We couldn't submit your return request. Please try again.");
       return;
     }
     setStatus("done");
-    setMessage("Return request submitted. We will email you when it is reviewed.");
+    setMessage("Your return request has been submitted. We'll email you when it's reviewed.");
     setReason("");
   }
 
   if (disabled) {
-    return <p className="text-sm text-white/50">Returns are available after delivery.</p>;
+    return <p className="text-sm text-[var(--account-ink-muted)]">Returns are available after delivery.</p>;
   }
 
   if (status === "done") {
-    return <p className="text-sm text-emerald-400">{message}</p>;
+    return <p className="text-sm text-[var(--account-accent)]">{message}</p>;
   }
 
   return (
     <form onSubmit={onSubmit} className="grid gap-3">
-      <label className="grid gap-2 text-sm text-white/70">
-        Reason for return
-        <textarea
+      <AccountField label="Reason for return">
+        <AccountTextarea
           required
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           rows={3}
-          className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-page)] px-4 py-3 text-white"
-          placeholder="Describe the issue or reason for return"
+          placeholder="Tell us why you'd like to return this order"
         />
-      </label>
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        className="inline-flex h-10 w-fit items-center justify-center rounded-xl border border-white/15 px-4 text-sm text-white transition hover:bg-white/5 disabled:opacity-60"
-      >
+      </AccountField>
+      <Button type="submit" disabled={status === "loading"} variant="outline" size="sm">
         {status === "loading" ? "Submitting…" : "Request return"}
-      </button>
-      {status === "error" && message ? <p className="text-sm text-red-400">{message}</p> : null}
+      </Button>
+      {status === "error" && message ? <p className="text-sm text-[var(--account-danger)]">{message}</p> : null}
     </form>
   );
 }

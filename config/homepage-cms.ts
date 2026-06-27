@@ -121,14 +121,14 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
     agri: {
       eyebrow: "Solutions for Growth",
       title: "Agri Community World",
-      body: "Join India's largest agricultural drone ecosystem. Register as a pilot, farmer, drone owner, or service provider and access training, financing, bookings, and support across the AGRONE network.",
+      body: "Register, book, and finance drones across India's AGRONE network.",
       href: "/agriculture",
       cta: "Explore Agri Drones",
       mediaNote: "",
       tiles: [
         {
-          label: "AGRONE Drone Owner Registration",
-          body: "Connect your drone to AGRONE farmers, pilots, and service demand.",
+          label: "Drone Owner Registration",
+          body: "Register your drone on the AGRONE network.",
           operator: "AGRONE Network",
           model: "DRONE OWNER NETWORK",
           location: "Pan-India",
@@ -137,8 +137,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: "https://drone.mithronsmart.com/droneowner_reg"
         },
         {
-          label: "AGRONE Pilot Registration",
-          body: "Join certified pilots, access training, and receive AGRONE missions.",
+          label: "Pilot Registration",
+          body: "Join certified pilots and receive AGRONE missions.",
           operator: "AGRONE Network",
           model: "AGRONE PILOT NETWORK",
           location: "Pilot network",
@@ -147,8 +147,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: "https://drone.mithronsmart.com/register"
         },
         {
-          label: "All India Farmer Drone Booking",
-          body: "Book spraying, mapping, and crop monitoring anywhere in India.",
+          label: "Farmer Drone Booking",
+          body: "Book spraying and crop monitoring across India.",
           operator: "AGRONE Network",
           model: "NATIONWIDE BOOKING",
           location: "Booking desk",
@@ -158,7 +158,7 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
         },
         {
           label: "Smart Farmer Registration",
-          body: "Access AGRONE services, crop insights, and on-demand drone support.",
+          body: "Access AGRONE services and on-demand drone support.",
           operator: "AGRONE Network",
           model: "SMART FARMER PROGRAM",
           location: "Farmer network",
@@ -167,8 +167,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: "https://drone.mithronsmart.com/farmer"
         },
         {
-          label: "Agri Drone Loan & EMI Check",
-          body: "Check loan eligibility, compare EMI plans, and explore AGRONE financing.",
+          label: "Drone Loan and EMI",
+          body: "Check eligibility and compare financing plans.",
           operator: "AGRONE Network",
           model: "FINANCING SUPPORT",
           location: "Loan check",
@@ -181,14 +181,14 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
     city: {
       eyebrow: "Solutions for Future Cities",
       title: "City Drone World",
-      body: "Urban drone platforms for booking, pilot networks, training, service care, and technician support across modern city operations.",
+      body: "Urban platforms for rentals, training, care, and technician support.",
       href: "/surveillance",
       cta: "Explore City Drones",
       mediaNote: "",
       tiles: [
         {
           label: "Dronelancer Model",
-          body: "Pilot marketplace connecting operators, routes, and on-demand city jobs.",
+          body: "Pilot marketplace for on-demand city jobs.",
           operator: "Mithron City Network",
           model: "DRONELANCER MODEL",
           location: "Pilot grid",
@@ -197,8 +197,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: ""
         },
         {
-          label: "City Drone Rental Services App",
-          body: "Book rentals, dispatch operators, and track project earnings.",
+          label: "Drone Rental App",
+          body: "Book rentals and track project earnings.",
           operator: "Mithron City Network",
           model: "RENTAL SERVICES APP",
           location: "Booking console",
@@ -207,8 +207,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: ""
         },
         {
-          label: "All Drone Academic",
-          body: "Pilot training, simulation labs, and certified urban flight programs.",
+          label: "Drone Academic",
+          body: "Pilot training and certified urban flight programs.",
           operator: "Mithron Academy Network",
           model: "ALL DRONE ACADEMIC",
           location: "Training hub",
@@ -217,8 +217,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: ""
         },
         {
-          label: "Drone FranchiseCare Center",
-          body: "Franchise care centers for repair, spares, and local maintenance.",
+          label: "FranchiseCare Center",
+          body: "Local repair, spares, and maintenance support.",
           operator: "Mithron Service Network",
           model: "FRANCHISECARE CENTER",
           location: "Care workshop",
@@ -227,8 +227,8 @@ export const defaultHomepageCmsContent: HomepageCmsContent = {
           href: ""
         },
         {
-          label: "Drone Technician Aggregation",
-          body: "Field technicians for diagnostics, tools, and maintenance coordination.",
+          label: "Technician Network",
+          body: "Field diagnostics and maintenance coordination.",
           operator: "Mithron Service Network",
           model: "TECHNICIAN AGGREGATION",
           location: "Field network",

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { recordClientAuthEvent } from "@/lib/auth/audit-client";
 import { mapAuthErrorForClient } from "@/lib/auth/client-errors";
@@ -47,6 +47,9 @@ function EmailSignInForm({
   password,
   busy,
   status,
+  hasError,
+  emailFieldId,
+  passwordFieldId,
   onEmailChange,
   onPasswordChange,
   onSubmit
@@ -55,16 +58,19 @@ function EmailSignInForm({
   password: string;
   busy: boolean;
   status: LoginStatus;
+  hasError: boolean;
+  emailFieldId: string;
+  passwordFieldId: string;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
     <form onSubmit={onSubmit} className={styles.authForm} data-testid="login-auth-form">
-      <label className={styles.field}>
-        <span className={styles.labelText}>Email</span>
+      <label className={styles.field} htmlFor={emailFieldId}>
+        <span className={styles.labelText}>Email address</span>
         <input
-          aria-label="Email"
+          id={emailFieldId}
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
           required
@@ -72,24 +78,26 @@ function EmailSignInForm({
           inputMode="email"
           autoComplete="email"
           className={styles.authInput}
-          placeholder="name@company.com"
+          placeholder="you@example.com"
+          aria-invalid={hasError || undefined}
         />
       </label>
-      <label className={styles.field}>
+      <label className={styles.field} htmlFor={passwordFieldId}>
         <span className={styles.labelText}>Password</span>
         <input
-          aria-label="Password"
+          id={passwordFieldId}
           value={password}
           onChange={(event) => onPasswordChange(event.target.value)}
           required
           type="password"
           autoComplete="current-password"
           className={styles.authInput}
-          placeholder="Enter your password"
+          placeholder="Your password"
+          aria-invalid={hasError || undefined}
         />
       </label>
       <div className={styles.formMeta}>
-        <Link className={styles.recoveryLink} href="/forgot-password">Forgot password?</Link>
+        <Link className={styles.recoveryLink} href="/forgot-password">Forgot your password?</Link>
       </div>
       <button
         type="submit"
@@ -102,7 +110,7 @@ function EmailSignInForm({
           ? "Signing in…"
           : status === "loading-role"
             ? "Loading…"
-            : "Continue with Email"}
+            : "Sign in"}
       </button>
     </form>
   );
@@ -110,6 +118,9 @@ function EmailSignInForm({
 
 export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormProps) {
   const socialEnabled = hasSocialSignIn(providers);
+  const emailSectionId = useId();
+  const emailFieldId = useId();
+  const passwordFieldId = useId();
   const isMountedRef = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -135,42 +146,72 @@ export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormP
     setStatus("authenticating");
     setError(null);
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(auditToken ? { "x-auth-audit-token": auditToken } : {})
-      },
-      body: JSON.stringify({
+    try {
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
-        password: credentialPassword,
-        next: redirectNext
-      }),
-      credentials: "same-origin"
-    });
-    const payload = await response.json().catch(() => ({})) as { error?: string; redirectPath?: string };
+        password: credentialPassword
+      });
 
-    if (!isMountedRef.current) return;
+      if (!isMountedRef.current) return;
 
-    if (!response.ok) {
+      if (signInError) {
+        await recordClientAuthEvent("auth.failed_login", {
+          email: normalizedEmail,
+          error: signInError.message,
+          provider: "email"
+        }, auditToken);
+        if (!isMountedRef.current) return;
+        setStatus("idle");
+        setError(mapAuthErrorForClient(signInError));
+        return;
+      }
+
+      setStatus("loading-role");
+
+      const provisionResponse = await fetch("/api/auth/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ next: redirectNext }),
+        credentials: "same-origin"
+      });
+      const payload = await provisionResponse.json().catch(() => ({})) as {
+        error?: string;
+        redirectPath?: string;
+      };
+
+      if (!isMountedRef.current) return;
+
+      if (!provisionResponse.ok) {
+        await supabase.auth.signOut();
+        await recordClientAuthEvent("auth.failed_login", {
+          email: normalizedEmail,
+          error: typeof payload.error === "string" ? payload.error : "Sign in failed.",
+          provider: "email"
+        }, auditToken);
+        if (!isMountedRef.current) return;
+        setStatus("idle");
+        setError(mapAuthErrorForClient(payload.error));
+        return;
+      }
+
+      await recordClientAuthEvent("auth.login", {
+        email: normalizedEmail,
+        provider: "email"
+      }, auditToken);
+      if (!isMountedRef.current) return;
+      setRedirectTo(typeof payload.redirectPath === "string" ? payload.redirectPath : "/account");
+    } catch (authError) {
+      if (!isMountedRef.current) return;
       await recordClientAuthEvent("auth.failed_login", {
         email: normalizedEmail,
-        error: typeof payload.error === "string" ? payload.error : "Sign in failed.",
+        error: authError instanceof Error ? authError.message : "Sign in failed.",
         provider: "email"
       }, auditToken);
       if (!isMountedRef.current) return;
       setStatus("idle");
-      setError(mapAuthErrorForClient(payload.error));
-      return;
+      setError(mapAuthErrorForClient(authError));
     }
-
-    await recordClientAuthEvent("auth.login", {
-      email: normalizedEmail,
-      provider: "email"
-    }, auditToken);
-    if (!isMountedRef.current) return;
-    setStatus("loading-role");
-    setRedirectTo(typeof payload.redirectPath === "string" ? payload.redirectPath : "/account");
   }
 
   async function submitEmail(event: FormEvent<HTMLFormElement>) {
@@ -220,8 +261,7 @@ export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormP
     <div className={styles.authCard} data-testid="login-auth-card">
       <div data-testid="login-guest-account">
         {socialEnabled ? (
-          <div className={styles.methodStack} data-testid="login-social-methods">
-            <p className={styles.methodLead}>Shop or browse as a guest</p>
+          <section className={styles.methodStack} data-testid="login-social-methods" aria-label="Continue with Google">
             {providers.google ? (
               <button
                 type="button"
@@ -235,28 +275,31 @@ export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormP
                 <span>{status === "google" ? "Signing in…" : "Continue with Google"}</span>
               </button>
             ) : null}
-          </div>
+          </section>
         ) : null}
 
         {showInlineEmail && socialEnabled ? (
           <div className={styles.methodDivider} aria-hidden="true">
-            <span>Team access</span>
+            <span>or</span>
           </div>
         ) : null}
 
         {showInlineEmail ? (
-          <>
-            <p className={styles.methodLead}>Authorized work account</p>
+          <section className={styles.emailSection} aria-labelledby={emailSectionId}>
+            <h3 className={styles.methodHeading} id={emailSectionId}>Sign in with email</h3>
             <EmailSignInForm
               email={email}
               password={password}
               busy={busy}
               status={status}
+              hasError={Boolean(error)}
+              emailFieldId={emailFieldId}
+              passwordFieldId={passwordFieldId}
               onEmailChange={setEmail}
               onPasswordChange={setPassword}
               onSubmit={submitEmail}
             />
-          </>
+          </section>
         ) : null}
       </div>
 

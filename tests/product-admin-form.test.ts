@@ -77,11 +77,12 @@ describe("product admin draft form", () => {
       },
       fields: {
         name: "Agri Kisan Drone Small",
-        tagline: "Compact field deployment platform",
+        tagline: "Agri Kisan Drone Small catalog product",
         price: 120000,
         compare_at: 149000,
         badge: "New",
         description: null,
+        description_json: null,
         on_sale: false,
         discount_type: null,
         discount_value: null,

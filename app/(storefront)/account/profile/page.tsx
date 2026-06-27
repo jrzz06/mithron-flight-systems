@@ -1,7 +1,16 @@
-import Link from "next/link";
-import { createClient } from "@/lib/server";
 import { redirect } from "next/navigation";
+import {
+  AccountCard,
+  AccountField,
+  AccountInput,
+  AccountPage as AccountPageShell,
+  AccountSection
+} from "@/components/account";
+import { LogoutForm } from "@/components/auth/logout-form";
+import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/server";
 import { updateProfileFormAction } from "./actions";
+import { ProfileSecurityPanel } from "./profile-security-panel";
 
 async function getProfile(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase
@@ -33,53 +42,52 @@ export default async function AccountProfilePage() {
   const displayName = profile?.display_name?.trim() || metadataName;
 
   return (
-    <div className="rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8">
-      <h2 className="type-section">Profile</h2>
-      <p className="mt-2 text-sm text-white/60">
-        Keep your contact details up to date. This information is used to pre-fill enquiry forms.
-      </p>
-      <form action={updateProfileFormAction} className="mt-6 grid gap-4 max-w-lg">
-        <label className="grid gap-2 text-sm">
-          <span className="text-white/70">Account email</span>
-          <input
-            value={email}
-            readOnly
-            disabled
-            className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white/70"
-            aria-readonly="true"
+    <AccountPageShell>
+      <AccountCard>
+        <AccountSection
+          title="Profile"
+          description="Update your name and phone number for orders and enquiries."
+        >
+          <form action={updateProfileFormAction} className="grid max-w-lg gap-4">
+            <AccountField label="Email address">
+              <AccountInput value={email} readOnly disabled aria-readonly="true" />
+            </AccountField>
+            <AccountField label="Full name">
+              <AccountInput
+                name="display_name"
+                defaultValue={displayName}
+                placeholder="Your name"
+                autoComplete="name"
+              />
+            </AccountField>
+            <AccountField label="Phone number">
+              <AccountInput
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                defaultValue={String(profile?.phone ?? "")}
+                placeholder="+91 98765 43210"
+              />
+            </AccountField>
+            <div>
+              <Button type="submit">Save profile</Button>
+            </div>
+          </form>
+        </AccountSection>
+      </AccountCard>
+
+      <div id="security">
+        <ProfileSecurityPanel email={email || null} />
+      </div>
+
+      <AccountCard>
+        <AccountSection title="Account" description="Sign out of your account on this device.">
+          <LogoutForm
+            buttonClassName="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--account-danger)] bg-transparent px-5 py-2 text-sm font-medium text-[var(--account-danger)] transition hover:bg-[color-mix(in_srgb,var(--account-danger)_8%,white)]"
           />
-        </label>
-        <label className="grid gap-2 text-sm">
-          <span className="text-white/70">Display name</span>
-          <input
-            name="display_name"
-            defaultValue={displayName}
-            placeholder="Your name as shown on enquiries"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white"
-          />
-        </label>
-        <label className="grid gap-2 text-sm">
-          <span className="text-white/70">Phone number</span>
-          <input
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            defaultValue={String(profile?.phone ?? "")}
-            placeholder="+91XXXXXXXXXX"
-            className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white"
-          />
-        </label>
-        <button type="submit" className="rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-black w-fit">
-          Save profile
-        </button>
-      </form>
-      <p className="mt-6 text-sm text-white/60">
-        Need to update your password?{" "}
-        <Link href="/account/security" className="text-emerald-400 underline-offset-2 hover:underline">
-          Go to security settings
-        </Link>
-      </p>
-    </div>
+        </AccountSection>
+      </AccountCard>
+    </AccountPageShell>
   );
 }

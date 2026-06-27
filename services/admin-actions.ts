@@ -219,19 +219,26 @@ function headers(serviceRoleKey: string, prefer = "return=representation") {
 
 async function mutationErrorMessage(response: Response, table: string, action: string) {
   const text = await response.text();
-  if (!text) return `Failed to ${action} ${table} record: ${response.status} ${response.statusText}`;
+  // Log full internal details server-side only; never expose to callers
+  if (!text) {
+    console.error(`[admin-actions] ${action} ${table} failed: ${response.status} ${response.statusText}`);
+    return `Failed to ${action} ${table} record.`;
+  }
 
   try {
     const parsed = JSON.parse(text) as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
-    const details = [
+    const internalDetails = [
       typeof parsed.message === "string" ? parsed.message : "",
       typeof parsed.details === "string" ? parsed.details : "",
-      typeof parsed.hint === "string" ? parsed.hint : "",
+      typeof parsed.hint === "string" ? `hint: ${parsed.hint}` : "",
       typeof parsed.code === "string" ? `code=${parsed.code}` : ""
     ].filter(Boolean).join(" ");
-    return `Failed to ${action} ${table} record: ${response.status} ${response.statusText}${details ? ` - ${details}` : ""}`;
+    console.error(`[admin-actions] ${action} ${table} failed: ${response.status} ${response.statusText}${internalDetails ? ` - ${internalDetails}` : ""}`);
+    const codeSuffix = typeof parsed.code === "string" ? ` code=${parsed.code}` : "";
+    return `Failed to ${action} ${table} record.${codeSuffix}`;
   } catch {
-    return `Failed to ${action} ${table} record: ${response.status} ${response.statusText} - ${text.slice(0, 500)}`;
+    console.error(`[admin-actions] ${action} ${table} failed: ${response.status} ${response.statusText} - ${text.slice(0, 500)}`);
+    return `Failed to ${action} ${table} record.`;
   }
 }
 
@@ -1025,12 +1032,31 @@ export function createDeploymentTask(payload: JsonRecord, actorId: string | null
   return createAdminRecord("staff_tasks", payload, actorId, env);
 }
 
-export function upsertInventoryRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
-  return upsertAdminRecord("inventory", "product_slug,sku", payload, actorId, env);
+export async function upsertInventoryRecord(
+  payload: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  try {
+    return await upsertAdminRecord("inventory", "product_slug", payload, actorId, env, options);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Legacy databases still use UNIQUE (product_slug, sku); PostgREST returns 42P10 for mismatched on_conflict targets.
+    if (message.includes("code=42P10")) {
+      return upsertAdminRecord("inventory", "product_slug,sku", payload, actorId, env, options);
+    }
+    throw error;
+  }
 }
 
-export function upsertWarehouseStockRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
-  return upsertAdminRecord("warehouse_stock", "warehouse_code,product_slug,sku", payload, actorId, env);
+export function upsertWarehouseStockRecord(
+  payload: JsonRecord,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: AdminMutationOptions = {}
+) {
+  return upsertAdminRecord("warehouse_stock", "warehouse_code,product_slug,sku", payload, actorId, env, options);
 }
 
 export function createInventoryMovementRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {

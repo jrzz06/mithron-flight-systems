@@ -4,6 +4,7 @@ import { normalizeCmsRole } from "@/lib/auth/permissions";
 import { getSupabaseAdminConfig, type SupabaseAdminConfig } from "@/lib/env";
 import { buildEnterpriseCleanupReadiness } from "@/services/enterprise-cleanup";
 import { countPublishedProductsWithoutPrimaryLink } from "@/services/catalog";
+import { isWarehouseEligible } from "@/lib/orders/lifecycle";
 
 type EnvSource = Record<string, string | undefined>;
 type AdminSnapshotStatus = "LIVE" | "PARTIAL" | "BLOCKED";
@@ -44,6 +45,7 @@ type WarehouseSnapshotTable =
 type WarehouseSnapshotInput = EnvSource | {
   env?: EnvSource;
   scope?: WarehouseSnapshotScope;
+  ordersFilter?: "all" | "warehouse";
 };
 
 type CountMetric = {
@@ -345,13 +347,14 @@ function isWarehouseSnapshotScope(value: unknown): value is WarehouseSnapshotSco
 }
 
 function resolveWarehouseSnapshotInput(input: WarehouseSnapshotInput = process.env) {
-  const isOptions = Boolean(input && typeof input === "object" && ("scope" in input || "env" in input));
-  const options = isOptions ? input as { env?: EnvSource; scope?: unknown } : null;
+  const isOptions = Boolean(input && typeof input === "object" && ("scope" in input || "env" in input || "ordersFilter" in input));
+  const options = isOptions ? input as { env?: EnvSource; scope?: unknown; ordersFilter?: "all" | "warehouse" } : null;
   const scope = isWarehouseSnapshotScope(options?.scope) ? options.scope : "full";
   return {
     env: options ? (options.env ?? process.env) : (input as EnvSource),
     scope,
-    tables: warehouseSnapshotScopes[scope]
+    tables: warehouseSnapshotScopes[scope],
+    ordersFilter: options?.ordersFilter ?? "warehouse"
   };
 }
 
@@ -1131,7 +1134,7 @@ function warehouseSnapshotLimitWarning(tables: Array<{ table: string; rows: Admi
 }
 
 export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput = process.env) => {
-  const { env: resolvedEnv, tables } = resolveWarehouseSnapshotInput(input);
+  const { env: resolvedEnv, tables, ordersFilter } = resolveWarehouseSnapshotInput(input);
   const config = getSupabaseAdminConfig(resolvedEnv);
 
   const emptyData = {
@@ -1164,7 +1167,7 @@ export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput =
     maybeFetch("inventory", "inventory", `select=product_slug,sku,variant_id,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at&order=updated_at.desc&limit=120`),
     maybeFetch("stock", "warehouse_stock", `select=id,warehouse_code,product_slug,sku,variant_id,available_quantity,committed_quantity,last_counted_at,updated_at&order=updated_at.desc&limit=120`),
     maybeFetch("movements", "inventory_movements", `select=id,movement_type,product_slug,sku,quantity_before,quantity_after,quantity_delta,reason_code,actor_user_id,related_order_id,related_shipment_id,created_at&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
-    maybeFetch("orders", "orders", `select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,metadata,timeline,shipment_tracking,created_at,updated_at&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
+    maybeFetch("orders", "orders", `select=id,order_number,customer_email,status,payment_status,fulfillment_status,channel,total,currency,metadata,timeline,shipment_tracking,archived_at,deleted_at,created_at,updated_at&order=created_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
     maybeFetch("orderItems", "order_items", `select=id,order_id,product_slug,product_name,sku,quantity,line_total,metadata,created_at&order=created_at.desc&limit=120`),
     maybeFetch("shipments", "shipments", `select=id,shipment_number,shipment_status,order_id,warehouse_id,carrier_name,tracking_number,updated_at,created_at&order=updated_at.desc&limit=${WAREHOUSE_SNAPSHOT_ROW_LIMIT}`),
     maybeFetch("shipmentItems", "shipment_items", `select=id,shipment_id,order_item_id,product_id,variant_id,quantity,created_at&order=created_at.desc&limit=120`),
@@ -1174,12 +1177,15 @@ export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput =
   const fetchedTables = [products, inventory, stock, movements, orders, orderItems, shipments, shipmentItems, shipmentTimeline, activityLogs]
     .filter((table) => table.status !== "SKIPPED");
   const blockedTable = fetchedTables.find((table) => table.status !== "LIVE");
+  const filteredOrders = ordersFilter === "warehouse"
+    ? orders.rows.filter((order) => isWarehouseEligible(order))
+    : orders.rows;
   const snapshotTables = [
     { table: "mithron_products", rows: products.rows },
     { table: "inventory", rows: inventory.rows },
     { table: "warehouse_stock", rows: stock.rows },
     { table: "inventory_movements", rows: movements.rows },
-    { table: "orders", rows: orders.rows },
+    { table: "orders", rows: filteredOrders },
     { table: "order_items", rows: orderItems.rows },
     { table: "shipments", rows: shipments.rows },
     { table: "shipment_items", rows: shipmentItems.rows },
@@ -1197,7 +1203,7 @@ export const getWarehouseSnapshot = cache(async (input: WarehouseSnapshotInput =
       inventory: inventory.rows,
       stock: stock.rows,
       movements: movements.rows,
-      orders: orders.rows,
+      orders: filteredOrders,
       orderItems: orderItems.rows,
       shipments: shipments.rows,
       shipmentItems: shipmentItems.rows,

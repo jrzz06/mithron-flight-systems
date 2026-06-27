@@ -2,18 +2,21 @@ import { redirect } from "next/navigation";
 import { OperationalFeedback } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { InventoryManager } from "@/components/admin/inventory-manager-loader";
+import { AdminInventoryLiveSync } from "@/components/admin/admin-inventory-live-sync";
 import { inventoryFeedbackQueryParams } from "@/lib/admin/conflict-handling";
-import { CSV_INVENTORY_PAGE_SIZE, countProductsMissingInventoryRecords, getCsvInventoryRows } from "@/services/csv-inventory-source";
+import { CSV_INVENTORY_PAGE_SIZE, countProductsMissingInventoryRecords, getCsvInventoryRows, type CatalogFilter } from "@/services/csv-inventory-source";
 import { repairMissingProductInventory } from "@/services/product-inventory-sync";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
-import { listPendingStockRequests } from "@/services/supplier-stock-requests";
+import { AdminStockRequestReviewPanel } from "@/components/admin/admin-stock-request-review-panel";
+import { listPendingStockRequestsForReview } from "@/services/supplier-stock-request-review";
 import {
   deleteInventoryProductFormAction,
   importInventoryCsvFormAction,
   saveInventoryBulkUpdateFormAction,
   saveInventoryQuickEditFormAction
 } from "@/app/warehouse/actions";
-import { approveStockRequestAction, rejectStockRequestAction, syncMissingInventoryAction } from "./stock-request-actions";
+import { syncMissingInventoryAction } from "./stock-request-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -66,13 +69,22 @@ async function deleteAdminInventoryWithFeedback(formData: FormData) {
   } catch (error) {
     redirect(`/admin/inventory?inventory_status=error&inventory_message=${encodeURIComponent(inventoryActionMessage(error).slice(0, 240))}`);
   }
-  redirect("/admin/inventory?inventory_status=success&inventory_message=Inventory%20item%20deleted.");
+  redirect("/admin/inventory?inventory_status=success&inventory_message=Product%20archived.");
+}
+
+function readCatalogFilter(value: string): CatalogFilter {
+  if (value === "archived" || value === "all") return value;
+  return "active";
 }
 
 export default async function AdminInventoryPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const currentPage = Math.max(1, Number.parseInt(searchValue(params, "page"), 10) || 1);
-  const auth = await getCurrentAuthContext();
+  const catalogFilter = readCatalogFilter(searchValue(params, "catalog"));
+  const [auth, policy] = await Promise.all([
+    getCurrentAuthContext(),
+    getAdminSettingsPolicy()
+  ]);
   let missingInventoryCount = await countProductsMissingInventoryRecords();
   if (missingInventoryCount > 0) {
     await repairMissingProductInventory(auth.userId).catch((error) => {
@@ -80,18 +92,19 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
     });
     missingInventoryCount = await countProductsMissingInventoryRecords();
   }
-  const inventorySource = await getCsvInventoryRows({ page: currentPage, pageSize: CSV_INVENTORY_PAGE_SIZE });
-  const stockRequests = await listPendingStockRequests();
+  const inventorySource = await getCsvInventoryRows({ page: currentPage, pageSize: CSV_INVENTORY_PAGE_SIZE, catalogFilter });
+  const stockRequests = await listPendingStockRequestsForReview();
   const inventoryStatus = searchValue(params, "inventory_status");
   const inventoryMessage = searchValue(params, "inventory_message");
   const stockStatus = searchValue(params, "stock_status");
   const stockMessage = searchValue(params, "stock_message");
   const rows = inventorySource.rows;
-  const previousPageHref = currentPage > 1 ? `/admin/inventory?page=${currentPage - 1}` : undefined;
-  const nextPageHref = inventorySource.hasNextPage ? `/admin/inventory?page=${currentPage + 1}` : undefined;
+  const previousPageHref = currentPage > 1 ? `/admin/inventory?page=${currentPage - 1}&catalog=${catalogFilter}` : undefined;
+  const nextPageHref = inventorySource.hasNextPage ? `/admin/inventory?page=${currentPage + 1}&catalog=${catalogFilter}` : undefined;
 
   return (
     <div data-admin-inventory-route className="grid gap-4">
+      <AdminInventoryLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <div data-inventory-mutation-feedback>
         <OperationalFeedback
           status={inventoryStatus}
@@ -114,34 +127,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
         </div>
       ) : null}
 
-      {stockRequests.length ? (
-        <section className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-4">
-          <h2 className="text-sm font-semibold text-[var(--platform-text-primary)]">Pending supplier stock requests</h2>
-          <div className="mt-3 grid gap-2">
-            {stockRequests.map((request) => (
-              <div key={String(request.id)} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-sm">
-                <div>
-                  <p className="font-medium text-[var(--platform-text-primary)]">{String(request.product_slug)}</p>
-                  <p className="text-[var(--platform-text-secondary)]">
-                    {String(request.current_quantity ?? "?")} → {String(request.requested_quantity)}
-                    {request.note ? ` · ${String(request.note)}` : ""}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <form action={approveStockRequestAction}>
-                    <input type="hidden" name="requestId" value={String(request.id)} />
-                    <OperationalSubmitButton pendingLabel="Applying" className="text-xs">Approve</OperationalSubmitButton>
-                  </form>
-                  <form action={rejectStockRequestAction}>
-                    <input type="hidden" name="requestId" value={String(request.id)} />
-                    <OperationalSubmitButton pendingLabel="Rejecting" className="text-xs">Reject</OperationalSubmitButton>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {stockRequests.length ? <AdminStockRequestReviewPanel items={stockRequests} /> : null}
 
       <InventoryManager
         rows={rows}
@@ -149,10 +135,12 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
         importAction={importAdminInventoryWithFeedback}
         bulkAction={bulkAdminInventoryWithFeedback}
         deleteAction={deleteAdminInventoryWithFeedback}
-        exportHref="/admin/inventory/export"
+        exportHref={`/admin/inventory/export?catalog=${catalogFilter}`}
         title="Inventory"
         page={inventorySource.page}
         totalProductCount={inventorySource.totalProductCount}
+        inventoryMetrics={inventorySource.inventoryMetrics}
+        catalogFilter={catalogFilter}
         hasNextPage={inventorySource.hasNextPage}
         previousPageHref={previousPageHref}
         nextPageHref={nextPageHref}

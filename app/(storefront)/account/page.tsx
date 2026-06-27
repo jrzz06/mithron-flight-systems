@@ -1,12 +1,22 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { StatusBadge } from "@/components/admin/module-panel";
-import { Button } from "@/components/ui/button";
+import {
+  AccountCard,
+  AccountEmptyState,
+  AccountLink,
+  AccountListItem,
+  AccountPage as AccountPageShell,
+  AccountQuickActions,
+  AccountSection,
+  AccountStat,
+  AccountStatusChip
+} from "@/components/account";
 import { createClient } from "@/lib/server";
+import { CUSTOMER_EMPTY_MESSAGES, customerEnquiryStatus, customerFulfillmentStatus, customerOrderStatus } from "@/lib/customer/copy";
+import { formatItemCount, formatOrderDate, formatOrderReference, orderItemCount } from "@/lib/customer/display";
 import { formatEnquiryReference, listOwnEnquiries } from "@/services/enquiries";
+import { listCustomerAddresses } from "@/services/customer-addresses";
 import { listCustomerOrders } from "@/services/customer-orders";
 import { formatINR } from "@/lib/utils";
-import { humanStatus } from "@/lib/platform/copy";
 
 async function getProfileDisplayName(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data } = await supabase
@@ -16,6 +26,17 @@ async function getProfileDisplayName(supabase: Awaited<ReturnType<typeof createC
     .maybeSingle();
 
   return typeof data?.display_name === "string" ? data.display_name.trim() : "";
+}
+
+async function listRecentNotifications(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase
+    .from("notifications")
+    .select("id,title,body,status,created_at")
+    .eq("recipient_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  return data ?? [];
 }
 
 export default async function AccountPage() {
@@ -32,103 +53,135 @@ export default async function AccountPage() {
     : typeof claims.user_metadata?.full_name === "string"
       ? claims.user_metadata.full_name.trim()
       : "";
-  const customerName = profileName || metadataName || email || "Signed-in customer";
-  const orders = userId ? await listCustomerOrders(userId) : [];
-  const enquiries = userId ? await listOwnEnquiries(userId) : [];
-  const recentOrders = orders.slice(0, 3);
-  const recentEnquiries = enquiries.slice(0, 3);
+  const customerName = profileName || metadataName || "there";
+
+  const [orders, enquiries, addresses, notifications] = userId
+    ? await Promise.all([
+        listCustomerOrders(userId),
+        listOwnEnquiries(userId),
+        listCustomerAddresses(userId),
+        listRecentNotifications(supabase, userId)
+      ])
+    : [[], [], [], []];
+
+  const recentOrder = orders[0] ?? null;
+  const recentEnquiry = enquiries[0] ?? null;
 
   return (
-    <div className="grid gap-6">
-      <section className="rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8">
-        <p className="type-meta text-white/50">Welcome back</p>
-        <h2 className="type-section mt-3">{customerName}</h2>
-        {email ? <p className="mt-2 text-sm text-white/60">{email}</p> : null}
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Button asChild><Link href="/products">Browse products</Link></Button>
-          <Button asChild variant="outline"><Link href="/checkout">Checkout</Link></Button>
-          <Button asChild variant="outline"><Link href="/contact">Submit enquiry</Link></Button>
+    <AccountPageShell>
+      <AccountCard>
+        <p className="text-sm text-[var(--account-ink-muted)]">Welcome back</p>
+        <h2 className="type-section mt-2 text-[var(--account-ink)]">{customerName}</h2>
+        {email ? <p className="mt-1 text-sm text-[var(--account-ink-muted)]">{email}</p> : null}
+        <div className="mt-6">
+          <AccountQuickActions
+            actions={[
+              { label: "Shop products", href: "/products", variant: "default" },
+              { label: "Track an order", href: "/track-order" },
+              { label: "Contact sales", href: "/contact" }
+            ]}
+          />
         </div>
-      </section>
+      </AccountCard>
 
-      <section className="grid gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-white/50">Recent orders</h3>
-          <Link href="/account/orders" className="text-sm text-emerald-400">View all orders</Link>
-        </div>
-        {recentOrders.length ? (
-          <div className="grid gap-3">
-            {recentOrders.map((order) => (
-              <Link
-                key={String(order.id)}
-                href={`/account/orders/${order.id}`}
-                className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] p-4 transition hover:border-white/20"
+      <div className="grid gap-4 sm:grid-cols-3">
+        <AccountStat label="Orders" value={orders.length} href="/account/orders" />
+        <AccountStat label="Enquiries" value={enquiries.length} href="/account/enquiries" />
+        <AccountStat label="Saved addresses" value={addresses.length} href="/account/addresses" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <AccountSection
+          title="Recent order"
+          action={<AccountLink href="/account/orders">View all orders</AccountLink>}
+        >
+          {recentOrder ? (
+            <AccountListItem
+              href={`/account/orders/${recentOrder.id}`}
+              title={formatOrderReference(recentOrder)}
+              subtitle={formatOrderDate(recentOrder.created_at)}
+              meta={
+                <>
+                  <p>{formatINR(Number(recentOrder.total ?? 0))}</p>
+                  {formatItemCount(orderItemCount(recentOrder)) ? (
+                    <p className="mt-1">{formatItemCount(orderItemCount(recentOrder))}</p>
+                  ) : null}
+                </>
+              }
+              badges={
+                <>
+                  <AccountStatusChip
+                    label={customerOrderStatus(String(recentOrder.status ?? "pending"))}
+                    status={String(recentOrder.status ?? "pending")}
+                  />
+                  <AccountStatusChip
+                    label={customerFulfillmentStatus(String(recentOrder.fulfillment_status ?? "pending"))}
+                    status={String(recentOrder.fulfillment_status ?? "pending")}
+                  />
+                </>
+              }
+            />
+          ) : (
+            <AccountEmptyState>
+              {CUSTOMER_EMPTY_MESSAGES.orders}{" "}
+              <AccountLink href="/products">Start shopping</AccountLink>
+            </AccountEmptyState>
+          )}
+        </AccountSection>
+
+        <AccountSection
+          title="Recent enquiry"
+          action={<AccountLink href="/account/enquiries">View all enquiries</AccountLink>}
+        >
+          {recentEnquiry ? (
+            <AccountListItem
+              href={`/account/enquiries/${recentEnquiry.id}`}
+              title={
+                typeof recentEnquiry.enquiry_number === "number" && recentEnquiry.enquiry_number > 0
+                  ? formatEnquiryReference(recentEnquiry.enquiry_number)
+                  : String(recentEnquiry.subject ?? "Enquiry")
+              }
+              subtitle={String(recentEnquiry.subject ?? "").slice(0, 100)}
+              meta={<p>Submitted {formatOrderDate(recentEnquiry.created_at)}</p>}
+              badges={
+                <AccountStatusChip
+                  label={customerEnquiryStatus(String(recentEnquiry.status ?? "new"))}
+                  status={String(recentEnquiry.status ?? "new")}
+                />
+              }
+              actionLabel="View enquiry"
+            />
+          ) : (
+            <AccountEmptyState>
+              {CUSTOMER_EMPTY_MESSAGES.enquiries}{" "}
+              <AccountLink href="/contact">Get in touch</AccountLink>
+            </AccountEmptyState>
+          )}
+        </AccountSection>
+      </div>
+
+      <AccountSection title="Notifications">
+        {notifications.length ? (
+          <ul className="grid gap-3">
+            {notifications.map((notification) => (
+              <li
+                key={notification.id}
+                className="rounded-2xl border border-[var(--account-border)] bg-[var(--account-surface-muted)] p-4"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-white">{String(order.order_number ?? order.id)}</p>
-                    <p className="mt-1 text-sm text-white/50">{String(order.created_at ?? "").slice(0, 10)}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      <StatusBadge status={String(order.status ?? "pending")} />
-                      <StatusBadge status={String(order.fulfillment_status ?? "pending")} />
-                    </div>
-                    <p className="text-sm text-white/70">{formatINR(Number(order.total ?? 0))}</p>
-                  </div>
-                </div>
-              </Link>
+                <p className="font-medium text-[var(--account-ink)]">{notification.title}</p>
+                {notification.body ? (
+                  <p className="mt-1 text-sm text-[var(--account-ink-muted)]">{notification.body}</p>
+                ) : null}
+                <p className="mt-2 text-xs text-[var(--account-ink-muted)]">
+                  {formatOrderDate(notification.created_at)}
+                </p>
+              </li>
             ))}
-          </div>
+          </ul>
         ) : (
-          <p className="rounded-2xl border border-dashed border-[var(--surface-border)] px-4 py-6 text-sm text-white/60">
-            No orders yet. <Link href="/checkout" className="text-emerald-400">Start checkout</Link>
-          </p>
+          <AccountEmptyState>{CUSTOMER_EMPTY_MESSAGES.notifications}</AccountEmptyState>
         )}
-      </section>
-
-      <section className="grid gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-white/50">Recent enquiries</h3>
-          <Link href="/account/enquiries" className="text-sm text-emerald-400">View all enquiries</Link>
-        </div>
-        {recentEnquiries.length ? (
-          <div className="grid gap-3">
-            {recentEnquiries.map((enquiry) => {
-              const enquiryNumber = typeof enquiry.enquiry_number === "number"
-                ? enquiry.enquiry_number
-                : Number(enquiry.enquiry_number);
-              const reference = Number.isFinite(enquiryNumber) && enquiryNumber > 0
-                ? formatEnquiryReference(enquiryNumber)
-                : String(enquiry.subject ?? "Enquiry");
-              return (
-                <Link
-                  key={String(enquiry.id)}
-                  href={`/account/enquiries/${enquiry.id}`}
-                  className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] p-4 transition hover:border-white/20"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-semibold text-white">{reference}</p>
-                      <p className="mt-1 truncate text-sm text-white/60">{String(enquiry.subject ?? enquiry.body ?? "").slice(0, 80)}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs uppercase tracking-[0.1em] text-emerald-400">
-                        {humanStatus(String(enquiry.status ?? "new"))}
-                      </span>
-                      <p className="text-xs text-white/40">{String(enquiry.created_at ?? "").slice(0, 10)}</p>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="rounded-2xl border border-dashed border-[var(--surface-border)] px-4 py-6 text-sm text-white/60">
-            No enquiries yet. <Link href="/contact" className="text-emerald-400">Contact sales</Link>
-          </p>
-        )}
-      </section>
-    </div>
+      </AccountSection>
+    </AccountPageShell>
   );
 }

@@ -87,7 +87,8 @@ describe("phase 1 auth and role flow stabilization", () => {
     const loginForm = readWorkspaceFile("app/login/login-form.tsx");
     const redirects = readWorkspaceFile("lib/auth/redirects.ts");
 
-    expect(loginForm).toContain("/api/auth/login");
+    expect(loginForm).toContain("signInWithPassword");
+    expect(loginForm).toContain("/api/auth/provision");
     expect(loginForm).toContain("loading-role");
     expect(redirects).toContain("getRoleAwareAuthRedirectPath");
     expect(redirects).toContain("canAccessProtectedPath");

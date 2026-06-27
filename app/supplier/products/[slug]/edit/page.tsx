@@ -1,3 +1,4 @@
+import type { JSONContent } from "@tiptap/core";
 import { StatusPill } from "@/components/platform";
 import { SupplierEditProductForm } from "@/components/supplier/supplier-edit-product-form";
 import { SupplierSubmitProductButton } from "@/components/supplier/supplier-submit-product-button";
@@ -21,6 +22,10 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
   const canEdit = ["draft", "rejected"].includes(workflowStatus);
   const canSubmit = ["draft", "rejected"].includes(workflowStatus);
   const statusHint = supplierStatusHint(workflowStatus);
+
+  const imageSrc = readProductImageSrc(product.image) || readProductImageSrc(product.hero);
+  const description = typeof product.description === "string" ? product.description : "";
+  const descriptionJson = product.description_json as JSONContent | string | null | undefined;
 
   return (
     <div className="max-w-xl grid gap-5">
@@ -51,8 +56,9 @@ export default async function SupplierEditProductPage({ params }: { params: Prom
               name: String(product.name ?? ""),
               category: String(product.category ?? "Agri Drones"),
               price: Number(product.price ?? 0),
-              tagline: String(product.tagline ?? ""),
-              imageSrc: readProductImageSrc(product.image) || readProductImageSrc(product.hero),
+              description,
+              descriptionJson: descriptionJson ?? undefined,
+              imageSrc,
               imageAlt: String(product.name ?? ""),
               updatedAt: typeof product.updated_at === "string" ? product.updated_at : null
             }}

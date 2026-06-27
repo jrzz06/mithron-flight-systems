@@ -1,4 +1,5 @@
 import { processEditorSubmission } from "@/lib/editor/serialize";
+import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
 
 function readOptionalString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -23,7 +24,7 @@ export function readEditorDocumentFields(formData: FormData, jsonField: string, 
   if (html !== undefined) {
     return {
       json: null,
-      html: html || "",
+      html: html ? sanitizeEditorHtml(html) : "",
       mediaAssetIds: [] as string[]
     };
   }

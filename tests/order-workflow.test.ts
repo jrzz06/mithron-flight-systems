@@ -42,4 +42,15 @@ describe("order workflow hardening", () => {
     expect(canTransitionOrderStatus("admin_review", "confirmed")).toBe(true);
     expect(canTransitionOrderStatus("admin_review", "cancelled")).toBe(true);
   });
+
+  it("defaults delete workflow to soft delete and supports restore", () => {
+    const workflow = source("services/order-workflow.ts");
+    const actions = source("app/admin/orders/actions.ts");
+    expect(workflow).toContain("softDeleteAdminOrderWorkflow");
+    expect(workflow).toContain("restoreAdminOrderWorkflow");
+    expect(workflow).toContain("permanentDeleteAdminOrderWorkflow");
+    expect(workflow).toContain("return softDeleteAdminOrderWorkflow(input, env);");
+    expect(actions).toContain("restoreAdminOrderFormAction");
+    expect(actions).toContain("permanentDeleteAdminOrderFormAction");
+  });
 });

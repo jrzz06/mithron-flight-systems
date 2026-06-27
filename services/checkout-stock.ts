@@ -64,6 +64,45 @@ export async function resolveCheckoutStockSkus(
   }));
 }
 
+export async function verifyCheckoutStockAvailability(
+  items: Array<{ productSlug: string; quantity: number }>,
+  env: EnvSource = process.env,
+  warehouseCode?: string
+) {
+  const config = assertSupabaseAdminConfig(env);
+  if (!items.length) return;
+
+  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
+  const slugs = [...new Set(items.map((item) => item.productSlug))];
+  const slugFilter = slugs.map((slug) => encodeURIComponent(slug)).join(",");
+  const response = await fetch(
+    `${config.url}/rest/v1/warehouse_stock?select=product_slug,sku,available_quantity&product_slug=in.(${slugFilter})&warehouse_code=eq.${encodeURIComponent(resolvedWarehouseCode)}`,
+    { headers: headers(config.serviceRoleKey), cache: "no-store" }
+  );
+
+  if (!response.ok) {
+    throw new Error("Unable to verify product inventory for checkout.");
+  }
+
+  const rows = (await response.json()) as Array<{ product_slug?: string; available_quantity?: number }>;
+  const availableBySlug = new Map<string, number>();
+  for (const row of rows) {
+    const slug = String(row.product_slug ?? "");
+    if (!slug) continue;
+    const available = Number(row.available_quantity ?? 0);
+    availableBySlug.set(slug, Math.max(availableBySlug.get(slug) ?? 0, available));
+  }
+
+  for (const item of items) {
+    const available = availableBySlug.get(item.productSlug) ?? 0;
+    if (available < item.quantity) {
+      throw new Error(
+        `Insufficient stock for ${item.productSlug}. Requested ${item.quantity}, available ${available}.`
+      );
+    }
+  }
+}
+
 export async function reserveCheckoutStock(
   orderId: string,
   items: CheckoutStockItem[],

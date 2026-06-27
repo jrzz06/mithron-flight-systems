@@ -148,6 +148,7 @@ describe("enterprise order management workflow", () => {
     const adminOrdersWorkspace = readFileSync(join(process.cwd(), "components/admin/admin-orders-workspace.tsx"), "utf8");
     const adminOrdersUi = `${adminOrdersPage}\n${adminOrdersWorkspace}`;
     const warehouseOrdersPage = readFileSync(join(process.cwd(), "app/warehouse/orders/page.tsx"), "utf8");
+    const operationsOrdersPage = readFileSync(join(process.cwd(), "app/operations/orders/page.tsx"), "utf8");
     const fulfillmentPage = readFileSync(join(process.cwd(), "app/warehouse/fulfillment/page.tsx"), "utf8");
     const pickingPage = readFileSync(join(process.cwd(), "app/warehouse/picking/page.tsx"), "utf8");
     const packingPage = readFileSync(join(process.cwd(), "app/warehouse/packing/page.tsx"), "utf8");
@@ -159,18 +160,17 @@ describe("enterprise order management workflow", () => {
     expect(adminOrdersUi).toContain("data-inventory-allocation");
     expect(adminOrdersUi).toContain("data-shipment-actions");
 
-    expect(warehouseOrdersPage).toContain("createWarehouseOrderFormAction");
-    expect(warehouseOrdersPage).toContain("updateWarehouseOrderLifecycleFormAction");
-    expect(warehouseOrdersPage).toContain("data-order-management-table=\"orders\"");
-    expect(warehouseOrdersPage).toContain("data-order-items-table=\"order_items\"");
-    expect(warehouseOrdersPage).toContain("data-order-filter-form");
+    // The warehouse orders page is now a pure queue view; create form lives in operations/orders.
+    expect(warehouseOrdersPage).toContain("advanceWarehouseOrderStepFormAction");
+    expect(warehouseOrdersPage).toContain("dispatchWarehouseOrderFormAction");
+    expect(operationsOrdersPage).toContain("createWarehouseOrderFormAction");
+    expect(operationsOrdersPage).toContain("updateWarehouseOrderLifecycleFormAction");
 
-    expect(fulfillmentPage).toContain("/warehouse/picking");
+    expect(fulfillmentPage).toContain("/warehouse/orders");
     expect(pickingPage).toContain("updateWarehouseOrderLifecycleFormAction");
-    expect(packingPage).toContain("updateWarehouseOrderLifecycleFormAction");
+    // packing page uses completeWarehousePackingFormAction now
+    expect(packingPage).toContain("completeWarehousePackingFormAction");
     expect(adminOrdersUi).toContain("timeline");
-    expect(warehouseOrdersPage).toContain("data-order-product-picker");
-    expect(warehouseOrdersPage).not.toContain("Order items JSON");
-    expect(warehouseOrdersPage).not.toContain("Shipment tracking JSON");
+    expect(operationsOrdersPage).not.toContain("Shipment tracking JSON");
   });
 });

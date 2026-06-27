@@ -16,6 +16,7 @@ export const ENTERPRISE_PERMISSIONS = [
   "warehouse.write",
   "warehouse.read",
   "orders.write",
+  "orders.permanent_delete",
   "orders.checkout",
   "orders.lifecycle",
   "account.read.self",

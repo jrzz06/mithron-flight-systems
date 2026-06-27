@@ -4,8 +4,10 @@ import { ControlShell } from "@/components/admin/control-shell";
 import { OperationalFeedback } from "@/components/admin/module-panel";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { WarehouseKpiStrip } from "@/components/warehouse/warehouse-kpi-strip";
+import { WarehouseOpsLiveSync } from "@/components/warehouse/warehouse-ops-live-sync";
 import { shipmentStatusLabel } from "@/lib/warehouse/operational-labels";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
 import { filterShipmentsForWarehouseScope, resolveWarehouseScope } from "@/services/warehouse-scope";
 import { updateShipmentLifecycleFormAction } from "../actions";
@@ -63,8 +65,9 @@ async function updateShipmentStatus(formData: FormData) {
 const actionButtonClass = "inline-flex min-h-8 items-center justify-center rounded-md border border-[var(--platform-border)] px-3 text-[11px] font-semibold text-[var(--platform-text-primary)] transition hover:border-[var(--platform-accent)]/40 disabled:cursor-not-allowed disabled:opacity-55";
 
 export default async function DispatchPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const [snapshot, auth] = await Promise.all([
+  const [snapshot, policy, auth] = await Promise.all([
     getWarehouseSnapshot({ scope: "dispatch" }),
+    getAdminSettingsPolicy(),
     getCurrentAuthContext()
   ]);
   const scope = await resolveWarehouseScope({ userId: auth.userId, role: auth.role });
@@ -95,6 +98,7 @@ export default async function DispatchPage({ searchParams }: { searchParams?: Pr
         { label: "Packing", href: "/warehouse/packing" }
       ]}
     >
+      <WarehouseOpsLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <section data-dispatch-handoff-center className="grid gap-6">
         <OperationalFeedback
           status={operationStatus}

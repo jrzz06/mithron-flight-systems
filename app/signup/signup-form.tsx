@@ -1,12 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { recordClientAuthEvent } from "@/lib/auth/audit-client";
-import { createClient } from "@/lib/client";
 import styles from "../auth/auth-page.module.css";
 
 export function SignupForm({ inviteToken }: { inviteToken?: string }) {
-  const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "sent">("idle");
@@ -17,25 +15,28 @@ export function SignupForm({ inviteToken }: { inviteToken?: string }) {
     setStatus("submitting");
     setMessage(null);
     const redirectTo = `${window.location.origin}/auth/callback?next=/onboarding`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: inviteToken ? { invite_token: inviteToken } : undefined
-      }
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        password,
+        redirectTo,
+        inviteToken: inviteToken ?? null
+      })
     });
-    if (error) {
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (inviteToken) {
         await recordClientAuthEvent("auth.invite_accept", {
           outcome: "failed",
           invite_token_present: true,
-          error: error.message,
+          error: data.error ?? "Request failed",
           provider: "supabase"
         });
       }
       setStatus("idle");
-      setMessage(error.message);
+      setMessage(data.error ?? "Something went wrong. Please try again.");
       return;
     }
     if (inviteToken) {

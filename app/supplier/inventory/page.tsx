@@ -82,8 +82,13 @@ export default async function SupplierInventoryPage({ searchParams }: { searchPa
                           name="requestedQuantity"
                           type="number"
                           min={0}
+                          step={1}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          required
                           defaultValue={String(row.quantity ?? 0)}
                           className="h-9 w-24 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-2 text-sm"
+                          aria-label={`Available stock quantity for ${productName}`}
                         />
                         <input
                           name="note"

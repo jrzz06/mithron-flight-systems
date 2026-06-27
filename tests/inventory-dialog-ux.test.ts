@@ -30,7 +30,8 @@ const inventoryRow: SimpleInventoryRow = {
   availableQuantity: 19,
   committedQuantity: 0,
   warehouseUpdatedAt: "2026-05-26T12:00:00.000Z",
-  inventoryUpdatedAt: "2026-05-26T12:00:00.000Z"
+  inventoryUpdatedAt: "2026-05-26T12:00:00.000Z",
+  isArchived: false
 };
 
 afterEach(() => {
@@ -61,7 +62,7 @@ describe("inventory dialog and stock workflow UX", () => {
     expect(manager).toContain("data-inventory-action=\"stock\"");
     expect(manager).toContain("data-inventory-action=\"archive\"");
     expect(manager).toContain("data-inventory-action=\"view\"");
-    expect(manager).toContain("data-inventory-action=\"delete\"");
+    expect(manager).toContain("data-inventory-action=\"archive-product\"");
     expect(manager).toContain("data-inventory-status-pill");
     expect(manager).not.toContain(">Stock update</button>");
   });
@@ -85,7 +86,7 @@ describe("inventory dialog and stock workflow UX", () => {
     expect(csvSource).toContain("offset=");
     expect(csvSource).toContain("columnInFilter");
     expect(adminPage).toContain("pageSize: CSV_INVENTORY_PAGE_SIZE");
-    expect(warehousePage).toContain("pageSize: CSV_INVENTORY_PAGE_SIZE");
+    expect(warehousePage).toContain("all: true");
     expect(adminExport).toContain("all: true");
     expect(warehouseExport).toContain("all: true");
   });

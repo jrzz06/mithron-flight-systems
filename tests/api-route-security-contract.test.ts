@@ -27,6 +27,7 @@ const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
   "app/api/auth/provision/route.ts": "session_auth",
   "app/api/admin/prune-logs/route.ts": "bearer_secret",
   "app/api/admin/archive-movements/route.ts": "bearer_secret",
+  "app/api/admin/customers/lookup/route.ts": "session_auth",
   "app/api/notifications/dispatch/route.ts": "bearer_secret",
   "app/api/payments/expire-pending/route.ts": "bearer_secret",
   "app/api/security/denials/route.ts": "staff_bearer_jwt",

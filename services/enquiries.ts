@@ -298,41 +298,6 @@ function text(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
-function mapCheckoutOrderToEnquiryRow(order: JsonRecord, orderItems: JsonRecord[]): AdminEnquiryRow {
-  const metadata = isPlainRecord(order.metadata) ? order.metadata : {};
-  const items = orderItems.filter(isPlainRecord);
-  const firstItem = items[0];
-  const itemSummary = items
-    .map((item) => `${text(item.product_name, text(item.product_slug, "Item"))} x ${String(item.quantity ?? 1)}`)
-    .join(", ");
-  const enquiryMessage = text(metadata.enquiry_message);
-  const orderNumber = text(order.order_number, text(order.id));
-
-  return {
-    id: text(order.id),
-    customer_email: text(order.customer_email),
-    subject: `Product enquiry · ${orderNumber}`,
-    body: enquiryMessage || (itemSummary ? `Checkout enquiry for ${itemSummary}.` : "Checkout product enquiry."),
-    status: text(order.status, "admin_review") === "admin_review" && !text(metadata.enquiry_contacted_at)
-      ? "new"
-      : "contacted",
-    related_product_slug: text(firstItem?.product_slug) || null,
-    assigned_to: null,
-    converted_order_id: text(order.id) || null,
-    created_at: text(order.created_at),
-    updated_at: text(order.updated_at),
-    payload: {
-      source: "checkout",
-      order_number: orderNumber,
-      customer_phone: text(metadata.customer_phone),
-      item_summary: itemSummary
-    },
-    source: "checkout",
-    order_number: orderNumber,
-    queue_kind: "checkout_order"
-  };
-}
-
 export type EnquiryInput = {
   customerUserId?: string | null;
   customerEmail: string;
@@ -472,6 +437,7 @@ export async function submitCheckoutProductEnquiry(
       related_product_slug: input.relatedProductSlug ?? null,
       region: input.region ?? null,
       status: "new",
+      enquiry_kind: "checkout",
       converted_order_id: null,
       payload: {
         customer_phone: input.customerPhone.trim(),
@@ -570,46 +536,16 @@ export async function listOwnEnquiries(userId: string, env: EnvSource = process.
 
 export async function listAdminEnquiries(env: EnvSource = process.env): Promise<AdminEnquiryRow[]> {
   const config = assertSupabaseAdminConfig(env);
-  const [enquiriesResponse, ordersResponse] = await Promise.all([
-    fetch(
-      `${config.url}/rest/v1/enquiries?select=id,enquiry_number,customer_email,subject,body,status,related_product_slug,assigned_to,converted_order_id,payload,created_at,updated_at&order=created_at.desc&limit=100`,
-      { headers: headers(config.serviceRoleKey), cache: "no-store" }
-    ),
-    fetch(
-      `${config.url}/rest/v1/orders?select=id,order_number,customer_email,status,metadata,created_at,updated_at&channel=eq.enquiry&order=created_at.desc&limit=100`,
-      { headers: headers(config.serviceRoleKey), cache: "no-store" }
-    )
-  ]);
-
-  const enquiries = enquiriesResponse.ok ? ((await enquiriesResponse.json()) as JsonRecord[]) : [];
-  const checkoutOrders = ordersResponse.ok ? ((await ordersResponse.json()) as JsonRecord[]) : [];
-  const checkoutOrderIds = checkoutOrders.map((order) => text(order.id)).filter(Boolean);
-  const orderItemsByOrderId = new Map<string, JsonRecord[]>();
-
-  if (checkoutOrderIds.length) {
-    const itemsResponse = await fetch(
-      `${config.url}/rest/v1/order_items?select=order_id,product_slug,product_name,quantity&order_id=in.(${checkoutOrderIds.map((id) => encodeURIComponent(id)).join(",")})`,
-      { headers: headers(config.serviceRoleKey), cache: "no-store" }
-    );
-    if (itemsResponse.ok) {
-      const orderItems = (await itemsResponse.json()) as JsonRecord[];
-      for (const item of orderItems) {
-        const orderId = text(item.order_id);
-        if (!orderId) continue;
-        const bucket = orderItemsByOrderId.get(orderId) ?? [];
-        bucket.push(item);
-        orderItemsByOrderId.set(orderId, bucket);
-      }
-    }
-  }
-
-  const linkedOrderIds = new Set(
-    enquiries
-      .map((enquiry) => text(enquiry.converted_order_id))
-      .filter(Boolean)
+  const enquiriesResponse = await fetch(
+    `${config.url}/rest/v1/enquiries?select=id,enquiry_number,customer_email,subject,body,status,related_product_slug,assigned_to,converted_order_id,enquiry_kind,payload,created_at,updated_at,archived_at,deleted_at&enquiry_kind=in.(product,checkout)&deleted_at=is.null&order=created_at.desc&limit=100`,
+    { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
 
-  const normalizedEnquiries: AdminEnquiryRow[] = enquiries.map((enquiry) => {
+  const enquiries = enquiriesResponse.ok ? ((await enquiriesResponse.json()) as JsonRecord[]) : [];
+
+  const normalizedEnquiries: AdminEnquiryRow[] = enquiries
+    .filter((enquiry) => text(enquiry.payload && isPlainRecord(enquiry.payload) ? enquiry.payload.source : "") !== "contact")
+    .map((enquiry) => {
     const payload = readPayload(enquiry.payload);
     const enquiryNumber = typeof enquiry.enquiry_number === "number"
       ? enquiry.enquiry_number
@@ -638,7 +574,7 @@ export async function listAdminEnquiries(env: EnvSource = process.env): Promise<
       subject: text(enquiry.subject),
       body: text(enquiry.body),
       status: text(enquiry.status, "new"),
-      source: text(payload.source) === "checkout" ? "checkout" : "contact",
+      source: text(payload.source) === "checkout" || text(enquiry.enquiry_kind) === "checkout" ? "checkout" : "contact",
       order_number: text(payload.order_number),
       order_id: text(enquiry.converted_order_id) || text(payload.order_id) || null,
       related_product_slug: text(enquiry.related_product_slug) || cartLines[0]?.product_slug || null,
@@ -653,11 +589,7 @@ export async function listAdminEnquiries(env: EnvSource = process.env): Promise<
     };
   });
 
-  const backfilledCheckoutEnquiries = checkoutOrders
-    .filter((order) => !linkedOrderIds.has(text(order.id)))
-    .map((order) => mapCheckoutOrderToEnquiryRow(order, orderItemsByOrderId.get(text(order.id)) ?? []));
-
-  return [...normalizedEnquiries, ...backfilledCheckoutEnquiries].sort((left, right) => {
+  return normalizedEnquiries.sort((left, right) => {
     const leftTime = Date.parse(text(left.created_at)) || 0;
     const rightTime = Date.parse(text(right.created_at)) || 0;
     return rightTime - leftTime;
@@ -777,6 +709,63 @@ export async function closeEnquiry(
     env
   );
 
+  return result.updated;
+}
+
+export async function archiveEnquiry(
+  enquiryId: string,
+  actorId: string,
+  note?: string,
+  env: EnvSource = process.env
+) {
+  const result = await persistEnquiryLifecycleUpdate(
+    enquiryId,
+    {
+      actorId,
+      timelineAction: "archived",
+      timelineSummary: note?.trim() || "Enquiry archived.",
+      patch: { archived_at: new Date().toISOString() }
+    },
+    env
+  );
+  return result.updated;
+}
+
+export async function rejectEnquiry(
+  enquiryId: string,
+  actorId: string,
+  note?: string,
+  env: EnvSource = process.env
+) {
+  const result = await persistEnquiryLifecycleUpdate(
+    enquiryId,
+    {
+      actorId,
+      nextStatus: "lost",
+      note,
+      timelineAction: "rejected",
+      timelineSummary: note?.trim() || "Enquiry rejected."
+    },
+    env
+  );
+  return result.updated;
+}
+
+export async function restoreEnquiry(
+  enquiryId: string,
+  actorId: string,
+  env: EnvSource = process.env
+) {
+  const result = await persistEnquiryLifecycleUpdate(
+    enquiryId,
+    {
+      actorId,
+      timelineAction: "restored",
+      timelineSummary: "Enquiry restored.",
+      patch: { archived_at: null, deleted_at: null }
+    },
+    env
+  );
   return result.updated;
 }
 
@@ -955,13 +944,17 @@ export async function promoteEnquiryToOrder(
       throw new Error("Products in this enquiry are no longer available in the catalog.");
     }
 
-    return convertEnquiryToOrder(
-      enquiryId,
+    const itemsWithSku = await resolveCheckoutStockSkus(cartLines, env);
+    const draft = buildValidatedOrderDraft(
       {
         customerEmail: text(enquiry.customer_email),
         phone: text(payload.customer_phone) || undefined,
         region: text(enquiry.region) || undefined,
-        items: cartLines,
+        items: itemsWithSku.map((item) => ({
+          productSlug: item.productSlug,
+          quantity: item.quantity,
+          sku: item.sku ?? undefined
+        })),
         metadata: {
           source_enquiry_id: enquiryId,
           customer_full_name: text(payload.customer_full_name),
@@ -972,9 +965,25 @@ export async function promoteEnquiryToOrder(
           shipping_address_id: payload.shipping_address_id ?? null
         }
       },
-      catalog,
+      catalog
+    );
+
+    return convertEnquiryToOrderAtomic(
+      enquiryId,
+      {
+        ...draft.order,
+        status: "admin_review",
+        created_by_user_id: text(enquiry.customer_user_id) || null,
+        metadata: {
+          ...draft.order.metadata,
+          source_enquiry_id: enquiryId,
+          created_by_user_id: text(enquiry.customer_user_id) || null
+        }
+      },
+      draft.orderItems,
       actorId,
-      env
+      env,
+      `convert:${enquiryId}`
     );
   }
 
@@ -988,18 +997,38 @@ export async function promoteEnquiryToOrder(
     throw new Error(`Product "${relatedSlug}" was not found in the catalog.`);
   }
 
-  return convertEnquiryToOrder(
-    enquiryId,
+  const itemsWithSku = await resolveCheckoutStockSkus([{ productSlug: relatedSlug, quantity: 1 }], env);
+  const draft = buildValidatedOrderDraft(
     {
       customerEmail: text(enquiry.customer_email),
       phone: text(payload.customer_phone) || undefined,
       region: text(enquiry.region) || undefined,
-      items: [{ productSlug: relatedSlug, quantity: 1 }],
+      items: itemsWithSku.map((item) => ({
+        productSlug: item.productSlug,
+        quantity: item.quantity,
+        sku: item.sku ?? undefined
+      })),
       metadata: { source_enquiry_id: enquiryId }
     },
-    catalog,
+    catalog
+  );
+
+  return convertEnquiryToOrderAtomic(
+    enquiryId,
+    {
+      ...draft.order,
+      status: "admin_review",
+      created_by_user_id: text(enquiry.customer_user_id) || null,
+      metadata: {
+        ...draft.order.metadata,
+        source_enquiry_id: enquiryId,
+        created_by_user_id: text(enquiry.customer_user_id) || null
+      }
+    },
+    draft.orderItems,
     actorId,
-    env
+    env,
+    `convert:${enquiryId}`
   );
 }
 
@@ -1135,6 +1164,87 @@ export async function markCheckoutOrderEnquiryContacted(
 /** @deprecated Use markEnquiryContacted instead. */
 export async function assignEnquiry(enquiryId: string, assignedTo: string, actorId: string, env: EnvSource = process.env) {
   return markEnquiryContacted(enquiryId, actorId, assignedTo, undefined, env);
+}
+
+export async function convertEnquiryToOrderAtomic(
+  enquiryId: string,
+  order: JsonRecord,
+  orderItems: JsonRecord[],
+  actorId: string,
+  env: EnvSource = process.env,
+  idempotencyKey?: string | null
+) {
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/rpc/convert_enquiry_to_order_atomic`, {
+    method: "POST",
+    headers: headers(config.serviceRoleKey),
+    cache: "no-store",
+    body: JSON.stringify({
+      p_enquiry_id: enquiryId,
+      p_actor_id: actorId,
+      p_order: order,
+      p_order_items: orderItems,
+      p_idempotency_key: idempotencyKey ?? null
+    })
+  });
+
+  const body = await response.text().catch(() => "");
+  if (!response.ok) {
+    throw new Error(`Enquiry conversion failed: ${response.status}${body ? ` - ${body.slice(0, 240)}` : ""}`);
+  }
+
+  const result = body ? JSON.parse(body) as JsonRecord : {};
+  if (result.ok !== true) {
+    throw new Error(text(result.error, "Enquiry conversion failed."));
+  }
+
+  const orderId = text(result.order_id);
+  const orderRow = isPlainRecord(result.row) ? result.row : { id: orderId, order_number: result.order_number };
+
+  const reservationItems = orderItems
+    .map((item) => ({
+      productSlug: String(item.product_slug ?? ""),
+      quantity: Number(item.quantity ?? 0),
+      sku: String(item.sku ?? "").trim() || null
+    }))
+    .filter((item) => item.productSlug && item.sku && item.quantity > 0);
+
+  if (orderId && reservationItems.length && result.idempotent !== true) {
+    try {
+      await reserveCheckoutStock(orderId, reservationItems, env);
+    } catch (error) {
+      console.warn("[enquiries] stock reservation failed during atomic enquiry conversion", {
+        enquiryId,
+        orderId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  if (orderId && result.idempotent !== true) {
+    const enquiry = await getEnquiryById(enquiryId, env);
+    const customerUserId = text(enquiry?.customer_user_id) || null;
+    const orderNumber = String(orderRow.order_number ?? orderId);
+    await notifyCustomerAboutOrder(
+      { ...orderRow, created_by_user_id: customerUserId, customer_email: text(order.customer_email) },
+      "Order created",
+      `Your enquiry was converted to order ${orderNumber}. We will follow up with fulfillment details.`,
+      actorId,
+      env
+    );
+  }
+
+  await logEnquiryActivity(
+    {
+      actorId,
+      action: "enquiries.converted",
+      enquiryId,
+      metadata: { order_id: orderId, idempotent: result.idempotent === true }
+    },
+    env
+  );
+
+  return orderRow;
 }
 
 export async function convertEnquiryToOrder(

@@ -86,6 +86,7 @@ export async function POST(request: Request) {
     await provisionAuthenticatedUserIfMissing({
       userId: user.id,
       email: user.email,
+      emailConfirmedAt: user.email_confirmed_at ?? null,
       displayName: typeof user.user_metadata?.display_name === "string"
         ? user.user_metadata.display_name
         : typeof user.user_metadata?.full_name === "string"

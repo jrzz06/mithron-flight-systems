@@ -65,7 +65,7 @@ describe("warehouse route snapshot scoping", () => {
     expect(shipments).toContain('getWarehouseSnapshot({ scope: "dispatch" })');
     expect(shipmentDetail).toContain('getWarehouseSnapshot({ scope: "dispatch" })');
     expect(movements).toContain('getWarehouseSnapshot({ scope: "movements" })');
-    expect(adminOrders).toContain('getWarehouseSnapshot({ scope: "orders" })');
+    expect(adminOrders).toMatch(/getWarehouseSnapshot\(\{\s*scope:\s*"orders"/);
   });
 
   it("keeps the packing station behind the picked state instead of processing shortcuts", () => {

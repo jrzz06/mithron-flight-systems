@@ -68,6 +68,23 @@ export async function checkDistributedRateLimit(
   }
 }
 
+export async function deleteDistributedRateLimitKey(key: string): Promise<void> {
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  if (!url || !token) return;
+
+  const redisKey = `ratelimit:${key}`;
+  try {
+    await fetch(`${url}/del/${encodeURIComponent(redisKey)}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store"
+    });
+  } catch {
+    // Non-critical: if deletion fails the counter naturally expires with the window
+  }
+}
+
 export async function peekDistributedRateLimit(
   key: string,
   maxRequests: number

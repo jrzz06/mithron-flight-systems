@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { AdminSection } from "@/components/admin/module-panel";
+import { SupplierLiveSync } from "@/components/supplier/supplier-live-sync";
 import { StatusPill } from "@/components/platform";
 import { relativeTimeLabel, supplierRejectionLabel } from "@/lib/platform/copy";
 import { listSupplierProducts } from "@/services/supplier-actions";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
 
 type SectionKey = "pending" | "approved" | "rejected";
@@ -84,12 +86,16 @@ function SubmissionList({ items, sectionKey }: { items: Awaited<ReturnType<typeo
 }
 
 export default async function SupplierSubmissionsPage() {
-  const context = await getCurrentAuthContext();
+  const [context, policy] = await Promise.all([
+    getCurrentAuthContext(),
+    getAdminSettingsPolicy()
+  ]);
   const products = context.userId ? await listSupplierProducts(context.userId) : [];
   const sections = submissionSections(products);
 
   return (
     <div className="grid gap-5">
+      <SupplierLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <p className="text-sm leading-relaxed text-[var(--platform-text-secondary)]">
         Track products you have sent for review and see what needs your attention.
       </p>

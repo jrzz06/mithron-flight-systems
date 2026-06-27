@@ -3,7 +3,7 @@ import { parseEnquiryRequestBody } from "@/lib/api/enquiries-schema";
 import { requireClientAuditToken } from "@/lib/api/require-client-audit-token";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { createClient } from "@/lib/server";
-import { submitEnquiry } from "@/services/enquiries";
+import { submitContactRequest } from "@/services/contact-requests";
 import { createCustomerCheckoutNotificationRecord } from "@/services/admin-actions";
 
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Full name, email, phone, subject, and message are required." }, { status: 400 });
     }
     if (!body.subject && !body.message && !body.email) {
-      return NextResponse.json({ ok: true, enquiryId: null });
+      return NextResponse.json({ ok: true, contactRequestId: null, enquiryId: null });
     }
 
     const supabase = await createClient();
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
 
     const rateKey = userId ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
-    const limit = await checkDistributedRateLimit(`enquiries:${rateKey}`, 10, 60_000);
+    const limit = await checkDistributedRateLimit(`contact-requests:${rateKey}`, 10, 60_000);
     if (!limit.allowed) {
       return NextResponse.json({ error: "Too many requests." }, { status: 429 });
     }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const enquiry = await submitEnquiry(
+    const contactRequest = await submitContactRequest(
       {
         customerUserId: userId,
         customerEmail: body.email,
@@ -43,28 +43,33 @@ export async function POST(request: Request) {
         customerCompany: body.company ?? null,
         subject: body.subject,
         body: body.message,
-        relatedProductSlug: body.relatedProductSlug ?? null,
         region: body.region ?? null
       },
       userId
     );
 
-    if (userId) {
+    const contactRequestId = String(contactRequest.id ?? "");
+
+    if (userId && contactRequestId) {
       await createCustomerCheckoutNotificationRecord({
         recipient_id: userId,
         channel: "customer",
-        title: "Enquiry received",
-        body: `We received your enquiry: ${body.subject}`,
+        title: "Consultation request received",
+        body: `We received your request: ${body.subject}`,
         status: "unread",
-        entity_table: "enquiries",
-        entity_id: String(enquiry.id ?? ""),
+        entity_table: "contact_requests",
+        entity_id: contactRequestId,
         metadata: { recipient_email: body.email }
       }).catch(() => undefined);
     }
 
-    return NextResponse.json({ ok: true, enquiryId: enquiry.id ?? null });
+    return NextResponse.json({
+      ok: true,
+      contactRequestId: contactRequestId || null,
+      enquiryId: contactRequestId || null
+    });
   } catch (error) {
-    console.error("[enquiries] failed", error);
+    console.error("[enquiries] contact redirect failed", error);
     const message = error instanceof Error ? error.message : "Could not send enquiry.";
     return NextResponse.json({ error: message }, { status: 500 });
   }

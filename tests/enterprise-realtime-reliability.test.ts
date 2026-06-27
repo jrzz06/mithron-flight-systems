@@ -37,7 +37,10 @@ describe("enterprise realtime reliability", () => {
       expect.arrayContaining(["hero_banners", "homepage_sections", "media_assets", "product_media_assets"])
     );
     expect(getEnterpriseRealtimeTables("admin")).toEqual(
-      expect.arrayContaining(["notifications", "activity_logs", "inventory", "warehouse_stock", "orders", "inventory_movements", "shipments", "deployment_requests"])
+      expect.arrayContaining(["notifications", "activity_logs", "inventory", "warehouse_stock", "orders", "inventory_movements", "shipments", "deployment_requests", "mithron_products"])
+    );
+    expect(getEnterpriseRealtimeTables("supplier")).toEqual(
+      expect.arrayContaining(["notifications", "inventory", "activity_logs", "mithron_products"])
     );
 
     const allOperationalTables = new Set<string>(Object.values(ENTERPRISE_REALTIME_SCOPES).flatMap((scope) => scope.tables));

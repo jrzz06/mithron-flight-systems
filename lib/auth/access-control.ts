@@ -78,6 +78,7 @@ export function sectionFromPath(pathname: string): AdminSection {
   if (normalized.startsWith("/operations")) return "operations";
   if (normalized.startsWith("/admin/suppliers")) return "suppliers";
   if (normalized.startsWith("/admin/enquiries")) return "enquiries";
+  if (normalized.startsWith("/admin/contact-requests")) return "enquiries";
   if (normalized.startsWith("/admin/cms")) return "cms";
   if (normalized.startsWith("/admin/products")) return "products";
   if (normalized.startsWith("/admin/inventory")) return "warehouse";
@@ -202,6 +203,8 @@ export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
     || matchesApiPrefix(normalized, "/api/payments/webhooks")
     || normalized === "/api/client-verification"
     || matchesApiPrefix(normalized, "/api/auth/login")
+    || normalized === "/api/auth/signup"
+    || normalized === "/api/auth/forgot-password"
   ) {
     return { kind: "public" };
   }
@@ -225,6 +228,7 @@ export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
   if (
     matchesApiPrefix(normalized, "/api/checkout")
     || normalized === "/api/enquiries"
+    || normalized === "/api/contact-requests"
   ) {
     return { kind: "session_or_guest" };
   }

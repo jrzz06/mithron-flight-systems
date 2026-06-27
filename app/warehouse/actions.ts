@@ -6,11 +6,8 @@ import { assertSupabaseAdminConfig } from "@/lib/env";
 import {
   assertAdminMutationPermission,
   createActivityLogRecord,
-  createOrderItemRecord,
-  createOrderRecord,
   createCustomerCheckoutNotificationRecord,
   createNotificationRecord,
-  deleteProductRecordSafely,
   fetchAdminRecordsByColumn,
   recordEntityRevisionSnapshot,
   updateAdminRecord,
@@ -22,6 +19,11 @@ import {
 } from "@/services/admin-actions";
 import { readExpectedUpdatedAt, readOptionalExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
 import { assertValidWarehouseCode } from "@/services/warehouses";
+import {
+  getDefaultWarehouseCode,
+  getWarehouseConfiguration,
+  parseWarehouseConfigurationFormData
+} from "@/services/warehouse-config";
 import {
   assertOrderFulfillmentTransition,
   buildInventoryLinkageRecords,
@@ -38,10 +40,11 @@ import {
   parseInventoryCsv,
   type InventoryCsvRecord
 } from "@/services/inventory-csv";
-import { buildValidatedOrderDraft, buildOrderTimelineEntry, appendOrderTimeline, syncOrderStatusFromFulfillment } from "@/services/orders";
-import { getCheckoutPricingBySlugs } from "@/services/catalog";
-import { reserveCheckoutStock, orderHasCheckoutReservations, releaseCheckoutStock } from "@/services/checkout-stock";
-import { getDefaultWarehouseCode, getWarehouseConfiguration, parseWarehouseConfigurationFormData } from "@/services/warehouse-config";
+import { buildOrderTimelineEntry, appendOrderTimeline, syncOrderStatusFromFulfillment } from "@/services/orders";
+import { createStaffOrderFromWorkflowInput } from "@/services/manual-order";
+import { generateWarehouseOrderNumber } from "@/lib/orders/order-number";
+import { orderHasCheckoutReservations, releaseCheckoutStock, reserveCheckoutStock } from "@/services/checkout-stock";
+import { deriveProductSku } from "@/services/product-inventory-sync";
 import { requirePermission, getCurrentAuthContext } from "@/services/auth";
 import { resolveWarehouseScope } from "@/services/warehouse-scope";
 import { roleHasPermission, PermissionDeniedError } from "@/lib/auth/permissions";
@@ -105,16 +108,6 @@ async function requireInventoryImportActor() {
     return context.userId;
   }
   throw new PermissionDeniedError("The current user does not have permission to import inventory CSV.");
-}
-
-function orderNumberFromTimestamp(timestamp: Date) {
-  const y = timestamp.getUTCFullYear();
-  const m = String(timestamp.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(timestamp.getUTCDate()).padStart(2, "0");
-  const h = String(timestamp.getUTCHours()).padStart(2, "0");
-  const min = String(timestamp.getUTCMinutes()).padStart(2, "0");
-  const s = String(timestamp.getUTCSeconds()).padStart(2, "0");
-  return `MTH-${y}${m}${d}-${h}${min}${s}`;
 }
 
 async function fetchOrderRecord(orderId: string, env: Record<string, string | undefined> = process.env) {
@@ -360,28 +353,13 @@ async function syncProductAvailabilityFromInventoryStatus(
 function revalidateInventoryPaths(productSlug?: string) {
   revalidateCatalogSurfaces(productSlug);
   revalidatePath("/admin/inventory");
-  revalidatePath("/admin/products");
-  revalidatePath("/warehouse");
-  revalidatePath("/warehouse/dashboard");
   revalidatePath("/warehouse/inventory");
-  revalidatePath("/warehouse/movements");
-  revalidatePath("/warehouse/transfers");
-  revalidatePath("/warehouse/activity");
 }
 
 function revalidateWarehouseFulfillmentPaths() {
   revalidatePath("/admin/orders");
-  revalidatePath("/operations/orders");
-  revalidatePath("/warehouse");
-  revalidatePath("/warehouse/dashboard");
   revalidatePath("/warehouse/orders");
-  revalidatePath("/warehouse/picking");
-  revalidatePath("/warehouse/packing");
-  revalidatePath("/warehouse/dispatch");
-  revalidatePath("/warehouse/returns");
-  revalidatePath("/warehouse/movements");
-  revalidatePath("/warehouse/shipments");
-  revalidatePath("/warehouse/activity");
+  revalidatePath("/warehouse/dashboard");
 }
 
 function adminRestHeaders(serviceRoleKey: string, prefer = "return=representation") {
@@ -830,26 +808,23 @@ async function importInventoryCsvRecord(
   now: string,
   warehouseCode: string
 ) {
-  const previousStock = await fetchWarehouseStockBySku(record.productSlug, record.sku, warehouseCode);
+  const productSlug = record.productSlug.trim();
+  const canonicalSku = deriveProductSku(productSlug);
+  const existingProducts = await fetchAdminRecordsByColumn("mithron_products", "slug", productSlug);
+  if (!existingProducts.length) {
+    throw new Error(
+      `Product "${productSlug}" does not exist. Create it in Products before importing inventory for row ${record.sourceRow}.`
+    );
+  }
+
+  const previousStock = await fetchWarehouseStockBySku(productSlug, canonicalSku, warehouseCode);
   const quantityBefore = Number(previousStock?.available_quantity ?? 0);
-  const product = await upsertProductRecord(
-    {
-      slug: record.productSlug,
-      name: record.productName,
-      category: record.category,
-      price: record.unitPrice,
-      image: record.imageUrl ? { src: record.imageUrl, alt: record.productName, source: CSV_IMPORT_SOURCE_TAG } : null,
-      workflow_status: "published",
-      is_visible: true,
-      source_availability: CSV_IMPORT_SOURCE_TAG,
-      updated_at: now
-    },
-    actorId
-  );
+  const product = existingProducts[0];
+
   const inventory = await upsertInventoryRecord(
     {
-      product_slug: record.productSlug,
-      sku: record.sku,
+      product_slug: productSlug,
+      sku: canonicalSku,
       variant_id: null,
       stock_status: record.stockStatus,
       quantity: record.stock,
@@ -863,8 +838,8 @@ async function importInventoryCsvRecord(
   const stock = await upsertWarehouseStockRecord(
     {
       warehouse_code: warehouseCode,
-      product_slug: record.productSlug,
-      sku: record.sku,
+      product_slug: productSlug,
+      sku: canonicalSku,
       variant_id: null,
       available_quantity: record.stock,
       committed_quantity: 0,
@@ -877,8 +852,8 @@ async function importInventoryCsvRecord(
 
   const movement = await recordInventoryMovementForStockChange(
     {
-      productId: record.productSlug,
-      sku: record.sku,
+      productId: productSlug,
+      sku: canonicalSku,
       variantId: null,
       warehouseCode,
       warehouseStockId: String(previousStock?.id ?? "") || null,
@@ -1031,10 +1006,21 @@ export async function saveInventoryBulkUpdateFormAction(formData: FormData) {
 
 export async function deleteInventoryProductFormAction(formData: FormData) {
   const productSlug = readInventoryString(formData, "product_slug");
-  if (!productSlug) throw new Error("Product is required before deleting inventory.");
+  if (!productSlug) throw new Error("Product is required before archiving.");
   const actorId = await requireProductCatalogActor();
-  await deleteProductRecordSafely(productSlug, actorId);
-  revalidateInventoryPaths();
+  const now = new Date().toISOString();
+  await updateProductPublicationRecord(
+    {
+      slug: productSlug,
+      workflow_status: "archived",
+      is_visible: false,
+      published_at: null,
+      archived_at: now,
+      updated_at: now
+    },
+    actorId
+  );
+  revalidateInventoryPaths(productSlug);
 }
 
 export async function duplicateInventoryProductFormAction(formData: FormData) {
@@ -1048,7 +1034,7 @@ export async function duplicateInventoryProductFormAction(formData: FormData) {
   const scope = await resolveWarehouseScope({ userId: context.userId, role: context.role });
   const now = new Date().toISOString();
   const copySlug = `${productSlug}-copy-${Date.now()}`;
-  const copySku = `${sku}-COPY`;
+  const copySku = deriveProductSku(copySlug);
   const quantity = readInventoryInteger(formData, "quantity");
   const price = readInventoryNumber(formData, "price");
   const category = readInventoryString(formData, "category", "Uncategorized");
@@ -1136,101 +1122,25 @@ export async function applyWarehouseMovementFormAction(formData: FormData) {
 export async function createWarehouseOrderFormAction(formData: FormData) {
   const input = buildOrderCreateWorkflowFromFormData(formData);
   const actorId = await currentActorId();
-  const now = new Date();
+  if (!actorId) throw new Error("Unauthorized: no active session.");
   const warehouseCode = await resolveWarehouseCodeFromFormData(formData);
-  const catalog = await getCheckoutPricingBySlugs(input.checkout.items.map((item) => item.productSlug));
-  const draft = buildValidatedOrderDraft(input.checkout, catalog);
-  const timeline = appendOrderTimeline(
-    [],
-    buildOrderTimelineEntry({
-      status: input.status,
-      event: "order.created",
-      note: input.note,
-      actorId,
-      metadata: {
-        source: "warehouse",
-        item_count: draft.orderItems.length
-      },
-      at: now
-    })
-  );
 
-  const orderRecord = await createOrderRecord(
+  await createStaffOrderFromWorkflowInput(
     {
-      order_number: orderNumberFromTimestamp(now),
-      customer_email: draft.order.customer_email,
+      checkout: input.checkout,
       status: input.status,
-      payment_status: input.paymentStatus,
-      fulfillment_status: input.fulfillmentStatus,
-      channel: draft.order.channel,
-      subtotal: draft.order.subtotal,
-      total: draft.order.total,
+      paymentStatus: input.paymentStatus,
+      fulfillmentStatus: input.fulfillmentStatus,
       currency: input.currency,
-      timeline,
-      metadata: draft.order.metadata,
-      // created_by_user_id is canonical for auth-linked ownership; created_by is legacy staff actor text — remove created_by later.
-      created_by: actorId,
-      updated_at: now.toISOString()
+      note: input.note,
+      changeSummary: input.changeSummary,
+      warehouseCode,
+      orderNumber: generateWarehouseOrderNumber(),
+      createdByStaffId: actorId,
+      timelineSource: "warehouse"
     },
     actorId
   );
-
-  const orderId = String(orderRecord.id ?? "");
-  if (!orderId) {
-    throw new Error("Order creation failed to return an id.");
-  }
-
-  for (const item of draft.orderItems) {
-    await createOrderItemRecord(
-      {
-        order_id: orderId,
-        product_slug: item.product_slug,
-        product_name: item.product_name,
-        bundle_id: item.bundle_id,
-        sku: item.sku,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        line_total: item.line_total,
-        metadata: item.metadata,
-        updated_at: now.toISOString()
-      },
-      actorId
-    );
-  }
-
-  const reservationItems = draft.orderItems
-    .filter((item) => item.sku)
-    .map((item) => ({
-      productSlug: item.product_slug,
-      quantity: item.quantity,
-      sku: item.sku
-    }));
-
-  if (reservationItems.length) {
-    await reserveCheckoutStock(orderId, reservationItems, process.env, warehouseCode);
-  }
-
-  await createActivityLogRecord(
-    {
-      actor_id: actorId,
-      action: "orders.create",
-      entity_table: "orders",
-      entity_id: orderId,
-      severity: "info",
-      metadata: {
-        status: input.status,
-        fulfillment_status: input.fulfillmentStatus,
-        payment_status: input.paymentStatus,
-        customer_email: draft.order.customer_email,
-        item_count: draft.orderItems.length,
-        total: draft.order.total,
-        warehouse_code: warehouseCode
-      }
-    },
-    actorId
-  );
-
-  await recordEntityRevisionSnapshot("orders", orderId, orderRecord as JsonRecord, actorId, input.changeSummary);
 
   revalidateWarehouseFulfillmentPaths();
 }

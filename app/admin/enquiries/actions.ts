@@ -108,7 +108,7 @@ export async function convertEnquiryToOrderFormAction(formData: FormData) {
     revalidatePath("/admin/enquiries");
     revalidatePath("/admin/orders");
     redirect(
-      `/admin/orders?order=${encodeURIComponent(convertedOrderId)}&queue=review&enquiry_status=success&enquiry_message=${encodeURIComponent("Enquiry converted to order.")}`
+      `/admin/orders?order=${encodeURIComponent(convertedOrderId)}&queue=pending_verification&enquiry_status=success&enquiry_message=${encodeURIComponent("Enquiry converted to order.")}`
     );
   } catch (error) {
     if (error instanceof Error && error.message === "NEXT_REDIRECT") throw error;

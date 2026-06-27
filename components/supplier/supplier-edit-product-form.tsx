@@ -15,7 +15,6 @@ export type SupplierProductEditDefaults = {
   name: string;
   category: string;
   price: number;
-  tagline: string;
   description?: string;
   descriptionJson?: string;
   imageSrc?: string;
@@ -76,17 +75,6 @@ export function SupplierEditProductForm({
             className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
           />
         </label>
-        <label className="grid gap-1 text-sm">
-          <span className="text-[var(--platform-text-secondary)]">Short description</span>
-          <span className="text-xs text-[var(--platform-text-muted)]">Shown on catalog cards — defaults to product name if empty</span>
-          <textarea
-            name="tagline"
-            rows={3}
-            defaultValue={defaults.tagline}
-            className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)]"
-          />
-        </label>
-
         <RichTextEditorField
           label="Product description"
           name="description"

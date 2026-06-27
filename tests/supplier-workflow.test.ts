@@ -44,6 +44,27 @@ describe("supplier workflow guards", () => {
     expect(editPage).not.toContain('["draft", "pending_review", "rejected"]');
     expect(editPage).toContain("supplierStatusExplanation");
     expect(editPage).toContain("You cannot edit this product while it is being reviewed.");
+    expect(editPage).toContain("description_json");
+  });
+
+  it("uses a single product description field in supplier and admin editors", () => {
+    const supplierCreateForm = readFileSync(join(root, "components/supplier/supplier-new-product-form.tsx"), "utf8");
+    const supplierEditForm = readFileSync(join(root, "components/supplier/supplier-edit-product-form.tsx"), "utf8");
+    const supplierActions = readFileSync(join(root, "app/supplier/products/actions.ts"), "utf8");
+    const adminCreateFields = readFileSync(join(root, "app/admin/products/product-create-detail-fields.tsx"), "utf8");
+    const adminEditDialog = readFileSync(join(root, "app/admin/products/product-detail-edit-dialog.tsx"), "utf8");
+
+    expect(supplierCreateForm).toContain('jsonName="description_json"');
+    expect(supplierEditForm).toContain('jsonName="description_json"');
+    expect(supplierCreateForm).not.toContain("tagline");
+    expect(supplierEditForm).not.toContain("tagline");
+    expect(supplierCreateForm).not.toContain("Short description");
+    expect(supplierActions).toContain("readSupplierProductDescriptionFields");
+    expect(supplierActions).not.toContain("tagline || name");
+    expect(adminCreateFields).toContain('jsonName="description_json"');
+    expect(adminEditDialog).toContain('jsonName="description_json"');
+    expect(adminCreateFields).not.toContain("tagline");
+    expect(adminEditDialog).not.toContain("tagline");
   });
 
   it("redirects supplier product actions with product_status feedback", () => {

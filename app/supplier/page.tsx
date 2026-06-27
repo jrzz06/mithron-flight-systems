@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { AdminSection } from "@/components/admin/module-panel";
+import { SupplierLiveSync } from "@/components/supplier/supplier-live-sync";
 import { StatusPill } from "@/components/platform";
 import { relativeTimeLabel, supplierEmptyMessage } from "@/lib/platform/copy";
 import { listSupplierInventory, listSupplierProducts } from "@/services/supplier-actions";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
 
 type ProductRow = Awaited<ReturnType<typeof listSupplierProducts>>[number];
@@ -81,13 +83,17 @@ function ProductRowLink({
 }
 
 export default async function SupplierDashboardPage() {
-  const context = await getCurrentAuthContext();
+  const [context, policy] = await Promise.all([
+    getCurrentAuthContext(),
+    getAdminSettingsPolicy()
+  ]);
   const products = context.userId ? await listSupplierProducts(context.userId) : [];
   const inventory = context.userId ? await listSupplierInventory(context.userId) : [];
 
   if (!products.length) {
     return (
       <div className="grid gap-5">
+        <SupplierLiveSync enabled={policy.realtimeUpdatesEnabled} />
         <p className="max-w-3xl text-sm leading-relaxed text-[var(--platform-text-secondary)]">
           Manage your product listings, send them for review, and keep track of stock levels. Start by adding your first product.
         </p>
@@ -159,6 +165,7 @@ export default async function SupplierDashboardPage() {
 
   return (
     <div className="grid gap-5">
+      <SupplierLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <p className="max-w-3xl text-sm leading-relaxed text-[var(--platform-text-secondary)]">
         Manage your product listings, track review progress, and monitor stock levels. Items that need your attention appear first.
       </p>

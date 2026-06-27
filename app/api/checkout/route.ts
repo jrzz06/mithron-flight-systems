@@ -13,7 +13,7 @@ import {
   updateAdminRecord
 } from "@/services/admin-actions";
 import { buildCustomerCheckoutDraft } from "@/services/orders";
-import { releaseCheckoutStock, reserveCheckoutStock, resolveCheckoutStockSkus } from "@/services/checkout-stock";
+import { releaseCheckoutStock, reserveCheckoutStock, resolveCheckoutStockSkus, verifyCheckoutStockAvailability } from "@/services/checkout-stock";
 import { createPaymentIntent, isPaymentGatewayConfigured } from "@/services/payments/gateway";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
 
@@ -168,10 +168,16 @@ export async function POST(request: Request) {
 
   let stockItems;
   try {
+    await verifyCheckoutStockAvailability(body.items);
     stockItems = await resolveCheckoutStockSkus(body.items);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to resolve product inventory.";
-    return NextResponse.json({ error: message }, { status: 409 });
+    const internal = error instanceof Error ? error.message : "Unable to resolve product inventory.";
+    console.error("[checkout] Stock verification failed:", internal);
+    const isStockError = /insufficient stock|out of stock/i.test(internal);
+    return NextResponse.json(
+      { error: isStockError ? "One or more items are out of stock or unavailable." : "Unable to process your order at this time." },
+      { status: 409 }
+    );
   }
 
   const catalog = await getCheckoutPricingBySlugs(body.items.map((item) => item.productSlug));
@@ -232,16 +238,16 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "order_items_failed");
-    const message = error instanceof Error ? error.message : "Unable to create order line items.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[checkout] Order line items creation failed:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Unable to process your order at this time." }, { status: 500 });
   }
 
   try {
     await reserveCheckoutStock(orderId, stockItems);
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "stock_reservation_failed");
-    const message = error instanceof Error ? error.message : "Insufficient stock for one or more items.";
-    return NextResponse.json({ error: message }, { status: 409 });
+    console.error("[checkout] Stock reservation failed:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "One or more items are no longer available." }, { status: 409 });
   }
 
   let intent;
@@ -255,8 +261,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "payment_intent_failed");
-    const message = error instanceof Error ? error.message : "Payment initialization failed.";
-    return NextResponse.json({ error: message }, { status: 503 });
+    console.error("[checkout] Payment initialization failed:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Payment service is unavailable. Please try again shortly." }, { status: 503 });
   }
 
   try {
@@ -273,8 +279,8 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "payment_record_failed");
-    const message = error instanceof Error ? error.message : "Payment record creation failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[checkout] Payment record creation failed:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Unable to process your order at this time." }, { status: 500 });
   }
 
   const paymentProvider = (process.env.PAYMENT_PROVIDER ?? "stub").toLowerCase();

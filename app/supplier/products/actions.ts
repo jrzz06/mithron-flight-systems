@@ -33,6 +33,15 @@ function supplierProductRedirect(path: string, status: "success" | "error", mess
   redirect(`${path}?product_status=${status}&product_message=${encodeURIComponent(message.slice(0, 240))}`);
 }
 
+function readSupplierProductDescriptionFields(formData: FormData) {
+  const editor = readEditorDocumentFields(formData, "description_json", "description");
+  if (!editor) return {};
+  return {
+    description: editor.html || null,
+    description_json: editor.json
+  };
+}
+
 async function notifyAdminsOfSubmission(productName: string, slug: string, actorId: string) {
   const adminIds = await listAdminUserIds();
   await Promise.all(
@@ -79,13 +88,12 @@ async function saveSupplierProductDraft(formData: FormData) {
     throw validationError;
   }
 
-  const { name, category, tagline, price, slug } = parsed;
+  const { name, category, price, slug } = parsed;
   const submitForApproval = String(formData.get("submit_for_approval") ?? "0") === "1";
 
   logSupplierProductFormDebug("parsed values", {
     name,
     category,
-    tagline,
     price,
     slug,
     submitForApproval,
@@ -95,7 +103,7 @@ async function saveSupplierProductDraft(formData: FormData) {
   const insertPayload = {
     slug,
     name,
-    tagline: tagline || name,
+    tagline: name,
     category,
     price,
     product_url: `/product/${slug}`,
@@ -106,14 +114,7 @@ async function saveSupplierProductDraft(formData: FormData) {
     specs: {},
     anchors: [],
     interests: [],
-    ...(() => {
-      const editor = readEditorDocumentFields(formData, "description_json", "description");
-      if (!editor) return {};
-      return {
-        description: editor.html || null,
-        description_json: editor.json
-      };
-    })()
+    ...readSupplierProductDescriptionFields(formData)
   };
 
   const { image, hero, gallery, uploadedImage } = await resolveSupplierProductImageFields(formData, {
@@ -240,7 +241,7 @@ export async function updateSupplierProductFormStateAction(
     const slug = String(formData.get("slug") ?? "").trim();
     if (!slug) throw new Error("Product slug is required.");
 
-    const { name, category, tagline, price } = parseSupplierProductForm(formData);
+    const { name, category, price } = parseSupplierProductForm(formData);
     const existingRows = await fetchAdminRecordsByColumn("mithron_products", "slug", slug);
     const existingImageSrc = readProductImageSrc(existingRows[0]?.image) || readProductImageSrc(existingRows[0]?.hero);
 
@@ -258,19 +259,11 @@ export async function updateSupplierProductFormStateAction(
       {
         name,
         category,
-        tagline: tagline || name,
         price,
         image,
         hero,
         gallery,
-        ...(() => {
-          const editor = readEditorDocumentFields(formData, "description_json", "description");
-          if (!editor) return {};
-          return {
-            description: editor.html || null,
-            description_json: editor.json
-          };
-        })(),
+        ...readSupplierProductDescriptionFields(formData),
         updated_at: new Date().toISOString()
       },
       context.userId,

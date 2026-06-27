@@ -1,6 +1,8 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { AdminSection } from "@/components/admin/module-panel";
+import { AdminSuppliersLiveSync } from "@/components/admin/admin-suppliers-live-sync";
 import { FeedbackBanner, StatusPill } from "@/components/platform";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { countPendingSupplierProducts } from "@/services/supplier-actions";
 import { formatINR } from "@/lib/utils";
 import { approveProductSubmissionFormAction, rejectProductSubmissionFormAction } from "./actions";
@@ -78,13 +80,15 @@ export default async function AdminSupplierProductsPage({
 }) {
   const params = await searchParams;
   const supplierFilter = typeof params.supplier === "string" ? params.supplier.trim() : "";
-  const [products, pendingCount] = await Promise.all([
+  const [products, pendingCount, policy] = await Promise.all([
     fetchPendingProducts(supplierFilter || undefined),
-    countPendingSupplierProducts()
+    countPendingSupplierProducts(),
+    getAdminSettingsPolicy()
   ]);
 
   return (
     <div className="grid gap-5">
+      <AdminSuppliersLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <div className="max-w-3xl">
         <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">Supplier approvals</p>
         <p className="mt-2 text-sm leading-relaxed text-[var(--platform-text-muted)]">

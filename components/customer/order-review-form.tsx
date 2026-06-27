@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { AccountField, AccountInput, AccountTextarea } from "@/components/account";
+import { Button } from "@/components/ui/button";
 
 export function OrderReviewForm({
   orderId,
@@ -22,14 +24,14 @@ export function OrderReviewForm({
 
   if (existingStatus) {
     return (
-      <p className="text-sm text-white/60">
+      <p className="text-sm text-[var(--account-ink-muted)]">
         Review submitted ({existingStatus.replaceAll("_", " ")}).
       </p>
     );
   }
 
   if (disabled) {
-    return <p className="text-sm text-white/50">Reviews unlock after delivery.</p>;
+    return <p className="text-sm text-[var(--account-ink-muted)]">Reviews are available after delivery.</p>;
   }
 
   async function onSubmit(event: React.FormEvent) {
@@ -45,50 +47,38 @@ export function OrderReviewForm({
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       setStatus("error");
-      setMessage(typeof payload.error === "string" ? payload.error : "Review submission failed.");
+      setMessage(typeof payload.error === "string" ? payload.error : "We couldn't submit your review. Please try again.");
       return;
     }
     setStatus("done");
-    setMessage(`Thanks for reviewing ${productName}. Your review is pending moderation.`);
+    setMessage(`Thank you for reviewing ${productName}. Your review is being checked before it appears.`);
   }
 
   if (status === "done") {
-    return <p className="text-sm text-emerald-400">{message}</p>;
+    return <p className="text-sm text-[var(--account-accent)]">{message}</p>;
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-4 grid gap-3 border-t border-[var(--surface-border)] pt-4">
-      <p className="text-sm font-medium text-white/80">Review {productName}</p>
-      <label className="grid gap-2 text-sm text-white/70">
-        Rating
+    <form onSubmit={onSubmit} className="mt-4 grid gap-3 border-t border-[var(--account-border)] pt-4">
+      <p className="text-sm font-medium text-[var(--account-ink)]">Review {productName}</p>
+      <AccountField label="Rating">
         <select
           value={rating}
           onChange={(event) => setRating(Number(event.target.value))}
-          className="w-24 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-page)] px-3 py-2 text-white"
+          className="min-h-11 w-28 rounded-xl border border-[var(--account-border-strong)] bg-[var(--account-surface)] px-3 py-2 text-[var(--account-ink)]"
         >
           {[5, 4, 3, 2, 1].map((value) => (
             <option key={value} value={value}>{value} stars</option>
           ))}
         </select>
-      </label>
-      <label className="grid gap-2 text-sm text-white/70">
-        Your review
-        <textarea
-          required
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          rows={3}
-          className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-page)] px-4 py-3 text-white"
-        />
-      </label>
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        className="inline-flex h-10 w-fit items-center justify-center rounded-xl bg-emerald-500 px-4 text-sm font-medium text-black disabled:opacity-60"
-      >
+      </AccountField>
+      <AccountField label="Your review">
+        <AccountTextarea required value={body} onChange={(event) => setBody(event.target.value)} rows={3} />
+      </AccountField>
+      <Button type="submit" disabled={status === "loading"} size="sm">
         {status === "loading" ? "Submitting…" : "Submit review"}
-      </button>
-      {status === "error" && message ? <p className="text-sm text-red-400">{message}</p> : null}
+      </Button>
+      {status === "error" && message ? <p className="text-sm text-[var(--account-danger)]">{message}</p> : null}
     </form>
   );
 }

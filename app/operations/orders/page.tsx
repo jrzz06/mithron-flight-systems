@@ -1,5 +1,6 @@
 import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
+import { FormField, Input, Select, Textarea } from "@/components/platform";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { formatINR } from "@/lib/utils";
 import { getWarehouseSnapshot } from "@/services/admin";
@@ -44,7 +45,7 @@ async function updateOperationsOrderLifecycleWithFeedback(formData: FormData) {
 }
 
 export default async function OperationsOrdersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const snapshot = await getWarehouseSnapshot({ scope: "orders" });
+  const snapshot = await getWarehouseSnapshot({ scope: "orders", ordersFilter: "all" });
   const params = searchParams ? await searchParams : {};
   const fulfillmentFilter = searchValue(params, "fulfillment_status");
   const query = searchValue(params, "q").toLowerCase();
@@ -114,14 +115,12 @@ export default async function OperationsOrdersPage({ searchParams }: { searchPar
           </div>
         </section>
 
-        <form data-order-filter-form className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:grid-cols-[1fr_220px_auto] md:items-end">
-          <label className="grid gap-2 text-sm">
-            <span className="text-white/70">Search orders</span>
-            <input name="q" defaultValue={query} placeholder="Order number, customer, or id" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none placeholder:text-white/30" />
-          </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-white/70">Fulfillment</span>
-            <select name="fulfillment_status" defaultValue={fulfillmentFilter} className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none">
+        <form data-order-filter-form className="grid gap-3 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5 md:grid-cols-[1fr_220px_auto] md:items-end">
+          <FormField label="Search orders" htmlFor="operations-order-search">
+            <Input id="operations-order-search" name="q" defaultValue={query} placeholder="Order number, customer, or id" />
+          </FormField>
+          <FormField label="Fulfillment" htmlFor="operations-order-fulfillment">
+            <Select id="operations-order-fulfillment" name="fulfillment_status" defaultValue={fulfillmentFilter}>
               <option value="">all</option>
               <option value="pending">pending</option>
               <option value="processing">processing</option>
@@ -130,9 +129,9 @@ export default async function OperationsOrdersPage({ searchParams }: { searchPar
               <option value="delivered">delivered</option>
               <option value="cancelled">cancelled</option>
               <option value="returned">returned</option>
-            </select>
-          </label>
-          <button className="rounded-xl border border-white/10 bg-white/[0.065] px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-white/78">Filter</button>
+            </Select>
+          </FormField>
+          <button className="platform-btn-secondary h-10 rounded-[var(--platform-radius)] px-4 text-sm font-medium">Filter</button>
         </form>
 
         <div className="grid gap-8 lg:grid-cols-2">
@@ -146,23 +145,19 @@ export default async function OperationsOrdersPage({ searchParams }: { searchPar
           </section>
         </div>
 
-        <form action={createOperationsOrderWithFeedback} data-order-management-table="orders" data-order-items-table="order_items" className="grid gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+        <form action={createOperationsOrderWithFeedback} data-order-management-table="orders" data-order-items-table="order_items" className="grid gap-4 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-5">
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="grid gap-2 text-sm">
-              <span className="text-white/70">Customer email</span>
-              <input name="customer_email" defaultValue="" placeholder="ops@example.com" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none placeholder:text-white/30" />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="text-white/70">Region</span>
-              <input name="region" defaultValue="" placeholder="IN-WEST" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none placeholder:text-white/30" />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="text-white/70">Mission profile</span>
-              <input name="mission_profile" defaultValue="" placeholder="agriculture" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none placeholder:text-white/30" />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className="text-white/70">Fulfillment status</span>
-              <select name="fulfillment_status" defaultValue="pending" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none">
+            <FormField label="Customer email" htmlFor="operations-customer-email">
+              <Input id="operations-customer-email" name="customer_email" defaultValue="" placeholder="ops@example.com" />
+            </FormField>
+            <FormField label="Region" htmlFor="operations-region">
+              <Input id="operations-region" name="region" defaultValue="" placeholder="IN-WEST" />
+            </FormField>
+            <FormField label="Mission profile" htmlFor="operations-mission-profile">
+              <Input id="operations-mission-profile" name="mission_profile" defaultValue="" placeholder="agriculture" />
+            </FormField>
+            <FormField label="Fulfillment status" htmlFor="operations-create-fulfillment">
+              <Select id="operations-create-fulfillment" name="fulfillment_status" defaultValue="pending">
                 <option value="pending">pending</option>
                 <option value="processing">processing</option>
                 <option value="packed">packed</option>
@@ -170,26 +165,23 @@ export default async function OperationsOrdersPage({ searchParams }: { searchPar
                 <option value="delivered">delivered</option>
                 <option value="cancelled">cancelled</option>
                 <option value="returned">returned</option>
-              </select>
-            </label>
+              </Select>
+            </FormField>
           </div>
           <input name="status" type="hidden" value="confirmed" />
           <input name="payment_status" type="hidden" value="not_required" />
           <input name="currency" type="hidden" value="INR" />
           <input name="warehouse_code" type="hidden" value="IN-WEST-01" />
           <input name="metadata" type="hidden" value="{}" />
-          <label className="grid gap-2 text-sm">
-            <span className="text-white/70">Order items</span>
-            <textarea name="order_items" defaultValue="[]" rows={5} className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 font-mono text-xs text-white outline-none" />
-          </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-white/70">Note</span>
-            <input name="note" defaultValue="" placeholder="Operations order capture" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none placeholder:text-white/30" />
-          </label>
-          <label className="grid gap-2 text-sm">
-            <span className="text-white/70">Change summary</span>
-            <input name="change_summary" defaultValue="" placeholder="Create operations order" className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-white outline-none placeholder:text-white/30" />
-          </label>
+          <FormField label="Order items" htmlFor="operations-order-items" hint="JSON array of line items">
+            <Textarea id="operations-order-items" name="order_items" defaultValue="[]" rows={5} className="font-mono text-xs" />
+          </FormField>
+          <FormField label="Note" htmlFor="operations-order-note">
+            <Input id="operations-order-note" name="note" defaultValue="" placeholder="Operations order capture" />
+          </FormField>
+          <FormField label="Change summary" htmlFor="operations-change-summary">
+            <Input id="operations-change-summary" name="change_summary" defaultValue="" placeholder="Create operations order" />
+          </FormField>
           <OperationalSubmitButton pendingLabel="Creating order">
             Create order
           </OperationalSubmitButton>

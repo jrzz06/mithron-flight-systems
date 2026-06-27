@@ -27,18 +27,9 @@ CREATE INDEX IF NOT EXISTS editor_document_media_asset_idx
 ALTER TABLE public.media_assets
   ADD COLUMN IF NOT EXISTS orphaned_at timestamptz;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'media_assets_status_check'
-  ) THEN
-    ALTER TABLE public.media_assets
-      ADD CONSTRAINT media_assets_status_check
-      CHECK (status IN ('active', 'orphaned', 'archived', 'draft'));
-  END IF;
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
+-- media_assets.status is cms_publish_status enum; extend it for orphan workflow instead of a text check.
+ALTER TYPE public.cms_publish_status ADD VALUE IF NOT EXISTS 'orphaned';
+ALTER TYPE public.cms_publish_status ADD VALUE IF NOT EXISTS 'active';
 
 COMMENT ON TABLE public.editor_document_media IS 'Tracks media assets referenced by TipTap editor documents for orphan cleanup.';
 COMMENT ON COLUMN public.media_assets.orphaned_at IS 'When set, asset is queued for deletion after grace period if unreferenced.';

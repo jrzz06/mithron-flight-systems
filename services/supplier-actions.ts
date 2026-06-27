@@ -42,6 +42,9 @@ function mapSupplierProductError(error: unknown) {
   if (message.includes("code=23514") || message.includes("workflow_status")) {
     return new Error("This product cannot be updated right now. Contact support if the problem continues.");
   }
+  if (message.includes("code=PGRST204") || message.includes("description_json")) {
+    return new Error("Product description storage is not ready on the server. Ask an admin to run the latest database migrations, then try again.");
+  }
   return error instanceof Error ? error : new Error(message);
 }
 
@@ -220,7 +223,7 @@ export async function deleteSupplierOwnedProduct(
 export async function getSupplierOwnedProduct(supplierId: string, slug: string, env: EnvSource = process.env) {
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(
-    `${config.url}/rest/v1/mithron_products?select=slug,name,category,price,tagline,image,hero,workflow_status,rejection_reason,supplier_id,is_visible,updated_at&slug=eq.${encodeURIComponent(slug)}&supplier_id=eq.${supplierId}&limit=1`,
+    `${config.url}/rest/v1/mithron_products?select=slug,name,category,price,description,description_json,image,hero,workflow_status,rejection_reason,supplier_id,is_visible,updated_at&slug=eq.${encodeURIComponent(slug)}&supplier_id=eq.${supplierId}&limit=1`,
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
   if (!response.ok) return null;

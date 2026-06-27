@@ -10,9 +10,10 @@ describe("auth provisioning and google login", () => {
     expect(readFileSync(join(root, "app/api/auth/provision/route.ts"), "utf8")).toContain("provisionAuthenticatedUserIfMissing");
   });
 
-  it("routes password login through the server auth endpoint and google through supabase oauth", () => {
+  it("routes password login through Supabase auth and provisions the session server-side", () => {
     const loginForm = readFileSync(join(process.cwd(), "app/login/login-form.tsx"), "utf8");
-    expect(loginForm).toContain('fetch("/api/auth/login"');
+    expect(loginForm).toContain("signInWithPassword");
+    expect(loginForm).toContain('fetch("/api/auth/provision"');
     expect(loginForm).toContain("signInWithOAuth");
     expect(loginForm).toContain('provider: "google"');
   });

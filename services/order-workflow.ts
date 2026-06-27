@@ -449,7 +449,53 @@ const deletableOrderStatuses = new Set([
   "cancelled"
 ]);
 
-export async function deleteAdminOrderWorkflow(
+const activeFulfillmentStatuses = ["processing", "picked", "packed", "ready_to_dispatch", "shipped", "delivered", "assigned"];
+const activeOrderStatuses = ["assigned", "processing", "packed", "dispatched", "delivered"];
+
+function assertOrderCanBeRemoved(order: JsonRecord) {
+  const status = String(order.status ?? "");
+  const fulfillmentStatus = String(order.fulfillment_status ?? "");
+  if (activeFulfillmentStatuses.includes(fulfillmentStatus) || activeOrderStatuses.includes(status)) {
+    throw new Error("Orders in active fulfillment cannot be deleted. Cancel the order instead.");
+  }
+}
+
+export async function archiveAdminOrderWorkflow(
+  input: { orderId: string; actorId: string; reason?: string },
+  env: EnvSource = process.env
+) {
+  const rows = await fetchAdminRecordsByColumn("orders", "id", input.orderId, env);
+  const order = rows[0];
+  if (!order) throw new Error("Order not found.");
+  if (order.deleted_at) throw new Error("Deleted orders must be restored before archiving.");
+
+  const now = new Date().toISOString();
+  const updated = await updateAdminRecord(
+    "orders",
+    "id",
+    input.orderId,
+    { archived_at: now, updated_at: now },
+    input.actorId,
+    env
+  );
+
+  await createActivityLogRecord(
+    {
+      actor_id: input.actorId,
+      action: "admin_archive",
+      entity_table: "orders",
+      entity_id: input.orderId,
+      severity: "info",
+      metadata: { reason: input.reason?.trim() ?? null }
+    },
+    input.actorId,
+    env
+  );
+
+  return updated;
+}
+
+export async function softDeleteAdminOrderWorkflow(
   input: { orderId: string; actorId: string; reason: string },
   env: EnvSource = process.env
 ) {
@@ -458,14 +504,108 @@ export async function deleteAdminOrderWorkflow(
   if (!order) throw new Error("Order not found.");
 
   const status = String(order.status ?? "");
-  const fulfillmentStatus = String(order.fulfillment_status ?? "");
   const channel = String(order.channel ?? "checkout");
-  const activeFulfillment = ["processing", "picked", "packed", "ready_to_dispatch", "shipped", "delivered", "assigned"];
-  if (activeFulfillment.includes(fulfillmentStatus) || ["assigned", "processing", "packed", "dispatched", "delivered"].includes(status)) {
-    throw new Error("Orders in active fulfillment cannot be deleted. Cancel the order instead.");
-  }
+  assertOrderCanBeRemoved(order);
   if (!deletableOrderStatuses.has(status) && channel !== "enquiry") {
-    throw new Error(`Order cannot be deleted in its current state (${status}).`);
+    throw new Error(`Order cannot be moved to trash in its current state (${status}).`);
+  }
+
+  const reason = input.reason.trim();
+  if (!reason) throw new Error("A deletion reason is required.");
+
+  const hasReservations = await orderHasCheckoutReservations(input.orderId, env).catch(() => false);
+  if (hasReservations) {
+    await releaseCheckoutStock(input.orderId, env);
+  }
+
+  const now = new Date().toISOString();
+  const updated = await updateAdminRecord(
+    "orders",
+    "id",
+    input.orderId,
+    {
+      deleted_at: now,
+      deleted_by: input.actorId,
+      updated_at: now
+    },
+    input.actorId,
+    env
+  );
+
+  await createActivityLogRecord(
+    {
+      actor_id: input.actorId,
+      action: "admin_soft_delete",
+      entity_table: "orders",
+      entity_id: input.orderId,
+      severity: "warning",
+      metadata: {
+        reason,
+        order_number: String(order.order_number ?? ""),
+        customer_email: String(order.customer_email ?? "")
+      }
+    },
+    input.actorId,
+    env
+  );
+
+  return { deleted: true, orderId: input.orderId, row: updated };
+}
+
+export async function restoreAdminOrderWorkflow(
+  input: { orderId: string; actorId: string },
+  env: EnvSource = process.env
+) {
+  const rows = await fetchAdminRecordsByColumn("orders", "id", input.orderId, env);
+  const order = rows[0];
+  if (!order) throw new Error("Order not found.");
+
+  const now = new Date().toISOString();
+  const updated = await updateAdminRecord(
+    "orders",
+    "id",
+    input.orderId,
+    {
+      deleted_at: null,
+      deleted_by: null,
+      archived_at: null,
+      updated_at: now
+    },
+    input.actorId,
+    env
+  );
+
+  await createActivityLogRecord(
+    {
+      actor_id: input.actorId,
+      action: "admin_restore",
+      entity_table: "orders",
+      entity_id: input.orderId,
+      severity: "info"
+    },
+    input.actorId,
+    env
+  );
+
+  return updated;
+}
+
+export async function permanentDeleteAdminOrderWorkflow(
+  input: { orderId: string; actorId: string; reason: string },
+  env: EnvSource = process.env
+) {
+  const rows = await fetchAdminRecordsByColumn("orders", "id", input.orderId, env);
+  const order = rows[0];
+  if (!order) throw new Error("Order not found.");
+  if (!order.deleted_at) {
+    throw new Error("Only orders in trash can be permanently deleted.");
+  }
+
+  const status = String(order.status ?? "");
+  const channel = String(order.channel ?? "checkout");
+  assertOrderCanBeRemoved(order);
+  if (!deletableOrderStatuses.has(status) && channel !== "enquiry") {
+    throw new Error(`Order cannot be permanently deleted in its current state (${status}).`);
   }
 
   const reason = input.reason.trim();
@@ -518,6 +658,13 @@ export async function deleteAdminOrderWorkflow(
 
   await deleteAdminRecord("orders", "id", input.orderId, input.actorId, env);
   return { deleted: true, orderId: input.orderId };
+}
+
+export async function deleteAdminOrderWorkflow(
+  input: { orderId: string; actorId: string; reason: string },
+  env: EnvSource = process.env
+) {
+  return softDeleteAdminOrderWorkflow(input, env);
 }
 
 export { AdminRecordConflictError };

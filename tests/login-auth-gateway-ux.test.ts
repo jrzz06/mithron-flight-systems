@@ -13,11 +13,14 @@ describe("login auth gateway UX", () => {
     const page = source("app/login/page.tsx");
 
     expect(page).toContain("Sign in");
-    expect(page).toContain("Guests use Google");
+    expect(page).toContain("Sign in to manage your account and orders");
+    expect(page).toContain("trustGrid");
     expect(page).not.toContain("Firebase");
     expect(page).not.toContain("Supabase");
     expect(page).not.toContain("Hybrid sign-in");
-    expect(page).not.toContain("trustGrid");
+    expect(page).not.toContain("Guests use Google");
+    expect(page).not.toContain("Team access");
+    expect(page).not.toContain("Authorized");
   });
 
   it("renders the interactive login form without a non-interactive loading skeleton", () => {
@@ -47,8 +50,11 @@ describe("login auth gateway UX", () => {
     expect(form).not.toContain("not configured");
     expect(form).toContain("Continue with Google");
     expect(form).not.toContain("Continue with Phone");
-    expect(form).toContain("Continue with Email");
-    expect(form).toContain("Authorized work account");
+    expect(form).toContain("Sign in");
+    expect(form).toContain("Sign in with email");
+    expect(form).not.toContain("Team access");
+    expect(form).not.toContain("Authorized work account");
+    expect(form).not.toContain("Shop or browse");
     expect(form).toContain("/auth/callback");
     expect(loginRoute).toContain("mapAuthErrorForClient");
     expect(loginRoute).toContain("resolvePostAuthRedirect");
@@ -60,13 +66,13 @@ describe("login auth gateway UX", () => {
   it("defines production-grade auth card geometry", () => {
     const css = source("app/login/login.module.css");
 
-    expect(css).toContain("grid-template-columns: minmax(0, 2fr) minmax(0, 3fr)");
+    expect(css).toContain("grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)");
     expect(css).toContain("@media (min-width: 768px) and (max-width: 1023px)");
     expect(css).toContain("@media (max-width: 767px)");
     expect(css).toContain("--auth-card-max: clamp(26.25rem, 92vw, 30rem)");
     expect(css).toContain(".authCard");
     expect(css).toContain(".authInput");
-    expect(css).toContain("min-height: 2.75rem");
+    expect(css).toContain("min-height: 3rem");
     expect(css).toContain(".authSubmit");
     expect(css).toContain(".methodDivider");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");

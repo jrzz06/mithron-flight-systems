@@ -23,8 +23,10 @@ export type EnterpriseRealtimeTable =
   | "staff_tasks"
   | "warehouse_stock"
   | "enquiries"
+  | "contact_requests"
   | "payments"
-  | "customer_addresses";
+  | "customer_addresses"
+  | "mithron_products";
 
 export type EnterpriseRealtimeStatus =
   | "idle"
@@ -66,7 +68,6 @@ export type EnterpriseRealtimeScopeConfig = {
 };
 
 export const STOREFRONT_REALTIME_BLOCKLIST = [
-  "mithron_products",
   "hero_slides",
   "cart_sessions",
   "checkout_sessions",
@@ -82,6 +83,7 @@ export const ENTERPRISE_REALTIME_SCOPES: Record<EnterpriseRealtimeScope, Enterpr
       "notifications",
       "activity_logs",
       "enquiries",
+      "contact_requests",
       "inventory",
       "warehouse_stock",
       "inventory_movements",
@@ -90,7 +92,8 @@ export const ENTERPRISE_REALTIME_SCOPES: Record<EnterpriseRealtimeScope, Enterpr
       "shipment_timeline",
       "deployment_requests",
       "staff_tasks",
-      "security_events"
+      "security_events",
+      "mithron_products"
     ]
   },
   cms: {
@@ -138,7 +141,7 @@ export const ENTERPRISE_REALTIME_SCOPES: Record<EnterpriseRealtimeScope, Enterpr
   supplier: {
     label: "Supplier live sync",
     channelPrefix: "enterprise-supplier",
-    tables: ["notifications", "inventory", "activity_logs"]
+    tables: ["notifications", "inventory", "activity_logs", "mithron_products"]
   }
 };
 

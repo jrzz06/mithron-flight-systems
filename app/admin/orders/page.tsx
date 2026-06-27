@@ -1,7 +1,19 @@
 import { redirect } from "next/navigation";
 import { AdminOrdersWorkspace } from "@/components/admin/admin-orders-workspace";
+import { OrdersLiveSync } from "@/components/admin/orders-live-sync";
 import { ModulePanel } from "@/components/admin/module-panel";
-import { confirmPaidOrderFormAction, assignOrderToWarehouseFormAction, cancelAdminOrderFormAction, deleteAdminOrderFormAction, rejectAdminOrderFormAction } from "@/app/admin/orders/actions";
+import { matchesAdminOrderQueue, type AdminOrderQueue } from "@/lib/orders/lifecycle";
+import {
+  archiveAdminOrderFormAction,
+  assignOrderToWarehouseFormAction,
+  cancelAdminOrderFormAction,
+  confirmPaidOrderFormAction,
+  createAdminManualOrderFormAction,
+  deleteAdminOrderFormAction,
+  permanentDeleteAdminOrderFormAction,
+  rejectAdminOrderFormAction,
+  restoreAdminOrderFormAction
+} from "@/app/admin/orders/actions";
 import { createShipmentFormAction, updateWarehouseOrderLifecycleFormAction } from "@/app/warehouse/actions";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
@@ -106,8 +118,66 @@ async function deleteAdminOrderAction(formData: FormData) {
   if (queue) params.set("queue", queue);
   if (query) params.set("q", query);
   params.set("order_status", "success");
-  params.set("order_message", "Order deleted.");
+  params.set("order_message", "Order moved to trash.");
   redirect(`/admin/orders?${params.toString()}`);
+}
+
+async function archiveAdminOrderAction(formData: FormData) {
+  "use server";
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  const queue = String(formData.get("queue") ?? "active");
+  const query = String(formData.get("q") ?? "");
+  try {
+    await archiveAdminOrderFormAction(formData);
+  } catch (error) {
+    redirectWithOrderFeedback(orderId, "error", orderActionMessage(error).slice(0, 240), queue, query);
+  }
+  redirectWithOrderFeedback(orderId, "success", "Order archived.", queue, query);
+}
+
+async function restoreAdminOrderAction(formData: FormData) {
+  "use server";
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  const queue = String(formData.get("queue") ?? "active");
+  const query = String(formData.get("q") ?? "");
+  try {
+    await restoreAdminOrderFormAction(formData);
+  } catch (error) {
+    redirectWithOrderFeedback(orderId, "error", orderActionMessage(error).slice(0, 240), queue, query);
+  }
+  redirectWithOrderFeedback(orderId, "success", "Order restored.", queue, query);
+}
+
+async function permanentDeleteAdminOrderAction(formData: FormData) {
+  "use server";
+  const queue = String(formData.get("queue") ?? "trash");
+  const query = String(formData.get("q") ?? "");
+  try {
+    await permanentDeleteAdminOrderFormAction(formData);
+  } catch (error) {
+    redirectWithOrderFeedback("", "error", orderActionMessage(error).slice(0, 240), queue, query);
+  }
+  const params = new URLSearchParams();
+  if (queue) params.set("queue", queue);
+  if (query) params.set("q", query);
+  params.set("order_status", "success");
+  params.set("order_message", "Order permanently deleted.");
+  redirect(`/admin/orders?${params.toString()}`);
+}
+
+async function createAdminManualOrderAction(formData: FormData) {
+  "use server";
+  try {
+    await createAdminManualOrderFormAction(formData);
+  } catch (error) {
+    const message = orderActionMessage(error).slice(0, 240);
+    const params = new URLSearchParams({
+      queue: "confirmed",
+      order_status: "error",
+      order_message: message
+    });
+    redirect(`/admin/orders?${params.toString()}`);
+  }
 }
 
 async function confirmAdminOrderAction(formData: FormData) {
@@ -137,28 +207,47 @@ async function confirmAdminWarehouseHandoffAction(formData: FormData) {
 }
 
 function countNeedsAction(orders: AdminRow[]) {
-  return orders.filter((order) => {
-    const status = text(order.status, "pending");
-    const channel = text(order.channel, "checkout");
-    return ["paid", "admin_review", "pending_payment"].includes(status)
-      || (channel === "enquiry" && ["admin_review", "pending_payment"].includes(status));
-  }).length;
+  return orders.filter((order) => matchesAdminOrderQueue(order, "pending_verification")).length;
+}
+
+function resolveQueue(queue: string): AdminOrderQueue {
+  const legacyMap: Record<string, AdminOrderQueue> = {
+    review: "pending_verification",
+    confirmed: "verified",
+    fulfillment: "warehouse"
+  };
+  const normalized = legacyMap[queue] ?? queue;
+  const allowed: AdminOrderQueue[] = [
+    "active",
+    "pending_verification",
+    "verified",
+    "warehouse",
+    "completed",
+    "cancelled",
+    "archived",
+    "trash",
+    "all"
+  ];
+  return allowed.includes(normalized as AdminOrderQueue) ? normalized as AdminOrderQueue : "active";
 }
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const [snapshot, warehouses, policy] = await Promise.all([
-    getWarehouseSnapshot({ scope: "orders" }),
+    getWarehouseSnapshot({ scope: "orders", ordersFilter: "all" }),
     listActiveWarehouses(),
     getAdminSettingsPolicy()
   ]);
   const params = searchParams ? await searchParams : {};
-  const queue = searchValue(params, "queue") || "review";
+  const queue = resolveQueue(searchValue(params, "queue") || "active");
   const selectedKey = searchValue(params, "order");
   const orderStatus = searchValue(params, "order_status");
   const orderMessage = searchValue(params, "order_message");
   const query = searchValue(params, "q").toLowerCase();
 
-  const selectedOrder = snapshot.data.orders.find(
+  const queueOrders = snapshot.data.orders.filter((order) => matchesAdminOrderQueue(order, queue));
+  const selectedOrder = queueOrders.find(
+    (order) => text(order.order_number) === selectedKey || text(order.id) === selectedKey
+  ) ?? snapshot.data.orders.find(
     (order) => text(order.order_number) === selectedKey || text(order.id) === selectedKey
   ) ?? null;
   const selectedOrderId = selectedOrder ? text(selectedOrder.id) : "";
@@ -179,11 +268,13 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
         { label: "Stock rows", value: String(snapshot.data.stock.length) }
       ]}
     >
+      <OrdersLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <AdminOrdersWorkspace
         orders={snapshot.data.orders}
         orderItems={snapshot.data.orderItems}
         stock={snapshot.data.stock}
         shipments={snapshot.data.shipments}
+        products={snapshot.data.products}
         warehouses={warehouses}
         defaultWarehouseCode={policy.defaultWarehouseCode}
         selectedOrder={selectedOrder}
@@ -195,10 +286,14 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
         orderMessage={orderMessage}
         snapshotStatus={snapshot.status}
         blockedReason={snapshot.blockedReason}
+        createAdminManualOrderAction={createAdminManualOrderAction}
         confirmAdminOrderAction={confirmAdminOrderAction}
         rejectAdminOrderAction={rejectAdminOrderAction}
         cancelAdminOrderAction={cancelAdminOrderAction}
         deleteAdminOrderAction={deleteAdminOrderAction}
+        archiveAdminOrderAction={archiveAdminOrderAction}
+        restoreAdminOrderAction={restoreAdminOrderAction}
+        permanentDeleteAdminOrderAction={permanentDeleteAdminOrderAction}
         assignAdminWarehouseAction={assignAdminWarehouseAction}
         updateAdminOrderLifecycleAction={updateAdminOrderLifecycleAction}
         confirmAdminWarehouseHandoffAction={confirmAdminWarehouseHandoffAction}

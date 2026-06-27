@@ -23,6 +23,7 @@ export type SimpleInventoryRow = {
   availableQuantity: number;
   committedQuantity: number;
   supplierName: string;
+  isArchived: boolean;
 };
 
 type AdminRow = Record<string, unknown>;
@@ -77,6 +78,12 @@ function productImage(product?: AdminRow) {
     ?? firstImageFrom(product?.source_images);
 }
 
+function isProductArchived(product?: AdminRow) {
+  if (!product) return false;
+  const workflowStatus = asText(product.workflow_status, "").toLowerCase();
+  return workflowStatus === "archived" || Boolean(asText(product.archived_at, ""));
+}
+
 export function readAdminText(value: unknown, fallback = "n/a") {
   return asText(value, fallback);
 }
@@ -85,121 +92,67 @@ export function readAdminNumber(value: unknown, fallback = 0) {
   return asNumber(value, fallback);
 }
 
+function pickWarehouseStockRow(stock: AdminRow[], productSlug: string, defaultWarehouseCode: string) {
+  const rows = stock.filter((row) => asText(row.product_slug, "") === productSlug);
+  if (!rows.length) return undefined;
+  return rows.find((row) => asText(row.warehouse_code, "") === defaultWarehouseCode) ?? rows[0];
+}
+
+/** Builds exactly one warehouse inventory row per product in the loaded set. */
 export function buildSimpleInventoryRows(
   products: AdminRow[],
   inventory: AdminRow[],
   stock: AdminRow[],
   defaultWarehouseCode = ""
 ): SimpleInventoryRow[] {
-  const productsBySlug = new Map(products.map((product) => [asText(product.slug, ""), product]));
-  const stockBySku = new Map(stock.map((row) => [`${asText(row.product_slug, "")}:${asText(row.sku, "")}`, row]));
-  const rows = new Map<string, SimpleInventoryRow>();
-
+  const inventoryBySlug = new Map<string, AdminRow>();
   for (const row of inventory) {
     const productSlug = asText(row.product_slug, "");
-    const sku = asText(row.sku, "");
-    if (!productSlug || !sku) continue;
-
-    const product = productsBySlug.get(productSlug);
-    const stockRow = stockBySku.get(`${productSlug}:${sku}`);
-    const warehouseCode = asText(stockRow?.warehouse_code, defaultWarehouseCode);
-    const quantity = asNumber(row.quantity, asNumber(stockRow?.available_quantity));
-    const id = `${warehouseCode}:${productSlug}:${sku}`;
-
-    rows.set(id, {
-      id,
-      productSlug,
-      productName: asText(product?.name, productSlug),
-      productImage: productImage(product),
-      sku,
-      variantId: asText(row.variant_id ?? stockRow?.variant_id, "") || null,
-      warehouseCode,
-      stockStatus: asStockStatus(row.stock_status, quantity, product),
-      quantity,
-      category: asText(product?.category, "Uncategorized"),
-      price: asNumber(product?.price),
-      inventoryValue: asNumber(product?.price) * quantity,
-      lastUpdated: asText(row.updated_at ?? stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
-      warehouseUpdatedAt: asText(stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
-      inventoryUpdatedAt: asText(row.updated_at, "") || null,
-      reservedQuantity: asNumber(row.reserved_quantity),
-      reorderThreshold: asNumber(row.reorder_threshold),
-      availableQuantity: asNumber(stockRow?.available_quantity, quantity),
-      committedQuantity: asNumber(stockRow?.committed_quantity),
-      supplierName: asText(product?.supplier_name, "")
-    });
+    if (productSlug && !inventoryBySlug.has(productSlug)) {
+      inventoryBySlug.set(productSlug, row);
+    }
   }
 
-  for (const row of stock) {
-    const productSlug = asText(row.product_slug, "");
-    const sku = asText(row.sku, "");
-    const warehouseCode = asText(row.warehouse_code, defaultWarehouseCode);
-    const id = `${warehouseCode}:${productSlug}:${sku}`;
-    if (!productSlug || !sku || rows.has(id)) continue;
+  const productOrder = new Map(products.map((product, index) => [asText(product.slug, ""), index]));
 
-    const product = productsBySlug.get(productSlug);
-    const quantity = asNumber(row.available_quantity);
-    rows.set(id, {
-      id,
-      productSlug,
-      productName: asText(product?.name, productSlug),
-      productImage: productImage(product),
-      sku,
-      variantId: asText(row.variant_id, "") || null,
-      warehouseCode,
-      stockStatus: asStockStatus(null, quantity, product),
-      quantity,
-      category: asText(product?.category, "Uncategorized"),
-      price: asNumber(product?.price),
-      inventoryValue: asNumber(product?.price) * quantity,
-      lastUpdated: asText(row.updated_at ?? row.last_counted_at, "") || null,
-      warehouseUpdatedAt: asText(row.updated_at ?? row.last_counted_at, "") || null,
-      inventoryUpdatedAt: null,
-      reservedQuantity: 0,
-      reorderThreshold: 0,
-      availableQuantity: quantity,
-      committedQuantity: asNumber(row.committed_quantity),
-      supplierName: asText(product?.supplier_name, "")
-    });
-  }
-
-  const slugsWithRows = new Set(Array.from(rows.values()).map((row) => row.productSlug));
-  // Read-time fallback only: persisted inventory rows are created by ensureProductCatalogInventoryRecord and the DB trigger.
-  for (const product of products) {
+  const rows = products.map((product) => {
     const productSlug = asText(product.slug, "");
-    if (!productSlug || slugsWithRows.has(productSlug)) continue;
+    const inv = inventoryBySlug.get(productSlug);
+    const stockRow = pickWarehouseStockRow(stock, productSlug, defaultWarehouseCode);
+    const sku = asText(inv?.sku, deriveProductSku(productSlug));
+    const warehouseCode = asText(stockRow?.warehouse_code, defaultWarehouseCode);
+    const quantity = asNumber(inv?.quantity, asNumber(stockRow?.available_quantity));
+    const price = asNumber(product.price);
 
-    const sku = deriveProductSku(productSlug);
-    const warehouseCode = defaultWarehouseCode;
-    const quantity = 0;
-    const id = `${warehouseCode}:${productSlug}:${sku}`;
-
-    rows.set(id, {
-      id,
+    return {
+      id: productSlug || sku,
       productSlug,
       productName: asText(product.name, productSlug),
       productImage: productImage(product),
       sku,
-      variantId: null,
+      variantId: asText(inv?.variant_id ?? stockRow?.variant_id, "") || null,
       warehouseCode,
-      stockStatus: asStockStatus("out_of_stock", quantity, product),
+      stockStatus: asStockStatus(inv?.stock_status, quantity, product),
       quantity,
       category: asText(product.category, "Uncategorized"),
-      price: asNumber(product.price),
-      inventoryValue: 0,
-      lastUpdated: null,
-      warehouseUpdatedAt: null,
-      inventoryUpdatedAt: null,
-      reservedQuantity: 0,
-      reorderThreshold: 0,
-      availableQuantity: 0,
-      committedQuantity: 0,
-      supplierName: asText(product.supplier_name, "")
-    });
-  }
+      price,
+      inventoryValue: price * quantity,
+      lastUpdated: asText(inv?.updated_at ?? stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
+      warehouseUpdatedAt: asText(stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
+      inventoryUpdatedAt: asText(inv?.updated_at, "") || null,
+      reservedQuantity: asNumber(inv?.reserved_quantity),
+      reorderThreshold: asNumber(inv?.reorder_threshold),
+      availableQuantity: asNumber(stockRow?.available_quantity, quantity),
+      committedQuantity: asNumber(stockRow?.committed_quantity),
+      supplierName: asText(product.supplier_name, ""),
+      isArchived: isProductArchived(product)
+    } satisfies SimpleInventoryRow;
+  });
 
-  const productOrder = new Map(products.map((product, index) => [asText(product.slug, ""), index]));
-  return Array.from(rows.values()).sort(
+  return rows.sort(
     (left, right) => (productOrder.get(left.productSlug) ?? 999) - (productOrder.get(right.productSlug) ?? 999)
   );
 }
+
+/** @deprecated Use buildSimpleInventoryRows — alias kept for clarity in warehouse contexts. */
+export const buildWarehouseInventoryRows = buildSimpleInventoryRows;

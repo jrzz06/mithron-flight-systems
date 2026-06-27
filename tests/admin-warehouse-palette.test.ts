@@ -15,8 +15,8 @@ describe("admin and warehouse dark enterprise palette", () => {
     const warehouseLoading = source("app/warehouse/loading.tsx");
 
     expect(platformStyles).toContain('[data-control-plane-theme="dark"]');
-    expect(platformStyles).toContain("--platform-bg: #14161a");
-    expect(platformStyles).toContain("--platform-surface: #14161a");
+    expect(platformStyles).toContain("--platform-bg: #111316");
+    expect(platformStyles).toContain("--platform-surface: #17191d");
     expect(platformStyles).toContain("--platform-text-primary: #eceef2");
     expect(platformStyles).toContain("--platform-accent: #dce0e6");
     expect(platformStyles).toContain("--platform-accent-text: #131518");

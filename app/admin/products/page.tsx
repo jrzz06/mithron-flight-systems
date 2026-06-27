@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { DataList, ModulePanel, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
+import { FormField, Input, Select } from "@/components/platform";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { getProductManagerSnapshot } from "@/services/admin";
+import { getProductCatalogMetrics } from "@/services/inventory-metrics";
 import { deleteProductCategoryFormAction, saveProductCategoryFormAction, saveProductDraftFormAction, saveProductInventoryWorkflowFormAction, saveProductMediaLinkFormAction, saveProductPublishStateFormAction, saveProductSeoFormAction, saveProductVariantsFormAction } from "./actions";
 import { resolveNextImageSrc } from "@/lib/media/next-image-src";
 import { ProductCatalogGrid, type ProductCatalogGridRow } from "./product-catalog-grid";
@@ -110,10 +112,11 @@ function readProductTool(value: string): ProductToolKey | "" {
 }
 
 export default async function AdminProductsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const [snapshot, warehouses, defaultWarehouseCode] = await Promise.all([
+  const [snapshot, warehouses, defaultWarehouseCode, catalogMetrics] = await Promise.all([
     getProductManagerSnapshot(),
     listActiveWarehouses(),
-    getDefaultWarehouseCode()
+    getDefaultWarehouseCode(),
+    getProductCatalogMetrics()
   ]);
   const params = searchParams ? await searchParams : {};
   const query = searchValue(params, "q").toLowerCase();
@@ -126,15 +129,19 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const nextCategorySortOrder = (categoryOptions.length + 1) * 10;
   const filteredProducts = snapshot.data.products.filter((product) => {
     const workflow = String(product.workflow_status ?? "published");
+    const isArchived = workflow === "archived" || Boolean(product.archived_at);
     const haystack = `${String(product.name ?? "")} ${String(product.slug ?? "")} ${String(product.category ?? "")}`.toLowerCase();
-    return (!statusFilter || workflow === statusFilter) && (!query || haystack.includes(query));
+    const matchesQuery = !query || haystack.includes(query);
+    const matchesStatus = !statusFilter
+      ? !isArchived
+      : statusFilter === "active"
+        ? !isArchived
+        : statusFilter === "all"
+          ? true
+          : workflow === statusFilter;
+    return matchesStatus && matchesQuery;
   });
   const activeProductSlug = selectedProductSlug || String(filteredProducts[0]?.slug ?? snapshot.data.products[0]?.slug ?? "");
-  const lowStockCount = snapshot.data.inventory.filter((row) => {
-    const quantity = Number(row.quantity ?? 0);
-    const reorder = Number(row.reorder_threshold ?? 0);
-    return Number.isFinite(quantity) && Number.isFinite(reorder) && reorder > 0 && quantity <= reorder;
-  }).length;
   const inventoryBySlug = new Map(snapshot.data.inventory.map((row) => [String(row.product_slug ?? ""), row]));
   const stockBySlug = new Map(snapshot.data.stock.map((row) => [String(row.product_slug ?? ""), row]));
   const productRows: ProductCatalogGridRow[] = filteredProducts.map((product) => {
@@ -214,9 +221,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
         title="Catalog management"
         description={connectivityMessage(snapshot.blockedReason) || "Search, filter, and manage products from one workspace."}
         metrics={[
-          { label: "Products", value: String(snapshot.data.products.length) },
-          { label: "Media", value: String(snapshot.data.mediaLinks.length) },
-          { label: "Low stock", value: String(lowStockCount) }
+          { label: "Active products", value: String(catalogMetrics.activeProducts) },
+          { label: "Archived products", value: String(catalogMetrics.archivedProducts) },
+          { label: "Total products", value: String(catalogMetrics.totalProducts) }
         ]}
       >
         <div className="grid gap-5">
@@ -227,19 +234,18 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             idle="Saved changes and errors appear here."
           />
           <form data-product-search className="grid gap-3 md:grid-cols-[minmax(0,1fr)_168px_auto] md:items-end">
-            <label className="grid gap-1.5 text-sm">
-              <span className={platformLabelClass}>Search products</span>
-              <input name="q" defaultValue={query} placeholder="Name, slug, category" className={platformFieldClass} />
-            </label>
-            <label data-product-status-filter className="grid gap-1.5 text-sm">
-              <span className={platformLabelClass}>Status</span>
-              <select name="workflow_status" defaultValue={statusFilter} className={platformFieldClass}>
-                <option value="">All</option>
+            <FormField label="Search products" htmlFor="product-search-q">
+              <Input id="product-search-q" name="q" defaultValue={query} placeholder="Name, slug, category" />
+            </FormField>
+            <FormField label="Status" htmlFor="product-search-status">
+              <Select id="product-search-status" name="workflow_status" defaultValue={statusFilter || "active"} data-product-status-filter>
+                <option value="active">Active</option>
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
-              </select>
-            </label>
+                <option value="all">All</option>
+              </Select>
+            </FormField>
             <button className="platform-btn-primary h-10 rounded-lg px-4 text-sm font-medium">
               Filter
             </button>

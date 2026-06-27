@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ControlShell } from "@/components/admin/control-shell";
+import { WarehouseOpsLiveSync } from "@/components/warehouse/warehouse-ops-live-sync";
 import { shipmentStatusLabel } from "@/lib/warehouse/operational-labels";
 import { getWarehouseSnapshot } from "@/services/admin";
+import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
 import { filterShipmentsForWarehouseScope, resolveWarehouseScope } from "@/services/warehouse-scope";
 import { connectivityMessage } from "@/lib/platform/copy";
@@ -21,8 +23,9 @@ function formatDate(value: unknown) {
 }
 
 export default async function WarehouseShipmentsPage() {
-  const [snapshot, auth] = await Promise.all([
+  const [snapshot, policy, auth] = await Promise.all([
     getWarehouseSnapshot({ scope: "dispatch" }),
+    getAdminSettingsPolicy(),
     getCurrentAuthContext()
   ]);
   const scope = await resolveWarehouseScope({ userId: auth.userId, role: auth.role });
@@ -39,6 +42,7 @@ export default async function WarehouseShipmentsPage() {
         { label: "Orders", href: "/warehouse/orders" }
       ]}
     >
+      <WarehouseOpsLiveSync enabled={policy.realtimeUpdatesEnabled} />
       <div className="overflow-x-auto rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)]">
         <table className="min-w-[960px] w-full border-collapse text-left text-sm">
           <thead className="border-b border-[var(--platform-border)] text-[11px] uppercase tracking-[0.08em] text-[var(--platform-text-muted)]">

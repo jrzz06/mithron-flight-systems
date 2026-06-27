@@ -2,8 +2,6 @@ import nextEnv from "@next/env";
 
 const { loadEnvConfig } = nextEnv;
 
-const ACTIVE_PRODUCT_FILTER = "workflow_status=eq.published&is_visible=eq.true&archived_at=is.null&merge_status=neq.archived_merged";
-
 async function main() {
   loadEnvConfig(process.cwd());
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,41 +14,65 @@ async function main() {
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    Prefer: "count=exact"
   };
 
-  const [productsResponse, inventoryResponse, stockResponse] = await Promise.all([
-    fetch(`${url}/rest/v1/mithron_products?select=slug&${ACTIVE_PRODUCT_FILTER}&limit=1000`, { headers }),
-    fetch(`${url}/rest/v1/inventory?select=product_slug,sku,quantity,reserved_quantity&limit=2000`, { headers }),
-    fetch(`${url}/rest/v1/warehouse_stock?select=product_slug,sku,available_quantity&limit=2000`, { headers })
+  const [productsCountResponse, inventoryCountResponse, productsResponse, inventoryResponse] = await Promise.all([
+    fetch(`${url}/rest/v1/mithron_products?select=slug`, { method: "HEAD", headers, cache: "no-store" }),
+    fetch(`${url}/rest/v1/inventory?select=product_slug`, { method: "HEAD", headers, cache: "no-store" }),
+    fetch(`${url}/rest/v1/mithron_products?select=slug&limit=5000`, { headers, cache: "no-store" }),
+    fetch(`${url}/rest/v1/inventory?select=product_slug&limit=5000`, { headers, cache: "no-store" })
   ]);
 
-  const products = await productsResponse.json();
-  const inventory = await inventoryResponse.json();
-  const stock = await stockResponse.json();
+  const readCount = (response: Response) => {
+    const range = response.headers.get("content-range");
+    if (!range?.includes("/")) return 0;
+    return Number(range.split("/").at(-1)) || 0;
+  };
 
-  const productSlugs = new Set(products.map((row) => String(row.slug ?? "")).filter(Boolean));
-  const inventorySlugs = new Set(inventory.map((row) => String(row.product_slug ?? "")).filter(Boolean));
-  const missingProducts = [...productSlugs].filter((slug) => !inventorySlugs.has(slug));
+  const products = productsResponse.ok ? await productsResponse.json() : [];
+  const inventory = inventoryResponse.ok ? await inventoryResponse.json() : [];
 
-  const duplicateInventory = inventory.reduce((map, row) => {
-    const key = `${row.product_slug}:${row.sku}`;
-    map.set(key, (map.get(key) ?? 0) + 1);
+  const productSlugs = new Set(products.map((row: { slug?: string }) => String(row.slug ?? "").trim()).filter(Boolean));
+  const inventorySlugCounts = inventory.reduce((map: Map<string, number>, row: { product_slug?: string }) => {
+    const slug = String(row.product_slug ?? "").trim();
+    if (!slug) return map;
+    map.set(slug, (map.get(slug) ?? 0) + 1);
     return map;
-  }, new Map());
-  const duplicateKeys = [...duplicateInventory.entries()].filter(([, count]) => count > 1).map(([key]) => key);
+  }, new Map<string, number>());
 
-  const negativeInventory = inventory.filter((row) => Number(row.quantity ?? 0) < 0 || Number(row.reserved_quantity ?? 0) < 0);
-  const negativeStock = stock.filter((row) => Number(row.available_quantity ?? 0) < 0);
+  const inventorySlugs = new Set(inventorySlugCounts.keys());
+  const missingProducts = [...productSlugs].filter((slug) => !inventorySlugs.has(slug));
+  const duplicateSlugs = [...inventorySlugCounts.entries()].filter(([, count]) => count > 1).map(([slug]) => slug);
+  const orphanSlugs = [...inventorySlugs].filter((slug) => !productSlugs.has(slug));
+  const archivedProducts = products.filter((row: { slug?: string; workflow_status?: string; archived_at?: string | null }) => {
+    const slug = String(row.slug ?? "").trim();
+    return slug && (String(row.workflow_status ?? "") === "archived" || row.archived_at);
+  });
+  const archivedMissingInventory = archivedProducts.filter((row: { slug?: string }) => !inventorySlugs.has(String(row.slug ?? "")));
+
+  const productCount = readCount(productsCountResponse);
+  const inventoryCount = readCount(inventoryCountResponse);
 
   const report = {
-    activeProducts: productSlugs.size,
-    inventoryRows: inventory.length,
+    productCount,
+    inventoryCount,
+    countsMatch: productCount === inventoryCount,
     missingInventoryForProducts: missingProducts.length,
-    duplicateInventoryKeys: duplicateKeys.length,
-    negativeInventoryRows: negativeInventory.length,
-    negativeStockRows: negativeStock.length,
-    synchronized: productSlugs.size === inventorySlugs.size && missingProducts.length === 0 && duplicateKeys.length === 0 && negativeInventory.length === 0 && negativeStock.length === 0
+    duplicateInventorySlugs: duplicateSlugs.length,
+    orphanInventorySlugs: orphanSlugs.length,
+    archivedProducts: archivedProducts.length,
+    archivedMissingInventory: archivedMissingInventory.length,
+    negativeInventoryRows: inventory.filter((row: { quantity?: number; reserved_quantity?: number }) =>
+      Number(row.quantity ?? 0) < 0 || Number(row.reserved_quantity ?? 0) < 0
+    ).length,
+    synchronized:
+      productCount === inventoryCount
+      && missingProducts.length === 0
+      && duplicateSlugs.length === 0
+      && orphanSlugs.length === 0
+      && archivedMissingInventory.length === 0
   };
 
   console.log(JSON.stringify(report, null, 2));

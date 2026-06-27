@@ -30,5 +30,6 @@ describe("supplier product form parsing", () => {
       slug: "spray-drone",
       price: 120000
     });
+    expect(parseSupplierProductForm(valid)).not.toHaveProperty("tagline");
   });
 });

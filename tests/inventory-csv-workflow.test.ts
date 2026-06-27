@@ -151,18 +151,16 @@ describe("inventory CSV workflow", () => {
     });
   });
 
-  it("keeps multi-SKU inventory rows and resolves stale available status at zero quantity", () => {
+  it("builds one warehouse row per product and resolves stale available status at zero quantity", () => {
     const products = [{ slug: "drone-kit", name: "Drone Kit", category: "Kits", price: 500, workflow_status: "published" }];
     const inventory = [
-      { product_slug: "drone-kit", sku: "KIT-BASE", stock_status: "available", quantity: 3, reserved_quantity: 0, reorder_threshold: 0 },
-      { product_slug: "drone-kit", sku: "KIT-PRO", stock_status: "available", quantity: 0, reserved_quantity: 0, reorder_threshold: 0 }
+      { product_slug: "drone-kit", sku: "DRONE-KIT", stock_status: "available", quantity: 0, reserved_quantity: 0, reorder_threshold: 0 }
     ];
 
     const rows = buildSimpleInventoryRows(products, inventory, [], "IN-WEST-01");
 
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toMatchObject({ sku: "KIT-BASE", quantity: 3, stockStatus: "available" });
-    expect(rows[1]).toMatchObject({ sku: "KIT-PRO", quantity: 0, stockStatus: "out_of_stock" });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ sku: "DRONE-KIT", quantity: 0, stockStatus: "out_of_stock" });
     expect(resolveStockStatus("available", 0)).toBe("out_of_stock");
   });
 
@@ -192,7 +190,7 @@ describe("inventory CSV workflow", () => {
     expect(csvSource).toContain('"mithron_products"');
     expect(csvSource).toContain("order=sort_order.asc");
     expect(csvSource).toContain('"inventory"');
-    expect(csvSource).not.toContain("source_availability=eq.");
+    expect(csvSource).toContain("catalogFilter");
     expect(importScript).toContain("fetchInventoryCsvSourceSlugs");
     expect(importScript).toContain("CSV_IMPORT_SOURCE_TAG");
     expect(exportRoute).toContain("getCsvInventoryRows");

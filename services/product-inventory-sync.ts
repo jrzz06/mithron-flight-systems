@@ -2,6 +2,8 @@ import { assertSupabaseAdminConfig, getSupabaseAdminConfig } from "@/lib/env";
 import {
   createAdminRecord,
   fetchAdminRecordsByColumn,
+  upsertInventoryRecord,
+  upsertWarehouseStockRecord,
   type AdminMutationOptions
 } from "@/services/admin-actions";
 import { getDefaultWarehouseCode } from "@/services/warehouse-config";
@@ -52,15 +54,15 @@ async function fetchPaginatedSlugs(
   return values;
 }
 
-async function fetchInventorySlugSkuPairs(
+async function fetchInventorySlugs(
   config: Extract<ReturnType<typeof getSupabaseAdminConfig>, { configured: true }>
 ) {
-  const pairs = new Set<string>();
+  const slugs = new Set<string>();
   let offset = 0;
 
   while (true) {
     const response = await fetch(
-      `${config.url}/rest/v1/inventory?select=product_slug,sku&order=product_slug.asc&limit=${PAGE_SIZE}&offset=${offset}`,
+      `${config.url}/rest/v1/inventory?select=product_slug&order=product_slug.asc&limit=${PAGE_SIZE}&offset=${offset}`,
       { headers: adminHeaders(config.serviceRoleKey), cache: "no-store" }
     );
     if (!response.ok) {
@@ -70,26 +72,25 @@ async function fetchInventorySlugSkuPairs(
     if (!rows.length) break;
     for (const row of rows) {
       const slug = String(row.product_slug ?? "").trim();
-      const sku = String(row.sku ?? "").trim();
-      if (slug && sku) pairs.add(`${slug}:${sku}`);
+      if (slug) slugs.add(slug);
     }
     if (rows.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
 
-  return pairs;
+  return slugs;
 }
 
 export async function listProductSlugsMissingInventory(env: EnvSource = process.env): Promise<string[]> {
   const config = getSupabaseAdminConfig(env);
   if (!config.configured) return [];
 
-  const [productSlugs, inventoryPairs] = await Promise.all([
+  const [productSlugs, inventorySlugs] = await Promise.all([
     fetchPaginatedSlugs(config, "mithron_products", "slug"),
-    fetchInventorySlugSkuPairs(config)
+    fetchInventorySlugs(config)
   ]);
 
-  return productSlugs.filter((slug) => !inventoryPairs.has(`${slug}:${deriveProductSku(slug)}`));
+  return productSlugs.filter((slug) => !inventorySlugs.has(slug));
 }
 
 export async function countProductsMissingInventoryRecords(env: EnvSource = process.env): Promise<number> {
@@ -113,25 +114,28 @@ export async function ensureProductCatalogInventoryRecord(
   const timestamp = new Date().toISOString();
 
   const existingInventory = await fetchAdminRecordsByColumn("inventory", "product_slug", normalizedSlug, env);
-  const hasInventory = existingInventory.some((row) => String(row.sku ?? "") === sku);
-  if (hasInventory) return;
+  if (existingInventory.length > 0) return;
 
-  await createAdminRecord(
-    "inventory",
-    {
-      product_slug: normalizedSlug,
-      sku,
-      stock_status: "out_of_stock",
-      quantity: 0,
-      reserved_quantity: 0,
-      reorder_threshold: 0,
-      updated_by: actorId,
-      updated_at: timestamp
-    },
-    actorId,
-    env,
-    options
-  );
+  const seedPayload = {
+    product_slug: normalizedSlug,
+    sku,
+    stock_status: "out_of_stock",
+    quantity: 0,
+    reserved_quantity: 0,
+    reorder_threshold: 0,
+    updated_by: actorId,
+    updated_at: timestamp
+  };
+
+  try {
+    await createAdminRecord("inventory", seedPayload, actorId, env, options);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("code=23505") || message.includes("duplicate key")) {
+      return;
+    }
+    throw error;
+  }
 }
 
 /** Seeds warehouse_stock for fulfillment workflows — requires warehouse.write. */
@@ -156,8 +160,7 @@ export async function ensureWarehouseStockRecord(
   );
   if (hasWarehouseStock) return;
 
-  await createAdminRecord(
-    "warehouse_stock",
+  await upsertWarehouseStockRecord(
     {
       warehouse_code: warehouseCode,
       product_slug: normalizedSlug,

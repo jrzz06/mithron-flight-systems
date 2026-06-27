@@ -15,7 +15,7 @@ export function EnquiryQueueLiveSync({ enabled = true }: { enabled?: boolean }) 
       supabase,
       scope: "admin",
       onEvent: (event) => {
-        if (event.table === "enquiries" || event.table === "orders" || event.table === "notifications") {
+        if (event.table === "enquiries" || event.table === "orders" || event.table === "contact_requests" || event.table === "notifications") {
           router.refresh();
         }
       },

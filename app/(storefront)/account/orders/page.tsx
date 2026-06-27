@@ -1,7 +1,16 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { StatusBadge } from "@/components/admin/module-panel";
+import {
+  AccountCard,
+  AccountEmptyState,
+  AccountLink,
+  AccountListItem,
+  AccountPage as AccountPageShell,
+  AccountSection,
+  AccountStatusChip
+} from "@/components/account";
 import { createClient } from "@/lib/server";
+import { CUSTOMER_EMPTY_MESSAGES, customerFulfillmentStatus, customerOrderStatus } from "@/lib/customer/copy";
+import { formatItemCount, formatOrderDate, formatOrderReference, orderItemCount } from "@/lib/customer/display";
 import { formatINR } from "@/lib/utils";
 import { listCustomerOrders } from "@/services/customer-orders";
 
@@ -17,36 +26,53 @@ export default async function AccountOrdersPage() {
   const orders = await listCustomerOrders(userId);
 
   return (
-    <div className="rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="type-section">Your orders</h2>
-        <Link href="/track-order" className="text-sm text-emerald-400">Track order without signing in</Link>
-      </div>
-      <div className="mt-6 grid gap-3">
-        {orders.length ? orders.map((order) => (
-          <Link
-            key={String(order.id)}
-            href={`/account/orders/${order.id}`}
-            className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-page)] p-4 transition hover:border-white/20"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold text-white">{String(order.order_number ?? order.id)}</p>
-                <p className="mt-1 text-sm text-white/50">{String(order.created_at ?? "").slice(0, 10)}</p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <StatusBadge status={String(order.status ?? "pending")} />
-                  <StatusBadge status={String(order.fulfillment_status ?? "pending")} />
-                </div>
-                <p className="text-sm text-white/70">{formatINR(Number(order.total ?? 0))}</p>
-              </div>
-            </div>
-          </Link>
-        )) : (
-          <p className="text-sm text-white/60">No orders yet. <Link href="/checkout" className="text-emerald-400">Start checkout</Link></p>
-        )}
-      </div>
-    </div>
+    <AccountPageShell>
+      <AccountCard>
+        <AccountSection
+          title="Your orders"
+          description="Track deliveries, view order details, and request returns."
+          action={<AccountLink href="/track-order">Track without signing in</AccountLink>}
+        >
+          {orders.length ? (
+            <ul className="grid gap-3">
+              {orders.map((order) => (
+                <li key={String(order.id)}>
+                  <AccountListItem
+                    href={`/account/orders/${order.id}`}
+                    title={formatOrderReference(order)}
+                    subtitle={formatOrderDate(order.created_at)}
+                    meta={
+                      <div className="space-y-1">
+                        <p>{formatINR(Number(order.total ?? 0))}</p>
+                        {formatItemCount(orderItemCount(order)) ? (
+                          <p>{formatItemCount(orderItemCount(order))}</p>
+                        ) : null}
+                      </div>
+                    }
+                    badges={
+                      <>
+                        <AccountStatusChip
+                          label={customerOrderStatus(String(order.status ?? "pending"))}
+                          status={String(order.status ?? "pending")}
+                        />
+                        <AccountStatusChip
+                          label={customerFulfillmentStatus(String(order.fulfillment_status ?? "pending"))}
+                          status={String(order.fulfillment_status ?? "pending")}
+                        />
+                      </>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <AccountEmptyState>
+              {CUSTOMER_EMPTY_MESSAGES.orders}{" "}
+              <AccountLink href="/checkout">Place your first order</AccountLink>
+            </AccountEmptyState>
+          )}
+        </AccountSection>
+      </AccountCard>
+    </AccountPageShell>
   );
 }

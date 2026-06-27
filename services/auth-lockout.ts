@@ -1,4 +1,4 @@
-import { peekDistributedRateLimit, checkDistributedRateLimit } from "@/lib/rate-limit-redis";
+import { peekDistributedRateLimit, checkDistributedRateLimit, deleteDistributedRateLimitKey } from "@/lib/rate-limit-redis";
 
 const FAILURE_LIMIT = 5;
 const FAILURE_WINDOW_MS = 15 * 60_000;
@@ -27,7 +27,7 @@ export async function recordLoginFailure(identifier: string) {
 export async function clearLoginFailures(identifier: string) {
   const normalized = normalizeIdentifier(identifier);
   if (!normalized) return;
-  await peekDistributedRateLimit(`auth-failures:${normalized}`, FAILURE_LIMIT);
+  await deleteDistributedRateLimitKey(`auth-failures:${normalized}`);
 }
 
 export class LoginLockedOutError extends Error {

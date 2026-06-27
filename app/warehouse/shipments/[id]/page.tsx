@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ControlShell } from "@/components/admin/control-shell";
 import { DataList, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
+import { Breadcrumb } from "@/components/platform/breadcrumb";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { getWarehouseSnapshot } from "@/services/admin";
 import { connectivityMessage } from "@/lib/platform/copy";
@@ -73,6 +74,10 @@ export default async function ShipmentDetailPage({ params, searchParams }: Shipm
 
   return (
     <div data-shipment-detail-route>
+      <Breadcrumb items={[
+        { label: "Shipments", href: "/warehouse/shipments" },
+        { label: asText(shipment.shipment_number, "Shipment") }
+      ]} />
       <ControlShell
       eyebrow="Shipment detail"
       title={asText(shipment.shipment_number, "Shipment")}

@@ -1,5 +1,6 @@
 import type { CheckoutOrderInput, CheckoutOrderItemInput } from "@/services/orders";
 import type { DeploymentRequestInput, StaffTaskInput } from "@/services/operations-actions";
+import type { ManualOrderPaymentMethod, ManualOrderWorkflowInput } from "@/services/manual-order";
 
 type JsonRecord = Record<string, unknown>;
 type StockStatus = "available" | "low_stock" | "out_of_stock";
@@ -416,6 +417,74 @@ export function buildInventoryLinkageRecords(
       updated_at: options.at
     },
     lowStock: stockStatus === "low_stock" || stockStatus === "out_of_stock"
+  };
+}
+
+function readOptionalNumber(formData: FormData, key: string) {
+  const value = readOptionalString(formData, key);
+  if (value === undefined) return 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${key} must be a non-negative number.`);
+  }
+  return parsed;
+}
+
+function assertManualPaymentMethod(value: string | undefined): ManualOrderPaymentMethod {
+  const allowed: ManualOrderPaymentMethod[] = ["pending_payment", "paid", "cod", "bank_transfer", "manual", "not_required"];
+  if (value && allowed.includes(value as ManualOrderPaymentMethod)) {
+    return value as ManualOrderPaymentMethod;
+  }
+  throw new Error("A valid payment method is required.");
+}
+
+export function buildManualOrderInputFromFormData(formData: FormData): ManualOrderWorkflowInput {
+  const email = readRequiredString(formData, "customer_email", "Customer");
+  const phone = readRequiredString(formData, "customer_phone", "Customer");
+  const fullName = readOptionalString(formData, "customer_full_name") ?? "";
+  const items = readOrderItems(formData, "order_items");
+
+  return {
+    email,
+    phone,
+    fullName,
+    customerUserId: readOptionalString(formData, "customer_user_id") ?? null,
+    createAccountIfMissing: readOptionalBoolean(formData, "create_customer"),
+    shippingAddress: {
+      label: readOptionalString(formData, "shipping_label") ?? "Shipping",
+      line1: readRequiredString(formData, "shipping_line1", "Shipping"),
+      line2: readOptionalString(formData, "shipping_line2") ?? null,
+      city: readRequiredString(formData, "shipping_city", "Shipping"),
+      region: readRequiredString(formData, "shipping_region", "Shipping"),
+      postalCode: readRequiredString(formData, "shipping_postal_code", "Shipping"),
+      country: readOptionalString(formData, "shipping_country") ?? "India",
+      phone: readOptionalString(formData, "shipping_phone") ?? phone
+    },
+    billingSameAsShipping: readOptionalBoolean(formData, "billing_same_as_shipping"),
+    billingAddress: readOptionalBoolean(formData, "billing_same_as_shipping")
+      ? undefined
+      : {
+          label: readOptionalString(formData, "billing_label") ?? "Billing",
+          line1: readRequiredString(formData, "billing_line1", "Billing"),
+          line2: readOptionalString(formData, "billing_line2") ?? null,
+          city: readRequiredString(formData, "billing_city", "Billing"),
+          region: readRequiredString(formData, "billing_region", "Billing"),
+          postalCode: readRequiredString(formData, "billing_postal_code", "Billing"),
+          country: readOptionalString(formData, "billing_country") ?? "India",
+          phone: readOptionalString(formData, "billing_phone") ?? phone
+        },
+    items,
+    paymentMethod: assertManualPaymentMethod(readOptionalString(formData, "payment_method")),
+    shippingAmount: readOptionalNumber(formData, "shipping_amount"),
+    discountAmount: readOptionalNumber(formData, "discount_amount"),
+    warehouseCode: readRequiredString(formData, "warehouse_code", "Warehouse"),
+    region: readOptionalString(formData, "region") ?? null,
+    missionProfile: readOptionalString(formData, "mission_profile") ?? null,
+    customerNote: readOptionalString(formData, "customer_note") ?? null,
+    internalNote: readOptionalString(formData, "internal_note") ?? readOptionalString(formData, "note") ?? null,
+    idempotencyKey: readOptionalString(formData, "idempotency_key") ?? null,
+    sendCustomerNotification: readOptionalBoolean(formData, "send_customer_notification") || !formData.has("send_customer_notification"),
+    shippingAddressId: readOptionalString(formData, "shipping_address_id") ?? null
   };
 }
 

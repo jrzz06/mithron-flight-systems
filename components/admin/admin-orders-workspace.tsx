@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   AdminFormSection,
@@ -6,8 +8,19 @@ import {
   OperationalFeedback,
   StatusBadge
 } from "@/components/admin/module-panel";
+import { FormField, Input, Select, Textarea } from "@/components/platform";
+import { ManualOrderCreatePanel } from "@/components/admin/manual-order-create-panel";
+import { AdminOrderActionForm, AdminOrdersOptimisticProvider, AdminOrdersQueueList } from "@/components/admin/admin-orders-optimistic";
 import { formatINR } from "@/lib/utils";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import {
+  ADMIN_QUEUE_LABELS,
+  customerOrderSourceLabel,
+  isOrderArchived,
+  isOrderDeleted,
+  matchesAdminOrderQueue,
+  type AdminOrderQueue
+} from "@/lib/orders/lifecycle";
 
 type AdminRow = Record<string, unknown>;
 
@@ -16,6 +29,7 @@ type AdminOrdersWorkspaceProps = {
   orderItems: AdminRow[];
   stock: AdminRow[];
   shipments: AdminRow[];
+  products: AdminRow[];
   warehouses: Array<{ code: string; name: string }>;
   defaultWarehouseCode: string;
   selectedOrder: AdminRow | null;
@@ -27,10 +41,14 @@ type AdminOrdersWorkspaceProps = {
   orderMessage: string;
   snapshotStatus: string;
   blockedReason?: string | null;
+  createAdminManualOrderAction: (formData: FormData) => Promise<void>;
   confirmAdminOrderAction: (formData: FormData) => Promise<void>;
   rejectAdminOrderAction: (formData: FormData) => Promise<void>;
   cancelAdminOrderAction: (formData: FormData) => Promise<void>;
   deleteAdminOrderAction: (formData: FormData) => Promise<void>;
+  archiveAdminOrderAction: (formData: FormData) => Promise<void>;
+  restoreAdminOrderAction: (formData: FormData) => Promise<void>;
+  permanentDeleteAdminOrderAction: (formData: FormData) => Promise<void>;
   assignAdminWarehouseAction: (formData: FormData) => Promise<void>;
   updateAdminOrderLifecycleAction: (formData: FormData) => Promise<void>;
   confirmAdminWarehouseHandoffAction: (formData: FormData) => Promise<void>;
@@ -48,14 +66,8 @@ const lifecycleStates = [
   "cancelled"
 ] as const;
 
-const queueDefinitions = [
-  { key: "review", label: "Pending" },
-  { key: "confirmed", label: "Confirmed" },
-  { key: "fulfillment", label: "Warehouse" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
-  { key: "all", label: "All" }
-] as const;
+const queueDefinitions = (Object.keys(ADMIN_QUEUE_LABELS) as AdminOrderQueue[])
+  .map((key) => ({ key, label: ADMIN_QUEUE_LABELS[key] }));
 
 function text(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -127,26 +139,7 @@ function orderStatusLabel(status: string) {
 }
 
 function orderMatchesQueue(order: AdminRow, queue: string) {
-  const status = text(order.status, "pending");
-  const fulfillment = text(order.fulfillment_status, "pending");
-  const channel = text(order.channel, "checkout");
-
-  if (queue === "review") {
-    return ["paid", "admin_review", "pending_payment"].includes(status)
-      || (channel === "enquiry" && ["admin_review", "pending_payment"].includes(status));
-  }
-  if (queue === "confirmed") return status === "confirmed";
-  if (queue === "fulfillment") {
-    return ["assigned", "processing", "packed", "dispatched", "in_transit"].includes(status)
-      || ["processing", "picked", "packed", "ready_to_dispatch", "shipped"].includes(fulfillment);
-  }
-  if (queue === "completed") {
-    return status === "delivered" || fulfillment === "delivered" || fulfillment === "shipped";
-  }
-  if (queue === "cancelled") {
-    return status === "cancelled" || fulfillment === "cancelled" || fulfillment === "returned";
-  }
-  return true;
+  return matchesAdminOrderQueue(order, (queue as AdminOrderQueue) || "active");
 }
 
 function canCancelOrder(order: AdminRow | null) {
@@ -158,7 +151,7 @@ function canCancelOrder(order: AdminRow | null) {
 }
 
 function canDeleteOrder(order: AdminRow | null) {
-  if (!order) return false;
+  if (!order || isOrderDeleted(order)) return false;
   const status = text(order.status, "pending");
   const fulfillment = text(order.fulfillment_status, "pending");
   const channel = text(order.channel, "checkout");
@@ -166,6 +159,19 @@ function canDeleteOrder(order: AdminRow | null) {
   if (activeFulfillment.includes(fulfillment)) return false;
   if (["assigned", "processing", "packed", "dispatched", "delivered", "confirmed"].includes(status)) return false;
   return ["draft", "pending_payment", "admin_review", "cancelled"].includes(status) || channel === "enquiry";
+}
+
+function canArchiveOrder(order: AdminRow | null) {
+  if (!order || isOrderDeleted(order) || isOrderArchived(order)) return false;
+  return !["cancelled", "delivered", "refunded"].includes(text(order.status, "pending"));
+}
+
+function canRestoreOrder(order: AdminRow | null) {
+  return Boolean(order && (isOrderDeleted(order) || isOrderArchived(order)));
+}
+
+function canPermanentlyDeleteOrder(order: AdminRow | null) {
+  return Boolean(order && isOrderDeleted(order));
 }
 
 function buildOrdersUrl(params: Record<string, string | undefined>) {
@@ -201,26 +207,26 @@ function nextStepForOrder(order: AdminRow) {
 
   if (status === "paid") {
     return {
-      title: "Review paid order",
-      description: "Payment is complete. Check customer details, then move this order into admin review.",
+      title: "Verify order",
+      description: "Payment is complete. Verify customer details, then move this order into admin review.",
       action: "confirm" as const,
-      button: "Move to admin review"
+      button: "Verify"
     };
   }
   if (status === "admin_review") {
     return {
-      title: "Confirm order",
+      title: "Approve order",
       description: "Approve the order after verifying contact details, items, and any enquiry notes.",
       action: "confirm" as const,
-      button: "Confirm order"
+      button: "Approve"
     };
   }
   if (status === "confirmed" && fulfillment === "pending") {
     return {
       title: "Send to warehouse",
-      description: "Order is confirmed. Assign it to warehouse so picking and packing can begin.",
+      description: "Order is verified. Assign it to warehouse so picking and packing can begin.",
       action: "assign" as const,
-      button: "Assign to warehouse"
+      button: "Send to Warehouse"
     };
   }
   if (status === "assigned" || fulfillment === "processing") {
@@ -252,6 +258,7 @@ export function AdminOrdersWorkspace({
   orderItems,
   stock,
   shipments,
+  products,
   warehouses,
   defaultWarehouseCode,
   selectedOrder,
@@ -263,10 +270,14 @@ export function AdminOrdersWorkspace({
   orderMessage,
   snapshotStatus,
   blockedReason,
+  createAdminManualOrderAction,
   confirmAdminOrderAction,
   rejectAdminOrderAction,
   cancelAdminOrderAction,
   deleteAdminOrderAction,
+  archiveAdminOrderAction,
+  restoreAdminOrderAction,
+  permanentDeleteAdminOrderAction,
   assignAdminWarehouseAction,
   updateAdminOrderLifecycleAction,
   confirmAdminWarehouseHandoffAction
@@ -293,6 +304,16 @@ export function AdminOrdersWorkspace({
   const shippingAddress = formatAddress(metadata);
   const nextStep = selectedOrder ? nextStepForOrder(selectedOrder) : null;
   const selectedKey = selectedOrderKey || (selectedOrder ? text(selectedOrder.order_number) || selectedOrderId : "");
+
+  const catalogProducts = products.map((product) => ({
+    slug: text(product.slug),
+    name: text(product.name, text(product.slug)),
+    price: Number(product.price ?? 0) || 0,
+    chargeTax: product.charge_tax !== false,
+    taxRate: product.tax_rate != null ? Number(product.tax_rate) : null,
+    taxIncluded: Boolean(product.tax_included),
+    taxGroup: text(product.tax_group) || null
+  })).filter((product) => product.slug);
 
   function formContextFields() {
     return (
@@ -327,11 +348,11 @@ export function AdminOrdersWorkspace({
               className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
                 active
                   ? "border-violet-500/50 bg-violet-500/10 text-violet-100"
-                  : "border-slate-800 bg-[#10151d] text-slate-300 hover:border-slate-700 hover:text-slate-100"
+                  : "border-[var(--platform-border)] bg-[var(--platform-surface-muted)] text-[var(--platform-text-secondary)] hover:border-[var(--platform-border-strong)] hover:text-[var(--platform-text-primary)]"
               }`}
             >
               {entry.label}
-              <span className={`rounded-md px-1.5 py-0.5 text-xs ${active ? "bg-violet-500/20" : "bg-slate-800"}`}>
+              <span className={`rounded-md px-1.5 py-0.5 text-xs ${active ? "bg-violet-500/20" : "bg-[var(--platform-surface-muted)]"}`}>
                 {entry.count}
               </span>
             </Link>
@@ -342,64 +363,53 @@ export function AdminOrdersWorkspace({
       <form
         method="get"
         data-order-filter-form
-        className="grid gap-3 rounded-xl border border-slate-800 bg-[#10151d] p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+        className="grid gap-3 rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
       >
         <input type="hidden" name="queue" value={queue} />
         {selectedKey ? <input type="hidden" name="order" value={selectedKey} /> : null}
-        <label className="grid gap-2 text-sm">
-          <span className="text-slate-400">Search by order number, email, or phone</span>
-          <input
+        <FormField label="Search by order number, email, or phone" htmlFor="admin-order-search">
+          <Input
+            id="admin-order-search"
             name="q"
             defaultValue={query}
             placeholder="ORD-..., buyer@example.com, +91..."
-            className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-slate-100 outline-none placeholder:text-slate-600"
           />
-        </label>
-        <button className="h-10 rounded-lg border border-slate-700 bg-[#151c26] px-4 text-sm font-semibold text-slate-100">
+        </FormField>
+        <button className="platform-btn-secondary h-10 rounded-lg px-4 text-sm font-semibold">
           Search
         </button>
       </form>
 
+      <div id="create-order">
+        <ManualOrderCreatePanel
+          products={catalogProducts}
+          defaultWarehouseCode={defaultWarehouseCode}
+          createAction={createAdminManualOrderAction}
+        />
+      </div>
+
+      <AdminOrdersOptimisticProvider orders={filteredOrders}>
+        {(optimisticOrders) => (
       <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
         <AdminTableShell
           title={`Orders (${filteredOrders.length})`}
           description={blockedReason ?? undefined}
         >
-          {filteredOrders.length ? (
-            <div className="divide-y divide-slate-800">
-              {filteredOrders.slice(0, 40).map((order) => {
-                const orderId = text(order.id);
-                const orderNumber = publicOrderLabel(order);
-                const isSelected = selectedKey === orderNumber || selectedOrderId === orderId;
-                const warehouse = assignedWarehouseCode(order, defaultWarehouseCode);
-                return (
-                  <Link
-                    key={orderId || orderNumber}
-                    href={buildOrdersUrl({ queue, order: orderNumber, q: query || undefined })}
-                    className={`block px-4 py-3 transition hover:bg-[#151c26] ${isSelected ? "bg-violet-500/10" : ""}`}
-                    aria-current={isSelected ? "true" : undefined}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-100">{orderNumber}</p>
-                        <p className="mt-1 truncate text-xs text-slate-500">{text(order.customer_email, "No email")}</p>
-                        <p className="mt-1 text-xs text-slate-600">{productSummary(orderId, orderItems)}</p>
-                        <p className="mt-1 text-xs text-slate-600">{orderDate(order)} · {warehouse} · {paymentLabel(order)}</p>
-                      </div>
-                      <div className="grid shrink-0 justify-items-end gap-1.5">
-                        <StatusBadge status={text(order.status, "pending")} />
-                        <span className="text-xs font-medium text-slate-400">
-                          {moneyText(order.total)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="px-4 py-6 text-sm text-slate-500">No orders match this queue.</p>
-          )}
+          <AdminOrdersQueueList
+            orders={optimisticOrders}
+            orderItems={orderItems}
+            selectedKey={selectedKey}
+            selectedOrderId={selectedOrderId}
+            queue={queue}
+            query={query}
+            publicOrderLabel={publicOrderLabel}
+            productSummary={productSummary}
+            orderDate={orderDate}
+            paymentLabel={paymentLabel}
+            assignedWarehouseCode={assignedWarehouseCode}
+            defaultWarehouseCode={defaultWarehouseCode}
+            buildOrdersUrl={buildOrdersUrl}
+          />
         </AdminTableShell>
 
         <section data-order-detail-panel className="grid gap-4">
@@ -408,13 +418,13 @@ export function AdminOrdersWorkspace({
               <AdminSection
                 eyebrow="Selected order"
                 title={publicOrderLabel(selectedOrder)}
-                description={`${orderChannel(selectedOrder)} · ${orderStatusLabel(text(selectedOrder.status, "pending"))}`}
+                description={`${customerOrderSourceLabel(selectedOrder)} · ${orderStatusLabel(text(selectedOrder.status, "pending"))}`}
                 actions={<StatusBadge status={snapshotStatus} />}
               >
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
-                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Customer</p>
-                    <p className="mt-2 text-sm font-medium text-slate-100">{text(metadata.customer_full_name) || text(selectedOrder.customer_email, "No email")}</p>
+                  <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--platform-text-muted)]">Customer</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--platform-text-primary)]">{text(metadata.customer_full_name) || text(selectedOrder.customer_email, "No email")}</p>
                     {text(selectedOrder.customer_email) ? (
                       <Link
                         href={`/admin/users?q=${encodeURIComponent(text(selectedOrder.customer_email))}`}
@@ -423,35 +433,44 @@ export function AdminOrdersWorkspace({
                         {text(selectedOrder.customer_email)}
                       </Link>
                     ) : (
-                      <p className="mt-1 text-sm text-slate-400">No email</p>
+                      <p className="mt-1 text-sm text-[var(--platform-text-secondary)]">No email</p>
                     )}
-                    <p className="mt-1 text-sm text-slate-400">Phone: {orderPhone(selectedOrder)}</p>
+                    <p className="mt-1 text-sm text-[var(--platform-text-secondary)]">Phone: {orderPhone(selectedOrder)}</p>
                     {text(metadata.customer_company) ? (
-                      <p className="mt-1 text-sm text-slate-400">Company: {text(metadata.customer_company)}</p>
+                      <p className="mt-1 text-sm text-[var(--platform-text-secondary)]">Company: {text(metadata.customer_company)}</p>
                     ) : null}
                     {shippingAddress ? (
-                      <p className="mt-2 text-sm leading-6 text-slate-400">{shippingAddress}</p>
+                      <p className="mt-2 text-sm leading-6 text-[var(--platform-text-secondary)]">{shippingAddress}</p>
                     ) : null}
                   </div>
-                  <div className="rounded-lg border border-slate-800 bg-[#10151d] p-3">
-                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Payment</p>
+                  <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--platform-text-muted)]">Order source</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--platform-text-primary)]">
+                      {customerOrderSourceLabel(selectedOrder)}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--platform-text-muted)]">
+                      Channel: {orderChannel(selectedOrder)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--platform-text-muted)]">Payment</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <StatusBadge status={text(selectedOrder.payment_status, "not_required")} />
                       <StatusBadge status={text(selectedOrder.fulfillment_status, "pending")} />
                     </div>
-                    <p className="mt-3 text-lg font-semibold text-slate-100">
+                    <p className="mt-3 text-lg font-semibold text-[var(--platform-text-primary)]">
                       {moneyText(selectedOrder.total)}
                     </p>
                     {assignedWarehouseCode(selectedOrder, defaultWarehouseCode) ? (
                       <Link
                         href="/warehouse/orders"
-                        className="mt-3 inline-flex rounded-full border border-slate-700 px-2.5 py-1 text-xs font-medium text-violet-300 hover:border-violet-400/40 hover:underline"
+                        className="mt-3 inline-flex rounded-full border border-[var(--platform-border-strong)] px-2.5 py-1 text-xs font-medium text-violet-300 hover:border-violet-400/40 hover:underline"
                       >
                         Warehouse: {assignedWarehouseCode(selectedOrder, defaultWarehouseCode)}
                       </Link>
                     ) : null}
                     {text(metadata.enquiry_message) ? (
-                      <p className="mt-3 text-sm leading-6 text-slate-400">
+                      <p className="mt-3 text-sm leading-6 text-[var(--platform-text-secondary)]">
                         Enquiry: {text(metadata.enquiry_message).slice(0, 220)}
                       </p>
                     ) : null}
@@ -466,10 +485,10 @@ export function AdminOrdersWorkspace({
                     return (
                       <div
                         key={text(item.id) || `${text(item.product_slug)}-${text(item.sku)}`}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 bg-[#10151d] px-3 py-2.5 text-sm"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-3 py-2.5 text-sm"
                       >
                         <div>
-                          <p className="font-medium text-slate-100">
+                          <p className="font-medium text-[var(--platform-text-primary)]">
                             {text(item.product_slug) ? (
                               <Link
                                 href={`/admin/products?product_slug=${encodeURIComponent(text(item.product_slug))}`}
@@ -481,13 +500,13 @@ export function AdminOrdersWorkspace({
                               text(item.product_name, "Product")
                             )}
                           </p>
-                          <p className="text-xs text-slate-500">Qty {numberText(item.quantity)} · {moneyText(item.line_total)}</p>
+                          <p className="text-xs text-[var(--platform-text-muted)]">Qty {numberText(item.quantity)} · {moneyText(item.line_total)}</p>
                         </div>
-                        <p className="text-xs text-slate-500">Stock {numberText(stockRow?.available_quantity)}</p>
+                        <p className="text-xs text-[var(--platform-text-muted)]">Stock {numberText(stockRow?.available_quantity)}</p>
                       </div>
                     );
                   }) : (
-                    <p className="text-sm text-slate-500">No order items found.</p>
+                    <p className="text-sm text-[var(--platform-text-muted)]">No order items found.</p>
                   )}
                 </div>
               </AdminSection>
@@ -499,7 +518,7 @@ export function AdminOrdersWorkspace({
                 >
                   <div className="flex flex-wrap items-end gap-3">
                     {nextStep.action === "confirm" ? (
-                      <form action={confirmAdminOrderAction} className="shrink-0">
+                      <AdminOrderActionForm orderId={selectedOrderId} action={confirmAdminOrderAction} nextStatus="confirmed" className="shrink-0">
                         <input type="hidden" name="order_id" value={selectedOrderId} />
                         <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
@@ -509,19 +528,19 @@ export function AdminOrdersWorkspace({
                         >
                           {nextStep.button}
                         </OperationalSubmitButton>
-                      </form>
+                      </AdminOrderActionForm>
                     ) : null}
                     {text(selectedOrder.status) === "admin_review" ? (
-                      <form action={rejectAdminOrderAction} className="flex min-w-0 flex-1 flex-wrap items-end gap-2 sm:flex-nowrap">
+                      <AdminOrderActionForm orderId={selectedOrderId} action={rejectAdminOrderAction} nextStatus="cancelled" className="flex min-w-0 flex-1 flex-wrap items-end gap-2 sm:flex-nowrap">
                         <input type="hidden" name="order_id" value={selectedOrderId} />
                         <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
-                        <label className="grid min-w-[220px] flex-1 gap-1 text-xs text-slate-400">
+                        <label className="grid min-w-[220px] flex-1 gap-1 text-xs text-[var(--platform-text-secondary)]">
                           Rejection note
                           <input
                             name="reject_reason"
                             placeholder="Reason shared with customer"
-                            className="h-10 w-full rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100"
+                            className="h-10 w-full rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)]"
                           />
                         </label>
                         <OperationalSubmitButton
@@ -530,20 +549,20 @@ export function AdminOrdersWorkspace({
                         >
                           Reject order
                         </OperationalSubmitButton>
-                      </form>
+                      </AdminOrderActionForm>
                     ) : null}
                     {canCancelOrder(selectedOrder) && text(selectedOrder.status) !== "admin_review" ? (
-                      <form action={cancelAdminOrderAction} className="flex min-w-0 flex-1 flex-wrap items-end gap-2 sm:flex-nowrap">
+                      <AdminOrderActionForm orderId={selectedOrderId} action={cancelAdminOrderAction} nextStatus="cancelled" className="flex min-w-0 flex-1 flex-wrap items-end gap-2 sm:flex-nowrap">
                         <input type="hidden" name="order_id" value={selectedOrderId} />
                         <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
-                        <label className="grid min-w-[220px] flex-1 gap-1 text-xs text-slate-400">
+                        <label className="grid min-w-[220px] flex-1 gap-1 text-xs text-[var(--platform-text-secondary)]">
                           Cancellation reason
                           <input
                             name="cancel_reason"
                             required
                             placeholder="Reason shared with customer"
-                            className="h-10 w-full rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100"
+                            className="h-10 w-full rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)]"
                           />
                         </label>
                         <OperationalSubmitButton
@@ -552,14 +571,14 @@ export function AdminOrdersWorkspace({
                         >
                           Cancel order
                         </OperationalSubmitButton>
-                      </form>
+                      </AdminOrderActionForm>
                     ) : null}
                     {nextStep.action === "assign" ? (
-                      <form action={assignAdminWarehouseAction} className="flex flex-wrap items-end gap-2">
+                      <AdminOrderActionForm orderId={selectedOrderId} action={assignAdminWarehouseAction} nextStatus="assigned" className="flex flex-wrap items-end gap-2">
                         <input type="hidden" name="order_id" value={selectedOrderId} />
                         <input type="hidden" name="expected_updated_at" value={text(selectedOrder.updated_at)} />
                         {formContextFields()}
-                        <label className="grid gap-1 text-xs text-slate-400">
+                        <label className="grid gap-1 text-xs text-[var(--platform-text-secondary)]">
                           Warehouse
                           <select
                             name="warehouse_code"
@@ -570,7 +589,7 @@ export function AdminOrdersWorkspace({
                                 : "";
                               return assigned || defaultWarehouseCode;
                             })()}
-                            className="h-10 min-w-[220px] rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100"
+                            className="h-10 min-w-[220px] rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)]"
                           >
                             {warehouses.map((warehouse) => (
                               <option key={warehouse.code} value={warehouse.code}>
@@ -585,7 +604,7 @@ export function AdminOrdersWorkspace({
                         >
                           {nextStep.button}
                         </OperationalSubmitButton>
-                      </form>
+                      </AdminOrderActionForm>
                     ) : null}
                   </div>
                 </AdminFormSection>
@@ -602,19 +621,19 @@ export function AdminOrdersWorkspace({
                     return (
                       <div key={`${text(entry.status, "status")}-${index}`}>
                         {showDate ? (
-                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{dateKey}</p>
+                          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--platform-text-muted)]">{dateKey}</p>
                         ) : null}
-                        <div className="rounded-lg border border-slate-800 bg-[#10151d] px-3 py-2.5">
+                        <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-3 py-2.5">
                           <div className="flex flex-wrap items-center gap-2">
                             <StatusBadge status={text(entry.status) || text(entry.event, "updated")} />
-                            <span className="text-xs text-slate-500">{eventAt.slice(11, 16) || "—"}</span>
+                            <span className="text-xs text-[var(--platform-text-muted)]">{eventAt.slice(11, 16) || "—"}</span>
                           </div>
-                          <p className="mt-1 text-sm text-slate-300">{eventLabel}</p>
+                          <p className="mt-1 text-sm text-[var(--platform-text-secondary)]">{eventLabel}</p>
                         </div>
                       </div>
                     );
                   }) : (
-                    <p className="text-sm text-slate-500">No timeline events yet.</p>
+                    <p className="text-sm text-[var(--platform-text-muted)]">No timeline events yet.</p>
                   )}
                 </div>
               </AdminSection>
@@ -630,12 +649,12 @@ export function AdminOrdersWorkspace({
                     <input type="hidden" name="status" value={text(selectedOrder.status, "confirmed")} />
                     <input type="hidden" name="payment_status" value={text(selectedOrder.payment_status, "not_required")} />
                     <input type="hidden" name="change_summary" value={`Operator status update ${publicOrderLabel(selectedOrder)}`} />
-                    <label className="grid gap-2 text-sm text-slate-300">
+                    <label className="grid gap-2 text-sm text-[var(--platform-text-secondary)]">
                       Next fulfillment status
                       <select
                         name="fulfillment_status"
                         defaultValue=""
-                        className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-slate-100 outline-none"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)] outline-none"
                       >
                         <option value="">Choose next status</option>
                         {lifecycleStates
@@ -648,7 +667,7 @@ export function AdminOrdersWorkspace({
                     <input
                       name="note"
                       placeholder="Optional note for the timeline"
-                      className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600"
+                      className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
                     />
                     <OperationalSubmitButton
                       pendingLabel="Updating..."
@@ -668,12 +687,12 @@ export function AdminOrdersWorkspace({
                   <form action={confirmAdminWarehouseHandoffAction} data-shipment-actions data-confirm-warehouse-handoff className="grid gap-3">
                     <input type="hidden" name="order_id" value={selectedOrderId} />
                     {formContextFields()}
-                    <label className="grid gap-2 text-sm text-slate-300">
+                    <label className="grid gap-2 text-sm text-[var(--platform-text-secondary)]">
                       Fulfillment warehouse
                       <select
                         name="warehouse_id"
                         defaultValue={assignedWarehouseCode(selectedOrder, defaultWarehouseCode)}
-                        className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-slate-100 outline-none"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)] outline-none"
                       >
                         {warehouses.map((warehouse) => (
                           <option key={warehouse.code} value={warehouse.code}>
@@ -689,7 +708,7 @@ export function AdminOrdersWorkspace({
                     {selectedShipments.length ? (
                       <div className="grid gap-2">
                         {selectedShipments.map((shipment) => (
-                          <div key={text(shipment.id)} className="rounded-lg border border-slate-800 bg-[#0b1017] px-3 py-2 text-sm text-slate-400">
+                          <div key={text(shipment.id)} className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 py-2 text-sm text-[var(--platform-text-secondary)]">
                             {text(shipment.shipment_number, "Shipment")} · {text(shipment.shipment_status, "pending")}
                           </div>
                         ))}
@@ -699,12 +718,12 @@ export function AdminOrdersWorkspace({
                       <input
                         name="carrier_name"
                         placeholder="Carrier name"
-                        className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
                       />
                       <input
                         name="tracking_number"
                         placeholder="Tracking number"
-                        className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-sm text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
                       />
                     </div>
                     {firstItem ? (
@@ -715,48 +734,124 @@ export function AdminOrdersWorkspace({
                         Create shipment handoff
                       </OperationalSubmitButton>
                     ) : (
-                      <p className="text-sm text-slate-500">Add order items before creating a shipment.</p>
+                      <p className="text-sm text-[var(--platform-text-muted)]">Add order items before creating a shipment.</p>
                     )}
+                  </form>
+                </AdminFormSection>
+              ) : null}
+
+              {canArchiveOrder(selectedOrder) ? (
+                <AdminFormSection
+                  title="Archive order"
+                  description="Hide this order from active queues while keeping it for audit."
+                >
+                  <form action={archiveAdminOrderAction} className="grid gap-3 md:max-w-xl">
+                    <input type="hidden" name="order_id" value={selectedOrderId} />
+                    {formContextFields()}
+                    <label className="grid gap-2 text-sm text-[var(--platform-text-secondary)]">
+                      Archive note
+                      <textarea
+                        name="archive_reason"
+                        rows={2}
+                        placeholder="Optional reason"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
+                      />
+                    </label>
+                    <OperationalSubmitButton
+                      pendingLabel="Archiving..."
+                      className="h-10 w-fit rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface-muted)] px-4 text-sm font-semibold text-[var(--platform-text-primary)]"
+                    >
+                      Archive order
+                    </OperationalSubmitButton>
+                  </form>
+                </AdminFormSection>
+              ) : null}
+
+              {canRestoreOrder(selectedOrder) ? (
+                <AdminFormSection
+                  title="Restore order"
+                  description="Return this order from trash or archive to active queues."
+                >
+                  <form action={restoreAdminOrderAction}>
+                    <input type="hidden" name="order_id" value={selectedOrderId} />
+                    {formContextFields()}
+                    <OperationalSubmitButton
+                      pendingLabel="Restoring..."
+                      className="h-10 w-fit rounded-lg border border-emerald-700 bg-emerald-950/40 px-4 text-sm font-semibold text-emerald-100"
+                    >
+                      Restore order
+                    </OperationalSubmitButton>
                   </form>
                 </AdminFormSection>
               ) : null}
 
               {canDeleteOrder(selectedOrder) ? (
                 <AdminFormSection
-                  title="Delete order"
-                  description="Permanently remove this order and related records. Use only for test data or duplicate entries."
+                  title="Move to trash"
+                  description="Soft-delete this order. It can be restored from the Trash queue."
                 >
                   <form action={deleteAdminOrderAction} className="grid gap-3 md:max-w-xl">
                     <input type="hidden" name="order_id" value={selectedOrderId} />
                     {formContextFields()}
-                    <label className="grid gap-2 text-sm text-slate-300">
+                    <label className="grid gap-2 text-sm text-[var(--platform-text-secondary)]">
                       Deletion reason
                       <textarea
                         name="delete_reason"
                         required
                         rows={2}
-                        placeholder="Why is this order being removed?"
-                        className="rounded-lg border border-slate-700 bg-[#0b1017] px-3 py-2 text-slate-100 outline-none placeholder:text-slate-600"
+                        placeholder="Why is this order being moved to trash?"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
                       />
                     </label>
                     <OperationalSubmitButton
                       pendingLabel="Deleting..."
-                      confirmMessage={`Delete order ${publicOrderLabel(selectedOrder)} permanently? This cannot be undone.`}
+                      confirmMessage={`Move order ${publicOrderLabel(selectedOrder)} to trash?`}
                       className="h-10 w-fit rounded-lg border border-rose-700 bg-rose-950/40 px-4 text-sm font-semibold text-rose-100"
                     >
-                      Delete order
+                      Move to trash
+                    </OperationalSubmitButton>
+                  </form>
+                </AdminFormSection>
+              ) : null}
+
+              {canPermanentlyDeleteOrder(selectedOrder) ? (
+                <AdminFormSection
+                  title="Permanent delete"
+                  description="Permanently remove this order from trash. This cannot be undone."
+                >
+                  <form action={permanentDeleteAdminOrderAction} className="grid gap-3 md:max-w-xl">
+                    <input type="hidden" name="order_id" value={selectedOrderId} />
+                    {formContextFields()}
+                    <label className="grid gap-2 text-sm text-[var(--platform-text-secondary)]">
+                      Deletion reason
+                      <textarea
+                        name="delete_reason"
+                        required
+                        rows={2}
+                        placeholder="Why is this order being permanently deleted?"
+                        className="rounded-lg border border-[var(--platform-border-strong)] bg-[var(--platform-surface)] px-3 py-2 text-[var(--platform-text-primary)] outline-none placeholder:text-[var(--platform-text-muted)]"
+                      />
+                    </label>
+                    <OperationalSubmitButton
+                      pendingLabel="Deleting..."
+                      confirmMessage={`Permanently delete order ${publicOrderLabel(selectedOrder)}? This cannot be undone.`}
+                      className="h-10 w-fit rounded-lg border border-rose-700 bg-rose-950/40 px-4 text-sm font-semibold text-rose-100"
+                    >
+                      Permanent delete
                     </OperationalSubmitButton>
                   </form>
                 </AdminFormSection>
               ) : null}
             </>
           ) : (
-            <div className="rounded-xl border border-slate-800 bg-[#10151d] p-6 text-sm text-slate-500">
+            <div className="rounded-xl border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-6 text-sm text-[var(--platform-text-muted)]">
               Select an order from the list to review customer details and take action.
             </div>
           )}
         </section>
       </div>
+        )}
+      </AdminOrdersOptimisticProvider>
     </div>
   );
 }

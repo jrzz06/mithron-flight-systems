@@ -10,8 +10,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const status = url.searchParams.get("status") ?? "all";
+  const catalog = url.searchParams.get("catalog");
+  const catalogFilter = catalog === "archived" || catalog === "all" ? catalog : "active";
   const query = (url.searchParams.get("q") ?? "").trim().toLowerCase();
-  const inventorySource = await getCsvInventoryRows({ all: true });
+  const inventorySource = await getCsvInventoryRows({ all: true, catalogFilter });
   const rows = inventorySource.rows
     .filter((row) => status === "all" || row.stockStatus === status)
     .filter((row) => query ? `${row.productName} ${row.sku} ${row.category}`.toLowerCase().includes(query) : true);

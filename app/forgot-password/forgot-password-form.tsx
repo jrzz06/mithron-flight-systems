@@ -1,8 +1,7 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { recordClientAuthEvent } from "@/lib/auth/audit-client";
-import { createClient } from "@/lib/client";
 import styles from "../auth/auth-page.module.css";
 
 type ForgotPasswordFormProps = {
@@ -10,7 +9,6 @@ type ForgotPasswordFormProps = {
 };
 
 export function ForgotPasswordForm({ auditToken }: ForgotPasswordFormProps) {
-  const supabase = useMemo(() => createClient(), []);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "sent">("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -19,18 +17,24 @@ export function ForgotPasswordForm({ auditToken }: ForgotPasswordFormProps) {
     event.preventDefault();
     setStatus("submitting");
     setMessage(null);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        redirectTo: `${window.location.origin}/reset-password`
+      })
     });
-    if (error) {
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
       await recordClientAuthEvent("auth.password_reset", {
         email,
         outcome: "failed",
-        error: error.message,
+        error: data.error ?? "Request failed",
         provider: "supabase"
       }, auditToken);
       setStatus("idle");
-      setMessage(error.message);
+      setMessage(data.error ?? "Something went wrong. Please try again.");
       return;
     }
     await recordClientAuthEvent("auth.password_reset", {

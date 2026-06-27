@@ -28,7 +28,6 @@ export function parseProductPrice(value: FormDataEntryValue | null) {
 export function parseSupplierProductForm(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const category = String(formData.get("category") ?? "Agri Drones").trim() || "Agri Drones";
-  const tagline = String(formData.get("tagline") ?? "").trim();
   const slugInput = String(formData.get("slug") ?? "").trim();
   const price = parseProductPrice(formData.get("price"));
 
@@ -41,5 +40,5 @@ export function parseSupplierProductForm(formData: FormData) {
   }
 
   const slug = resolveProductSlug(name, slugInput);
-  return { name, category, tagline, price, slug };
+  return { name, category, price, slug };
 }

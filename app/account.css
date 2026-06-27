@@ -1,0 +1,29 @@
+.account-hub {
+  --account-ink: var(--ds-ink);
+  --account-ink-muted: var(--ds-ink-2);
+  --account-surface: var(--ds-card);
+  --account-surface-muted: var(--ds-bg-2);
+  --account-border: var(--ds-border);
+  --account-border-strong: var(--ds-border-strong);
+  --account-accent: var(--ds-accent);
+  --account-accent-soft: color-mix(in srgb, var(--ds-accent) 12%, transparent);
+  --account-danger: var(--color-destructive, #df1f2d);
+  --account-warning: #b45309;
+  --account-success: var(--ds-accent);
+}
+
+.account-hub a:focus-visible,
+.account-hub button:focus-visible,
+.account-hub input:focus-visible,
+.account-hub select:focus-visible,
+.account-hub textarea:focus-visible,
+.account-hub summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--account-surface), 0 0 0 4px var(--account-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-hub [data-account-drawer] {
+    transition: none !important;
+  }
+}

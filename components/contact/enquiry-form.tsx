@@ -73,7 +73,7 @@ export function EnquiryForm({
       return;
     }
 
-    const response = await fetch("/api/enquiries", {
+    const response = await fetch("/api/contact-requests", {
       method: "POST",
       headers: guestHeaders?.headers ?? { "Content-Type": "application/json" },
       body: JSON.stringify({

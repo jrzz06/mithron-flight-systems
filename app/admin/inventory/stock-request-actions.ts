@@ -2,18 +2,19 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getCurrentAuthContext } from "@/services/auth";
+import { getCurrentAuthContext, requireAdminPermission } from "@/services/auth";
 import { approveAndApplyStockRequest, rejectStockRequest } from "@/services/supplier-stock-requests";
 import { repairMissingProductInventory } from "@/services/product-inventory-sync";
 
 function feedbackPath(status: "success" | "error", message: string) {
-  return `/admin/inventory?inventory_status=${status}&inventory_message=${encodeURIComponent(message.slice(0, 200))}`;
+  return `/admin/inventory?stock_status=${status}&stock_message=${encodeURIComponent(message.slice(0, 200))}`;
 }
 
 export async function approveStockRequestAction(formData: FormData) {
   const context = await getCurrentAuthContext();
   const actorId = context.userId;
   if (!actorId) redirect("/login?next=/admin/inventory");
+  await requireAdminPermission("products.write");
 
   const requestId = String(formData.get("requestId") ?? "").trim();
   try {
@@ -28,6 +29,7 @@ export async function rejectStockRequestAction(formData: FormData) {
   const context = await getCurrentAuthContext();
   const actorId = context.userId;
   if (!actorId) redirect("/login?next=/admin/inventory");
+  await requireAdminPermission("products.write");
 
   const requestId = String(formData.get("requestId") ?? "").trim();
   try {
@@ -42,6 +44,7 @@ export async function syncMissingInventoryAction() {
   const context = await getCurrentAuthContext();
   const actorId = context.userId;
   if (!actorId) redirect("/login?next=/admin/inventory");
+  await requireAdminPermission("products.write");
 
   try {
     const result = await repairMissingProductInventory(actorId);

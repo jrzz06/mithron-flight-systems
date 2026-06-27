@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { lookupOrderForTracking } from "@/services/customer-orders";
 
 export async function GET(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+  const limit = await checkDistributedRateLimit(`order-track:${ip}`, 10, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
   const requestUrl = new URL(request.url);
   const orderNumber = requestUrl.searchParams.get("orderNumber")?.trim() ?? "";
   const email = requestUrl.searchParams.get("email")?.trim() ?? "";

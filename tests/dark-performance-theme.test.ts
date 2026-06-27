@@ -14,7 +14,7 @@ describe("dark enterprise control-plane theme", () => {
     const productsPage = source("app/admin/products/page.tsx");
 
     expect(platformStyles).toContain('[data-control-plane-theme="dark"]');
-    expect(platformStyles).toContain("--platform-bg: #14161a");
+    expect(platformStyles).toContain("--platform-bg: #111316");
     expect(platformShell).toContain('data-control-plane-theme="dark"');
     expect(platformShell).toContain('@/app/platform.css');
     expect(productsPage).toContain("platformFieldClass");

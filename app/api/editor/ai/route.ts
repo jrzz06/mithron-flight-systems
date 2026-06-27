@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireEditorActor } from "@/services/editor-image-upload";
+import { requirePermission } from "@/services/auth";
 import type { EditorAiAction } from "@/lib/editor/types";
 
 export const runtime = "nodejs";
@@ -18,7 +18,7 @@ const ACTION_PROMPTS: Record<EditorAiAction, string> = {
 
 export async function POST(request: Request) {
   try {
-    await requireEditorActor();
+    await requirePermission("cms.write");
     const body = (await request.json()) as { action?: EditorAiAction; text?: string };
     const action = body.action;
     const text = body.text?.trim();
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ text: rewritten });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI request failed.";
-    const status = message.includes("Authentication") ? 401 : 500;
+    const status = message.includes("Authentication") || message.includes("Unauthorized") ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

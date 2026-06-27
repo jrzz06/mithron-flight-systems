@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { parseRequestedStockQuantity } from "@/lib/supplier/stock-request-validation";
 import { requirePermission } from "@/services/auth";
 import { createSupplierStockRequest } from "@/services/supplier-stock-requests";
 
@@ -14,7 +15,18 @@ export async function submitSupplierStockRequestAction(formData: FormData) {
   if (!userId) redirect("/login?next=/supplier/inventory");
 
   const productSlug = String(formData.get("productSlug") ?? "").trim();
-  const requestedQuantity = Number(formData.get("requestedQuantity"));
+  if (!productSlug) {
+    redirect(feedbackPath("error", "Select a product before submitting stock."));
+  }
+
+  let requestedQuantity: number;
+  try {
+    requestedQuantity = parseRequestedStockQuantity(formData.get("requestedQuantity"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Stock quantity must be zero or greater.";
+    redirect(feedbackPath("error", message));
+  }
+
   const note = String(formData.get("note") ?? "").trim();
 
   try {
