@@ -1,5 +1,6 @@
 "use client";
 
+import type { JSONContent } from "@tiptap/core";
 import { useActionState, useRef, useState } from "react";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
@@ -16,7 +17,7 @@ export type SupplierProductEditDefaults = {
   category: string;
   price: number;
   description?: string;
-  descriptionJson?: string;
+  descriptionJson?: string | JSONContent;
   imageSrc?: string;
   imageAlt?: string;
   updatedAt?: string | null;
