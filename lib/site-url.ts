@@ -1,8 +1,8 @@
-const DEFAULT_SITE_URL = "https://final-mithron-deploy.vercel.app";
+const LOCAL_DEV_SITE_URL = "http://127.0.0.1:3000";
 
 function normalizeSiteUrl(value: string) {
   const trimmed = value.trim();
-  if (!trimmed) return DEFAULT_SITE_URL;
+  if (!trimmed) return LOCAL_DEV_SITE_URL;
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
   }
@@ -25,14 +25,14 @@ function resolveSiteUrlString() {
     return normalizeSiteUrl(configuredUrl);
   }
 
-  return DEFAULT_SITE_URL;
+  return LOCAL_DEV_SITE_URL;
 }
 
 export function getSiteUrl() {
   try {
     return new URL(resolveSiteUrlString());
   } catch {
-    return new URL(DEFAULT_SITE_URL);
+    return new URL(LOCAL_DEV_SITE_URL);
   }
 }
 

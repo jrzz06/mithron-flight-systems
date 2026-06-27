@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const root = join(import.meta.dirname, "..");
 const WIX_SITEMAP = "https://www.mithron.co/store-products-sitemap.xml";
-const OUR_SITEMAP = "https://final-mithron-deploy.vercel.app/sitemap.xml";
+const OUR_SITEMAP = "https://mithron-flight-systems-kbkbkh.vercel.app/sitemap.xml";
 
 function loadProjectEnv() {
   for (const envPath of [join(root, ".env.local"), join(root, ".env")]) {
@@ -231,7 +231,7 @@ async function main() {
   const liveChecks = [];
   for (const item of toSpotCheck) {
     if (item.db_slug) {
-      liveChecks.push(await checkLiveProductPage("https://final-mithron-deploy.vercel.app", item.db_slug));
+      liveChecks.push(await checkLiveProductPage("https://mithron-flight-systems-kbkbkh.vercel.app", item.db_slug));
     }
   }
 

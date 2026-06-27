@@ -1,4 +1,4 @@
-const BASE = "https://final-mithron-deploy.vercel.app";
+const BASE = "https://mithron-flight-systems-kbkbkh.vercel.app";
 
 async function testPagination() {
   for (let page = 1; page <= 5; page++) {

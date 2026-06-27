@@ -28,8 +28,8 @@ describe("production security hardening", () => {
     expect(() => assertValidCmsHref("javascript:alert(1)", "Navigation")).toThrow(/blocked URL scheme/i);
     expect(() => assertValidCmsHref("//evil.example/phish", "Navigation")).toThrow(/protocol-relative/i);
     expect(assertValidCmsHref("/category/video-drones", "Navigation")).toBe("/category/video-drones");
-    expect(assertValidCmsHref("https://final-mithron-deploy.vercel.app/about", "Navigation"))
-      .toBe("https://final-mithron-deploy.vercel.app/about");
+    expect(assertValidCmsHref("https://mithron-flight-systems-kbkbkh.vercel.app/about", "Navigation"))
+      .toBe("https://mithron-flight-systems-kbkbkh.vercel.app/about");
     expect(sanitizePublicCmsHref("javascript:alert(1)", "/")).toBe("/");
   });
 

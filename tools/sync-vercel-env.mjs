@@ -91,7 +91,7 @@ const values = {
     local.get("AUTH_AUDIT_CLIENT_SECRET") && !local.get("AUTH_AUDIT_CLIENT_SECRET")?.includes("change-me")
       ? local.get("AUTH_AUDIT_CLIENT_SECRET")
       : secret,
-  NEXT_PUBLIC_SITE_URL: "https://final-mithron-deploy.vercel.app",
+  NEXT_PUBLIC_SITE_URL: "https://mithron-flight-systems-kbkbkh.vercel.app",
   EMAIL_FROM: "Mithron <noreply@mithron.com>",
   RESEND_API_KEY: "re_deploy_placeholder_rotate_before_launch",
   PAYMENT_PROVIDER: "razorpay",

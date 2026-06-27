@@ -1,4 +1,4 @@
-const BASE = "https://final-mithron-deploy.vercel.app";
+const BASE = "https://mithron-flight-systems-kbkbkh.vercel.app";
 const CATEGORIES = [
   "accessories",
   "agri-drones",
