@@ -197,14 +197,15 @@ export async function fetchHomepageCmsContent(): Promise<HomepageCmsContent> {
 
     const rows = (await response.json()) as Array<{ payload?: unknown }>;
     const payload = rows[0]?.payload;
-    if (!isPlainRecord(payload) || !isPlainRecord(payload.homepage)) {
+    if (!isPlainRecord(payload)) {
       if (isCmsStrictMode()) {
-        throw new Error("Homepage CMS payload is empty. Save homepage content in the admin editor first.");
+        throw new Error("Homepage CMS admin_settings row is missing. Save homepage content in the admin editor first.");
       }
       return fallback;
     }
 
-    return mergeHomepageCmsContent(payload.homepage);
+    const homepage = isPlainRecord(payload.homepage) ? payload.homepage : {};
+    return mergeHomepageCmsContent(homepage);
   } catch (error) {
     if (isCmsStrictMode()) {
       throw error instanceof Error ? error : new Error(String(error));
