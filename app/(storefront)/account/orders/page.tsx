@@ -9,7 +9,7 @@ import {
   AccountStatusChip
 } from "@/components/account";
 import { createClient } from "@/lib/server";
-import { CUSTOMER_EMPTY_MESSAGES, customerFulfillmentStatus, customerOrderStatus } from "@/lib/customer/copy";
+import { CUSTOMER_EMPTY_MESSAGES, CUSTOMER_ORDER_POLICY, customerFulfillmentStatus, customerOrderStatus } from "@/lib/customer/copy";
 import { formatItemCount, formatOrderDate, formatOrderReference, orderItemCount } from "@/lib/customer/display";
 import { formatINR } from "@/lib/utils";
 import { listCustomerOrders } from "@/services/customer-orders";
@@ -30,7 +30,7 @@ export default async function AccountOrdersPage() {
       <AccountCard>
         <AccountSection
           title="Your orders"
-          description="Track deliveries, view order details, and request returns."
+          description={`Track deliveries, view order details, and request returns after delivery. ${CUSTOMER_ORDER_POLICY.cancellationUnavailable}`}
           action={<AccountLink href="/track-order">Track without signing in</AccountLink>}
         >
           {orders.length ? (

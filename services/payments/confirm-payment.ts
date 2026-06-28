@@ -3,6 +3,8 @@ import { mergePaymentLifecycleMetadata, paymentEventToLifecycleState } from "@/l
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
 import { releaseCheckoutStock } from "@/services/checkout-stock";
 import { notifyAdminsAboutPaidOrder } from "@/services/enquiries";
+import { generateAndStoreInvoice } from "@/lib/invoice/generate-invoice";
+import { sendOrderConfirmationEmail } from "@/services/email/order-confirmation";
 import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } from "@/services/orders";
 import { cashfreeCheckoutMode } from "./config";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
@@ -342,8 +344,21 @@ export async function applyPaymentEvent(input: {
     });
 
     logPaymentEvent("payment_verified", { orderId, provider, source });
-    // Extension point: invoice generation, GST documents, accounting exports, and
-    // transactional emails should hook in here after server-side verification only.
+
+    try {
+      const invoice = await generateAndStoreInvoice(orderId);
+      await sendOrderConfirmationEmail({
+        orderId,
+        order,
+        invoiceNumber: invoice.invoiceNumber
+      });
+    } catch (invoiceError) {
+      logPaymentWarning("invoice_generation_failed", {
+        orderId,
+        error: invoiceError instanceof Error ? invoiceError.message : String(invoiceError)
+      });
+    }
+
     return { ok: true, status: event.status };
   }
 

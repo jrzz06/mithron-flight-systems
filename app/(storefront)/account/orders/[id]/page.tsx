@@ -9,8 +9,9 @@ import { OrderReturnForm } from "@/components/customer/order-return-form";
 import { OrderReviewForm } from "@/components/customer/order-review-form";
 import { OrderProgressTracker } from "@/components/customer/order-progress-tracker";
 import { createClient } from "@/lib/server";
-import { customerOrderStatus, customerPaymentStatus } from "@/lib/customer/copy";
+import { customerOrderStatus, customerPaymentStatus, CUSTOMER_ORDER_POLICY } from "@/lib/customer/copy";
 import { formatOrderDate, formatOrderReference } from "@/lib/customer/display";
+import { formatAddressMultiline } from "@/lib/addresses/format";
 import {
   buildCustomerProgressSteps,
   currentCustomerProgressLabel,
@@ -24,13 +25,7 @@ import { listReturnRequestsForOrder } from "@/services/order-returns";
 import { getEnquiryById } from "@/services/enquiries";
 
 function formatAddress(address: Record<string, unknown>) {
-  const parts = [
-    address.line1,
-    address.line2,
-    [address.city, address.region, address.postal_code].filter(Boolean).join(", "),
-    address.country
-  ].filter((part) => typeof part === "string" && part.trim());
-  return parts.join("\n");
+  return formatAddressMultiline(address);
 }
 
 function trackingDetails(tracking: unknown) {
@@ -69,7 +64,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
     listCustomerReviewsForOrder(id, userId)
   ]);
 
-  const { order, items, payment, shippingAddress } = detail;
+  const { order, items, payment, shippingAddress, billingAddress, billingSameAsShipping } = detail;
   const metadata = order.metadata && typeof order.metadata === "object" && !Array.isArray(order.metadata)
     ? order.metadata as Record<string, unknown>
     : {};
@@ -121,14 +116,29 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
         />
       </div>
 
-      <div className="mt-6">
-        <AccountSection title="Delivery address">
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <AccountSection title="Shipping address">
           {shippingAddress ? (
             <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--account-ink)]">
               {formatAddress(shippingAddress)}
             </p>
           ) : (
-            <p className="text-sm text-[var(--account-ink-muted)]">No delivery address on file.</p>
+            <p className="text-sm text-[var(--account-ink-muted)]">No shipping address on file.</p>
+          )}
+        </AccountSection>
+
+        <AccountSection title="Billing address">
+          {billingAddress ? (
+            <>
+              {billingSameAsShipping ? (
+                <p className="mb-2 text-xs text-[var(--account-ink-muted)]">Same as shipping address</p>
+              ) : null}
+              <p className="whitespace-pre-line text-sm leading-relaxed text-[var(--account-ink)]">
+                {formatAddress(billingAddress)}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--account-ink-muted)]">No billing address on file.</p>
           )}
         </AccountSection>
       </div>
@@ -141,6 +151,11 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
             <p>Method: {String(payment.provider ?? "—")}</p>
             {payment.verified_at ? <p>Paid on {formatOrderDate(payment.verified_at)}</p> : null}
           </div>
+          {typeof order.invoice_url === "string" && order.invoice_url.trim() ? (
+            <div className="mt-4">
+              <AccountLink href={`/account/orders/${id}/invoice`}>Download invoice</AccountLink>
+            </div>
+          ) : null}
         </AccountSection>
       ) : null}
 
@@ -173,7 +188,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
         </ul>
       </AccountSection>
 
-      <AccountSection title="Returns" className="mt-6">
+      <AccountSection title="Returns" description={CUSTOMER_ORDER_POLICY.returnsAfterDelivery} className="mt-6">
         {activeReturn ? (
           <p className="text-sm text-[var(--account-ink-muted)]">
             Return request status:{" "}
@@ -185,6 +200,13 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
         ) : (
           <OrderReturnForm orderId={id} disabled={!canReturn} />
         )}
+      </AccountSection>
+
+      <AccountSection title="Cancellation" description={CUSTOMER_ORDER_POLICY.cancellationUnavailable} className="mt-6">
+        <p className="text-sm text-[var(--account-ink-muted)]">
+          Need help with this order?{" "}
+          <AccountLink href="/contact">Contact our team</AccountLink>
+        </p>
       </AccountSection>
     </AccountCard>
   );

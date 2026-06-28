@@ -213,6 +213,11 @@ export async function persistValidatedOrderDraft(
     })
   );
 
+  const mergedMetadata = {
+    ...draft.order.metadata,
+    ...options.metadata
+  } as JsonRecord;
+
   const orderRecord = await createOrderRecord(
     {
       order_number: options.orderNumber,
@@ -225,12 +230,15 @@ export async function persistValidatedOrderDraft(
       total: draft.order.total,
       currency: options.currency,
       timeline,
-      metadata: {
-        ...draft.order.metadata,
-        ...options.metadata
-      },
+      metadata: mergedMetadata,
       created_by_user_id: options.createdByUserId,
       ...(options.createdByStaffId ? { created_by: options.createdByStaffId } : {}),
+      ...(typeof mergedMetadata.shipping_address_id === "string"
+        ? { shipping_address_id: mergedMetadata.shipping_address_id }
+        : {}),
+      ...(typeof mergedMetadata.billing_address_id === "string"
+        ? { billing_address_id: mergedMetadata.billing_address_id }
+        : {}),
       updated_at: now.toISOString()
     },
     options.actorId,
@@ -366,8 +374,14 @@ export async function createAdminManualOrderWorkflow(
         shipping_amount: shippingAmount,
         discount_amount: discountAmount,
         guest_shipping_address: addressToMetadata(input.shippingAddress),
+        shipping_address: addressToMetadata(input.shippingAddress),
+        guest_billing_address: addressToMetadata(billingAddress),
         billing_address: addressToMetadata(billingAddress),
+        billing_same_as_shipping: input.billingSameAsShipping !== false,
         ...(input.shippingAddressId ? { shipping_address_id: input.shippingAddressId } : {}),
+        ...(input.billingSameAsShipping !== false && input.shippingAddressId
+          ? { billing_address_id: input.shippingAddressId }
+          : {}),
         ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {})
       }
     },

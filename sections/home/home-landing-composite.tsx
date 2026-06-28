@@ -1080,7 +1080,7 @@ export function HomeLandingComposite({
 }
 
 function formatMissionHeadline(title: string) {
-  return title.trim().toUpperCase();
+  return title.trim().replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 }
 
 type MissionLightPoint = { x: string; y: string };
@@ -1601,7 +1601,7 @@ function MissionWorldBentoSection({
                 </div>
                 <h2 className={styles.agriHeadline}>{headline}</h2>
                 <div className={styles.agriIntroBody}>
-                  <p>{config.body}</p>
+                  <p className={styles.agriIntroPlainText}>{config.body}</p>
                   {introFooter}
                 </div>
               </div>
@@ -1772,7 +1772,7 @@ function CityDroneWorldSection({
       variant="city"
       sectionClassName={styles.citySection}
       testId="city-drone-world-section"
-      headline={config.title.toUpperCase()}
+      headline={formatMissionHeadline(config.title)}
       introFooter={
         config.mediaNote ? (
           <p className={styles.agriFallbackNote}>

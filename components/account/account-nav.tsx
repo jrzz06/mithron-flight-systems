@@ -40,7 +40,7 @@ function NavLinks({
   showLogout?: boolean;
 }) {
   return (
-    <nav aria-label="Account navigation" className="grid gap-1">
+    <nav aria-label="Account navigation" className="grid gap-1.5">
       {links.map((link) => {
         const active = isActivePath(pathname, link.href);
         return (
@@ -49,10 +49,10 @@ function NavLinks({
             href={link.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-11 items-center rounded-xl border-l-2 px-4 py-2.5 text-sm font-medium transition",
+              "flex min-h-10 items-center rounded-full px-4 text-sm font-medium transition-all duration-300",
               active
-                ? "border-[var(--account-accent)] bg-[var(--account-surface-muted)] text-[var(--account-ink)]"
-                : "border-transparent text-[var(--account-ink-muted)] hover:bg-[var(--account-surface-muted)] hover:text-[var(--account-ink)]"
+                ? "bg-[var(--account-accent-soft)] text-[var(--account-accent)] ring-1 ring-[var(--account-accent)]/20"
+                : "text-[var(--account-ink-muted)] hover:bg-[var(--account-surface-muted)] hover:text-[var(--account-ink)]"
             )}
           >
             {link.label}
@@ -60,13 +60,13 @@ function NavLinks({
         );
       })}
       {workspaceHref && workspaceLabel ? (
-        <Button asChild className="mt-2">
+        <Button asChild className="mt-4 rounded-full" variant="default">
           <Link href={workspaceHref}>Open {workspaceLabel}</Link>
         </Button>
       ) : null}
       {showLogout ? (
         <LogoutForm
-          buttonClassName="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--account-border-strong)] bg-transparent px-3 py-2 text-sm font-medium text-[var(--account-ink-muted)] transition hover:bg-[var(--account-surface-muted)] hover:text-[var(--account-ink)]"
+          buttonClassName="mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-full border border-[var(--account-border-strong)] bg-transparent px-4 text-sm font-medium text-[var(--account-ink-muted)] transition-all duration-300 hover:bg-[var(--account-surface-muted)] hover:text-[var(--account-ink)]"
         />
       ) : null}
     </nav>
@@ -105,7 +105,7 @@ export function AccountNav({
           aria-controls="account-mobile-nav"
           aria-label={open ? "Close account menu" : "Open account menu"}
           onClick={() => setOpen((value) => !value)}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[var(--account-border)] bg-[var(--account-surface)] text-[var(--account-ink)]"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--account-border)] bg-[var(--account-surface)] text-[var(--account-ink)] shadow-sm transition-all active:scale-95"
         >
           {open ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
         </button>
@@ -115,23 +115,23 @@ export function AccountNav({
             <button
               type="button"
               aria-label="Close account menu"
-              className="absolute inset-0 bg-black/30"
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500"
               onClick={() => setOpen(false)}
             />
             <aside
               id="account-mobile-nav"
               data-account-drawer
-              className="absolute inset-y-0 left-0 w-[min(88vw,320px)] border-r border-[var(--account-border)] bg-[var(--account-surface)] p-4 shadow-xl"
+              className="absolute inset-y-0 left-0 w-[min(88vw,320px)] border-r border-[var(--account-border)] bg-[var(--account-surface)] p-6 shadow-2xl transition-transform duration-500 ease-[var(--account-motion)]"
             >
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-[var(--account-ink)]">Menu</p>
+              <div className="mb-8 flex items-center justify-between">
+                <p className="font-display text-lg font-semibold text-[var(--account-ink)]">Account Menu</p>
                 <button
                   type="button"
                   aria-label="Close account menu"
                   onClick={() => setOpen(false)}
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[var(--account-border)]"
+                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[var(--account-border)] bg-[var(--account-surface-muted)]"
                 >
-                  <X className="size-5" aria-hidden />
+                  <X className="size-4" aria-hidden />
                 </button>
               </div>
               <NavLinks
@@ -150,7 +150,7 @@ export function AccountNav({
 
   return (
     <aside className="hidden h-fit lg:sticky lg:top-24 lg:block">
-      <div className="rounded-2xl border border-[var(--account-border)] bg-[var(--account-surface)] p-4">
+      <div className="rounded-[var(--account-radius-card)] border border-[var(--account-border)] bg-[var(--account-surface)] p-5 shadow-[var(--account-shadow-sm)]">
         <NavLinks
           links={links}
           pathname={pathname}

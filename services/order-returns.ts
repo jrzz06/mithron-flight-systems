@@ -139,7 +139,7 @@ export async function createReturnRequest(
 
   const fulfillment = String(order.fulfillment_status ?? "");
   const status = String(order.status ?? "");
-  if (!["delivered", "shipped"].includes(fulfillment) && status !== "delivered") {
+  if (fulfillment !== "delivered" && status !== "delivered") {
     throw new Error("Returns are only available after delivery.");
   }
 

@@ -10,6 +10,14 @@ const toneClasses: Record<ChipTone, string> = {
   info: "border-[color-mix(in_srgb,var(--account-accent)_30%,transparent)] bg-[var(--account-accent-soft)] text-[var(--account-accent)]"
 };
 
+const dotClasses: Record<ChipTone, string> = {
+  neutral: "bg-[var(--account-ink-muted)]",
+  success: "bg-[var(--account-success)]",
+  warning: "bg-[var(--account-warning)]",
+  danger: "bg-[var(--account-danger)]",
+  info: "bg-[var(--account-accent)]"
+};
+
 function toneForStatus(status: string): ChipTone {
   const normalized = status.toLowerCase();
   if (["delivered", "paid", "succeeded", "converted", "won", "confirmed"].includes(normalized)) return "success";
@@ -34,11 +42,12 @@ export function AccountStatusChip({ label, status, tone, className }: AccountSta
   return (
     <span
       className={cn(
-        "inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-xs font-medium leading-none",
+        "inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-none tracking-tight",
         toneClasses[resolvedTone],
         className
       )}
     >
+      <span className={cn("size-1.5 rounded-full", dotClasses[resolvedTone])} aria-hidden />
       {label}
     </span>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CUSTOMER_ORDER_POLICY } from "@/lib/customer/copy";
 import { AccountField, AccountTextarea } from "@/components/account";
 import { Button } from "@/components/ui/button";
 
@@ -30,7 +31,7 @@ export function OrderReturnForm({ orderId, orderItemId, disabled }: { orderId: s
   }
 
   if (disabled) {
-    return <p className="text-sm text-[var(--account-ink-muted)]">Returns are available after delivery.</p>;
+    return <p className="text-sm text-[var(--account-ink-muted)]">{CUSTOMER_ORDER_POLICY.returnsAfterDelivery}</p>;
   }
 
   if (status === "done") {

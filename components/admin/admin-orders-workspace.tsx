@@ -187,19 +187,7 @@ function orderTimeline(order: AdminRow) {
   return Array.isArray(order.timeline) ? order.timeline.slice(-6).reverse() as AdminRow[] : [];
 }
 
-function formatAddress(metadata: Record<string, unknown>) {
-  const guest = metadata.guest_shipping_address;
-  if (guest && typeof guest === "object" && !Array.isArray(guest)) {
-    const address = guest as Record<string, unknown>;
-    return [
-      text(address.line1),
-      text(address.city),
-      text(address.region),
-      text(address.postalCode)
-    ].filter(Boolean).join(", ");
-  }
-  return "";
-}
+import { formatAddressInline, pickAddressFromMetadata } from "@/lib/addresses/format";
 
 function nextStepForOrder(order: AdminRow) {
   const status = text(order.status, "pending");
@@ -301,7 +289,9 @@ export function AdminOrdersWorkspace({
   const firstItem = selectedItems[0] ?? null;
   const timeline = selectedOrder ? orderTimeline(selectedOrder) : [];
   const metadata = selectedOrder ? orderMetadata(selectedOrder) : {};
-  const shippingAddress = formatAddress(metadata);
+  const shippingAddress = formatAddressInline(pickAddressFromMetadata(metadata, "shipping"));
+  const billingAddress = formatAddressInline(pickAddressFromMetadata(metadata, "billing"));
+  const billingSameAsShipping = metadata.billing_same_as_shipping !== false;
   const nextStep = selectedOrder ? nextStepForOrder(selectedOrder) : null;
   const selectedKey = selectedOrderKey || (selectedOrder ? text(selectedOrder.order_number) || selectedOrderId : "");
 
@@ -440,7 +430,19 @@ export function AdminOrdersWorkspace({
                       <p className="mt-1 text-sm text-[var(--platform-text-secondary)]">Company: {text(metadata.customer_company)}</p>
                     ) : null}
                     {shippingAddress ? (
-                      <p className="mt-2 text-sm leading-6 text-[var(--platform-text-secondary)]">{shippingAddress}</p>
+                      <div className="mt-2 space-y-2 text-sm leading-6 text-[var(--platform-text-secondary)]">
+                        <p>
+                          <span className="font-medium text-[var(--platform-text-primary)]">Shipping: </span>
+                          {shippingAddress}
+                        </p>
+                        {billingAddress ? (
+                          <p>
+                            <span className="font-medium text-[var(--platform-text-primary)]">Billing: </span>
+                            {billingAddress}
+                            {billingSameAsShipping ? " (same as shipping)" : ""}
+                          </p>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                   <div className="rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-3">
@@ -461,6 +463,14 @@ export function AdminOrdersWorkspace({
                     <p className="mt-3 text-lg font-semibold text-[var(--platform-text-primary)]">
                       {moneyText(selectedOrder.total)}
                     </p>
+                    {text(selectedOrder.payment_status) === "succeeded" && text(selectedOrder.invoice_url) ? (
+                      <Link
+                        href={`/admin/orders/invoice/${encodeURIComponent(selectedOrderId)}`}
+                        className="mt-3 inline-flex rounded-full border border-[var(--platform-border-strong)] px-2.5 py-1 text-xs font-medium text-violet-300 hover:border-violet-400/40 hover:underline"
+                      >
+                        View invoice
+                      </Link>
+                    ) : null}
                     {assignedWarehouseCode(selectedOrder, defaultWarehouseCode) ? (
                       <Link
                         href="/warehouse/orders"

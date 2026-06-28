@@ -8,6 +8,16 @@ export type GuestAddress = {
   label?: string;
 };
 
+export function isCompleteGuestAddress(address: Partial<GuestAddress> | null | undefined) {
+  if (!address) return false;
+  const line1 = typeof address.line1 === "string" ? address.line1.trim() : "";
+  const city = typeof address.city === "string" ? address.city.trim() : "";
+  const region = typeof address.region === "string" ? address.region.trim() : "";
+  const postalCode = typeof address.postalCode === "string" ? address.postalCode.trim() : "";
+  if (!line1 || !city || !region || !postalCode) return false;
+  return ![line1, city, region, postalCode].some((entry) => entry.length > 160);
+}
+
 export function isValidCheckoutPhone(phone: string) {
   return isValidCustomerPhone(phone);
 }
@@ -16,18 +26,21 @@ export function isValidCheckoutEmail(email: string) {
   return isValidCustomerEmail(email);
 }
 
-function parseGuestAddress(record: Record<string, unknown>): GuestAddress | null {
-  const guestAddress = record.guestAddress;
-  if (!guestAddress || typeof guestAddress !== "object" || Array.isArray(guestAddress)) return null;
-  const address = guestAddress as Record<string, unknown>;
+function parseGuestAddressValue(value: unknown): GuestAddress | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const address = value as Record<string, unknown>;
   const line1 = typeof address.line1 === "string" ? address.line1.trim() : "";
   const city = typeof address.city === "string" ? address.city.trim() : "";
   const region = typeof address.region === "string" ? address.region.trim() : "";
   const postalCode = typeof address.postalCode === "string" ? address.postalCode.trim() : "";
   if (!line1 || !city || !region || !postalCode) return null;
-  if ([line1, city, region, postalCode].some((value) => value.length > 160)) return null;
+  if ([line1, city, region, postalCode].some((entry) => entry.length > 160)) return null;
   const label = typeof address.label === "string" ? address.label.trim().slice(0, 80) : undefined;
   return { line1, city, region, postalCode, ...(label ? { label } : {}) };
+}
+
+function parseGuestAddress(record: Record<string, unknown>): GuestAddress | null {
+  return parseGuestAddressValue(record.guestAddress);
 }
 
 export type CheckoutRequestBody = {
@@ -37,7 +50,10 @@ export type CheckoutRequestBody = {
   company?: string;
   items: Array<{ productSlug: string; quantity: number }>;
   addressId?: string;
+  billingAddressId?: string;
   guestAddress?: GuestAddress;
+  guestBillingAddress?: GuestAddress;
+  billingSameAsShipping?: boolean;
   region?: string;
   promoCode?: string;
   paymentProvider?: string;
@@ -87,7 +103,10 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
   if (company === null) return null;
 
   const addressId = typeof record.addressId === "string" ? record.addressId.trim() : undefined;
+  const billingAddressId = typeof record.billingAddressId === "string" ? record.billingAddressId.trim() : undefined;
   const guestAddress = parseGuestAddress(record);
+  const guestBillingAddress = parseGuestAddressValue(record.guestBillingAddress);
+  const billingSameAsShipping = record.billingSameAsShipping !== false;
   const region = typeof record.region === "string" ? record.region.trim().slice(0, 120) : undefined;
   const promoCode = typeof record.promoCode === "string" ? record.promoCode.trim().slice(0, 80) : undefined;
   const paymentProvider = typeof record.paymentProvider === "string" ? record.paymentProvider.trim().toLowerCase() : undefined;
@@ -99,7 +118,10 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
     items,
     ...(company ? { company } : {}),
     ...(addressId ? { addressId } : {}),
+    ...(billingAddressId ? { billingAddressId } : {}),
     ...(guestAddress ? { guestAddress } : {}),
+    ...(guestBillingAddress ? { guestBillingAddress } : {}),
+    billingSameAsShipping,
     ...(region ? { region } : {}),
     ...(promoCode ? { promoCode } : {}),
     ...(paymentProvider ? { paymentProvider } : {})

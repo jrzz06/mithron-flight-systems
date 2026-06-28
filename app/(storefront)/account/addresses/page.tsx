@@ -25,7 +25,9 @@ export default async function AccountAddressesPage() {
           postal_code: String(address.postal_code ?? ""),
           country: typeof address.country === "string" ? address.country : null,
           phone: typeof address.phone === "string" ? address.phone : null,
-          is_default: Boolean(address.is_default)
+          is_default: Boolean(address.is_default),
+          is_billing: address.is_billing !== false,
+          is_shipping: address.is_shipping !== false
         }))}
       />
     </AccountPageShell>

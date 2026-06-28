@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
-import { parseCheckoutRequestBody, type GuestAddress } from "@/lib/api/checkout-schema";
+import { parseCheckoutRequestBody } from "@/lib/api/checkout-schema";
+import { buildCheckoutAddressMetadata } from "@/lib/addresses/resolve-server";
 import { requireClientAuditToken } from "@/lib/api/require-client-audit-token";
 import { createClient } from "@/lib/server";
 import { assertSupabaseAdminConfig } from "@/lib/env";
@@ -30,13 +31,6 @@ import type { CheckoutPaymentResponse, PaymentProviderId } from "@/services/paym
 
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function buildShippingMetadata(addressId?: string, guestAddress?: GuestAddress) {
-  return {
-    shipping_address_id: addressId ?? null,
-    ...(guestAddress ? { guest_shipping_address: guestAddress } : {})
-  };
-}
 
 async function findCheckoutByIdempotencyKey(
   idempotencyKey: string,
@@ -186,10 +180,24 @@ export async function POST(request: Request) {
 
   if (body.addressId && userId) {
     try {
-      await assertCustomerAddressBelongsToUser(userId, body.addressId);
-    } catch {
-      return NextResponse.json({ error: "Invalid shipping address for this account." }, { status: 403 });
+      await assertCustomerAddressBelongsToUser(userId, body.addressId, process.env, { requireShipping: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid shipping address for this account.";
+      return NextResponse.json({ error: message }, { status: 403 });
     }
+  }
+
+  if (body.billingAddressId && userId) {
+    try {
+      await assertCustomerAddressBelongsToUser(userId, body.billingAddressId, process.env, { requireBilling: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid billing address for this account.";
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+  }
+
+  if (!body.billingSameAsShipping && !body.billingAddressId && !body.guestBillingAddress) {
+    return NextResponse.json({ error: "A billing address is required when it differs from shipping." }, { status: 400 });
   }
 
   let stockItems;
@@ -208,6 +216,17 @@ export async function POST(request: Request) {
 
   const catalog = await getCheckoutPricingBySlugs(body.items.map((item) => item.productSlug));
 
+  const addressMetadata = await buildCheckoutAddressMetadata(
+    {
+      addressId: body.addressId,
+      billingAddressId: body.billingAddressId,
+      guestAddress: body.guestAddress,
+      guestBillingAddress: body.guestBillingAddress,
+      billingSameAsShipping: body.billingSameAsShipping
+    },
+    userId
+  );
+
   const draft = buildCustomerCheckoutDraft(
     {
       customerEmail: body.email,
@@ -219,7 +238,7 @@ export async function POST(request: Request) {
         sku: item.sku ?? undefined
       })),
       metadata: {
-        ...buildShippingMetadata(body.addressId, body.guestAddress),
+        ...addressMetadata,
         customer_full_name: body.fullName,
         ...(body.company ? { customer_company: body.company } : {}),
         ...(body.promoCode ? { promo_code: body.promoCode } : {}),
@@ -238,7 +257,13 @@ export async function POST(request: Request) {
       {
         ...draft.order,
         created_by_user_id: userId,
-        order_number: orderNumber
+        order_number: orderNumber,
+        ...(typeof addressMetadata.shipping_address_id === "string"
+          ? { shipping_address_id: addressMetadata.shipping_address_id }
+          : {}),
+        ...(typeof addressMetadata.billing_address_id === "string"
+          ? { billing_address_id: addressMetadata.billing_address_id }
+          : {})
       },
       userId
     );

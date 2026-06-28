@@ -5,7 +5,7 @@
     "/media/mithron/mission/agrone/agrone-drone-owner-registration.png": {
       "assetId": "storefront-agrone-drone-owner-registration",
       "bucket": "mithron-story",
-      "primarySrc": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/agrone-drone-owner-registration-2560w-enh-v1.21bdbb7b.webp",
+      "primarySrc": "/optimized/agrone-mission/agrone-drone-owner-registration/768.webp",
       "variants": {
         "webp": [
           {
@@ -54,7 +54,7 @@
     "/media/mithron/mission/agrone/agrone-pilot-registration.png": {
       "assetId": "storefront-agrone-pilot-registration",
       "bucket": "mithron-story",
-      "primarySrc": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/agrone-pilot-registration-2560w-enh-v1.9bc339ad.webp",
+      "primarySrc": "/optimized/agrone-mission/agrone-pilot-registration/1024.webp",
       "variants": {
         "webp": [
           {
@@ -250,7 +250,7 @@
     "/media/mithron/mission/city/dronelancer-model.png": {
       "assetId": "storefront-dronelancer-model",
       "bucket": "mithron-story",
-      "primarySrc": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/dronelancer-model-2560w-enh-v1.968b53b0.webp",
+      "primarySrc": "/optimized/city-mission/dronelancer-model/1024.webp",
       "variants": {
         "webp": [
           {
@@ -299,7 +299,7 @@
     "/media/mithron/mission/city/city-drone-rental-services-app.png": {
       "assetId": "storefront-city-drone-rental-services-app",
       "bucket": "mithron-story",
-      "primarySrc": "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-story/storefront/city-drone-rental-services-app-2560w-enh-v1.1b9f03f3.webp",
+      "primarySrc": "/optimized/city-mission/city-drone-rental-services-app/1024.webp",
       "variants": {
         "webp": [
           {

@@ -29,11 +29,22 @@ export type CustomerAddressInput = {
 const customerAddressColumns =
   "id,user_id,label,line1,line2,city,region,postal_code,country,phone,is_default,is_billing,is_shipping,created_at,updated_at";
 
-export async function assertCustomerAddressBelongsToUser(userId: string, addressId: string, env: EnvSource = process.env) {
+export async function assertCustomerAddressBelongsToUser(
+  userId: string,
+  addressId: string,
+  env: EnvSource = process.env,
+  options?: { requireShipping?: boolean; requireBilling?: boolean }
+) {
   const rows = await fetchAdminRecordsByColumn("customer_addresses", "id", addressId, env);
   const row = rows[0];
   if (!row || String(row.user_id ?? "") !== userId) {
-    throw new Error("Shipping address not found for this account.");
+    throw new Error("Address not found for this account.");
+  }
+  if (options?.requireShipping && row.is_shipping === false) {
+    throw new Error("Selected address is not enabled for shipping.");
+  }
+  if (options?.requireBilling && row.is_billing === false) {
+    throw new Error("Selected address is not enabled for billing.");
   }
   return row;
 }

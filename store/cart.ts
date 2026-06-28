@@ -20,6 +20,7 @@ export type CartSlice = {
   setCheckoutEmail: (email: string) => void;
   setCheckoutRegion: (region: string) => void;
   setShippingAddressId: (addressId: string) => void;
+  setBillingAddressId: (addressId: string) => void;
   setCheckoutOrderMeta: (meta: Partial<Pick<CheckoutDraft, "paymentIntentId" | "orderId">>) => void;
   subtotal: () => number;
   taxTotal: () => number;
@@ -83,6 +84,9 @@ export function createCartSlice(): CartSlice {
     setShippingAddressId(shippingAddressId) {
       slice.checkout = { ...slice.checkout, shippingAddressId };
     },
+    setBillingAddressId(billingAddressId) {
+      slice.checkout = { ...slice.checkout, billingAddressId };
+    },
     setCheckoutOrderMeta(meta) {
       slice.checkout = { ...slice.checkout, ...meta };
     },
@@ -118,6 +122,7 @@ type CartStore = {
   setCheckoutEmail: (email: string) => void;
   setCheckoutRegion: (region: string) => void;
   setShippingAddressId: (addressId: string) => void;
+  setBillingAddressId: (addressId: string) => void;
   setCheckoutOrderMeta: (meta: Partial<Pick<CheckoutDraft, "paymentIntentId" | "orderId">>) => void;
   subtotal: () => number;
   taxTotal: () => number;
@@ -185,6 +190,9 @@ export const useCartStore = create<CartStore>()(
       },
       setShippingAddressId(shippingAddressId) {
         set((state) => ({ checkout: { ...state.checkout, shippingAddressId } }));
+      },
+      setBillingAddressId(billingAddressId) {
+        set((state) => ({ checkout: { ...state.checkout, billingAddressId } }));
       },
       setCheckoutOrderMeta(meta) {
         set((state) => ({ checkout: { ...state.checkout, ...meta } }));

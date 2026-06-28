@@ -84,16 +84,14 @@ export function estimatedDispatchDate(createdAt: unknown) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(result);
 }
 
+import { formatAddressInline, pickAddressFromMetadata } from "@/lib/addresses/format";
+
 export function formatGuestAddress(metadata: Record<string, unknown>) {
-  const guest = metadata.guest_shipping_address;
-  if (!guest || typeof guest !== "object" || Array.isArray(guest)) return "";
-  const address = guest as Record<string, unknown>;
-  return [
-    address.line1,
-    address.line2,
-    [address.city, address.region, address.postalCode].filter(Boolean).join(", "),
-    address.country
-  ].filter((part) => typeof part === "string" && part.trim()).join("\n");
+  return formatAddressInline(pickAddressFromMetadata(metadata, "shipping"));
+}
+
+export function formatBillingAddress(metadata: Record<string, unknown>) {
+  return formatAddressInline(pickAddressFromMetadata(metadata, "billing"));
 }
 
 export const ORDER_PROGRESS_STEPS = [

@@ -567,7 +567,7 @@ function surface<T>(
     return mapped;
   }
 
-  if (isCmsStrictMode() && rowCount > 0) {
+  if (isCmsStrictMode()) {
     throw new Error(`CMS surface "${name}" is missing published content: ${fallbackReason}`);
   }
 

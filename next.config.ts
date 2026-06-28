@@ -72,7 +72,10 @@ const nextConfig: NextConfig = {
       { pathname: "/assets/**" },
       { pathname: "/optimized/**" }
     ],
-    remotePatterns: [{ protocol: "https", hostname: supabaseImageHostname() }],
+    remotePatterns: [
+      { protocol: "https", hostname: supabaseImageHostname() },
+      { protocol: "https", hostname: "media.gettyimages.com" }
+    ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 30,
     deviceSizes: [640, 768, 1024, 1280, 1536, 1920],

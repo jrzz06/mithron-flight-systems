@@ -1,3 +1,4 @@
+import { Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type AccountEmptyStateProps = {
@@ -9,11 +10,18 @@ export function AccountEmptyState({ children, className }: AccountEmptyStateProp
   return (
     <div
       className={cn(
-        "rounded-2xl border border-dashed border-[var(--account-border-strong)] bg-[var(--account-surface-muted)] px-4 py-6 text-sm leading-relaxed text-[var(--account-ink-muted)]",
+        "flex flex-col items-center justify-center rounded-[var(--account-radius-card)] border border-dashed border-[var(--account-border-strong)] bg-[var(--account-surface)] px-6 py-12 text-center",
         className
       )}
     >
-      {children}
+      <div className="mb-4 flex items-center justify-center gap-1.5 text-[var(--account-border-strong)]">
+        <Circle className="size-1.5 fill-current" />
+        <Circle className="size-2 fill-current" />
+        <Circle className="size-1.5 fill-current" />
+      </div>
+      <div className="max-w-[280px] text-sm leading-relaxed text-[var(--account-ink-muted)]">
+        {children}
+      </div>
     </div>
   );
 }

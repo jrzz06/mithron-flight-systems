@@ -1,7 +1,6 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
+import { resolveOrderAddresses } from "@/lib/addresses/resolve-server";
 
-// Customer order ownership uses created_by_user_id (auth user id).
-// Staff/warehouse order creation may set created_by separately — do not conflate the two columns.
 type JsonRecord = Record<string, unknown>;
 type EnvSource = Record<string, string | undefined>;
 
@@ -25,7 +24,7 @@ export async function listCustomerOrders(userId: string, env: EnvSource = proces
 export async function getCustomerOrder(userId: string, orderId: string, env: EnvSource = process.env) {
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(
-    `${config.url}/rest/v1/orders?select=id,order_number,customer_email,status,payment_status,fulfillment_status,total,currency,metadata,timeline,shipment_tracking,created_by_user_id,created_at,updated_at&id=eq.${encodeURIComponent(orderId)}&limit=1`,
+    `${config.url}/rest/v1/orders?select=id,order_number,customer_email,status,payment_status,fulfillment_status,total,currency,metadata,timeline,shipment_tracking,invoice_url,shipping_address_id,billing_address_id,created_by_user_id,created_at,updated_at&id=eq.${encodeURIComponent(orderId)}&limit=1`,
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
   if (!response.ok) return null;
@@ -48,23 +47,20 @@ export async function getCustomerOrder(userId: string, orderId: string, env: Env
   const items = itemsResponse.ok ? ((await itemsResponse.json()) as JsonRecord[]) : [];
   const payments = paymentsResponse.ok ? ((await paymentsResponse.json()) as JsonRecord[]) : [];
 
-  const metadata = order.metadata as JsonRecord | undefined;
-  const addressId = typeof metadata?.shipping_address_id === "string" ? metadata.shipping_address_id : null;
-  let shippingAddress: JsonRecord | null = null;
-  if (addressId) {
-    const addressResponse = await fetch(
-      `${config.url}/rest/v1/customer_addresses?select=id,user_id,label,line1,line2,city,region,postal_code,country&user_id=eq.${userId}&id=eq.${encodeURIComponent(addressId)}&limit=1`,
-      { headers: headers(config.serviceRoleKey), cache: "no-store" }
-    );
-    if (addressResponse.ok) {
-      const addresses = (await addressResponse.json()) as JsonRecord[];
-      shippingAddress = addresses[0] ?? null;
-    }
-  }
-
+  const metadata = order.metadata && typeof order.metadata === "object" && !Array.isArray(order.metadata)
+    ? order.metadata as JsonRecord
+    : {};
+  const addresses = await resolveOrderAddresses(metadata, userId, env, order);
   const payment = payments.find((row) => String(row.status ?? "") === "succeeded") ?? payments[0] ?? null;
 
-  return { order, items, payment, shippingAddress };
+  return {
+    order,
+    items,
+    payment,
+    shippingAddress: addresses.shippingAddress,
+    billingAddress: addresses.billingAddress,
+    billingSameAsShipping: addresses.billingSameAsShipping
+  };
 }
 
 export async function linkGuestOrdersToUser(userId: string, email: string, env: EnvSource = process.env) {

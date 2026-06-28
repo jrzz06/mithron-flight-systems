@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-22T16:12:00.367Z",
+  "updatedAt": "2026-06-28T15:37:54.184Z",
   "assets": [
     {
       "assetId": "agrone-mission-agrone-drone-owner-registration",
@@ -11,36 +11,28 @@
       "status": "generated",
       "fallbackSrc": "/media/mithron/mission/agrone/agrone-drone-owner-registration.png",
       "fallbackAlt": "AGRONE drone owner registration",
-      "width": 1024,
-      "height": 576,
-      "sourceSizeKb": 66.58,
-      "blurDataUrl": "data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAADQAwCdASocABAAPwFqrU8rJaQiMAgBYCAJaQAAXBujekEPUfUvTDAA/u/DYAZaIaYhSMxp+wlhrCFpjpujQru77jGMnqZ119IYKdFwwjVVoRKOG0WkDhZvgr3gmMPIAAA=",
-      "dominantColor": "#f8f8f8",
+      "width": 768,
+      "height": 1024,
+      "sourceSizeKb": 144.86,
+      "blurDataUrl": "data:image/webp;base64,UklGRsAAAABXRUJQVlA4ILQAAABQBQCdASoVABwAPwFurk8rJqQiMAgBYCAJZACdM2QDQyQSVN44I7Pit33MwtZ1KJ4E1sAA/tT/GxnlCZslJoc1SQauQK+iBCzdOL0wjpiQCzzoUbXAC3AqwyQxNYTTOQel7SEZ5dG9gO3cndHo2yhRF7tDgk0kLVvgTjRfqlRD3l9iYSVUM5q5Q69D4qqaLVa4SQQuaAOPY6vCE04vexVVHTyLrMop3tecsqIpN+ZnGtNqkAA=",
+      "dominantColor": "#181808",
       "variants": {
         "webp": [
           {
             "width": 480,
-            "height": 270,
+            "height": 640,
             "format": "webp",
             "src": "/optimized/agrone-mission/agrone-drone-owner-registration/480.webp",
             "storagePath": "optimized/agrone-mission/agrone-drone-owner-registration/480.webp",
-            "optimizedSizeKb": 19.63
+            "optimizedSizeKb": 86.05
           },
           {
             "width": 768,
-            "height": 432,
+            "height": 1024,
             "format": "webp",
             "src": "/optimized/agrone-mission/agrone-drone-owner-registration/768.webp",
             "storagePath": "optimized/agrone-mission/agrone-drone-owner-registration/768.webp",
-            "optimizedSizeKb": 40.78
-          },
-          {
-            "width": 1024,
-            "height": 576,
-            "format": "webp",
-            "src": "/optimized/agrone-mission/agrone-drone-owner-registration/1024.webp",
-            "storagePath": "optimized/agrone-mission/agrone-drone-owner-registration/1024.webp",
-            "optimizedSizeKb": 64.08
+            "optimizedSizeKb": 167.52
           }
         ]
       }
@@ -56,9 +48,9 @@
       "fallbackAlt": "AGRONE pilot registration",
       "width": 1024,
       "height": 576,
-      "sourceSizeKb": 103.58,
-      "blurDataUrl": "data:image/webp;base64,UklGRp4AAABXRUJQVlA4IJIAAABQBACdASocABAAPwFqrU8rJiQiMAgBYCAJZwAATv9yPaV7IJCazrV11DSMAP7tYPdqC0isnHn+9AqdsWjB9ZtsWtZsB7wlqS5ZB6yqmDUcrDBz1dnFC2CrnUy2W6uMQ8+KhkzIQnQQmfo8rmAjIty/0UnG/rJyHy3Ua3wvfU8EVhadKQ4wXPIrlTIpLC3/U4HAAA==",
-      "dominantColor": "#f8f8f8",
+      "sourceSizeKb": 145.37,
+      "blurDataUrl": "data:image/webp;base64,UklGRqYAAABXRUJQVlA4IJoAAAAwBACdASocABAAPwFsrk8rJaQiMAgBYCAJYgCsACHaVDYbrfcqnfnv2AAA/pBmHNliQmrC5jMa3q82wxSQdW1wcVMpwS2TYTwpvLDs7t29gXVlFuF/S+ifqW8N5r0/oQ/1U1vX606SES/rONqlCGLLd88v1X6/1yJ5H0E5kslluRc5TTDEuLEoFYsUHP4zVfdAyvrXG1LXAAAA",
+      "dominantColor": "#e8d8c8",
       "variants": {
         "webp": [
           {
@@ -67,7 +59,7 @@
             "format": "webp",
             "src": "/optimized/agrone-mission/agrone-pilot-registration/480.webp",
             "storagePath": "optimized/agrone-mission/agrone-pilot-registration/480.webp",
-            "optimizedSizeKb": 34.34
+            "optimizedSizeKb": 52.22
           },
           {
             "width": 768,
@@ -75,7 +67,7 @@
             "format": "webp",
             "src": "/optimized/agrone-mission/agrone-pilot-registration/768.webp",
             "storagePath": "optimized/agrone-mission/agrone-pilot-registration/768.webp",
-            "optimizedSizeKb": 72.34
+            "optimizedSizeKb": 111.99
           },
           {
             "width": 1024,
@@ -83,7 +75,7 @@
             "format": "webp",
             "src": "/optimized/agrone-mission/agrone-pilot-registration/1024.webp",
             "storagePath": "optimized/agrone-mission/agrone-pilot-registration/1024.webp",
-            "optimizedSizeKb": 111.95
+            "optimizedSizeKb": 171.68
           }
         ]
       }

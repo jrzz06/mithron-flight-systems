@@ -228,6 +228,7 @@ export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
 
   if (
     matchesApiPrefix(normalized, "/api/checkout")
+    || matchesApiPrefix(normalized, "/api/invoices")
     || normalized === "/api/enquiries"
     || normalized === "/api/contact-requests"
     || normalized === "/api/payments/verify"

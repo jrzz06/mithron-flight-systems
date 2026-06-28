@@ -22,6 +22,8 @@ type AddressRow = {
   country?: string | null;
   phone?: string | null;
   is_default?: boolean | null;
+  is_billing?: boolean | null;
+  is_shipping?: boolean | null;
 };
 
 type AddressManagerProps = {
@@ -31,6 +33,7 @@ type AddressManagerProps = {
 export function AddressManager({ addresses }: AddressManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
 
   return (
     <div className="grid gap-6">
@@ -39,16 +42,28 @@ export function AddressManager({ addresses }: AddressManagerProps) {
           <div>
             <h2 className="type-section text-[var(--account-ink)]">Saved addresses</h2>
             <p className="mt-1 text-sm text-[var(--account-ink-muted)]">
-              Manage delivery addresses for faster checkout.
+              Manage shipping and billing addresses for faster checkout.
             </p>
           </div>
-          <Button type="button" variant="outline" onClick={() => setShowAddForm((value) => !value)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setShowAddForm((value) => !value);
+              if (showAddForm) {
+                setBillingSameAsShipping(true);
+              }
+            }}
+          >
             {showAddForm ? "Cancel" : "Add address"}
           </Button>
         </div>
 
         {showAddForm ? (
           <form action={createAddressFormAction} className="mt-6 grid gap-4 border-t border-[var(--account-border)] pt-6 md:grid-cols-2">
+            <input type="hidden" name="billing_same_as_shipping" value={billingSameAsShipping ? "true" : "false"} />
+
+            <p className="type-section text-lg text-[var(--account-ink)] md:col-span-2">Shipping address</p>
             <AccountField label="Label" className="md:col-span-2">
               <AccountInput name="label" placeholder="Home, Office, etc." />
             </AccountField>
@@ -75,8 +90,49 @@ export function AddressManager({ addresses }: AddressManagerProps) {
             </AccountField>
             <label className="flex min-h-11 items-center gap-2 text-sm text-[var(--account-ink-muted)] md:col-span-2">
               <input type="checkbox" name="is_default" className="size-4" />
-              Set as default address
+              Set as default shipping address
             </label>
+
+            <label className="flex min-h-11 items-center gap-2 border-t border-[var(--account-border)] pt-4 text-sm text-[var(--account-ink-muted)] md:col-span-2">
+              <input
+                type="checkbox"
+                checked={billingSameAsShipping}
+                onChange={(event) => setBillingSameAsShipping(event.target.checked)}
+                className="size-4"
+              />
+              Billing address is the same as shipping address
+            </label>
+
+            {!billingSameAsShipping ? (
+              <>
+                <p className="type-section text-lg text-[var(--account-ink)] md:col-span-2">Billing address</p>
+                <AccountField label="Label" className="md:col-span-2">
+                  <AccountInput name="billing_label" placeholder="Billing, Office, etc." />
+                </AccountField>
+                <AccountField label="Address line 1" className="md:col-span-2">
+                  <AccountInput name="billing_line1" required placeholder="Street address" />
+                </AccountField>
+                <AccountField label="Address line 2 (optional)" className="md:col-span-2">
+                  <AccountInput name="billing_line2" placeholder="Apartment, suite, etc." />
+                </AccountField>
+                <AccountField label="City">
+                  <AccountInput name="billing_city" required />
+                </AccountField>
+                <AccountField label="State / region">
+                  <AccountInput name="billing_region" required />
+                </AccountField>
+                <AccountField label="Postal code">
+                  <AccountInput name="billing_postal_code" required />
+                </AccountField>
+                <AccountField label="Country">
+                  <AccountInput name="billing_country" defaultValue="India" />
+                </AccountField>
+                <AccountField label="Phone (optional)" className="md:col-span-2">
+                  <AccountInput name="billing_phone" type="tel" inputMode="tel" autoComplete="tel" />
+                </AccountField>
+              </>
+            ) : null}
+
             <div className="md:col-span-2">
               <Button type="submit">Save address</Button>
             </div>
@@ -100,6 +156,12 @@ export function AddressManager({ addresses }: AddressManagerProps) {
                         </p>
                         {address.is_default ? (
                           <AccountStatusChip label="Primary" tone="success" />
+                        ) : null}
+                        {address.is_shipping !== false ? (
+                          <AccountStatusChip label="Shipping" tone="neutral" />
+                        ) : null}
+                        {address.is_billing !== false ? (
+                          <AccountStatusChip label="Billing" tone="neutral" />
                         ) : null}
                       </div>
                       <p className="mt-2 text-sm leading-relaxed text-[var(--account-ink-muted)]">
@@ -162,6 +224,14 @@ export function AddressManager({ addresses }: AddressManagerProps) {
                       <AccountField label="Postal code" className="md:col-span-2">
                         <AccountInput name="postal_code" required defaultValue={address.postal_code} />
                       </AccountField>
+                      <label className="flex min-h-11 items-center gap-2 text-sm text-[var(--account-ink-muted)]">
+                        <input type="checkbox" name="is_shipping" defaultChecked={address.is_shipping !== false} className="size-4" />
+                        Use for shipping
+                      </label>
+                      <label className="flex min-h-11 items-center gap-2 text-sm text-[var(--account-ink-muted)]">
+                        <input type="checkbox" name="is_billing" defaultChecked={address.is_billing !== false} className="size-4" />
+                        Use for billing
+                      </label>
                       <div className="md:col-span-2">
                         <Button type="submit">Save changes</Button>
                       </div>

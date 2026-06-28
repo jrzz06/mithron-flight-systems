@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { isValidCheckoutEmail, isValidCheckoutPhone } from "@/lib/api/checkout-schema";
+import { isValidCheckoutEmail, isValidCheckoutPhone, isCompleteGuestAddress } from "@/lib/api/checkout-schema";
 import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
 import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
@@ -19,6 +19,9 @@ type AddressRow = {
   city?: string;
   region?: string;
   postal_code?: string;
+  is_default?: boolean;
+  is_billing?: boolean;
+  is_shipping?: boolean;
 };
 
 type GuestAddressForm = {
@@ -173,6 +176,7 @@ export function CheckoutPageClient() {
   const setCheckoutEmail = useCartStore((state) => state.setCheckoutEmail);
   const setCheckoutRegion = useCartStore((state) => state.setCheckoutRegion);
   const setShippingAddressId = useCartStore((state) => state.setShippingAddressId);
+  const setBillingAddressId = useCartStore((state) => state.setBillingAddressId);
   const setCheckoutOrderMeta = useCartStore((state) => state.setCheckoutOrderMeta);
   const subtotal = useCartStore((state) => state.subtotal());
   const taxTotal = useCartStore((state) => state.taxTotal());
@@ -182,6 +186,13 @@ export function CheckoutPageClient() {
   const [addresses, setAddresses] = useState<AddressRow[]>([]);
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [guestAddress, setGuestAddress] = useState<GuestAddressForm>(emptyGuestAddress);
+  const [guestBillingAddress, setGuestBillingAddress] = useState<GuestAddressForm>(() => ({
+    ...emptyGuestAddress(),
+    label: "Billing"
+  }));
+  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
+  const [showManualBillingForm, setShowManualBillingForm] = useState(false);
+  const billingAddressId = checkout.billingAddressId ?? "";
   const [loading, setLoading] = useState<"payment" | "enquiry" | "stub" | null>(null);
   const [error, setError] = useState("");
   const [enquiryMessage, setEnquiryMessage] = useState("");
@@ -203,7 +214,23 @@ export function CheckoutPageClient() {
   const stubOrderId = searchParams.get("order");
   const stubFlag = searchParams.get("stub");
 
-  const usingSavedAddress = Boolean(isSignedIn && checkout.shippingAddressId && addresses.length);
+  const shippingAddresses = useMemo(
+    () => addresses.filter((address) => address.is_shipping !== false),
+    [addresses]
+  );
+  const billingAddresses = useMemo(
+    () => addresses.filter((address) => address.is_billing !== false),
+    [addresses]
+  );
+
+  const usingSavedAddress = Boolean(isSignedIn && checkout.shippingAddressId && shippingAddresses.length);
+  const usingSavedBillingAddress = Boolean(
+    isSignedIn
+      && !billingSameAsShipping
+      && billingAddressId
+      && billingAddresses.length
+      && !showManualBillingForm
+  );
 
   const cartPayload = useMemo(() => {
     const payload: Record<string, unknown> = {
@@ -236,8 +263,47 @@ export function CheckoutPageClient() {
       }
     }
 
+    payload.billingSameAsShipping = billingSameAsShipping;
+    if (!billingSameAsShipping) {
+      if (usingSavedBillingAddress) {
+        payload.billingAddressId = billingAddressId;
+      } else {
+        const trimmedBilling = {
+          label: guestBillingAddress.label.trim() || "Billing",
+          line1: guestBillingAddress.line1.trim(),
+          city: guestBillingAddress.city.trim(),
+          region: guestBillingAddress.region.trim(),
+          postalCode: guestBillingAddress.postalCode.trim()
+        };
+        if (
+          trimmedBilling.line1
+          && trimmedBilling.city
+          && trimmedBilling.region
+          && trimmedBilling.postalCode
+        ) {
+          payload.guestBillingAddress = trimmedBilling;
+        }
+      }
+    }
+
     return payload;
-  }, [checkout.email, checkout.region, checkout.shippingAddressId, checkout.promoCode, phone, fullName, company, items, usingSavedAddress, guestAddress, paymentProvider]);
+  }, [
+    checkout.email,
+    checkout.region,
+    checkout.shippingAddressId,
+    checkout.promoCode,
+    phone,
+    fullName,
+    company,
+    items,
+    usingSavedAddress,
+    usingSavedBillingAddress,
+    guestAddress,
+    guestBillingAddress,
+    billingSameAsShipping,
+    billingAddressId,
+    paymentProvider
+  ]);
 
   const markComplete = useCallback((
     mode: CompletionMode,
@@ -279,8 +345,15 @@ export function CheckoutPageClient() {
         if (!active) return;
         const rows = Array.isArray(payload.addresses) ? payload.addresses : [];
         setAddresses(rows);
-        if (rows.length === 1 && !checkout.shippingAddressId) {
-          setShippingAddressId(rows[0].id);
+        const defaultShipping = rows.find((row: AddressRow) => row.is_shipping !== false && row.is_default)
+          ?? rows.find((row: AddressRow) => row.is_shipping !== false);
+        if (defaultShipping && !checkout.shippingAddressId) {
+          setShippingAddressId(defaultShipping.id);
+        }
+        const defaultBilling = rows.find((row: AddressRow) => row.is_billing !== false && row.is_default)
+          ?? rows.find((row: AddressRow) => row.is_billing !== false);
+        if (defaultBilling && !checkout.billingAddressId) {
+          setBillingAddressId(defaultBilling.id);
         }
       })
       .catch(() => undefined);
@@ -289,7 +362,41 @@ export function CheckoutPageClient() {
       active = false;
       controller.abort();
     };
-  }, [checkout.shippingAddressId, setShippingAddressId]);
+  }, [checkout.shippingAddressId, checkout.billingAddressId, setShippingAddressId, setBillingAddressId]);
+
+  useEffect(() => {
+    if (billingSameAsShipping && checkout.shippingAddressId) {
+      setBillingAddressId(checkout.shippingAddressId);
+    }
+  }, [billingSameAsShipping, checkout.shippingAddressId, setBillingAddressId]);
+
+  useEffect(() => {
+    if (billingSameAsShipping) {
+      setShowManualBillingForm(false);
+    }
+  }, [billingSameAsShipping]);
+
+  useEffect(() => {
+    if (
+      !billingSameAsShipping
+      && isSignedIn
+      && billingAddresses.length
+      && !billingAddressId
+      && !showManualBillingForm
+    ) {
+      const defaultBilling = billingAddresses.find((address) => address.is_default) ?? billingAddresses[0];
+      if (defaultBilling) {
+        setBillingAddressId(defaultBilling.id);
+      }
+    }
+  }, [
+    billingSameAsShipping,
+    isSignedIn,
+    billingAddresses,
+    billingAddressId,
+    showManualBillingForm,
+    setBillingAddressId
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -392,9 +499,19 @@ export function CheckoutPageClient() {
       return false;
     }
     if (requireAddress) {
-      if (usingSavedAddress) return true;
+      if (usingSavedAddress) {
+        if (!billingSameAsShipping && !usingSavedBillingAddress && !isCompleteGuestAddress(guestBillingAddress)) {
+          setError("Enter a complete billing address.");
+          return false;
+        }
+        return true;
+      }
       if (!guestAddress.line1.trim() || !guestAddress.city.trim() || !guestAddress.region.trim() || !guestAddress.postalCode.trim()) {
         setError("Enter a complete shipping address to pay online.");
+        return false;
+      }
+      if (!billingSameAsShipping && !isCompleteGuestAddress(guestBillingAddress)) {
+        setError("Enter a complete billing address.");
         return false;
       }
     }
@@ -833,9 +950,9 @@ export function CheckoutPageClient() {
                   <legend className="type-section mb-1 text-2xl">Shipping address</legend>
                   <p className="text-sm text-slate-500">Required for online payment. Optional for product enquiries.</p>
 
-                  {isSignedIn && addresses.length ? (
+                  {isSignedIn && shippingAddresses.length ? (
                     <div className="grid gap-3">
-                      {addresses.map((address) => (
+                      {shippingAddresses.map((address) => (
                         <button
                           key={address.id}
                           type="button"
@@ -896,7 +1013,141 @@ export function CheckoutPageClient() {
                       </label>
                     </div>
                   ) : null}
+
+                  <label className="flex items-start gap-3 border-t border-slate-200 pt-4 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={billingSameAsShipping}
+                      onChange={(event) => setBillingSameAsShipping(event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-[#1f6b46] focus:ring-[#1f6b46]"
+                    />
+                    <span>Billing address is the same as shipping address</span>
+                  </label>
                 </fieldset>
+
+                {!billingSameAsShipping ? (
+                <fieldset className="grid gap-4 border-0 p-0">
+                  <legend className="type-section mb-1 text-2xl">Billing address</legend>
+                  {isSignedIn && billingAddresses.length > 0 ? (
+                    <div className="grid gap-3">
+                      <p className="text-sm text-slate-500">Select a saved billing address or enter one below.</p>
+                      {billingAddresses.map((address) => (
+                        <button
+                          key={`billing-${address.id}`}
+                          type="button"
+                          onClick={() => {
+                            setBillingAddressId(address.id);
+                            setShowManualBillingForm(false);
+                          }}
+                          className={`rounded-2xl border p-4 text-left transition ${billingAddressId === address.id && !showManualBillingForm ? "border-[#1f6b46] bg-[#f7faf8]" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                        >
+                          <p className="font-semibold">{address.label ?? "Address"}</p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {address.line1}, {address.city}, {address.region} {address.postal_code}
+                          </p>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (showManualBillingForm) {
+                            setShowManualBillingForm(false);
+                            const defaultBilling = billingAddresses.find((address) => address.is_default) ?? billingAddresses[0];
+                            if (defaultBilling) {
+                              setBillingAddressId(defaultBilling.id);
+                            }
+                          } else {
+                            setBillingAddressId("");
+                            setShowManualBillingForm(true);
+                          }
+                        }}
+                        className="text-left text-sm font-medium text-[#1f6b46] underline-offset-2 hover:underline"
+                      >
+                        {showManualBillingForm ? "Use a saved address" : "Enter a different address"}
+                      </button>
+                      {showManualBillingForm ? (
+                        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-sm font-medium text-slate-700">Enter billing address</p>
+                          <label className="grid gap-2">
+                            <span className="text-sm text-slate-600">Address line</span>
+                            <input
+                              value={guestBillingAddress.line1}
+                              onChange={(event) => setGuestBillingAddress((current) => ({ ...current, line1: event.target.value }))}
+                              className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                              placeholder="Street, building, area"
+                            />
+                          </label>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <label className="grid gap-2">
+                              <span className="text-sm text-slate-600">City</span>
+                              <input
+                                value={guestBillingAddress.city}
+                                onChange={(event) => setGuestBillingAddress((current) => ({ ...current, city: event.target.value }))}
+                                className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                              />
+                            </label>
+                            <label className="grid gap-2">
+                              <span className="text-sm text-slate-600">Postal code</span>
+                              <input
+                                value={guestBillingAddress.postalCode}
+                                onChange={(event) => setGuestBillingAddress((current) => ({ ...current, postalCode: event.target.value }))}
+                                className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                              />
+                            </label>
+                          </div>
+                          <label className="grid gap-2">
+                            <span className="text-sm text-slate-600">State / region</span>
+                            <input
+                              value={guestBillingAddress.region}
+                              onChange={(event) => setGuestBillingAddress((current) => ({ ...current, region: event.target.value }))}
+                              className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-700">Enter billing address</p>
+                      <label className="grid gap-2">
+                        <span className="text-sm text-slate-600">Address line</span>
+                        <input
+                          value={guestBillingAddress.line1}
+                          onChange={(event) => setGuestBillingAddress((current) => ({ ...current, line1: event.target.value }))}
+                          className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                          placeholder="Street, building, area"
+                        />
+                      </label>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="grid gap-2">
+                          <span className="text-sm text-slate-600">City</span>
+                          <input
+                            value={guestBillingAddress.city}
+                            onChange={(event) => setGuestBillingAddress((current) => ({ ...current, city: event.target.value }))}
+                            className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                          />
+                        </label>
+                        <label className="grid gap-2">
+                          <span className="text-sm text-slate-600">Postal code</span>
+                          <input
+                            value={guestBillingAddress.postalCode}
+                            onChange={(event) => setGuestBillingAddress((current) => ({ ...current, postalCode: event.target.value }))}
+                            className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                          />
+                        </label>
+                      </div>
+                      <label className="grid gap-2">
+                        <span className="text-sm text-slate-600">State / region</span>
+                        <input
+                          value={guestBillingAddress.region}
+                          onChange={(event) => setGuestBillingAddress((current) => ({ ...current, region: event.target.value }))}
+                          className="type-body h-11 rounded-xl border border-slate-200 bg-white px-4 text-[#0f172a] outline-none focus:border-[#1f6b46]"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </fieldset>
+                ) : null}
 
                 <fieldset className="grid gap-4 border-0 p-0">
                   <legend className="type-section mb-1 text-2xl">Product enquiry</legend>

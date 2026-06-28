@@ -47,6 +47,11 @@ export const CUSTOMER_EMPTY_MESSAGES = {
   notifications: "You're all caught up. We'll let you know when something needs your attention."
 } as const;
 
+export const CUSTOMER_ORDER_POLICY = {
+  returnsAfterDelivery: "Returns are available after delivery.",
+  cancellationUnavailable: "Order cancellation is not available. If an order cannot be fulfilled, our team will review and reject it."
+} as const;
+
 export function customerOrderStatus(status: string): string {
   const normalized = status.toLowerCase().trim();
   if (CUSTOMER_STATUS_LABELS[normalized] !== undefined) return CUSTOMER_STATUS_LABELS[normalized];

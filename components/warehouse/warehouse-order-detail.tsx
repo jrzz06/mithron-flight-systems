@@ -154,7 +154,10 @@ export function WarehouseOrderDetail({
           <p className="mt-2 text-sm text-[var(--platform-text-secondary)]">{shippingMethod(order)}</p>
           <p className="text-sm text-[var(--platform-text-secondary)]">Assigned: {assignedPicker(order)}</p>
           <p className="text-sm text-[var(--platform-text-secondary)]">Created: {formatOrderDate(order.created_at)}</p>
-          {address ? <p className="mt-2 whitespace-pre-line text-sm text-[var(--platform-text-muted)]">{address}</p> : null}
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--platform-text-muted)]">Ship to</p>
+          {address ? <p className="mt-2 whitespace-pre-line text-sm text-[var(--platform-text-muted)]">{address}</p> : (
+            <p className="mt-2 text-sm text-[var(--platform-text-muted)]">No shipping address on file.</p>
+          )}
         </div>
       </section>
 
