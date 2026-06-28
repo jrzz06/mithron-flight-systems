@@ -86,6 +86,7 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
   }
 
   const items: CheckoutRequestBody["items"] = [];
+  const quantityBySlug = new Map<string, number>();
   for (const raw of record.items) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
     const item = raw as Record<string, unknown>;
@@ -93,6 +94,11 @@ export function parseCheckoutRequestBody(body: unknown): CheckoutRequestBody | n
     const quantity = typeof item.quantity === "number" ? item.quantity : Number(item.quantity);
     if (!productSlug || productSlug.length > 200) return null;
     if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 99) return null;
+    quantityBySlug.set(productSlug, (quantityBySlug.get(productSlug) ?? 0) + quantity);
+  }
+
+  for (const [productSlug, quantity] of quantityBySlug) {
+    if (quantity > 99) return null;
     items.push({ productSlug, quantity });
   }
 

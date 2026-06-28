@@ -290,5 +290,5 @@ values ('orders.permanent_delete', 'Permanent Order Delete', 'Hard-delete orders
 on conflict (key) do update set label = excluded.label, description = excluded.description;
 
 insert into public.role_permissions (role_key, permission_key)
-values ('admin', 'orders.permanent_delete'), ('super_admin', 'orders.permanent_delete')
+values ('admin', 'orders.permanent_delete')
 on conflict (role_key, permission_key) do nothing;

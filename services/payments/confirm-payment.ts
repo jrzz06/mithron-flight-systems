@@ -179,6 +179,17 @@ export async function applyPaymentEvent(input: {
   }
 
   const paymentAmount = Number(payment.amount ?? 0);
+  const paymentCurrency = String(payment.currency ?? "INR").trim().toUpperCase();
+  const eventCurrency = String(event.currency ?? paymentCurrency).trim().toUpperCase();
+  if (event.status === "succeeded" && eventCurrency !== paymentCurrency) {
+    logPaymentWarning("payment_currency_mismatch", {
+      provider,
+      intentId: event.intentId,
+      expected: paymentCurrency,
+      received: eventCurrency
+    });
+    return { ok: false, status: 400, error: "Payment currency mismatch." };
+  }
   if (event.status === "succeeded" && Math.abs(event.amount - paymentAmount) > 0.01) {
     logPaymentWarning("payment_amount_mismatch", {
       provider,

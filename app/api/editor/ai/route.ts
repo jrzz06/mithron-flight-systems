@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { requirePermission } from "@/services/auth";
 import type { EditorAiAction } from "@/lib/editor/types";
 
@@ -18,7 +19,12 @@ const ACTION_PROMPTS: Record<EditorAiAction, string> = {
 
 export async function POST(request: Request) {
   try {
-    await requirePermission("cms.write");
+    const { userId } = await requirePermission("cms.write");
+    const limit = await checkDistributedRateLimit(`editor-ai:${userId}`, 20, 60_000);
+    if (!limit.allowed) {
+      return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+    }
+
     const body = (await request.json()) as { action?: EditorAiAction; text?: string };
     const action = body.action;
     const text = body.text?.trim();

@@ -6,6 +6,32 @@ import { isPaymentProviderId, verifyPaymentWebhook } from "@/services/payments/g
 import { logPaymentError } from "@/services/payments/logger";
 import type { PaymentProviderId } from "@/services/payments/types";
 
+function resolveWebhookEventId(
+  provider: string,
+  request: Request,
+  payload: unknown,
+  event: { intentId: string; status: string; paymentId?: string }
+) {
+  if (provider === "razorpay") {
+    const headerId = request.headers.get("x-razorpay-event-id")?.trim();
+    if (headerId) return headerId;
+  }
+
+  if (provider === "cashfree") {
+    const headerId =
+      request.headers.get("x-idempotency-key")?.trim()
+      ?? request.headers.get("x-idempotency-header")?.trim();
+    if (headerId) return headerId;
+  }
+
+  const payloadRecord = payload as { id?: string };
+  if (payloadRecord.id) {
+    return String(payloadRecord.id);
+  }
+
+  return `${provider}:${event.intentId}:${event.status}:${event.paymentId ?? "unknown"}`;
+}
+
 export async function POST(request: Request, context: { params: Promise<{ provider: string }> }) {
   const { provider: providerParam } = await context.params;
   const provider = providerParam.trim().toLowerCase();
@@ -63,12 +89,7 @@ export async function POST(request: Request, context: { params: Promise<{ provid
     return NextResponse.json({ error: message }, { status: 401 });
   }
 
-  const eventId = String(
-    (payload as { id?: string }).id
-    ?? (payload as { event?: string }).event
-    ?? (payload as { type?: string }).type
-    ?? `${event.intentId}:${event.status}:${event.paymentId ?? "unknown"}`
-  );
+  const eventId = resolveWebhookEventId(provider, request, payload, event);
 
   const result = await applyPaymentEvent({
     provider: provider as PaymentProviderId,

@@ -71,6 +71,7 @@ const mutableTables = new Set([
   "profiles",
   "user_roles",
   "enquiries",
+  "contact_requests",
   "customer_addresses",
   "payments"
 ]);
@@ -111,6 +112,7 @@ const tablePermissions: Record<string, EnterprisePermission> = {
   profiles: "settings.write",
   user_roles: "settings.write",
   enquiries: "enquiries.write",
+  contact_requests: "enquiries.write",
   customer_addresses: "enquiries.write",
   payments: "payments.write"
 };
@@ -151,7 +153,8 @@ const adminReadColumnsByTable: Record<string, string> = {
   profiles: "id,email,display_name,default_role,governance_status,session_revoked_at,updated_at,created_at",
   user_roles: "user_id,role_key,created_at",
   roles: "key,label,description,sort_order",
-  enquiries: "id,customer_user_id,customer_email,subject,status,related_product_slug,assigned_to,converted_order_id,created_at,updated_at",
+  enquiries: "id,customer_user_id,customer_email,subject,status,related_product_slug,assigned_to,converted_order_id,enquiry_kind,created_at,updated_at",
+  contact_requests: "id,request_number,customer_user_id,customer_email,customer_phone,customer_full_name,customer_company,subject,body,status,assigned_to,converted_order_id,created_at,updated_at",
   customer_addresses: "id,user_id,label,line1,city,region,postal_code,country,phone,is_default,is_billing,is_shipping,created_at,updated_at",
   payments: "id,order_id,provider,provider_intent_id,provider_payment_id,amount,currency,status,verified_at,created_at,updated_at"
 };

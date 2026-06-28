@@ -233,7 +233,18 @@ export function verifyCashfreeWebhookSignature(input: {
   signature: string;
   timestamp: string;
   webhookSecret: string;
+  maxAgeMs?: number;
 }) {
+  const maxAgeMs = input.maxAgeMs ?? 5 * 60_000;
+  const timestampValue = Number(input.timestamp);
+  if (!Number.isFinite(timestampValue)) {
+    throw new Error("Invalid Cashfree webhook timestamp.");
+  }
+  const timestampMs = timestampValue > 1_000_000_000_000 ? timestampValue : timestampValue * 1000;
+  if (Math.abs(Date.now() - timestampMs) > maxAgeMs) {
+    throw new Error("Cashfree webhook timestamp is outside the acceptable window.");
+  }
+
   const signedPayload = `${input.timestamp}${input.rawBody}`;
   const expected = createHmac("sha256", input.webhookSecret).update(signedPayload).digest("base64");
   const expectedBuf = Buffer.from(expected, "utf8");

@@ -134,6 +134,12 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     return secureRedirectResponse(request, callbackUrl);
   }
 
+  // OAuth PKCE exchange must run in the auth callback route without middleware
+  // touching Supabase cookies first — otherwise code_verifier no longer matches.
+  if (pathname === "/auth/callback") {
+    return secureNextResponse(request);
+  }
+
   if (
     pathname.startsWith("/_next/static")
     || pathname.startsWith("/_next/image")

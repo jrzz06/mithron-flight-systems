@@ -3,7 +3,8 @@ import {
   fulfillReservedStock,
   releaseCheckoutStock,
   reserveCheckoutStock,
-  resolveCheckoutStockSkus
+  resolveCheckoutStockSkus,
+  verifyCheckoutStockAvailability
 } from "@/services/checkout-stock";
 
 const env = {
@@ -81,5 +82,26 @@ describe("checkout stock RPC contracts", () => {
       p_order_id: "order-1",
       p_actor_id: "actor-1"
     });
+  });
+
+  it("aggregates duplicate slug quantities before stock verification", async () => {
+    mockFetch(async () => ({
+      ok: true,
+      json: async () => [{ product_slug: "ag10", sku: "AG10-STD", available_quantity: 100 }]
+    }));
+
+    await expect(
+      verifyCheckoutStockAvailability([
+        { productSlug: "ag10", quantity: 60 },
+        { productSlug: "ag10", quantity: 50 }
+      ], env)
+    ).rejects.toThrow(/Insufficient stock for ag10\. Requested 110, available 100/);
+
+    await expect(
+      verifyCheckoutStockAvailability([
+        { productSlug: "ag10", quantity: 60 },
+        { productSlug: "ag10", quantity: 40 }
+      ], env)
+    ).resolves.toBeUndefined();
   });
 });

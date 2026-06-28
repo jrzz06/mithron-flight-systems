@@ -21,6 +21,8 @@ describe("iteration 1 production hardening contracts", () => {
     expect(proxy).toContain("resolveApiRoutePolicy");
     expect(proxy).toContain("authorization.eventType");
     expect(proxy).toContain('matcher: ["/((?!_next/static|_next/image|favicon.ico|api/health).*)"]');
+    expect(proxy).toContain('pathname === "/auth/callback"');
+    expect(proxy).toContain("code_verifier");
   });
 
   it("exposes stable QA anchors for operational route families", () => {

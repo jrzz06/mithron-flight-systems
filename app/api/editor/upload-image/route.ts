@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { requirePermission } from "@/services/auth";
 import { uploadEditorInlineImage } from "@/services/editor-image-upload";
 
@@ -8,6 +9,11 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   try {
     const { userId } = await requirePermission("cms.write");
+    const limit = await checkDistributedRateLimit(`editor-upload:${userId}`, 20, 60_000);
+    if (!limit.allowed) {
+      return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     const documentType = String(formData.get("document_type") ?? "draft");

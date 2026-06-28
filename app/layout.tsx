@@ -18,7 +18,7 @@ const outfit = Outfit({
   variable: "--font-outfit",
   display: "swap",
   adjustFontFallback: true,
-  weight: ["500", "600", "700"]
+  weight: "variable"
 });
 
 const siteUrl = getSiteUrl();

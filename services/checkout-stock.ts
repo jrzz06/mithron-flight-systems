@@ -93,11 +93,16 @@ export async function verifyCheckoutStockAvailability(
     availableBySlug.set(slug, Math.max(availableBySlug.get(slug) ?? 0, available));
   }
 
+  const requestedBySlug = new Map<string, number>();
   for (const item of items) {
-    const available = availableBySlug.get(item.productSlug) ?? 0;
-    if (available < item.quantity) {
+    requestedBySlug.set(item.productSlug, (requestedBySlug.get(item.productSlug) ?? 0) + item.quantity);
+  }
+
+  for (const [slug, requested] of requestedBySlug) {
+    const available = availableBySlug.get(slug) ?? 0;
+    if (available < requested) {
       throw new Error(
-        `Insufficient stock for ${item.productSlug}. Requested ${item.quantity}, available ${available}.`
+        `Insufficient stock for ${slug}. Requested ${requested}, available ${available}.`
       );
     }
   }

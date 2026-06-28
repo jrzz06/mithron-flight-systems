@@ -18,7 +18,8 @@ describe("checkout request schema", () => {
       fullName: "Buyer Example",
       items: [{ productSlug: "drone-x", quantity: 2 }],
       addressId: "addr-1",
-      region: "IN-KA"
+      region: "IN-KA",
+      billingSameAsShipping: true
     });
   });
 
@@ -28,6 +29,34 @@ describe("checkout request schema", () => {
     expect(parseCheckoutRequestBody({ email: "a@b.com", fullName: "A B", items: [{ productSlug: "x", quantity: 100 }] })).toBeNull();
     expect(parseCheckoutRequestBody({ email: "a@b.com", phone: "123", fullName: "A B", items: [{ productSlug: "x", quantity: 1 }] })).toBeNull();
     expect(parseCheckoutRequestBody({ email: "not-an-email", phone: "+919876543210", fullName: "A B", items: [{ productSlug: "x", quantity: 1 }] })).toBeNull();
+  });
+
+  it("merges duplicate product slugs and caps combined quantity at 99", () => {
+    expect(parseCheckoutRequestBody({
+      email: "buyer@example.com",
+      phone: "+919876543210",
+      fullName: "Buyer Example",
+      items: [
+        { productSlug: "drone-x", quantity: 40 },
+        { productSlug: "drone-x", quantity: 50 }
+      ]
+    })).toEqual({
+      email: "buyer@example.com",
+      phone: "+919876543210",
+      fullName: "Buyer Example",
+      items: [{ productSlug: "drone-x", quantity: 90 }],
+      billingSameAsShipping: true
+    });
+
+    expect(parseCheckoutRequestBody({
+      email: "buyer@example.com",
+      phone: "+919876543210",
+      fullName: "Buyer Example",
+      items: [
+        { productSlug: "drone-x", quantity: 60 },
+        { productSlug: "drone-x", quantity: 40 }
+      ]
+    })).toBeNull();
   });
 });
 

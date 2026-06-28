@@ -43,7 +43,7 @@ const rolePermissions: Record<CmsRole, EnterprisePermission[]> = {
   admin: [...ENTERPRISE_PERMISSIONS],
   warehouse: ["warehouse.write", "warehouse.read", "orders.write", "orders.lifecycle", "notifications.write"],
   supplier: ["products.submit", "inventory.update_own", "media.write", "notifications.write"],
-  user: ["enquiries.write", "orders.checkout", "payments.write", "account.read.self"]
+  user: ["orders.checkout", "payments.write", "account.read.self"]
 };
 
 const legacyRoleAliases: Record<string, CmsRole> = {

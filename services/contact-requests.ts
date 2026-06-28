@@ -12,7 +12,6 @@ import {
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
-import { requirePermission } from "@/services/auth";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 
 export type { AdminContactRequestRow, ContactRequestNoteEntry, ContactRequestTimelineEntry } from "@/lib/contact-requests/shared";
@@ -77,10 +76,9 @@ function readNotes(payload: JsonRecord): ContactRequestNoteEntry[] {
     : [];
 }
 
-function contactMutationOptions(actorId: string | null) {
-  return actorId
-    ? { guard: () => requirePermission("enquiries.write") }
-    : { allowSystemActor: true };
+function contactMutationOptions(_actorId: string | null) {
+  // Public contact submissions are persisted via the service role after API auth/rate limits.
+  return { allowSystemActor: true };
 }
 
 async function listAdminRecipientIds(roleKey: string, env: EnvSource) {

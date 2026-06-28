@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 type RouteSecurityCategory =
   | "public_rate_limited"
   | "session_auth"
+  | "session_or_guest_auth"
+  | "staff_permission_auth"
   | "bearer_secret"
   | "staff_bearer_jwt"
   | "token_auth"
@@ -16,14 +18,22 @@ const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
   "app/api/catalog/search/route.ts": "public_rate_limited",
   "app/api/checkout/route.ts": "public_rate_limited",
   "app/api/checkout/enquiry/route.ts": "public_rate_limited",
+  "app/api/checkout/status/route.ts": "session_or_guest_auth",
   "app/api/enquiries/route.ts": "public_rate_limited",
   "app/api/auth/login/route.ts": "public_rate_limited",
+  "app/api/auth/signup/route.ts": "public_rate_limited",
+  "app/api/auth/forgot-password/route.ts": "public_rate_limited",
   "app/api/auth/audit/route.ts": "public_rate_limited",
   "app/api/csp-report/route.ts": "public_rate_limited",
+  "app/api/contact-requests/route.ts": "session_or_guest_auth",
+  "app/api/orders/track/route.ts": "public_rate_limited",
   "app/api/payments/webhooks/[provider]/route.ts": "public_rate_limited",
   "app/api/payments/providers/route.ts": "public_rate_limited",
   "app/api/payments/verify/route.ts": "public_rate_limited",
+  "app/api/invoices/[orderId]/route.ts": "session_or_guest_auth",
   "app/api/account/addresses/route.ts": "session_auth",
+  "app/api/account/reviews/route.ts": "session_auth",
+  "app/api/account/returns/route.ts": "session_auth",
   "app/api/notifications/route.ts": "session_auth",
   "app/api/payments/intent/route.ts": "session_auth",
   "app/api/auth/provision/route.ts": "session_auth",
@@ -34,13 +44,17 @@ const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
   "app/api/payments/expire-pending/route.ts": "bearer_secret",
   "app/api/security/denials/route.ts": "staff_bearer_jwt",
   "app/api/upload/route.ts": "token_auth",
+  "app/api/editor/ai/route.ts": "staff_permission_auth",
+  "app/api/editor/upload-image/route.ts": "staff_permission_auth",
   "app/api/dev/load-test/route.ts": "dev_only",
   "app/api/health/route.ts": "health"
 };
 
 const CATEGORY_REQUIREMENTS: Record<RouteSecurityCategory, RegExp[]> = {
   public_rate_limited: [/checkDistributedRateLimit/],
-  session_auth: [/getClaims|getUser/, /checkDistributedRateLimit/],
+  session_auth: [/getClaims|getUser|getCurrentAuthContext/, /checkDistributedRateLimit/],
+  session_or_guest_auth: [/getClaims/, /checkDistributedRateLimit/, /requireClientAuditToken|assertInvoiceOrderAccess|fetchCheckoutOrderStatus/],
+  staff_permission_auth: [/requirePermission/, /checkDistributedRateLimit/],
   bearer_secret: [/authorizeBearerSecret|safeBearerEquals/],
   staff_bearer_jwt: [/getUser\(/, /checkDistributedRateLimit/],
   token_auth: [/safeTokenEquals|safeBearerEquals/, /checkDistributedRateLimit/],

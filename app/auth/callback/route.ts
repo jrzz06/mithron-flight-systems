@@ -33,9 +33,15 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      console.warn("[mithron-auth] OAuth code exchange failed.", error.message);
+      console.warn("[mithron-auth] OAuth code exchange failed.", {
+        message: error.message,
+        status: error.status,
+        code: error.code
+      });
+      const failureUrl = loginFailureRedirect(request, "verification_failed", next);
+      failureUrl.searchParams.delete("code");
       return applySessionCookies(
-        NextResponse.redirect(loginFailureRedirect(request, "verification_failed", next))
+        NextResponse.redirect(failureUrl)
       );
     }
   }

@@ -30,10 +30,10 @@ async function assertOrderAccess(input: {
 
   if (input.userId) {
     const ownerId = typeof order.created_by_user_id === "string" ? order.created_by_user_id : null;
-    if (ownerId && ownerId !== input.userId) {
-      return { ok: false as const, status: 404, error: "Order not found." };
+    if (ownerId === input.userId) {
+      return { ok: true as const, order };
     }
-    return { ok: true as const, order };
+    return { ok: false as const, status: 404, error: "Order not found." };
   }
 
   const audit = requireClientAuditToken(input.request);

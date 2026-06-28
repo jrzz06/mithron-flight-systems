@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { requireClientAuditToken } from "@/lib/api/require-client-audit-token";
 import { createClient } from "@/lib/server";
 import { fetchCheckoutOrderStatus } from "@/services/customer-orders";
@@ -10,6 +11,12 @@ export async function GET(request: Request) {
 
   if (!orderId) {
     return NextResponse.json({ error: "orderId is required." }, { status: 400 });
+  }
+
+  const rateKey = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anonymous";
+  const limit = await checkDistributedRateLimit(`checkout-status:${rateKey}`, 30, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
   const supabase = await createClient();
