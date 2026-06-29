@@ -2,8 +2,7 @@ import { assertSupabaseAdminConfig } from "@/lib/env";
 import { mergePaymentLifecycleMetadata } from "@/lib/orders/payment-lifecycle";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
 import { getCheckoutWarehouseCode } from "@/services/warehouse-config";
-import { generateAndStoreInvoice } from "@/lib/invoice/generate-invoice";
-import { sendOrderConfirmationEmail } from "@/services/email/order-confirmation";
+import { ensureOrderInvoiceAndEmail } from "@/services/email/ensure-order-invoice-email";
 import { notifyAdminsAboutPaidOrder } from "@/services/enquiries";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
 import type { PaymentEvent, PaymentProviderId } from "./types";
@@ -140,26 +139,14 @@ export async function confirmVerifiedPayment(
       source: input.source
     });
 
-    try {
-      if (order) {
-        const invoice = await generateAndStoreInvoice(input.orderId);
-        await sendOrderConfirmationEmail({
-          orderId: input.orderId,
-          order,
-          invoiceNumber: invoice.invoiceNumber
-        });
-      }
-    } catch (invoiceError) {
-      logPaymentWarning("invoice_generation_failed", {
-        orderId: input.orderId,
-        error: invoiceError instanceof Error ? invoiceError.message : String(invoiceError)
-      });
-    }
+    await ensureOrderInvoiceAndEmail(input.orderId, env);
   } else {
     logPaymentEvent("confirm_verified_payment_skipped", {
       orderId: input.orderId,
       reason: reason ?? "unknown"
     });
+
+    await ensureOrderInvoiceAndEmail(input.orderId, env);
   }
 
   return {

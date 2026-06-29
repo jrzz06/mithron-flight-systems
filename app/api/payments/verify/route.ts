@@ -7,6 +7,7 @@ import { logPaymentError, logPaymentEvent } from "@/services/payments/logger";
 import { applyPaymentEvent } from "@/services/payments/confirm-payment";
 import { isPaymentProviderId, verifyClientPayment } from "@/services/payments/gateway";
 import { verifyRazorpayPaymentOnServer } from "@/services/payments/verify-razorpay-server";
+import { ensureOrderInvoiceAndEmail } from "@/services/email/ensure-order-invoice-email";
 import type { PaymentProviderId } from "@/services/payments/types";
 
 type VerifyBody = {
@@ -88,11 +89,18 @@ export async function POST(request: Request) {
 
   if (String(payment.status ?? "") === "succeeded" || String(access.order.payment_status ?? "") === "succeeded") {
     logPaymentEvent("payment_verify_already_paid", { orderId, provider });
+    const fulfillment = await ensureOrderInvoiceAndEmail(orderId);
     return NextResponse.json({
       ok: true,
       paid: true,
       paymentStatus: "succeeded",
-      orderNumber: String(access.order.order_number ?? orderId)
+      orderNumber: String(access.order.order_number ?? orderId),
+      total: Number(access.order.total ?? 0),
+      amount: Number(access.order.total ?? 0),
+      invoiceNumber: fulfillment?.invoiceNumber ?? null,
+      invoiceUrl: fulfillment?.invoiceUrl ?? null,
+      emailSent: fulfillment?.emailSent ?? false,
+      customerEmail: fulfillment?.customerEmail ?? String(access.order.customer_email ?? "")
     });
   }
 
@@ -149,12 +157,19 @@ export async function POST(request: Request) {
     }
 
     logPaymentEvent("payment_verified_via_api", { orderId, provider, source: "verify" });
+    const fulfillment = await ensureOrderInvoiceAndEmail(orderId);
     return NextResponse.json({
       ok: true,
       paid: result.status === "succeeded",
       paymentStatus: result.status,
       orderPaymentStatus: result.status === "succeeded" ? "succeeded" : String(access.order.payment_status ?? ""),
       orderNumber: String(access.order.order_number ?? orderId),
+      total: Number(access.order.total ?? 0),
+      amount: Number(access.order.total ?? 0),
+      invoiceNumber: fulfillment?.invoiceNumber ?? null,
+      invoiceUrl: fulfillment?.invoiceUrl ?? null,
+      emailSent: fulfillment?.emailSent ?? false,
+      customerEmail: fulfillment?.customerEmail ?? String(access.order.customer_email ?? ""),
       skipped: result.skipped ?? false
     });
   } catch (error) {

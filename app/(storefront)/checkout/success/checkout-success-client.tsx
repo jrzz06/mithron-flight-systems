@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Mail } from "lucide-react";
 import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
 import {
   clearPendingPaymentVerification,
@@ -21,7 +21,29 @@ type SuccessState = {
   total: number;
   email: string;
   isSignedIn: boolean;
+  invoiceNumber: string;
+  invoiceUrl: string;
+  emailSent: boolean;
 };
+
+async function fetchCheckoutSuccess(input: {
+  orderId: string;
+  email: string;
+  signedIn: boolean;
+}) {
+  const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
+  if (!input.signedIn && !guestHeaders?.token) return null;
+
+  const query = new URLSearchParams({ orderId: input.orderId });
+  if (!input.signedIn && input.email) query.set("email", input.email);
+
+  const response = await fetch(`/api/checkout/success?${query.toString()}`, {
+    headers: input.signedIn ? undefined : (guestHeaders!.headers as Record<string, string>),
+    cache: "no-store"
+  });
+  if (!response.ok) return null;
+  return response.json().catch(() => null);
+}
 
 export function CheckoutSuccessClient() {
   const router = useRouter();
@@ -46,6 +68,7 @@ export function CheckoutSuccessClient() {
 
     async function confirmFromServer() {
       const pending = readPendingPaymentVerification();
+      const signedIn = !email;
       const guestHeaders = email ? await buildGuestRequestHeaders() : { token: "signed-in", headers: {} as Record<string, string> };
 
       if (pending && pending.orderId === orderId && pending.razorpayPaymentId && pending.razorpaySignature) {
@@ -69,12 +92,22 @@ export function CheckoutSuccessClient() {
         if (verifyResponse.ok && verifyPayload.paid) {
           clearPendingPaymentVerification();
           clearCart();
+
+          const fulfillment = await fetchCheckoutSuccess({
+            orderId,
+            email: pending.email || email,
+            signedIn: pending.signedIn
+          });
+
           setSuccess({
             orderId,
             orderNumber: String(verifyPayload.orderNumber ?? pending.orderNumber ?? orderId),
-            total: Number(verifyPayload.amount ?? 0),
-            email: pending.email || email,
-            isSignedIn: pending.signedIn
+            total: Number(fulfillment?.total ?? verifyPayload.total ?? verifyPayload.amount ?? 0),
+            email: String(fulfillment?.customerEmail ?? pending.email || email),
+            isSignedIn: pending.signedIn,
+            invoiceNumber: String(fulfillment?.invoiceNumber ?? verifyPayload.invoiceNumber ?? ""),
+            invoiceUrl: String(fulfillment?.invoiceUrl ?? verifyPayload.invoiceUrl ?? `/api/invoices/${orderId}`),
+            emailSent: Boolean(fulfillment?.emailSent ?? verifyPayload.emailSent)
           });
           setState("success");
           return;
@@ -95,12 +128,22 @@ export function CheckoutSuccessClient() {
         if (statusResponse.ok && statusPayload.paid) {
           clearPendingPaymentVerification();
           clearCart();
+
+          const fulfillment = await fetchCheckoutSuccess({
+            orderId,
+            email,
+            signedIn
+          });
+
           setSuccess({
             orderId,
-            orderNumber: String(statusPayload.orderNumber ?? orderId),
-            total: Number(statusPayload.total ?? 0),
-            email,
-            isSignedIn: !email
+            orderNumber: String(fulfillment?.orderNumber ?? statusPayload.orderNumber ?? orderId),
+            total: Number(fulfillment?.total ?? statusPayload.total ?? 0),
+            email: String(fulfillment?.customerEmail ?? email),
+            isSignedIn: signedIn,
+            invoiceNumber: String(fulfillment?.invoiceNumber ?? ""),
+            invoiceUrl: String(fulfillment?.invoiceUrl ?? `/api/invoices/${orderId}`),
+            emailSent: Boolean(fulfillment?.emailSent)
           });
           setState("success");
           return;
@@ -129,13 +172,19 @@ export function CheckoutSuccessClient() {
     return (
       <div className={styles.page}>
         <div className={styles.container}>
-          <p className={styles.pageLead}>Confirming your payment with our server…</p>
+          <p className={styles.pageLead}>Confirming your payment and preparing your invoice…</p>
         </div>
       </div>
     );
   }
 
   if (state === "success" && success) {
+    const invoiceSrc = success.invoiceUrl.includes("?")
+      ? success.invoiceUrl
+      : email
+        ? `${success.invoiceUrl}?email=${encodeURIComponent(email)}`
+        : success.invoiceUrl;
+
     return (
       <div className={styles.page}>
         <div className={styles.container}>
@@ -143,12 +192,37 @@ export function CheckoutSuccessClient() {
             <CheckCircle2 className={styles.successIcon} aria-hidden="true" />
             <h1 className={styles.successTitle}>Payment successful</h1>
             <p className={styles.successBody}>
-              Order reference {success.orderNumber}. Your payment was verified on our server and your order is confirmed.
+              Order reference {success.orderNumber}. Your payment was verified and your GST invoice is ready below.
             </p>
             {success.total > 0 ? (
               <p className={styles.pageNote}>Amount paid: {formatINR(success.total)}</p>
             ) : null}
+            {success.invoiceNumber ? (
+              <p className={styles.pageNote}>Invoice: {success.invoiceNumber}</p>
+            ) : null}
+            {success.email ? (
+              <p className={styles.invoiceFootnote}>
+                <Mail className="inline-block h-4 w-4 align-text-bottom mr-1" aria-hidden="true" />
+                {success.emailSent
+                  ? `Invoice and order confirmation sent to ${success.email}.`
+                  : `Your invoice is shown below. We could not send email to ${success.email} right now — save or print this page.`}
+              </p>
+            ) : null}
+
+            <div className={styles.invoiceFrameWrap}>
+              <iframe
+                title={`Tax invoice ${success.invoiceNumber || success.orderNumber}`}
+                src={invoiceSrc}
+                className={styles.invoiceFrame}
+              />
+            </div>
+
             <div className={styles.actions}>
+              <Button asChild variant="outline">
+                <a href={invoiceSrc} target="_blank" rel="noopener noreferrer">
+                  Open invoice in new tab
+                </a>
+              </Button>
               {success.isSignedIn && !isStorefrontGuestOnly() ? (
                 <Button asChild variant="accent">
                   <Link href="/account/orders">View orders</Link>
