@@ -65,7 +65,7 @@ describe("dual-provider payment integration", () => {
 
   it("verifies Cashfree webhook signatures", () => {
     const secret = "cashfree_webhook_secret";
-    const timestamp = "1710000000";
+    const timestamp = String(Math.floor(Date.now() / 1000));
     const rawBody = JSON.stringify({ type: "PAYMENT_SUCCESS_WEBHOOK" });
     const signature = createHmac("sha256", secret).update(`${timestamp}${rawBody}`).digest("base64");
 
@@ -101,8 +101,10 @@ describe("dual-provider payment integration", () => {
   it("centralizes webhook side effects in confirm-payment service", () => {
     const confirm = source("services/payments/confirm-payment.ts");
     expect(confirm).toContain("applyPaymentEvent");
+    expect(confirm).toContain("resolvePaymentRecordForEvent");
     expect(confirm).toContain("releaseCheckoutStock");
     expect(confirm).toContain("payment.succeeded");
+    expect(confirm).toContain("notifyAdminsAboutPaidOrder");
   });
 
   it("exposes enabled providers without secrets", () => {

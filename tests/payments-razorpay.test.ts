@@ -47,6 +47,22 @@ describe("Razorpay payment gateway", () => {
     });
     await expect(gateway.verifyWebhook({}, "bad-signature", "{}")).rejects.toThrow(/signature/i);
   });
+
+  it("rejects sub-rupee order totals before calling Razorpay", async () => {
+    const gateway = createRazorpayGateway({
+      RAZORPAY_KEY_ID: "rzp_test",
+      RAZORPAY_KEY_SECRET: "secret",
+      RAZORPAY_WEBHOOK_SECRET: "test_webhook_secret"
+    });
+    await expect(
+      gateway.createIntent({
+        orderId: "order-1",
+        amount: 0.5,
+        currency: "INR",
+        customerEmail: "buyer@example.com"
+      })
+    ).rejects.toThrow(/at least ₹1/i);
+  });
 });
 
 describe("commerce lifecycle hardening", () => {

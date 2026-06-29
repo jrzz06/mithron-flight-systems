@@ -70,7 +70,10 @@ const nextConfig: NextConfig = {
     localPatterns: [
       { pathname: "/media/**" },
       { pathname: "/assets/**" },
-      { pathname: "/optimized/**" }
+      { pathname: "/optimized/**" },
+      { pathname: "/login-bg.webp" },
+      { pathname: "/login-bg@2x.webp" }
+      /* login-bg is now on Supabase CDN — no local pattern needed */
     ],
     remotePatterns: [
       { protocol: "https", hostname: supabaseImageHostname() },

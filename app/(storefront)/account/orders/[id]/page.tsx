@@ -5,11 +5,10 @@ import {
   AccountSection,
   AccountStatusChip
 } from "@/components/account";
-import { OrderReturnForm } from "@/components/customer/order-return-form";
 import { OrderReviewForm } from "@/components/customer/order-review-form";
 import { OrderProgressTracker } from "@/components/customer/order-progress-tracker";
 import { createClient } from "@/lib/server";
-import { customerOrderStatus, customerPaymentStatus, CUSTOMER_ORDER_POLICY } from "@/lib/customer/copy";
+import { customerPaymentStatus, CUSTOMER_ORDER_POLICY } from "@/lib/customer/copy";
 import { formatOrderDate, formatOrderReference } from "@/lib/customer/display";
 import { formatAddressMultiline } from "@/lib/addresses/format";
 import {
@@ -21,7 +20,6 @@ import {
 import { formatINR } from "@/lib/utils";
 import { listCustomerReviewsForOrder } from "@/services/customer-order-reviews";
 import { getCustomerOrder } from "@/services/customer-orders";
-import { listReturnRequestsForOrder } from "@/services/order-returns";
 import { getEnquiryById } from "@/services/enquiries";
 
 function formatAddress(address: Record<string, unknown>) {
@@ -59,10 +57,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
   const detail = await getCustomerOrder(userId, id);
   if (!detail) notFound();
 
-  const [returnRequests, reviews] = await Promise.all([
-    listReturnRequestsForOrder(id, userId),
-    listCustomerReviewsForOrder(id, userId)
-  ]);
+  const reviews = await listCustomerReviewsForOrder(id, userId);
 
   const { order, items, payment, shippingAddress, billingAddress, billingSameAsShipping } = detail;
   const metadata = order.metadata && typeof order.metadata === "object" && !Array.isArray(order.metadata)
@@ -85,9 +80,7 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
   const paymentLabel = customerPaymentStatus(String(payment?.status ?? order.payment_status ?? "pending"));
   const tracking = trackingDetails(order.shipment_tracking);
   const fulfillmentStatus = String(order.fulfillment_status ?? "pending");
-  const canReturn = fulfillmentStatus === "delivered" || String(order.status ?? "") === "delivered";
   const canReview = fulfillmentStatus === "delivered";
-  const activeReturn = returnRequests.find((row) => !["cancelled", "rejected", "refunded"].includes(String(row.status ?? "")));
 
   return (
     <AccountCard>
@@ -186,20 +179,6 @@ export default async function AccountOrderDetailPage({ params }: { params: Promi
             );
           })}
         </ul>
-      </AccountSection>
-
-      <AccountSection title="Returns" description={CUSTOMER_ORDER_POLICY.returnsAfterDelivery} className="mt-6">
-        {activeReturn ? (
-          <p className="text-sm text-[var(--account-ink-muted)]">
-            Return request status:{" "}
-            <AccountStatusChip
-              label={customerOrderStatus(String(activeReturn.status ?? "requested"))}
-              status={String(activeReturn.status ?? "requested")}
-            />
-          </p>
-        ) : (
-          <OrderReturnForm orderId={id} disabled={!canReturn} />
-        )}
       </AccountSection>
 
       <AccountSection title="Cancellation" description={CUSTOMER_ORDER_POLICY.cancellationUnavailable} className="mt-6">

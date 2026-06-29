@@ -30,7 +30,7 @@ export default async function AccountOrdersPage() {
       <AccountCard>
         <AccountSection
           title="Your orders"
-          description={`Track deliveries, view order details, and request returns after delivery. ${CUSTOMER_ORDER_POLICY.cancellationUnavailable}`}
+          description={`Track deliveries and view order details. ${CUSTOMER_ORDER_POLICY.cancellationUnavailable}`}
           action={<AccountLink href="/track-order">Track without signing in</AccountLink>}
         >
           {orders.length ? (

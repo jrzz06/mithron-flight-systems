@@ -68,12 +68,12 @@
 
 .miniCarouselRail {
   display: flex;
-  gap: clamp(22px, 3.2vw, 58px);
-  align-items: start;
+  gap: clamp(18px, 2.4vw, 42px);
+  align-items: flex-start;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  padding: 0 clamp(108px, 8vw, 152px);
-  scroll-padding-inline: clamp(108px, 8vw, 152px);
+  padding: 0 clamp(56px, 5.5vw, 68px);
+  scroll-padding-inline: clamp(56px, 5.5vw, 68px);
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -86,9 +86,10 @@
 
 .miniCarouselItem {
   display: grid;
-  flex: 0 0 clamp(57px, 4.3vw, 77px);
-  gap: 15px;
+  flex: 0 0 clamp(72px, 5.2vw, 88px);
+  gap: 12px;
   justify-items: center;
+  align-content: start;
   color: var(--home-ink);
   text-align: center;
   text-decoration: none;
@@ -159,30 +160,43 @@
   outline-offset: 6px;
 }
 
-.miniCarouselNext {
+.miniCarouselNav {
   position: absolute;
-  top: 50%;
-  right: clamp(10px, 3vw, 52px);
+  top: calc(50% - 10px);
   z-index: 3;
   display: grid;
-  width: clamp(44px, 4.4vw, 58px);
-  height: clamp(44px, 4.4vw, 58px);
+  width: clamp(40px, 4vw, 52px);
+  height: clamp(40px, 4vw, 52px);
   place-items: center;
   border: 0;
   border-radius: 999px;
-  background: rgba(226, 232, 240, 0.9);
-  color: rgba(15, 23, 42, 0.72);
+  background: rgba(226, 232, 240, 0.94);
+  color: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
   transform: translateY(-50%);
   transition:
     background-color 220ms var(--ease-system),
-    color 220ms var(--ease-system);
+    color 220ms var(--ease-system),
+    opacity 220ms var(--ease-system);
 }
 
-.miniCarouselNext:hover,
-.miniCarouselNext:focus-visible {
-  background: rgba(15, 23, 42, 0.82);
+.miniCarouselNav:is(:hover, :focus-visible):not(:disabled) {
+  background: rgba(15, 23, 42, 0.84);
   color: #ffffff;
   outline: none;
+}
+
+.miniCarouselNav:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.miniCarouselPrev {
+  left: clamp(8px, 2vw, 20px);
+}
+
+.miniCarouselNext {
+  right: clamp(8px, 2vw, 20px);
 }
 
 .promoImageBand {
@@ -1765,13 +1779,13 @@
   }
 
   .miniCarouselRail {
-    gap: 16px;
-    padding: 0 52px 0 16px;
-    scroll-padding-inline: 16px;
+    gap: 14px;
+    padding: 0 50px;
+    scroll-padding-inline: 50px;
   }
 
   .miniCarouselItem {
-    flex: 0 0 108px;
+    flex: 0 0 92px;
     gap: 10px;
   }
 
@@ -1796,10 +1810,18 @@
   line-clamp: 2;
   }
 
+  .miniCarouselNav {
+    width: 36px;
+    height: 36px;
+    top: calc(50% - 8px);
+  }
+
+  .miniCarouselPrev {
+    left: 6px;
+  }
+
   .miniCarouselNext {
-    right: 8px;
-    width: 38px;
-    height: 38px;
+    right: 6px;
   }
 
   .shelfTitle {
@@ -1819,9 +1841,9 @@
 
 @media (max-width: 640px) {
   .miniCarouselRail {
-    gap: 14px;
-    padding: 0 clamp(16px, 5vw, 48px);
-    scroll-padding-inline: clamp(16px, 5vw, 48px);
+    gap: 12px;
+    padding: 0 46px;
+    scroll-padding-inline: 46px;
   }
 
   .miniCarousel {
@@ -2043,7 +2065,7 @@
   .miniCarouselItem,
   .miniCarouselImage,
   .miniCarouselBuyNow,
-  .miniCarouselNext,
+  .miniCarouselNav,
   .viewAllLink,
   .productCard,
   .productImageWell,
@@ -2067,7 +2089,7 @@
   .miniCarouselItem:focus-visible .miniCarouselImage,
   .miniCarouselItem:hover .miniCarouselBuyNow,
   .miniCarouselItem:focus-visible .miniCarouselBuyNow,
-  .miniCarouselNext,
+  .miniCarouselNav,
   .productCard:hover,
   .productCard:focus-visible,
   .guideCard:hover,

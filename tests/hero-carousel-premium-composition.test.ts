@@ -42,20 +42,25 @@ describe("hero carousel premium composition", () => {
     expect(globals).toContain("@keyframes hero-cinematic-enter");
     expect(hero).toContain("hero-dji-content-unit");
     expect(hero).toContain("hero-dji-headline-row");
-    expect(hero).toContain("hero-dji-prev");
-    expect(hero).toContain('placement="inline"');
-    expect(hero).toContain('placement="edge"');
+    expect(hero).toContain('side="left"');
+    expect(hero).toContain('side="right"');
     expect(hero).toContain('label="Previous hero"');
-    expect(hero).not.toContain("hero-carousel-control--left");
+    expect(hero).toContain("hero-carousel-control--left");
 
     expect(globals).toContain(".hero-dji-content-unit");
     expect(globals).toContain(".hero-dji-headline-row");
-    expect(globals).toContain(".hero-dji-prev");
     expect(globals).toContain("justify-content: center");
-    expect(globals).not.toContain(".hero-carousel-control--left");
+    expect(globals).toContain(".hero-carousel-control--left");
     expect(globals).toContain(".hero-carousel-control--right");
     expect(globals).toContain(".hero-banner-product-image :is(img, video)");
     expect(globals).toContain("object-position: var(--hero-image-object-position, center center)");
+    expect(hero).toContain('mobileObjectPosition: "78% 47%"');
+    expect(hero).toContain('mobileTransform: "translate3d(0, 0, 0) scale(1.1)"');
+    expect(hero).toContain("hero-banner-media-bleed");
+    expect(hero).toContain('bg-[#050505]');
+    expect(hero).toContain("--hero-image-mobile-origin");
+    expect(globals).toContain(".hero-banner-media-bleed");
+    expect(globals).toContain("max-width: none !important");
   });
 
   it("uses a CSS opacity crossfade carousel contract", () => {
@@ -109,7 +114,7 @@ describe("hero carousel premium composition", () => {
     expect(globals).toContain("margin-bottom: 0");
     expect(globals).toContain("object-fit: cover");
     expect(globals).toContain("justify-content: center");
-    expect(globals).toContain("grid-template-columns: auto 1fr");
+    expect(globals).toContain("grid-template-columns: 1fr");
     expect(globals).toContain("font-weight: 600");
     expect(globals).toContain("white-space: nowrap");
 

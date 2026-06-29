@@ -15,8 +15,10 @@ describe("CSP headers", () => {
     expect(proxy).toContain("buildContentSecurityPolicy");
     expect(proxy).toContain("generateCspNonce");
     expect(policy).toContain("checkout.razorpay.com");
-    expect(policy).toContain("identitytoolkit.googleapis.com");
-    expect(policy).toContain("recaptcha.google.com");
+    expect(policy).toContain("cdn.razorpay.com");
+    expect(policy).toContain("lumberjack.razorpay.com");
+    expect(policy).toContain("https://*.razorpay.com");
+    expect(policy).toContain("https://*.cashfree.com");
     expect(policy).toContain("/api/csp-report");
     expect(policy).toContain("script-src 'self' 'nonce-test-nonce'");
     expect(policy).not.toContain("script-src 'self' 'unsafe-inline'");

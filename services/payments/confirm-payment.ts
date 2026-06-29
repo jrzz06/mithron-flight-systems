@@ -6,8 +6,10 @@ import { notifyAdminsAboutPaidOrder } from "@/services/enquiries";
 import { generateAndStoreInvoice } from "@/lib/invoice/generate-invoice";
 import { sendOrderConfirmationEmail } from "@/services/email/order-confirmation";
 import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } from "@/services/orders";
+import { inrAmountsMatch } from "./amount";
 import { cashfreeCheckoutMode } from "./config";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
+import { resolvePaymentRecordForEvent } from "./resolve-payment-record";
 import type { CheckoutPaymentResponse, PaymentEvent, PaymentProviderId } from "./types";
 
 type JsonRecord = Record<string, unknown>;
@@ -39,7 +41,8 @@ export function buildCheckoutPaymentResponse(input: {
     amount: input.amount,
     currency: input.currency,
     razorpayKeyId: input.provider === "razorpay" ? env.RAZORPAY_KEY_ID?.trim() ?? null : null,
-    cashfreeMode: input.provider === "cashfree" ? cashfreeCheckoutMode(env) : null
+    cashfreeMode: input.provider === "cashfree" ? cashfreeCheckoutMode(env) : null,
+    amountPaise: input.intent.amountPaise ?? Math.round(input.amount * 100)
   };
 }
 
@@ -167,10 +170,10 @@ export async function applyPaymentEvent(input: {
     }
   }
 
-  const payments = await fetchAdminRecordsByColumn("payments", "provider_intent_id", event.intentId);
-  const payment = payments.find((row) => String(row.provider ?? "") === provider) ?? payments[0];
+  const payments = await resolvePaymentRecordForEvent(provider, event);
+  const payment = payments;
   if (!payment) {
-    logPaymentWarning("payment_record_missing", { provider, intentId: event.intentId });
+    logPaymentWarning("payment_record_missing", { provider, intentId: event.intentId, paymentId: event.paymentId ?? null });
     return { ok: false, status: 404, error: "Payment record not found." };
   }
 
@@ -190,7 +193,7 @@ export async function applyPaymentEvent(input: {
     });
     return { ok: false, status: 400, error: "Payment currency mismatch." };
   }
-  if (event.status === "succeeded" && Math.abs(event.amount - paymentAmount) > 0.01) {
+  if (event.status === "succeeded" && !inrAmountsMatch(paymentAmount, event.amount)) {
     logPaymentWarning("payment_amount_mismatch", {
       provider,
       intentId: event.intentId,
@@ -206,6 +209,7 @@ export async function applyPaymentEvent(input: {
     String(payment.id),
     {
       status: event.status,
+      provider_intent_id: event.intentId || String(payment.provider_intent_id ?? ""),
       provider_payment_id: event.paymentId ?? null,
       webhook_payload: event.raw as JsonRecord,
       verified_at: event.status === "succeeded" ? new Date().toISOString() : null,
@@ -333,7 +337,8 @@ export async function applyPaymentEvent(input: {
           providerIntentId: event.intentId,
           providerPaymentId: event.paymentId,
           source,
-          note: "Payment verified by server."
+          note: "Payment verified by server.",
+          payment_provider: provider
         }),
         updated_at: new Date().toISOString()
       },

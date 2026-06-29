@@ -21,14 +21,6 @@ const supplierProductTransitions = [
   { from: "rejected", to: "draft", action: "product.revise", actor: "supplier" as const }
 ];
 
-const returnRequestTransitions = [
-  { from: "requested", to: "approved", action: "return.approve", actor: "warehouse" as const },
-  { from: "requested", to: "rejected", action: "return.reject", actor: "warehouse" as const },
-  { from: "requested", to: "cancelled", action: "return.cancel", actor: "user" as const },
-  { from: "approved", to: "received", action: "return.receive", actor: "warehouse" as const },
-  { from: "received", to: "refunded", action: "return.refund", actor: "admin" as const }
-];
-
 const stockRequestTransitions = [
   { from: "pending", to: "approved", action: "stock_request.approve", actor: "admin" as const },
   { from: "pending", to: "rejected", action: "stock_request.reject", actor: "admin" as const },
@@ -43,8 +35,7 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
       "Browse catalog and manage cart",
       "Complete checkout and payment",
       "Track orders (account or guest lookup)",
-      "Submit reviews after delivery",
-      "Request returns for eligible orders"
+      "Submit reviews after delivery"
     ],
     permissions: getRolePermissions("user"),
     pages: [
@@ -61,17 +52,12 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
       { id: "checkout.place", label: "Place order", permission: "orders.checkout", auditEvent: "order.checkout_started", notification: "order.placed" },
       { id: "payment.complete", label: "Complete payment", permission: "payments.write", auditEvent: "payment.succeeded", notification: "payment.received" },
       { id: "order.track", label: "Track order", permission: "self", auditEvent: "order.tracked" },
-      { id: "review.submit", label: "Submit review", permission: "self", auditEvent: "review.submitted", notification: "review.pending" },
-      { id: "return.request", label: "Request return", permission: "self", auditEvent: "return.requested", notification: "return.requested" }
+      { id: "review.submit", label: "Submit review", permission: "self", auditEvent: "review.submitted", notification: "review.pending" }
     ],
     stateMachines: {
       order: {
         states: ["draft", "pending_payment", "paid", "confirmed", "assigned", "processing", "packed", "dispatched", "in_transit", "delivered", "refunded"],
         transitions: customerOrderTransitions
-      },
-      return_request: {
-        states: ["requested", "approved", "received", "refunded", "rejected", "cancelled"],
-        transitions: returnRequestTransitions
       },
       customer_review: {
         states: ["pending", "published", "rejected"],
@@ -158,7 +144,6 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
     responsibilities: [
       "Receive and allocate paid orders",
       "Pick, pack, and dispatch shipments",
-      "Process returns and restock inventory",
       "Maintain stock movements audit trail"
     ],
     permissions: getRolePermissions("warehouse"),
@@ -168,15 +153,13 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
       { path: "/warehouse/allocate", label: "Allocate", description: "Reserve stock for assigned orders" },
       { path: "/warehouse/fulfillment", label: "Fulfillment", description: "Pick → pack → ship pipeline" },
       { path: "/warehouse/inventory", label: "Stock", description: "Warehouse stock levels" },
-      { path: "/warehouse/returns", label: "Returns", description: "Return inspections" },
       { path: "/warehouse/shipments", label: "Shipments", description: "Carrier handoff" }
     ],
     actions: [
       { id: "order.allocate", label: "Allocate inventory", permission: "orders.lifecycle", auditEvent: "order.allocated", notification: "order.processing" },
       { id: "order.pick", label: "Mark picked", permission: "orders.lifecycle", auditEvent: "order.picked" },
       { id: "order.pack", label: "Mark packed", permission: "orders.lifecycle", auditEvent: "order.packed" },
-      { id: "shipment.dispatch", label: "Dispatch shipment", permission: "warehouse.write", auditEvent: "shipment.dispatched", notification: "order.shipped" },
-      { id: "return.receive", label: "Receive return", permission: "warehouse.write", auditEvent: "return.received" }
+      { id: "shipment.dispatch", label: "Dispatch shipment", permission: "warehouse.write", auditEvent: "shipment.dispatched", notification: "order.shipped" }
     ],
     stateMachines: {
       fulfillment: {
@@ -189,10 +172,6 @@ export const ROLE_WORKFLOWS: Record<WorkflowRole, RoleWorkflow> = {
           { from: "ready_to_dispatch", to: "shipped", action: "warehouse.dispatch", actor: "warehouse" },
           { from: "shipped", to: "delivered", action: "shipment.delivered", actor: "warehouse" }
         ]
-      },
-      return_request: {
-        states: ["requested", "approved", "received", "refunded", "rejected", "cancelled"],
-        transitions: returnRequestTransitions
       }
     }
   }

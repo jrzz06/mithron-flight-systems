@@ -48,7 +48,6 @@ export const CUSTOMER_EMPTY_MESSAGES = {
 } as const;
 
 export const CUSTOMER_ORDER_POLICY = {
-  returnsAfterDelivery: "Returns are available after delivery.",
   cancellationUnavailable: "Order cancellation is not available. If an order cannot be fulfilled, our team will review and reject it."
 } as const;
 

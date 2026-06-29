@@ -15,6 +15,7 @@ export type PaymentIntentResult = {
   providerOrderId?: string;
   checkoutUrl?: string;
   paymentSessionId?: string;
+  amountPaise?: number;
 };
 
 export type PaymentEvent = {
@@ -61,4 +62,5 @@ export type CheckoutPaymentResponse = {
   currency: string;
   razorpayKeyId: string | null;
   cashfreeMode: "sandbox" | "production" | null;
+  amountPaise?: number | null;
 };

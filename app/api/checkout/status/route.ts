@@ -43,8 +43,8 @@ export async function GET(request: Request) {
 
   const paid =
     status.paymentStatus === "succeeded" ||
-    status.orderPaymentStatus === "paid" ||
-    status.orderPaymentStatus === "succeeded";
+    status.orderPaymentStatus === "succeeded" ||
+    status.status === "paid";
 
   return NextResponse.json({
     ok: true,

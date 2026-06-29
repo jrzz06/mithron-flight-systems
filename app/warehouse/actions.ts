@@ -625,6 +625,16 @@ export async function saveSimpleInventoryFormAction(formData: FormData) {
 }
 
 export async function saveInventoryQuickEditFormAction(formData: FormData) {
+  const auth = await getCurrentAuthContext();
+  if (auth.disabled) {
+    throw new ProfileDisabledError();
+  }
+  if (!roleHasPermission(auth.role, "products.write")) {
+    throw new PermissionDeniedError(
+      "Stock edits are managed in the Admin panel. Warehouse operators can view stock levels only."
+    );
+  }
+
   const productSlug = readInventoryString(formData, "product_slug");
   const sku = readInventoryString(formData, "sku");
   if (!productSlug || !sku) throw new Error("Product and SKU are required for inventory updates.");

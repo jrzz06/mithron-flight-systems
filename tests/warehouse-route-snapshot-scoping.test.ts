@@ -16,7 +16,6 @@ describe("warehouse route snapshot scoping", () => {
       picking: source("app/warehouse/picking/page.tsx"),
       packing: source("app/warehouse/packing/page.tsx"),
       dispatch: source("app/warehouse/dispatch/page.tsx"),
-      returns: source("app/warehouse/returns/page.tsx"),
       transfers: source("app/warehouse/transfers/page.tsx"),
       activity: source("app/warehouse/activity/page.tsx"),
       settings: source("app/warehouse/settings/page.tsx")

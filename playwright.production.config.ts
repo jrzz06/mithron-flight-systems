@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const productionBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "https://mithron-flight-systems-kbkbkh.vercel.app";
+const productionBaseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "https://final-mithron-deploy.vercel.app";
 
 export default defineConfig({
   testDir: "./tests/e2e",

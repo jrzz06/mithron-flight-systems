@@ -73,7 +73,10 @@ type CompletionState = {
 
 declare global {
   interface Window {
-    Razorpay?: new (options: Record<string, unknown>) => { open: () => void };
+    Razorpay?: new (options: Record<string, unknown>) => {
+      open: () => void;
+      on: (event: string, handler: (response: Record<string, unknown>) => void) => void;
+    };
     Cashfree?: (config: { mode: "sandbox" | "production" }) => {
       checkout: (options: { paymentSessionId: string; redirectTarget?: string }) => Promise<{ error?: unknown }>;
     };
@@ -505,7 +508,7 @@ export function CheckoutPageClient() {
     let active = true;
     (async () => {
       setLoading("payment");
-      const paid = await verifyPaymentOnServer({
+      const verification = await verifyPaymentOnServer({
         orderId: cashfreeReturnOrderId,
         provider: "cashfree",
         email: checkout.email,
@@ -513,11 +516,11 @@ export function CheckoutPageClient() {
         cashfreeOrderId: checkout.paymentIntentId ?? undefined
       });
       if (!active) return;
-      if (paid) {
+      if (verification.paid) {
         markComplete("payment", cashfreeReturnOrderId, cashfreeReturnOrderId);
         router.replace("/checkout", { scroll: false });
       } else {
-        setError("Payment could not be confirmed yet. Please wait a moment and refresh.");
+        setError(verification.error ?? "Payment could not be confirmed yet. Please wait a moment and refresh.");
       }
       setLoading(null);
     })();
@@ -614,9 +617,11 @@ export function CheckoutPageClient() {
     razorpayPaymentId?: string;
     razorpaySignature?: string;
     cashfreeOrderId?: string;
-  }) {
+  }): Promise<{ paid: boolean; error?: string }> {
     const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
-    if (!input.signedIn && !guestHeaders?.token) return false;
+    if (!input.signedIn && !guestHeaders?.token) {
+      return { paid: false, error: "Unable to verify this browser session. Refresh the page and try again." };
+    }
 
     const response = await fetch("/api/payments/verify", {
       method: "POST",
@@ -635,13 +640,25 @@ export function CheckoutPageClient() {
       })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) return false;
-    if (payload.paid) return true;
-    return waitForCheckoutPaymentConfirmation({
+    if (!response.ok) {
+      return {
+        paid: false,
+        error: typeof payload.error === "string" ? payload.error : "Payment verification failed."
+      };
+    }
+    if (payload.paid) return { paid: true };
+    const confirmed = await waitForCheckoutPaymentConfirmation({
       orderId: input.orderId,
       email: input.email,
       signedIn: input.signedIn
     });
+    if (confirmed) return { paid: true };
+    return {
+      paid: false,
+      error: typeof payload.error === "string"
+        ? payload.error
+        : "Payment is still processing. Refresh this page shortly or check your email for confirmation."
+    };
   }
 
   async function openRazorpayCheckout(input: {
@@ -649,7 +666,7 @@ export function CheckoutPageClient() {
     orderId: string;
     orderNumber: string;
     razorpayOrderId: string;
-    amount: number;
+    amountPaise: number;
     email: string;
     signedIn: boolean;
   }) {
@@ -659,22 +676,29 @@ export function CheckoutPageClient() {
       return false;
     }
 
+    if (!input.amountPaise || input.amountPaise < 100) {
+      setError("Order total must be at least ₹1 to pay online.");
+      return false;
+    }
+
     return new Promise<boolean>((resolve) => {
       const rzp = new window.Razorpay!({
         key: input.key,
+        amount: input.amountPaise,
         currency: "INR",
         name: "Mithron",
         description: `Order ${input.orderNumber}`,
         order_id: input.razorpayOrderId,
         prefill: { email: input.email, contact: phone.trim() },
         theme: { color: "#174d33", backdrop_color: "#f7faf8" },
+        retry: { enabled: true, max_count: 3 },
         handler: async (response: {
           razorpay_order_id?: string;
           razorpay_payment_id?: string;
           razorpay_signature?: string;
         }) => {
           setLoading("payment");
-          const paid = await verifyPaymentOnServer({
+          const verification = await verifyPaymentOnServer({
             orderId: input.orderId,
             provider: "razorpay",
             email: input.email,
@@ -684,18 +708,28 @@ export function CheckoutPageClient() {
             razorpaySignature: response.razorpay_signature
           });
           setLoading(null);
-          if (paid) {
+          if (verification.paid) {
             markComplete("payment", input.orderId, input.orderNumber);
             resolve(true);
             return;
           }
-          setError("Payment is still processing. Refresh this page shortly or check your email for confirmation.");
+          setError(verification.error ?? "Payment is still processing. Refresh this page shortly or check your email for confirmation.");
           resolve(false);
         },
         modal: {
+          confirm_close: true,
           ondismiss: () => resolve(false)
         }
       });
+
+      rzp.on("payment.failed", (response) => {
+        const reason = typeof response.error === "object" && response.error && "description" in response.error
+          ? String((response.error as { description?: string }).description ?? "")
+          : "";
+        setError(reason.trim() || "Payment failed. Try another method or refresh and try again.");
+        resolve(false);
+      });
+
       rzp.open();
     });
   }
@@ -722,11 +756,12 @@ export function CheckoutPageClient() {
     });
 
     if (result?.error) {
+      setError("Cashfree checkout was interrupted. Please try again.");
       return false;
     }
 
     setLoading("payment");
-    const paid = await verifyPaymentOnServer({
+    const verification = await verifyPaymentOnServer({
       orderId: input.orderId,
       provider: "cashfree",
       email: input.email,
@@ -734,11 +769,11 @@ export function CheckoutPageClient() {
       cashfreeOrderId: input.cashfreeOrderId
     });
     setLoading(null);
-    if (paid) {
+    if (verification.paid) {
       markComplete("payment", input.orderId, input.orderNumber);
       return true;
     }
-    setError("Payment is still processing. Refresh this page shortly or check your email for confirmation.");
+    setError(verification.error ?? "Payment is still processing. Refresh this page shortly or check your email for confirmation.");
     return false;
   }
 
@@ -797,7 +832,7 @@ export function CheckoutPageClient() {
         orderId: payload.orderId,
         orderNumber,
         razorpayOrderId: payload.clientSecret,
-        amount: Number(payload.amount ?? 0),
+        amountPaise: Number(payload.amountPaise ?? Math.round(Number(payload.amount ?? 0) * 100)),
         email: checkout.email,
         signedIn: isSignedIn
       });

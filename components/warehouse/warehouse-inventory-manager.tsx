@@ -71,11 +71,13 @@ function StockLevelBar({ row }: { row: SimpleInventoryRow }) {
 export function WarehouseInventoryManager({
   rows,
   action,
-  totalProductCount
+  totalProductCount,
+  readOnly = false
 }: {
   rows: SimpleInventoryRow[];
-  action: InventoryAction;
+  action?: InventoryAction;
   totalProductCount: number;
+  readOnly?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -141,7 +143,9 @@ export function WarehouseInventoryManager({
       </div>
 
       <p className="text-sm text-[var(--platform-text-secondary)]">
-        Showing {filteredRows.length} of {rows.length} inventory records · {totalProductCount} active products in catalog
+        {readOnly
+          ? `Read-only stock levels for fulfillment planning. Showing ${filteredRows.length} of ${rows.length} products · ${totalProductCount} active in catalog. Stock changes are managed in Admin and Supplier panels.`
+          : `Showing ${filteredRows.length} of ${rows.length} inventory records · ${totalProductCount} active products in catalog`}
       </p>
 
       <div className="grid gap-2 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-3 md:grid-cols-[minmax(220px,1fr)_150px_150px_150px]">
@@ -176,7 +180,7 @@ export function WarehouseInventoryManager({
               <th className="px-3 py-3">Availability</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Last updated</th>
-              <th className="px-3 py-3">Actions</th>
+              <th className="px-3 py-3">{readOnly ? "History" : "Actions"}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--platform-border)]">
@@ -199,20 +203,30 @@ export function WarehouseInventoryManager({
                 <td className="px-3 py-3"><StatusPill status={row.stockStatus} /></td>
                 <td className="px-3 py-3 text-[var(--platform-text-muted)]">{formatUpdated(row.lastUpdated)}</td>
                 <td className="px-3 py-3">
-                  <div className="flex min-w-[360px] flex-wrap gap-2">
-                    <button type="button" onClick={() => setAdjustingRow(row)} className={actionButtonClass}>Adjust</button>
-                    <form action={action} className="contents">
-                      <HiddenFields row={row} quantity={0} stockStatus="out_of_stock" />
-                      <OperationalSubmitButton pendingLabel="Saving" className={actionButtonClass}>Mark out of stock</OperationalSubmitButton>
-                    </form>
-                    <form action={action} className="contents">
-                      <HiddenFields row={row} quantity={Math.max(row.quantity, 1)} stockStatus="available" />
-                      <OperationalSubmitButton pendingLabel="Saving" className={actionButtonClass}>Mark in stock</OperationalSubmitButton>
-                    </form>
+                  {readOnly ? (
                     <Link href={`/warehouse/movements?product_slug=${encodeURIComponent(row.productSlug)}&sku=${encodeURIComponent(row.sku)}`} className={actionButtonClass}>
                       View movements
                     </Link>
-                  </div>
+                  ) : (
+                    <div className="flex min-w-[360px] flex-wrap gap-2">
+                      <button type="button" onClick={() => setAdjustingRow(row)} className={actionButtonClass}>Adjust</button>
+                      {action ? (
+                        <>
+                          <form action={action} className="contents">
+                            <HiddenFields row={row} quantity={0} stockStatus="out_of_stock" />
+                            <OperationalSubmitButton pendingLabel="Saving" className={actionButtonClass}>Mark out of stock</OperationalSubmitButton>
+                          </form>
+                          <form action={action} className="contents">
+                            <HiddenFields row={row} quantity={Math.max(row.quantity, 1)} stockStatus="available" />
+                            <OperationalSubmitButton pendingLabel="Saving" className={actionButtonClass}>Mark in stock</OperationalSubmitButton>
+                          </form>
+                        </>
+                      ) : null}
+                      <Link href={`/warehouse/movements?product_slug=${encodeURIComponent(row.productSlug)}&sku=${encodeURIComponent(row.sku)}`} className={actionButtonClass}>
+                        View movements
+                      </Link>
+                    </div>
+                  )}
                 </td>
               </tr>
             )) : (
@@ -226,7 +240,7 @@ export function WarehouseInventoryManager({
         </table>
       </div>
 
-      {adjustingRow ? (
+      {!readOnly && adjustingRow && action ? (
         <WarehouseInventoryAdjustmentPanel row={adjustingRow} action={action} onClose={() => setAdjustingRow(null)} />
       ) : null}
     </section>

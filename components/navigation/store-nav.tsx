@@ -47,11 +47,13 @@ function getFeaturedCard(menu: MegaMenuConfig, featureKey: string | undefined) {
 export function StoreNav({
   navigationItems = [],
   enterpriseMenuConfigs = [],
-  onSearchIntent
+  onSearchIntent,
+  variant = "default"
 }: {
   navigationItems?: NavigationNode[];
   enterpriseMenuConfigs?: EnterpriseMenuConfig[];
   onSearchIntent?: () => void;
+  variant?: "default" | "login";
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -228,12 +230,15 @@ export function StoreNav({
 
   const renderedMenu = renderedMenuKey ? enterpriseMenuByKey.get(renderedMenuKey) : undefined;
 
+  const isLoginNav = variant === "login";
+
   return (
     <div
       className="TOP_NAVBAR adaptive-navbar left-0 top-0 z-[999] w-full max-[767px]:sticky min-[768px]:absolute"
       style={style}
       data-nav-state="adaptive"
       data-nav-ink={tone}
+      data-nav-variant={variant}
       onMouseEnter={clearCloseTimer}
       onMouseLeave={scheduleEnterpriseMenuClose}
       onBlur={(event) => {
@@ -247,27 +252,29 @@ export function StoreNav({
         }
       }}
     >
-      <div className="mithron-topbar" data-testid="mithron-topbar">
-        <div className="mithron-topbar__inner">
-          <nav className="mithron-topbar__links" aria-label="Mithron utility navigation">
-            <Link href="/" className="mithron-topbar__link">mithron.com</Link>
-            <Link href="/contact" className="mithron-topbar__link">Support</Link>
-            <Link href="/products" className="mithron-topbar__link mithron-topbar__more">
-              Browse products <ChevronDown className="size-3" aria-hidden="true" />
-            </Link>
-          </nav>
-          <p className="mithron-topbar__announcement">
-            Drone Care, spares, and training paths are available now.
-            <Link href="/product/mithron-care-plus" className="mithron-topbar__announcement-link">
-              Explore Mithron Care
-            </Link>
-          </p>
-          <div className="mithron-topbar__locale" aria-label="Store region and currency">
-            <Globe2 className="size-3.5" aria-hidden="true" />
-            <span>India (English / ₹ INR)</span>
+      {!isLoginNav ? (
+        <div className="mithron-topbar" data-testid="mithron-topbar">
+          <div className="mithron-topbar__inner">
+            <nav className="mithron-topbar__links" aria-label="Mithron utility navigation">
+              <Link href="/" className="mithron-topbar__link">mithron.com</Link>
+              <Link href="/contact" className="mithron-topbar__link">Support</Link>
+              <Link href="/products" className="mithron-topbar__link mithron-topbar__more">
+                Browse products <ChevronDown className="size-3" aria-hidden="true" />
+              </Link>
+            </nav>
+            <p className="mithron-topbar__announcement">
+              Drone Care, spares, and training paths are available now.
+              <Link href="/product/mithron-care-plus" className="mithron-topbar__announcement-link">
+                Explore Mithron Care
+              </Link>
+            </p>
+            <div className="mithron-topbar__locale" aria-label="Store region and currency">
+              <Globe2 className="size-3.5" aria-hidden="true" />
+              <span>India (English / ₹ INR)</span>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
       <header className="adaptive-navbar__bar relative h-16 font-[var(--type-ui)] md:h-[66px]">
         <div className="adaptive-navbar__inner relative z-10 mx-auto grid h-full w-full max-w-[1680px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 pl-2 pr-4 md:pl-3 md:pr-8 lg:pl-5 lg:pr-[clamp(2.5rem,6.4vw,7.5rem)]">
           <div className="flex min-w-0 items-center justify-self-start md:gap-2.5">
@@ -307,26 +314,30 @@ export function StoreNav({
           </div>
 
           <div className="flex shrink-0 items-center justify-end gap-1 justify-self-end md:gap-2.5">
-            <button
-              className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-11 items-center justify-center rounded-full text-current"
-              aria-label="Search Mithron systems"
-              type="button"
-              onFocus={preloadSearchOverlay}
-              onClick={() => setOverlay("search")}
-              onPointerDown={preloadSearchOverlay}
-              onPointerEnter={preloadSearchOverlay}
-            >
-              <Search className="size-[18px]" />
-            </button>
-            <CartNavButton />
-            {!isStorefrontGuestOnly() ? (
-              <Link
-                href="/account"
-                aria-label="Account"
-                className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-11 items-center justify-center rounded-full text-current"
-              >
-                <UserRound className="size-[18px]" />
-              </Link>
+            {!isLoginNav ? (
+              <>
+                <button
+                  className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-11 items-center justify-center rounded-full text-current"
+                  aria-label="Search Mithron systems"
+                  type="button"
+                  onFocus={preloadSearchOverlay}
+                  onClick={() => setOverlay("search")}
+                  onPointerDown={preloadSearchOverlay}
+                  onPointerEnter={preloadSearchOverlay}
+                >
+                  <Search className="size-[18px]" />
+                </button>
+                <CartNavButton />
+                {!isStorefrontGuestOnly() ? (
+                  <Link
+                    href="/account"
+                    aria-label="Account"
+                    className="adaptive-navbar__icon nav-interactive nav-interactive--subtle inline-flex size-11 items-center justify-center rounded-full text-current"
+                  >
+                    <UserRound className="size-[18px]" />
+                  </Link>
+                ) : null}
+              </>
             ) : null}
             <button
               type="button"
@@ -353,8 +364,8 @@ export function StoreNav({
         navigationItems={displayedNavigationItems}
         open={mobileMenuOpen}
         onClose={() => setOverlay(null)}
-        onSearch={() => setOverlay("search")}
-        onSearchIntent={preloadSearchOverlay}
+        onSearch={isLoginNav ? undefined : () => setOverlay("search")}
+        onSearchIntent={isLoginNav ? undefined : preloadSearchOverlay}
       />
     </div>
   );
@@ -723,7 +734,7 @@ function MobileMenu({
   navigationItems: NavigationNode[];
   open: boolean;
   onClose: () => void;
-  onSearch: () => void;
+  onSearch?: () => void;
   onSearchIntent?: () => void;
 }) {
   return (
@@ -767,34 +778,36 @@ function MobileMenu({
           ))}
         </ul>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            tabIndex={open ? 0 : -1}
-            onFocus={onSearchIntent}
-            onPointerDown={onSearchIntent}
-            onPointerEnter={onSearchIntent}
-            onClick={() => {
-              onClose();
-              onSearch();
-            }}
-            className="adaptive-mobile-menu__action nav-interactive inline-flex h-11 items-center justify-center rounded-full border"
-            aria-label="Search"
-          >
-            <Search className="size-[18px]" />
-          </button>
-          {!isStorefrontGuestOnly() ? (
-            <Link
-              href="/account"
+        {onSearch ? (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              type="button"
               tabIndex={open ? 0 : -1}
-              onClick={onClose}
+              onFocus={onSearchIntent}
+              onPointerDown={onSearchIntent}
+              onPointerEnter={onSearchIntent}
+              onClick={() => {
+                onClose();
+                onSearch();
+              }}
               className="adaptive-mobile-menu__action nav-interactive inline-flex h-11 items-center justify-center rounded-full border"
-              aria-label="Account"
+              aria-label="Search"
             >
-              <UserRound className="size-[18px]" />
-            </Link>
-          ) : null}
-        </div>
+              <Search className="size-[18px]" />
+            </button>
+            {!isStorefrontGuestOnly() ? (
+              <Link
+                href="/account"
+                tabIndex={open ? 0 : -1}
+                onClick={onClose}
+                className="adaptive-mobile-menu__action nav-interactive inline-flex h-11 items-center justify-center rounded-full border"
+                aria-label="Account"
+              >
+                <UserRound className="size-[18px]" />
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </>
   );

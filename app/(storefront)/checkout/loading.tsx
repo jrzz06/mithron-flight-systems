@@ -1,18 +1,19 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import styles from "./checkout.module.css";
 
 export default function CheckoutLoading() {
   return (
-    <div role="status" aria-live="polite" aria-label="Loading checkout" className="surface-section-cool min-h-screen px-6 py-28 md:px-16">
-      <div className="mx-auto max-w-[920px]">
-        <Skeleton className="h-8 w-48 bg-white/10" />
-        <Skeleton className="mt-3 h-12 w-full max-w-xl bg-white/10" />
-        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="grid gap-4 rounded-[24px] border border-[var(--surface-border)] bg-[var(--surface-card)] p-6">
+    <div role="status" aria-live="polite" aria-label="Loading checkout" className={styles.page}>
+      <div className={styles.container}>
+        <Skeleton className="h-4 w-28 rounded-md bg-slate-200" />
+        <Skeleton className="mt-3 h-10 w-full max-w-xl rounded-md bg-slate-200" />
+        <div className={`${styles.layout} mt-10`}>
+          <div className={`${styles.formPanel} grid gap-4`}>
             {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-12 bg-white/10" />
+              <Skeleton key={index} className="h-12 rounded-xl bg-slate-200" />
             ))}
           </div>
-          <Skeleton className="h-72 rounded-[24px] bg-white/10" />
+          <Skeleton className="h-96 rounded-[1.75rem] bg-slate-200" />
         </div>
       </div>
       <span className="sr-only">Loading checkout form.</span>

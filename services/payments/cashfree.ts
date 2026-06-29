@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSiteOrigin } from "@/lib/site-url";
+import { assertMinimumCheckoutAmount, inrToPaise, normalizeInrAmount } from "./amount";
 import { cashfreeApiBase } from "./config";
 import { logPaymentError } from "./logger";
 import type {
@@ -95,7 +96,8 @@ export class CashfreeGateway implements PaymentGateway {
   }
 
   async createIntent(input: CreateIntentInput): Promise<PaymentIntentResult> {
-    const merchantOrderId = sanitizeCashfreeOrderId(input.orderId);
+    const merchantOrderId = sanitizeCashfreeOrderId(input.metadata?.receipt?.trim() || input.orderId);
+    const orderAmount = assertMinimumCheckoutAmount(input.amount, "Cashfree");
     const returnUrl = `${getSiteOrigin()}/checkout?cashfree_return=1&order=${encodeURIComponent(input.orderId)}`;
 
     const response = await fetch(`${cashfreeApiBase(this.env)}/orders`, {
@@ -103,7 +105,7 @@ export class CashfreeGateway implements PaymentGateway {
       headers: cashfreeHeaders(this.env),
       body: JSON.stringify({
         order_id: merchantOrderId,
-        order_amount: Number(input.amount.toFixed(2)),
+        order_amount: orderAmount,
         order_currency: input.currency || "INR",
         customer_details: {
           customer_id: merchantOrderId,
@@ -134,7 +136,8 @@ export class CashfreeGateway implements PaymentGateway {
       intentId,
       providerOrderId: intentId,
       paymentSessionId,
-      clientSecret: paymentSessionId
+      clientSecret: paymentSessionId,
+      amountPaise: inrToPaise(orderAmount)
     };
   }
 
@@ -154,7 +157,7 @@ export class CashfreeGateway implements PaymentGateway {
       provider: "cashfree",
       intentId: String(order.order_id ?? intentId),
       status: mapCashfreePaymentStatus(order.order_status),
-      amount: Number(order.order_amount ?? 0),
+      amount: normalizeInrAmount(order.order_amount ?? 0),
       currency: String(order.order_currency ?? "INR"),
       raw: order
     };
@@ -187,7 +190,7 @@ export class CashfreeGateway implements PaymentGateway {
     const payment = bodyJson.data?.payment;
     const intentId = String(order?.order_id ?? "");
     const paymentId = payment?.cf_payment_id ? String(payment.cf_payment_id) : undefined;
-    const amount = Number(payment?.payment_amount ?? order?.order_amount ?? 0);
+    const amount = normalizeInrAmount(payment?.payment_amount ?? order?.order_amount ?? 0);
     const currency = String(payment?.payment_currency ?? order?.order_currency ?? "INR");
 
     return {

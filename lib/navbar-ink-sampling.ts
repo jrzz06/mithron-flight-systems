@@ -20,6 +20,7 @@ export function normalizeStorefrontPath(pathname: string | null) {
 export function resolveInitialNavbarTone(pathname: string | null): NavbarInkTone {
   const normalized = normalizeStorefrontPath(pathname);
   if (normalized === "/") return "light";
+  if (normalized === "/login") return "light";
   if (normalized.startsWith("/category/")) return "light";
   if (FLUSH_HERO_LIGHT_NAV_ROUTES.has(normalized)) return "light";
   return "dark";
@@ -195,6 +196,13 @@ export function toneFromHeroMediaSampling(sampleY = getNavbarSampleY()): NavbarI
   const shelfImage = document.querySelector<HTMLImageElement>(".productShelfHero img");
   if (shelfHero && shelfImage && isNavbarWithinSection(shelfHero, sampleY)) {
     const tone = toneFromMediaElement(shelfImage, sampleY);
+    if (tone) return tone;
+  }
+
+  const loginHero = document.querySelector("[data-login-hero-surface] .heroImage");
+  const loginSurface = document.querySelector("[data-login-hero-surface]");
+  if (loginHero instanceof HTMLImageElement && loginSurface && isNavbarWithinSection(loginSurface, sampleY)) {
+    const tone = toneFromMediaElement(loginHero, sampleY);
     if (tone) return tone;
   }
 

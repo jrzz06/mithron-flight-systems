@@ -9,10 +9,10 @@ import {
 describe("production SEO helper utilities", () => {
   const sampleSitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://mithron-flight-systems-kbkbkh.vercel.app/</loc></url>
-  <url><loc>https://mithron-flight-systems-kbkbkh.vercel.app/products</loc></url>
-  <url><loc>https://mithron-flight-systems-kbkbkh.vercel.app/category/agri-drones</loc></url>
-  <url><loc>https://mithron-flight-systems-kbkbkh.vercel.app/product/source-agri-kisan-drone-small-8-liter</loc></url>
+  <url><loc>https://final-mithron-deploy.vercel.app/</loc></url>
+  <url><loc>https://final-mithron-deploy.vercel.app/products</loc></url>
+  <url><loc>https://final-mithron-deploy.vercel.app/category/agri-drones</loc></url>
+  <url><loc>https://final-mithron-deploy.vercel.app/product/source-agri-kisan-drone-small-8-liter</loc></url>
 </urlset>`;
 
   it("parses sitemap loc entries", () => {

@@ -9,10 +9,24 @@ export function isInternalAvailabilityTag(value: string) {
   return (CSV_IMPORT_SOURCE_TAGS as readonly string[]).includes(value);
 }
 
+const WIX_AVAILABILITY_ALIASES: Record<string, string> = {
+  instock: "In stock",
+  "in stock": "In stock",
+  available: "In stock",
+  outofstock: "Out of stock",
+  "out of stock": "Out of stock",
+  out_of_stock: "Out of stock",
+  lowstock: "Low stock",
+  "low stock": "Low stock",
+  low_stock: "Low stock",
+  unknown: "In stock"
+};
+
 export function customerFacingAvailability(value: string | null | undefined, fallback = "In stock") {
   const trimmed = String(value ?? "").trim();
   if (!trimmed || isInternalAvailabilityTag(trimmed)) return fallback;
-  return trimmed;
+  const normalized = WIX_AVAILABILITY_ALIASES[trimmed.toLowerCase()];
+  return normalized ?? trimmed;
 }
 
 export type InventoryCsvRecord = {

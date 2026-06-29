@@ -59,7 +59,7 @@
     "cms:patch-agri": "node tools/patch-agri-cms.mjs",
     "security:verify-secrets": "node tools/verify-secrets-hygiene.mjs",
     "security:validate-boundaries": "node tools/validate-security-boundaries.mjs",
-    "security:validate-boundaries:prod": "node tools/validate-security-boundaries.mjs --base-url=https://mithron-flight-systems-kbkbkh.vercel.app",
+    "security:validate-boundaries:prod": "node tools/validate-security-boundaries.mjs --base-url=https://final-mithron-deploy.vercel.app",
     "validate:currency": "node tools/validate-currency-policy.mjs",
     "products:upload": "node tools/upload-mithron-products.cjs",
     "products:crawl-upload": "node tools/crawl-upload-mithron-products.cjs",

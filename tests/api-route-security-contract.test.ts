@@ -33,7 +33,6 @@ const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
   "app/api/invoices/[orderId]/route.ts": "session_or_guest_auth",
   "app/api/account/addresses/route.ts": "session_auth",
   "app/api/account/reviews/route.ts": "session_auth",
-  "app/api/account/returns/route.ts": "session_auth",
   "app/api/notifications/route.ts": "session_auth",
   "app/api/payments/intent/route.ts": "session_auth",
   "app/api/auth/provision/route.ts": "session_auth",

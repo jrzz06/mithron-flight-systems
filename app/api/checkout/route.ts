@@ -360,7 +360,11 @@ export async function POST(request: Request) {
         currency: draft.order.currency,
         customerEmail: body.email,
         customerPhone: body.phone,
-        metadata: { address_id: body.addressId ?? "", phone: body.phone }
+        metadata: {
+          address_id: body.addressId ?? "",
+          phone: body.phone,
+          receipt: orderNumber
+        }
       },
       paymentProvider
     );
@@ -379,9 +383,13 @@ export async function POST(request: Request) {
         amount: draft.order.total,
         currency: draft.order.currency,
         status: "requires_payment",
-        webhook_payload: intent.paymentSessionId
-          ? { payment_session_id: intent.paymentSessionId }
-          : {}
+        webhook_payload: {
+          internal_order_id: orderId,
+          order_number: orderNumber,
+          merchant_order_id: intent.providerOrderId ?? intent.intentId,
+          ...(intent.paymentSessionId ? { payment_session_id: intent.paymentSessionId } : {}),
+          ...(paymentProvider === "razorpay" ? { razorpay_order_id: intent.intentId } : {})
+        }
       },
       userId
     );

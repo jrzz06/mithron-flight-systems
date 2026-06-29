@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const root = join(import.meta.dirname, "..");
-const BASE = process.env.CATALOG_VERIFY_BASE_URL ?? "https://mithron-flight-systems-kbkbkh.vercel.app";
+const BASE = process.env.CATALOG_VERIFY_BASE_URL ?? "https://final-mithron-deploy.vercel.app";
 
 const CATEGORY_MAP = {
   Accessories: "accessories",

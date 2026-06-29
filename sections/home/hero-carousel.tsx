@@ -85,29 +85,29 @@ const heroImageComposition: Record<string, HeroImageComposition> = {
   "ag10-arrival": {
     focalPoint: "right-center drone over glacial terrain at sunrise",
     desktopObjectPosition: "72% 52%",
-    mobileObjectPosition: "center 45%",
-    desktopTransform: "translate3d(0, 0, 0) scale(1)",
-    mobileTransform: "translate3d(0, 0, 0) scale(1)",
+    mobileObjectPosition: "78% 47%",
+    desktopTransform: "translate3d(0, 0, 0) scale(1.08)",
+    mobileTransform: "translate3d(0, 0, 0) scale(1.1)",
     desktopFilter: "none",
-    mobileFilter: "none"
+    mobileFilter: "saturate(1.06) contrast(1.04)"
   },
   "mapping-flight": {
     focalPoint: "center caged drone over night sports court",
     desktopObjectPosition: "62% 58%",
-    mobileObjectPosition: "center 42%",
-    desktopTransform: "translate3d(0, 0, 0) scale(1)",
-    mobileTransform: "translate3d(0, 0, 0) scale(1)",
+    mobileObjectPosition: "66% 48%",
+    desktopTransform: "translate3d(0, 0, 0) scale(1.08)",
+    mobileTransform: "translate3d(0, 0, 0) scale(1.1)",
     desktopFilter: "none",
-    mobileFilter: "none"
+    mobileFilter: "saturate(1.05) contrast(1.03)"
   },
   "drone-ecosystem": {
     focalPoint: "upper-right medical delivery drone over coastal horizon",
     desktopObjectPosition: "90% 52%",
-    mobileObjectPosition: "center 42%",
-    desktopTransform: "translate3d(0, 0, 0) scale(1)",
-    mobileTransform: "translate3d(0, 0, 0) scale(1)",
+    mobileObjectPosition: "82% 42%",
+    desktopTransform: "translate3d(0, 0, 0) scale(1.08)",
+    mobileTransform: "translate3d(0, 0, 0) scale(1.1)",
     desktopFilter: "none",
-    mobileFilter: "none"
+    mobileFilter: "saturate(1.05) contrast(1.03)"
   }
 };
 
@@ -291,10 +291,7 @@ export function HeroCarousel({
           setIsHovered(false);
         }
       }}
-      className={cn(
-        "hero-premium-field relative isolate h-[80svh] min-h-[480px] md:min-h-[580px] w-full overflow-hidden",
-        tone.section
-      )}
+      className="hero-premium-field relative isolate h-[80svh] min-h-[480px] md:min-h-[580px] w-full overflow-hidden bg-[#050505]"
     >
       {safeSlides.map((item, itemIndex) => {
         const slideInk = getHeroContentInk(item, itemIndex);
@@ -314,6 +311,15 @@ export function HeroCarousel({
       );
       })}
 
+      <HeroControl
+        label="Previous hero"
+        side="left"
+        className={tone.control}
+        onClick={() => goToSlide(activeIndex - 1)}
+      >
+        <ChevronLeft className="size-5" />
+      </HeroControl>
+
       <div className="hero-dji-layout pointer-events-none absolute inset-0 z-20">
         <div
           key={`${slide.id}-panel`}
@@ -322,14 +328,6 @@ export function HeroCarousel({
         >
           <div className="hero-dji-content-unit">
             <div className="hero-dji-headline-row">
-              <HeroControl
-                label="Previous hero"
-                placement="inline"
-                className={cn("hero-dji-prev", tone.control)}
-                onClick={() => goToSlide(activeIndex - 1)}
-              >
-                <ChevronLeft className="size-5" />
-              </HeroControl>
               <div className="hero-dji-headline-zone">
                 <h1
                   key={`${slide.id}-title`}
@@ -378,7 +376,7 @@ export function HeroCarousel({
 
       <HeroControl
         label="Next hero"
-        placement="edge"
+        side="right"
         className={tone.control}
         onClick={() => goToSlide(activeIndex + 1)}
       >
@@ -409,7 +407,9 @@ function HeroBackdrop({
     "--hero-image-transform": composition.desktopTransform,
     "--hero-image-mobile-transform": composition.mobileTransform,
     "--hero-image-filter": composition.desktopFilter,
-    "--hero-image-mobile-filter": composition.mobileFilter
+    "--hero-image-mobile-filter": composition.mobileFilter,
+    "--hero-image-desktop-origin": composition.desktopObjectPosition,
+    "--hero-image-mobile-origin": composition.mobileObjectPosition
   } as CSSProperties;
 
   return (
@@ -421,7 +421,7 @@ function HeroBackdrop({
         aria-label={`Explore ${slide.title}`}
         className="hero-banner-product-link block size-full outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-page)]"
       >
-        <div data-testid="hero-product-image" className="hero-banner-product-image absolute inset-0">
+        <div data-testid="hero-product-image" className="hero-banner-product-image hero-banner-media-bleed absolute inset-0">
           {slide.video?.src && !reducedMotion ? (
             <video
               autoPlay
@@ -431,7 +431,7 @@ function HeroBackdrop({
               preload="metadata"
               poster={posterSrc}
               aria-label={slide.video.alt || slide.image.alt}
-              className="absolute inset-0 h-full w-full object-cover [filter:var(--hero-image-mobile-filter)] [object-position:var(--hero-image-mobile-object-position)] [transform:var(--hero-image-mobile-transform)] md:[filter:var(--hero-image-filter)] md:[object-position:var(--hero-image-object-position)] md:[transform:var(--hero-image-transform)]"
+              className="absolute inset-0 h-full w-full object-cover [filter:var(--hero-image-mobile-filter)] [object-position:var(--hero-image-mobile-object-position)] [transform:var(--hero-image-mobile-transform)] [transform-origin:var(--hero-image-mobile-origin)] md:[filter:var(--hero-image-filter)] md:[object-position:var(--hero-image-object-position)] md:[transform:var(--hero-image-transform)] md:[transform-origin:var(--hero-image-desktop-origin)]"
               style={imageStyle}
             >
               <source src={slide.video.src} type={videoType} />
@@ -444,7 +444,7 @@ function HeroBackdrop({
               priority={Boolean(slide.image.priority)}
               responsive={slide.image.responsive}
               sizes="100vw"
-              className="[filter:var(--hero-image-mobile-filter)] [object-position:var(--hero-image-mobile-object-position)] [transform:var(--hero-image-mobile-transform)] md:[filter:var(--hero-image-filter)] md:[object-position:var(--hero-image-object-position)] md:[transform:var(--hero-image-transform)]"
+              className="[filter:var(--hero-image-mobile-filter)] [object-position:var(--hero-image-mobile-object-position)] [transform:var(--hero-image-mobile-transform)] [transform-origin:var(--hero-image-mobile-origin)] md:[filter:var(--hero-image-filter)] md:[object-position:var(--hero-image-object-position)] md:[transform:var(--hero-image-transform)] md:[transform-origin:var(--hero-image-desktop-origin)]"
               style={imageStyle}
             />
           )}
@@ -456,37 +456,23 @@ function HeroBackdrop({
 
 function HeroControl({
   label,
-  placement,
+  side,
   className,
   onClick,
   children
 }: {
   label: string;
-  placement: "inline" | "edge";
+  side: "left" | "right";
   className: string;
   onClick: () => void;
   children: ReactNode;
 }) {
-  if (placement === "inline") {
-    return (
-      <button
-        aria-label={label}
-        className={cn(
-          "hero-carousel-control-inline hidden size-11 shrink-0 place-items-center rounded-full border opacity-70 transition-[opacity,background-color,border-color,color] duration-300 ease-[var(--ease-cinematic)] hover:opacity-100 md:grid",
-          className
-        )}
-        onClick={onClick}
-      >
-        {children}
-      </button>
-    );
-  }
-
   return (
     <button
       aria-label={label}
       className={cn(
-        "hero-carousel-control hero-carousel-control--right absolute z-30 hidden size-11 place-items-center rounded-full border opacity-70 transition-[opacity,background-color,border-color,color] duration-300 ease-[var(--ease-cinematic)] hover:opacity-100 md:grid",
+        "hero-carousel-control absolute z-30 hidden size-11 place-items-center rounded-full border opacity-70 transition-[opacity,background-color,border-color,color] duration-300 ease-[var(--ease-cinematic)] hover:opacity-100 md:grid",
+        side === "left" ? "hero-carousel-control--left" : "hero-carousel-control--right",
         className
       )}
       onClick={onClick}

@@ -113,7 +113,8 @@ export async function POST(request: Request) {
       return NextResponse.json({
         ok: true,
         paid: false,
-        paymentStatus: event.status
+        paymentStatus: event.status,
+        orderPaymentStatus: String(access.order.payment_status ?? "")
       });
     }
 
@@ -133,11 +134,13 @@ export async function POST(request: Request) {
       ok: true,
       paid: result.status === "succeeded",
       paymentStatus: result.status,
+      orderPaymentStatus: result.status === "succeeded" ? "succeeded" : String(access.order.payment_status ?? ""),
       skipped: result.skipped ?? false
     });
   } catch (error) {
     logPaymentError("payment_verify_failed", error, { orderId, provider });
     const message = error instanceof Error ? error.message : "Payment verification failed.";
-    return NextResponse.json({ error: message }, { status: 401 });
+    const statusCode = /signature|unauthorized|invalid/i.test(message) ? 401 : 400;
+    return NextResponse.json({ error: message }, { status: statusCode });
   }
 }

@@ -38,7 +38,7 @@ const navbarToneStyles = {
 
 const NAVBAR_ROOT_SELECTOR = ".TOP_NAVBAR, .adaptive-mobile-menu, .adaptive-mobile-menu__backdrop";
 const NAVBAR_SURFACE_SELECTOR =
-  ".catalog-hero-section--showcase, #hero, [data-testid='home-hero'], .productShelfHero, [data-navbar-ink-surface]";
+  ".catalog-hero-section--showcase, #hero, [data-testid='home-hero'], .productShelfHero, [data-login-hero-surface], [data-navbar-ink-surface]";
 const MIN_CHECK_INTERVAL_MS = 100;
 
 function isInteractionPaused() {
@@ -157,7 +157,9 @@ export function useAdaptiveNavbarTone(initialTone: NavbarInkTone = "dark") {
 
   useEffect(() => {
     toneRef.current = initialTone;
-    queueMicrotask(() => setTone(initialTone));
+    queueMicrotask(() => {
+      setTone(isMobileViewport() ? "dark" : initialTone);
+    });
   }, [initialTone]);
 
   useEffect(() => {

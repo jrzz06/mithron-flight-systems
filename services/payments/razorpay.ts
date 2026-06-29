@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { assertMinimumCheckoutAmount, inrToPaise } from "./amount";
 import type {
   ClientPaymentVerificationInput,
   CreateIntentInput,
@@ -50,7 +51,7 @@ function envWebhookSecret(env: Record<string, string | undefined>) {
 function mapRazorpayStatus(event: string, paymentStatus?: string): PaymentEvent["status"] {
   if (event === "payment.failed" || paymentStatus === "failed") return "failed";
   if (event === "payment.refunded" || event === "refund.processed" || paymentStatus === "refunded") return "refunded";
-  if (event === "payment.captured" || paymentStatus === "captured") return "succeeded";
+  if (event === "payment.captured" || paymentStatus === "captured" || paymentStatus === "paid") return "succeeded";
   if (event === "payment.authorized" || paymentStatus === "authorized") return "processing";
   return "requires_payment";
 }
@@ -65,7 +66,9 @@ export class RazorpayGateway implements PaymentGateway {
 
   async createIntent(input: CreateIntentInput): Promise<PaymentIntentResult> {
     const { keyId, keySecret } = envCredentials(this.env);
-    const amountPaise = Math.round(input.amount * 100);
+    const normalizedAmount = assertMinimumCheckoutAmount(input.amount, "Razorpay");
+    const amountPaise = inrToPaise(normalizedAmount);
+    const receipt = (input.metadata?.receipt ?? input.orderId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
 
     const response = await fetch("https://api.razorpay.com/v1/orders", {
@@ -77,7 +80,8 @@ export class RazorpayGateway implements PaymentGateway {
       body: JSON.stringify({
         amount: amountPaise,
         currency: input.currency || "INR",
-        receipt: input.orderId,
+        receipt: receipt || input.orderId.slice(0, 40),
+        payment_capture: 1,
         notes: {
           order_id: input.orderId,
           customer_email: input.customerEmail,
@@ -96,7 +100,8 @@ export class RazorpayGateway implements PaymentGateway {
       intentId: order.id,
       providerOrderId: order.id,
       clientSecret: order.id,
-      checkoutUrl: undefined
+      checkoutUrl: undefined,
+      amountPaise: order.amount
     };
   }
 

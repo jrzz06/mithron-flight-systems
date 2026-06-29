@@ -109,7 +109,6 @@ export const warehouseNavGroups: PlatformNavGroup[] = [
       { label: "Fulfillment", href: "/warehouse/picking", icon: "orders" },
       { label: "Shipments", href: "/warehouse/shipments", icon: "truck" },
       { label: "Stock", href: "/warehouse/inventory", icon: "inventory" },
-      { label: "Returns", href: "/warehouse/returns", icon: "returns" },
       { label: "History", href: "/warehouse/activity", icon: "audit" },
       { label: "Settings", href: "/warehouse/settings", icon: "operations" }
     ]
@@ -137,7 +136,6 @@ export const warehouseRouteTitles: PlatformRouteTitle[] = [
   { href: "/warehouse/dispatch", title: "Dispatch", kicker: "Dispatch" },
   { href: "/warehouse/inventory", title: "Inventory", kicker: "Inventory" },
   { href: "/warehouse/shipments", title: "Shipments", kicker: "Fulfillment" },
-  { href: "/warehouse/returns", title: "Returns", kicker: "Returns" },
   { href: "/warehouse/activity", title: "Activity", kicker: "History" },
   { href: "/warehouse/settings", title: "Settings", kicker: "Settings" }
 ];

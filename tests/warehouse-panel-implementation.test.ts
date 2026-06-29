@@ -27,7 +27,6 @@ describe("warehouse panel implementation", () => {
       "app/warehouse/packing/page.tsx",
       "app/warehouse/dispatch/page.tsx",
       "app/warehouse/inventory/page.tsx",
-      "app/warehouse/returns/page.tsx",
       "app/warehouse/transfers/page.tsx",
       "app/warehouse/activity/page.tsx",
       "app/warehouse/settings/page.tsx",
@@ -44,7 +43,6 @@ describe("warehouse panel implementation", () => {
       "Fulfillment",
       "Shipments",
       "Stock",
-      "Returns",
       "History",
       "Settings"
     ]) {
@@ -101,7 +99,6 @@ describe("warehouse panel implementation", () => {
       picking: source("app/warehouse/picking/page.tsx"),
       packing: source("app/warehouse/packing/page.tsx"),
       dispatch: source("app/warehouse/dispatch/page.tsx"),
-      returns: source("app/warehouse/returns/page.tsx"),
       transfers: source("app/warehouse/transfers/page.tsx"),
       activity: source("app/warehouse/activity/page.tsx"),
       settings: source("app/warehouse/settings/page.tsx")
@@ -129,10 +126,6 @@ describe("warehouse panel implementation", () => {
     expect(pages.dispatch).toContain("updateShipmentLifecycleFormAction");
     expect(pages.dispatch).toContain("value=\"shipped\"");
     expect(pages.dispatch).toContain("export shipment CSV");
-
-    expect(pages.returns).toContain("data-returns-workflow");
-    expect(pages.returns).toContain("value=\"returned\"");
-    expect(pages.returns).toContain("value=\"damaged\"");
 
     expect(pages.transfers).toContain("data-stock-transfer-workflow");
     expect(pages.transfers).toContain("applyWarehouseMovementFormAction");

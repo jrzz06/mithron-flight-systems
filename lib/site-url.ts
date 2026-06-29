@@ -2,7 +2,7 @@ const LOCAL_DEV_SITE_URL = "http://127.0.0.1:3000";
 
 /** Retired Vercel projects or domains that must never be used for auth or canonical URLs. */
 const OBSOLETE_APP_HOSTS = new Set([
-  "final-mithron-deploy.vercel.app"
+  "mithron-flight-systems-kbkbkh.vercel.app"
 ]);
 
 function normalizeSiteUrl(value: string) {

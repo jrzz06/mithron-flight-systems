@@ -1,12 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { useCallback, useRef } from "react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import { useReducedMotionPreference } from "@/hooks/use-reduced-motion";
 import type { HomeMiniCarouselItem } from "@/lib/home/mini-carousel";
 import styles from "./home-landing-composite.module.css";
+
+type MiniCarouselScrollState = {
+  canPrev: boolean;
+  canNext: boolean;
+};
+
+function readMiniCarouselScrollState(rail: HTMLDivElement): MiniCarouselScrollState {
+  const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
+  return {
+    canPrev: rail.scrollLeft > 8,
+    canNext: rail.scrollLeft < maxScrollLeft - 8
+  };
+}
 
 export function HomeMiniCarousel({
   items
@@ -15,10 +28,41 @@ export function HomeMiniCarousel({
 }) {
   const miniCarouselRailRef = useRef<HTMLDivElement | null>(null);
   const reducedMotion = useReducedMotionPreference();
-  const scrollMiniCarousel = useCallback(() => {
+  const [scrollState, setScrollState] = useState<MiniCarouselScrollState>({
+    canPrev: false,
+    canNext: true
+  });
+
+  const updateScrollState = useCallback(() => {
     const rail = miniCarouselRailRef.current;
     if (!rail) return;
-    rail.scrollBy({ left: rail.clientWidth * 0.8, behavior: reducedMotion ? "auto" : "smooth" });
+    setScrollState(readMiniCarouselScrollState(rail));
+  }, []);
+
+  useEffect(() => {
+    const rail = miniCarouselRailRef.current;
+    if (!rail) return;
+
+    updateScrollState();
+    rail.addEventListener("scroll", updateScrollState, { passive: true });
+    const resizeObserver = new ResizeObserver(updateScrollState);
+    resizeObserver.observe(rail);
+
+    return () => {
+      rail.removeEventListener("scroll", updateScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [items, updateScrollState]);
+
+  const scrollMiniCarousel = useCallback((direction: "prev" | "next") => {
+    const rail = miniCarouselRailRef.current;
+    if (!rail) return;
+
+    const distance = rail.clientWidth * 0.72;
+    rail.scrollBy({
+      left: direction === "next" ? distance : -distance,
+      behavior: reducedMotion ? "auto" : "smooth"
+    });
   }, [reducedMotion]);
 
   return (
@@ -29,6 +73,17 @@ export function HomeMiniCarousel({
       data-media-state={items.some((item) => item.sourceState === "VERIFIED") ? "VERIFIED" : "FALLBACK"}
     >
       <div className={styles.miniCarouselViewport}>
+        <button
+          type="button"
+          className={`${styles.miniCarouselNav} ${styles.miniCarouselPrev}`}
+          aria-label="Show previous Mithron categories"
+          data-testid="home-mini-carousel-prev"
+          disabled={!scrollState.canPrev}
+          onClick={() => scrollMiniCarousel("prev")}
+        >
+          <ArrowLeft size={22} aria-hidden="true" />
+        </button>
+
         <div
           ref={miniCarouselRailRef}
           className={styles.miniCarouselRail}
@@ -59,11 +114,14 @@ export function HomeMiniCarousel({
             </Link>
           ))}
         </div>
+
         <button
           type="button"
-          className={styles.miniCarouselNext}
+          className={`${styles.miniCarouselNav} ${styles.miniCarouselNext}`}
           aria-label="Show more Mithron categories"
-          onClick={scrollMiniCarousel}
+          data-testid="home-mini-carousel-next"
+          disabled={!scrollState.canNext}
+          onClick={() => scrollMiniCarousel("next")}
         >
           <ArrowRight size={22} aria-hidden="true" />
         </button>

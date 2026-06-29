@@ -6,7 +6,7 @@
       "googleSignIn": {
         "oAuthBrandDisplayName": "Mithron",
         "supportEmail": "mithronadmin@gmail.com",
-        "authorizedDomains": ["localhost", "127.0.0.1", "mithron-flight-systems-kbkbkh.vercel.app"]
+        "authorizedDomains": ["localhost", "127.0.0.1", "final-mithron-deploy.vercel.app"]
       }
     }
   }

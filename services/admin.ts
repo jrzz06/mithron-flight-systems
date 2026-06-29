@@ -24,7 +24,6 @@ type WarehouseSnapshotScope =
   | "picking"
   | "packing"
   | "dispatch"
-  | "returns"
   | "transfers"
   | "movements"
   | "activity"
@@ -99,7 +98,6 @@ const warehouseSnapshotScopes: Record<WarehouseSnapshotScope, Set<WarehouseSnaps
   picking: new Set(["stock", "orders", "orderItems"]),
   packing: new Set(["orders", "orderItems", "shipments"]),
   dispatch: new Set(["shipments", "shipmentItems", "shipmentTimeline", "orders", "orderItems"]),
-  returns: new Set(["shipments", "orders"]),
   transfers: new Set(["stock", "movements"]),
   movements: new Set(["movements"]),
   activity: new Set(["movements", "shipmentTimeline", "activityLogs"]),

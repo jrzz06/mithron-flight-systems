@@ -6,13 +6,12 @@ describe("workflow registry", () => {
     expect(Object.keys(ROLE_WORKFLOWS).sort()).toEqual(["admin", "supplier", "user", "warehouse"]);
   });
 
-  it("connects customer browse-to-return pages without dead ends", () => {
+  it("connects customer browse-to-review pages without dead ends", () => {
     const customer = getRoleWorkflow("user");
     const paths = customer.pages.map((page) => page.path);
     expect(paths).toContain("/track-order");
     expect(paths).toContain("/checkout");
     expect(paths).toContain("/account/orders");
-    expect(customer.actions.some((action) => action.id === "return.request")).toBe(true);
     expect(customer.actions.some((action) => action.id === "review.submit")).toBe(true);
   });
 
@@ -27,14 +26,9 @@ describe("workflow registry", () => {
     const warehouse = getRoleWorkflow("warehouse");
     const paths = warehouse.pages.map((page) => page.path);
     expect(paths).toContain("/warehouse/allocate");
+    expect(paths).not.toContain("/warehouse/returns");
     const fulfillment = warehouse.stateMachines.fulfillment;
     expect(fulfillment.transitions.some((t) => t.from === "pending" && t.to === "processing")).toBe(true);
-  });
-
-  it("enforces return request transitions by role", () => {
-    expect(canTransition("return_request", "requested", "approved", "warehouse")).toBe(true);
-    expect(canTransition("return_request", "requested", "cancelled", "user")).toBe(true);
-    expect(canTransition("return_request", "requested", "approved", "user")).toBe(false);
   });
 
   it("enforces supplier product approval transitions", () => {

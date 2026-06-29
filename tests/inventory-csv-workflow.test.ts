@@ -48,6 +48,9 @@ describe("inventory CSV workflow", () => {
     expect(customerFacingAvailability("wix_inventory_csv")).toBe("In stock");
     expect(customerFacingAvailability(CSV_IMPORT_SOURCE_TAG)).toBe("In stock");
     expect(customerFacingAvailability("Made to order")).toBe("Made to order");
+    expect(customerFacingAvailability("InStock")).toBe("In stock");
+    expect(customerFacingAvailability("OutOfStock")).toBe("Out of stock");
+    expect(customerFacingAvailability("Unknown")).toBe("In stock");
   });
 
   it("flags duplicate SKUs and invalid stock before import", () => {
@@ -179,7 +182,8 @@ describe("inventory CSV workflow", () => {
     expect(manager).toContain("data-inventory-csv-import");
     expect(manager).toContain("Supabase inventory records are the source of truth");
     expect(adminPage).toContain("InventoryManager");
-    expect(warehousePage).toContain("InventoryManager");
+    expect(warehousePage).toContain("WarehouseInventoryManager");
+    expect(warehousePage).toContain("readOnly");
     expect(adminPage).toContain("getCsvInventoryRows");
     expect(warehousePage).toContain("getCsvInventoryRows");
     expect(actions).toContain("saveInventoryQuickEditFormAction");
@@ -197,17 +201,19 @@ describe("inventory CSV workflow", () => {
     expect(warehouseExportRoute).toContain("getCsvInventoryRows");
   });
 
-  it("keeps warehouse quick stock edits on warehouse permissions only", () => {
+  it("keeps warehouse quick stock edits on admin permissions only", () => {
     const actions = source("app/warehouse/actions.ts");
     const quickEditStart = actions.indexOf("export async function saveInventoryQuickEditFormAction");
     const quickEditEnd = actions.indexOf("export async function importInventoryCsvFormAction");
     const quickEdit = actions.slice(quickEditStart, quickEditEnd);
+    const permissionGuard = quickEdit.indexOf('roleHasPermission(auth.role, "products.write")');
     const archiveGuard = quickEdit.indexOf('const shouldArchiveProduct = stockStatus === "archived";');
     const archivePreflight = quickEdit.indexOf('if (shouldArchiveProduct) await assertAdminMutationPermission("mithron_products", actorId);');
     const movementWrite = quickEdit.indexOf("recordInventoryMovementForStockChange");
     const productArchiveWrite = quickEdit.indexOf("const productRecord = shouldArchiveProduct");
 
-    expect(archiveGuard).toBeGreaterThan(-1);
+    expect(permissionGuard).toBeGreaterThan(-1);
+    expect(archiveGuard).toBeGreaterThan(permissionGuard);
     expect(archivePreflight).toBeGreaterThan(archiveGuard);
     expect(archivePreflight).toBeLessThan(movementWrite);
     expect(productArchiveWrite).toBeGreaterThan(movementWrite);

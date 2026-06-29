@@ -196,6 +196,9 @@ export type CartItem = {
   taxGroup?: string;
   taxRate?: number;
   taxIncluded?: boolean;
+  category?: string;
+  sku?: string;
+  availabilityLabel?: string;
 };
 
 export type CheckoutStep = "cart" | "details" | "shipping" | "payment" | "review" | "confirmation";

@@ -25,7 +25,7 @@ export const heroSlides: HeroSlide[] = [
       mode: "full-bleed",
       textTone: "dark",
       mediaPosition: "72% 52%",
-      mobileMediaPosition: "center 45%",
+      mobileMediaPosition: "78% 47%",
       productDominance: "flagship"
     }
   },
@@ -43,7 +43,7 @@ export const heroSlides: HeroSlide[] = [
       mode: "full-bleed",
       textTone: "light",
       mediaPosition: "62% 58%",
-      mobileMediaPosition: "center 42%",
+      mobileMediaPosition: "66% 48%",
       productDominance: "flagship"
     }
   },
@@ -61,7 +61,7 @@ export const heroSlides: HeroSlide[] = [
       mode: "full-bleed",
       textTone: "light",
       mediaPosition: "78% 46%",
-      mobileMediaPosition: "center 42%",
+      mobileMediaPosition: "82% 42%",
       productDominance: "flagship"
     }
   }

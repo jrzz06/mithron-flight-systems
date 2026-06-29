@@ -108,9 +108,9 @@ describe("customer checkout workflow", () => {
     const checkoutPage = readFileSync(join(process.cwd(), "app/(storefront)/checkout/checkout-page-client.tsx"), "utf8");
     expect(checkoutPage).toContain("/api/checkout");
     expect(checkoutPage).toContain("/api/checkout/enquiry");
-    expect(checkoutPage).toContain("Pay & place order");
-    expect(checkoutPage).toContain("Send product enquiry");
-    expect(checkoutPage).toContain("Checkout with or without an account");
+    expect(checkoutPage).toContain("Pay and place order");
+    expect(checkoutPage).toContain("Submit product enquiry");
+    expect(checkoutPage).toContain("Complete your purchase");
     const enquiryRoute = readFileSync(join(process.cwd(), "app/api/checkout/enquiry/route.ts"), "utf8");
     expect(enquiryRoute).toContain("submitCheckoutProductEnquiry");
     expect(checkoutPage).toContain("CUSTOMER_CONTACT_REQUIRED_MESSAGE");
