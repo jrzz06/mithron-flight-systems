@@ -43,33 +43,58 @@ function GoogleIcon() {
   );
 }
 
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  if (hidden) {
+    return (
+      <svg className={styles.toggleIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M4 4l16 16" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className={styles.toggleIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 function EmailSignInForm({
   email,
   password,
+  showPassword,
   busy,
   status,
   hasError,
   emailFieldId,
   passwordFieldId,
+  passwordToggleId,
   onEmailChange,
   onPasswordChange,
+  onTogglePassword,
   onSubmit
 }: {
   email: string;
   password: string;
+  showPassword: boolean;
   busy: boolean;
   status: LoginStatus;
   hasError: boolean;
   emailFieldId: string;
   passwordFieldId: string;
+  passwordToggleId: string;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
+  onTogglePassword: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
     <form onSubmit={onSubmit} className={styles.authForm} data-testid="login-auth-form">
       <label className={styles.field} htmlFor={emailFieldId}>
-        <span className={styles.labelText}>Email address</span>
+        <span className={styles.labelText}>email address</span>
         <input
           id={emailFieldId}
           value={email}
@@ -79,27 +104,43 @@ function EmailSignInForm({
           inputMode="email"
           autoComplete="email"
           className={styles.authInput}
-          placeholder="you@example.com"
           aria-invalid={hasError || undefined}
         />
       </label>
+
       <label className={styles.field} htmlFor={passwordFieldId}>
-        <span className={styles.labelText}>Password</span>
-        <input
-          id={passwordFieldId}
-          value={password}
-          onChange={(event) => onPasswordChange(event.target.value)}
-          required
-          type="password"
-          autoComplete="current-password"
-          className={styles.authInput}
-          placeholder="Your password"
-          aria-invalid={hasError || undefined}
-        />
+        <span className={`${styles.labelText} ${styles.labelTextPassword}`}>Password</span>
+        <div className={styles.passwordField}>
+          <input
+            id={passwordFieldId}
+            value={password}
+            onChange={(event) => onPasswordChange(event.target.value)}
+            required
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            className={styles.authInput}
+            aria-invalid={hasError || undefined}
+          />
+          <button
+            type="button"
+            id={passwordToggleId}
+            className={styles.passwordToggle}
+            onClick={onTogglePassword}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            aria-controls={passwordFieldId}
+          >
+            <EyeIcon hidden={showPassword} />
+          </button>
+        </div>
       </label>
+
       <div className={styles.formMeta}>
-        <Link className={styles.recoveryLink} href="/forgot-password">Forgot your password?</Link>
+        <Link className={styles.recoveryLink} href="/forgot-password">
+          Forgot password?
+        </Link>
       </div>
+
       <button
         type="submit"
         disabled={busy}
@@ -111,7 +152,7 @@ function EmailSignInForm({
           ? "Signing in…"
           : status === "loading-role"
             ? "Loading…"
-            : "Sign in"}
+            : "Log In"}
       </button>
     </form>
   );
@@ -119,12 +160,13 @@ function EmailSignInForm({
 
 export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormProps) {
   const socialEnabled = hasSocialSignIn(providers);
-  const emailSectionId = useId();
   const emailFieldId = useId();
   const passwordFieldId = useId();
+  const passwordToggleId = useId();
   const isMountedRef = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState<LoginStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [redirectTo, setRedirectTo] = useState<string | null>(null);
@@ -260,22 +302,22 @@ export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormP
 
   return (
     <div className={styles.authCard} data-testid="login-auth-card">
+      {error ? <p className={styles.inlineAlert} role="alert">{error}</p> : null}
+
       <div data-testid="login-guest-account">
-        {socialEnabled ? (
+        {socialEnabled && providers.google ? (
           <section className={styles.methodStack} data-testid="login-social-methods" aria-label="Continue with Google">
-            {providers.google ? (
-              <button
-                type="button"
-                onClick={signInWithGoogle}
-                disabled={busy}
-                data-testid="login-google-button"
-                className={styles.googleButton}
-                aria-busy={status === "google"}
-              >
-                <GoogleIcon />
-                <span>{status === "google" ? "Signing in…" : "Continue with Google"}</span>
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={signInWithGoogle}
+              disabled={busy}
+              data-testid="login-google-button"
+              className={styles.googleButton}
+              aria-busy={status === "google"}
+            >
+              <GoogleIcon />
+              <span>{status === "google" ? "Signing in…" : "Continue With Google"}</span>
+            </button>
           </section>
         ) : null}
 
@@ -286,25 +328,25 @@ export function LoginForm({ nextPath, auditToken = null, providers }: LoginFormP
         ) : null}
 
         {showInlineEmail ? (
-          <section className={styles.emailSection} aria-labelledby={emailSectionId}>
-            <h3 className={styles.methodHeading} id={emailSectionId}>Sign in with email</h3>
+          <section className={styles.emailSection} aria-label="Email sign in">
             <EmailSignInForm
               email={email}
               password={password}
+              showPassword={showPassword}
               busy={busy}
               status={status}
               hasError={Boolean(error)}
               emailFieldId={emailFieldId}
               passwordFieldId={passwordFieldId}
+              passwordToggleId={passwordToggleId}
               onEmailChange={setEmail}
               onPasswordChange={setPassword}
+              onTogglePassword={() => setShowPassword((current) => !current)}
               onSubmit={submitEmail}
             />
           </section>
         ) : null}
       </div>
-
-      {error ? <p className={styles.inlineAlert} role="alert">{error}</p> : null}
     </div>
   );
 }
