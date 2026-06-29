@@ -49,6 +49,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     ok: true,
     orderId: status.orderId,
+    orderNumber: status.orderNumber,
+    total: status.total,
     status: status.status,
     paymentStatus: status.paymentStatus,
     orderPaymentStatus: status.orderPaymentStatus,

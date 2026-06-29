@@ -26,6 +26,15 @@ type RazorpayWebhookPayload = {
         amount?: number;
         currency?: string;
         status?: string;
+        method?: string;
+      };
+    };
+    order?: {
+      entity?: {
+        id?: string;
+        amount?: number;
+        currency?: string;
+        status?: string;
       };
     };
   };
@@ -51,9 +60,106 @@ function envWebhookSecret(env: Record<string, string | undefined>) {
 function mapRazorpayStatus(event: string, paymentStatus?: string): PaymentEvent["status"] {
   if (event === "payment.failed" || paymentStatus === "failed") return "failed";
   if (event === "payment.refunded" || event === "refund.processed" || paymentStatus === "refunded") return "refunded";
-  if (event === "payment.captured" || paymentStatus === "captured" || paymentStatus === "paid") return "succeeded";
-  if (event === "payment.authorized" || paymentStatus === "authorized") return "processing";
+  if (
+    event === "payment.captured"
+    || event === "payment.authorized"
+    || event === "order.paid"
+    || paymentStatus === "captured"
+    || paymentStatus === "paid"
+    || paymentStatus === "authorized"
+  ) {
+    return "succeeded";
+  }
   return "requires_payment";
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type RazorpayPaymentEntity = {
+  id?: string;
+  order_id?: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
+};
+
+async function fetchRazorpayPaymentEntity(
+  paymentId: string,
+  env: Record<string, string | undefined>
+): Promise<RazorpayPaymentEntity> {
+  const { keyId, keySecret } = envCredentials(env);
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+    method: "GET",
+    headers: { Authorization: `Basic ${auth}` },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Razorpay payment lookup failed (${response.status}).`);
+  }
+
+  return (await response.json()) as RazorpayPaymentEntity;
+}
+
+async function captureRazorpayPaymentIfAuthorized(
+  payment: RazorpayPaymentEntity,
+  env: Record<string, string | undefined>
+) {
+  if (payment.status !== "authorized") return payment;
+
+  const paymentId = String(payment.id ?? "");
+  const amountPaise = Number(payment.amount ?? 0);
+  if (!paymentId || !amountPaise) return payment;
+
+  const { keyId, keySecret } = envCredentials(env);
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/capture`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ amount: amountPaise, currency: String(payment.currency ?? "INR") })
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    if (!/already captured|captured/i.test(body)) {
+      return payment;
+    }
+  }
+
+  return fetchRazorpayPaymentEntity(paymentId, env);
+}
+
+async function resolveVerifiedRazorpayPayment(
+  paymentId: string,
+  orderId: string,
+  env: Record<string, string | undefined>
+) {
+  let payment = await fetchRazorpayPaymentEntity(paymentId, env);
+  if (String(payment.order_id ?? "") !== orderId) {
+    throw new Error("Razorpay payment does not match the checkout order.");
+  }
+
+  payment = await captureRazorpayPaymentIfAuthorized(payment, env);
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const status = String(payment.status ?? "");
+    if (status === "captured" || status === "paid" || status === "authorized") {
+      break;
+    }
+    if (status === "failed" || status === "refunded") {
+      break;
+    }
+    await sleep(500);
+    payment = await fetchRazorpayPaymentEntity(paymentId, env);
+  }
+
+  return payment;
 }
 
 export class RazorpayGateway implements PaymentGateway {
@@ -121,29 +227,7 @@ export class RazorpayGateway implements PaymentGateway {
       throw new Error("Invalid Razorpay payment signature.");
     }
 
-    const { keyId } = envCredentials(this.env);
-    const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-    const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
-      method: "GET",
-      headers: { Authorization: `Basic ${auth}` },
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error(`Razorpay payment lookup failed (${response.status}).`);
-    }
-
-    const payment = (await response.json()) as {
-      id?: string;
-      order_id?: string;
-      amount?: number;
-      currency?: string;
-      status?: string;
-    };
-
-    if (String(payment.order_id ?? "") !== orderId) {
-      throw new Error("Razorpay payment does not match the checkout order.");
-    }
+    const payment = await resolveVerifiedRazorpayPayment(paymentId, orderId, this.env);
 
     return {
       provider: "razorpay",
@@ -208,16 +292,18 @@ export class RazorpayGateway implements PaymentGateway {
     const bodyJson = (typeof payload === "object" && payload !== null ? payload : JSON.parse(body)) as RazorpayWebhookPayload;
     const eventName = String(bodyJson.event ?? "");
     const payment = bodyJson.payload?.payment?.entity;
-    const intentId = String(payment?.order_id ?? "");
+    const orderEntity = bodyJson.payload?.order?.entity;
+    const intentId = String(payment?.order_id ?? orderEntity?.id ?? "");
     const paymentId = payment?.id ? String(payment.id) : undefined;
-    const amount = Number(payment?.amount ?? 0) / 100;
-    const currency = String(payment?.currency ?? "INR");
+    const amount = Number(payment?.amount ?? orderEntity?.amount ?? 0) / 100;
+    const currency = String(payment?.currency ?? orderEntity?.currency ?? "INR");
+    const paymentStatus = payment?.status ?? orderEntity?.status;
 
     return {
       provider: "razorpay",
       intentId,
       paymentId,
-      status: mapRazorpayStatus(eventName, payment?.status),
+      status: mapRazorpayStatus(eventName, paymentStatus),
       amount,
       currency,
       raw: bodyJson

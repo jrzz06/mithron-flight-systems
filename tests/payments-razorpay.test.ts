@@ -63,6 +63,63 @@ describe("Razorpay payment gateway", () => {
       })
     ).rejects.toThrow(/at least ₹1/i);
   });
+
+  it("treats authorized Razorpay payments as succeeded after client verification", async () => {
+    const secret = "test_webhook_secret";
+    const payload = {
+      event: "payment.authorized",
+      payload: {
+        payment: {
+          entity: {
+            id: "pay_auth",
+            order_id: "order_auth",
+            amount: 11800,
+            currency: "INR",
+            status: "authorized"
+          }
+        }
+      }
+    };
+    const rawBody = JSON.stringify(payload);
+    const signature = createHmac("sha256", secret).update(rawBody).digest("hex");
+    const gateway = createRazorpayGateway({
+      RAZORPAY_KEY_ID: "rzp_test",
+      RAZORPAY_KEY_SECRET: "secret",
+      RAZORPAY_WEBHOOK_SECRET: secret
+    });
+
+    const event = await gateway.verifyWebhook(payload, signature, rawBody);
+    expect(event.status).toBe("succeeded");
+    expect(event.amount).toBe(118);
+  });
+
+  it("maps order.paid webhook events to succeeded", async () => {
+    const secret = "test_webhook_secret";
+    const payload = {
+      event: "order.paid",
+      payload: {
+        order: {
+          entity: {
+            id: "order_paid",
+            amount: 50000,
+            currency: "INR",
+            status: "paid"
+          }
+        }
+      }
+    };
+    const rawBody = JSON.stringify(payload);
+    const signature = createHmac("sha256", secret).update(rawBody).digest("hex");
+    const gateway = createRazorpayGateway({
+      RAZORPAY_KEY_ID: "rzp_test",
+      RAZORPAY_KEY_SECRET: "secret",
+      RAZORPAY_WEBHOOK_SECRET: secret
+    });
+
+    const event = await gateway.verifyWebhook(payload, signature, rawBody);
+    expect(event.status).toBe("succeeded");
+    expect(event.intentId).toBe("order_paid");
+  });
 });
 
 describe("commerce lifecycle hardening", () => {

@@ -94,7 +94,7 @@ describe("dual-provider payment integration", () => {
   });
 
   it("routes payment verification through a dedicated API", () => {
-    expect(source("app/api/payments/verify/route.ts")).toContain("verifyClientPayment");
+    expect(source("app/api/payments/verify/route.ts")).toContain("verifyRazorpayPaymentOnServer");
     expect(source("app/api/payments/verify/route.ts")).toContain("applyPaymentEvent");
   });
 
@@ -103,8 +103,9 @@ describe("dual-provider payment integration", () => {
     expect(confirm).toContain("applyPaymentEvent");
     expect(confirm).toContain("resolvePaymentRecordForEvent");
     expect(confirm).toContain("releaseCheckoutStock");
-    expect(confirm).toContain("payment.succeeded");
-    expect(confirm).toContain("notifyAdminsAboutPaidOrder");
+    expect(confirm).toContain("confirmVerifiedPayment");
+    const atomic = source("services/payments/confirm-verified-payment.ts");
+    expect(atomic).toContain("notifyAdminsAboutPaidOrder");
   });
 
   it("exposes enabled providers without secrets", () => {

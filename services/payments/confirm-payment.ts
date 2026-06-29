@@ -1,13 +1,11 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
-import { mergePaymentLifecycleMetadata, paymentEventToLifecycleState } from "@/lib/orders/payment-lifecycle";
+import { mergePaymentLifecycleMetadata } from "@/lib/orders/payment-lifecycle";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
 import { releaseCheckoutStock } from "@/services/checkout-stock";
-import { notifyAdminsAboutPaidOrder } from "@/services/enquiries";
-import { generateAndStoreInvoice } from "@/lib/invoice/generate-invoice";
-import { sendOrderConfirmationEmail } from "@/services/email/order-confirmation";
 import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } from "@/services/orders";
-import { inrAmountsMatch } from "./amount";
+import { inrAmountsMatch, inrToPaise } from "./amount";
 import { cashfreeCheckoutMode } from "./config";
+import { confirmVerifiedPayment } from "./confirm-verified-payment";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
 import { resolvePaymentRecordForEvent } from "./resolve-payment-record";
 import type { CheckoutPaymentResponse, PaymentEvent, PaymentProviderId } from "./types";
@@ -163,13 +161,6 @@ export async function applyPaymentEvent(input: {
   const { provider, event, source } = input;
   const eventId = input.eventId ?? `${event.intentId}:${event.status}:${event.paymentId ?? "unknown"}`;
 
-  if (source === "webhook") {
-    const inserted = await recordWebhookEvent(provider, eventId, input.rawPayload ?? event.raw);
-    if (!inserted) {
-      return { ok: true, status: event.status, skipped: true, reason: "duplicate_event" };
-    }
-  }
-
   const payments = await resolvePaymentRecordForEvent(provider, event);
   const payment = payments;
   if (!payment) {
@@ -177,30 +168,80 @@ export async function applyPaymentEvent(input: {
     return { ok: false, status: 404, error: "Payment record not found." };
   }
 
+  const orderId = String(payment.order_id ?? "");
+  if (!orderId) {
+    return { ok: false, status: 404, error: "Order not found for payment." };
+  }
+
   if (String(payment.status ?? "") === "succeeded" && event.status === "succeeded") {
     return { ok: true, status: "succeeded", skipped: true, reason: "already_paid" };
   }
 
-  const paymentAmount = Number(payment.amount ?? 0);
-  const paymentCurrency = String(payment.currency ?? "INR").trim().toUpperCase();
-  const eventCurrency = String(event.currency ?? paymentCurrency).trim().toUpperCase();
-  if (event.status === "succeeded" && eventCurrency !== paymentCurrency) {
-    logPaymentWarning("payment_currency_mismatch", {
+  if (event.status === "succeeded") {
+    const paymentAmount = Number(payment.amount ?? 0);
+    const paymentCurrency = String(payment.currency ?? "INR").trim().toUpperCase();
+    const eventCurrency = String(event.currency ?? paymentCurrency).trim().toUpperCase();
+    if (eventCurrency !== paymentCurrency) {
+      logPaymentWarning("payment_currency_mismatch", {
+        provider,
+        intentId: event.intentId,
+        expected: paymentCurrency,
+        received: eventCurrency
+      });
+      return { ok: false, status: 400, error: "Payment currency mismatch." };
+    }
+    if (!inrAmountsMatch(paymentAmount, event.amount)) {
+      const paymentPaise = inrToPaise(paymentAmount);
+      const eventPaise = inrToPaise(event.amount);
+      const paiseMatch = paymentPaise === eventPaise;
+      if (!paiseMatch && Math.abs(paymentPaise - eventPaise) > 1) {
+        logPaymentWarning("payment_amount_mismatch", {
+          provider,
+          intentId: event.intentId,
+          expected: paymentAmount,
+          received: event.amount
+        });
+        return { ok: false, status: 400, error: "Payment amount mismatch." };
+      }
+    }
+
+    const confirmed = await confirmVerifiedPayment({
+      paymentId: String(payment.id),
+      orderId,
       provider,
-      intentId: event.intentId,
-      expected: paymentCurrency,
-      received: eventCurrency
+      event,
+      source,
+      eventId
     });
-    return { ok: false, status: 400, error: "Payment currency mismatch." };
+
+    if (!confirmed.ok) {
+      return { ok: false, status: confirmed.status ?? 400, error: confirmed.error };
+    }
+
+    if (!confirmed.skipped) {
+      const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
+      const order = orders[0];
+      await createCustomerPaymentNotification({
+        recipientId: typeof order?.created_by_user_id === "string" ? order.created_by_user_id : null,
+        customerEmail: typeof order?.customer_email === "string" ? order.customer_email : null,
+        orderId,
+        orderNumber: String(order?.order_number ?? orderId)
+      });
+    }
+
+    return {
+      ok: true,
+      status: "succeeded",
+      skipped: confirmed.skipped,
+      reason: confirmed.reason
+    };
   }
-  if (event.status === "succeeded" && !inrAmountsMatch(paymentAmount, event.amount)) {
-    logPaymentWarning("payment_amount_mismatch", {
-      provider,
-      intentId: event.intentId,
-      expected: paymentAmount,
-      received: event.amount
-    });
-    return { ok: false, status: 400, error: "Payment amount mismatch." };
+
+  if (source === "webhook") {
+    const inserted = await recordWebhookEvent(provider, eventId, input.rawPayload ?? event.raw);
+    if (!inserted) {
+      return { ok: true, status: event.status, skipped: true, reason: "duplicate_event" };
+    }
   }
 
   await updateAdminRecord(
@@ -212,18 +253,13 @@ export async function applyPaymentEvent(input: {
       provider_intent_id: event.intentId || String(payment.provider_intent_id ?? ""),
       provider_payment_id: event.paymentId ?? null,
       webhook_payload: event.raw as JsonRecord,
-      verified_at: event.status === "succeeded" ? new Date().toISOString() : null,
+      verified_at: null,
       updated_at: new Date().toISOString()
     },
     null,
     process.env,
     { allowSystemActor: true }
   );
-
-  const orderId = String(payment.order_id ?? "");
-  if (!orderId) {
-    return { ok: true, status: event.status };
-  }
 
   const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
   const order = orders[0];
@@ -290,91 +326,6 @@ export async function applyPaymentEvent(input: {
       process.env,
       { allowSystemActor: true }
     );
-    return { ok: true, status: event.status };
-  }
-
-  if (event.status === "succeeded") {
-    const currentStatus = String(order.status ?? "pending_payment");
-    let nextStatus = currentStatus;
-    try {
-      nextStatus = transitionOrderStatus(currentStatus, "paid");
-    } catch {
-      if (currentStatus === "paid" || currentStatus === "admin_review" || currentStatus === "confirmed") {
-        nextStatus = currentStatus;
-      } else {
-        return { ok: false, status: 409, error: "Order is not in a payable state." };
-      }
-    }
-
-    const lifecycleState = paymentEventToLifecycleState(event.status);
-    const timeline = appendOrderTimeline(
-      order.timeline,
-      buildOrderTimelineEntry({
-        status: nextStatus,
-        event: "payment.succeeded",
-        note: `Payment verified via ${source}.`,
-        actorId: null,
-        metadata: {
-          provider,
-          provider_intent_id: event.intentId,
-          provider_payment_id: event.paymentId ?? null,
-          payment_lifecycle: lifecycleState
-        }
-      })
-    );
-
-    await updateAdminRecord(
-      "orders",
-      "id",
-      orderId,
-      {
-        status: nextStatus,
-        payment_status: "succeeded",
-        timeline,
-        metadata: mergePaymentLifecycleMetadata(baseMetadata, {
-          state: "PAYMENT_VERIFIED",
-          provider,
-          providerIntentId: event.intentId,
-          providerPaymentId: event.paymentId,
-          source,
-          note: "Payment verified by server.",
-          payment_provider: provider
-        }),
-        updated_at: new Date().toISOString()
-      },
-      null,
-      process.env,
-      { allowSystemActor: true }
-    );
-
-    await createCustomerPaymentNotification({
-      recipientId: typeof order.created_by_user_id === "string" ? order.created_by_user_id : null,
-      customerEmail: typeof order.customer_email === "string" ? order.customer_email : null,
-      orderId,
-      orderNumber: String(order.order_number ?? orderId)
-    });
-
-    await notifyAdminsAboutPaidOrder({
-      orderId,
-      orderNumber: String(order.order_number ?? orderId)
-    });
-
-    logPaymentEvent("payment_verified", { orderId, provider, source });
-
-    try {
-      const invoice = await generateAndStoreInvoice(orderId);
-      await sendOrderConfirmationEmail({
-        orderId,
-        order,
-        invoiceNumber: invoice.invoiceNumber
-      });
-    } catch (invoiceError) {
-      logPaymentWarning("invoice_generation_failed", {
-        orderId,
-        error: invoiceError instanceof Error ? invoiceError.message : String(invoiceError)
-      });
-    }
-
     return { ok: true, status: event.status };
   }
 

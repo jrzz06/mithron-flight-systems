@@ -6,6 +6,7 @@ import { fetchAdminRecordsByColumn } from "@/services/admin-actions";
 import { logPaymentError, logPaymentEvent } from "@/services/payments/logger";
 import { applyPaymentEvent } from "@/services/payments/confirm-payment";
 import { isPaymentProviderId, verifyClientPayment } from "@/services/payments/gateway";
+import { verifyRazorpayPaymentOnServer } from "@/services/payments/verify-razorpay-server";
 import type { PaymentProviderId } from "@/services/payments/types";
 
 type VerifyBody = {
@@ -85,24 +86,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No active payment session found for this order." }, { status: 404 });
   }
 
-  if (String(payment.status ?? "") === "succeeded") {
-    return NextResponse.json({ ok: true, paid: true, paymentStatus: "succeeded" });
+  if (String(payment.status ?? "") === "succeeded" || String(access.order.payment_status ?? "") === "succeeded") {
+    logPaymentEvent("payment_verify_already_paid", { orderId, provider });
+    return NextResponse.json({
+      ok: true,
+      paid: true,
+      paymentStatus: "succeeded",
+      orderNumber: String(access.order.order_number ?? orderId)
+    });
   }
 
   try {
     let event;
     if (provider === "razorpay") {
-      const intentId = body?.razorpayOrderId?.trim() || String(payment.provider_intent_id);
       const paymentId = body?.razorpayPaymentId?.trim() ?? "";
       const signature = body?.razorpaySignature?.trim() ?? "";
       if (!paymentId || !signature) {
         return NextResponse.json({ error: "Razorpay payment verification fields are required." }, { status: 400 });
       }
-      event = await verifyClientPayment("razorpay", {
-        intentId,
-        paymentId,
-        signature,
-        orderId
+
+      event = await verifyRazorpayPaymentOnServer({
+        internalOrderId: orderId,
+        storedRazorpayOrderId: String(payment.provider_intent_id),
+        clientRazorpayOrderId: body?.razorpayOrderId,
+        razorpayPaymentId: paymentId,
+        razorpaySignature: signature,
+        expectedAmountInr: Number(payment.amount ?? access.order.total ?? 0),
+        expectedCurrency: String(payment.currency ?? access.order.currency ?? "INR")
       });
     } else {
       const intentId = body?.cashfreeOrderId?.trim() || String(payment.provider_intent_id);
@@ -110,19 +120,28 @@ export async function POST(request: Request) {
     }
 
     if (event.status !== "succeeded") {
+      logPaymentEvent("payment_verify_not_succeeded", {
+        orderId,
+        provider,
+        gatewayStatus: event.status
+      });
       return NextResponse.json({
         ok: true,
         paid: false,
         paymentStatus: event.status,
-        orderPaymentStatus: String(access.order.payment_status ?? "")
+        orderPaymentStatus: String(access.order.payment_status ?? ""),
+        error: event.status === "failed"
+          ? "Payment failed at the gateway. You can retry checkout."
+          : "Payment is still processing on the gateway. We will confirm it shortly."
       });
     }
 
+    const verifyEventId = `verify:${provider}:${event.paymentId ?? event.intentId}`;
     const result = await applyPaymentEvent({
       provider: provider as PaymentProviderId,
       event,
       source: "verify",
-      eventId: `verify:${provider}:${event.intentId}:${event.paymentId ?? "unknown"}`
+      eventId: verifyEventId
     });
 
     if (!result.ok) {
@@ -135,12 +154,13 @@ export async function POST(request: Request) {
       paid: result.status === "succeeded",
       paymentStatus: result.status,
       orderPaymentStatus: result.status === "succeeded" ? "succeeded" : String(access.order.payment_status ?? ""),
+      orderNumber: String(access.order.order_number ?? orderId),
       skipped: result.skipped ?? false
     });
   } catch (error) {
     logPaymentError("payment_verify_failed", error, { orderId, provider });
     const message = error instanceof Error ? error.message : "Payment verification failed.";
-    const statusCode = /signature|unauthorized|invalid/i.test(message) ? 401 : 400;
+    const statusCode = /signature|unauthorized|invalid|mismatch/i.test(message) ? 401 : 400;
     return NextResponse.json({ error: message }, { status: statusCode });
   }
 }

@@ -101,7 +101,7 @@ export async function fetchCheckoutOrderStatus(
 ) {
   const config = assertSupabaseAdminConfig(env);
   const response = await fetch(
-    `${config.url}/rest/v1/orders?select=id,status,payment_status,customer_email,created_by_user_id&id=eq.${encodeURIComponent(orderId)}&limit=1`,
+    `${config.url}/rest/v1/orders?select=id,order_number,total,status,payment_status,customer_email,created_by_user_id&id=eq.${encodeURIComponent(orderId)}&limit=1`,
     { headers: headers(config.serviceRoleKey), cache: "no-store" }
   );
   if (!response.ok) return null;
@@ -127,6 +127,8 @@ export async function fetchCheckoutOrderStatus(
 
   return {
     orderId: String(order.id),
+    orderNumber: String(order.order_number ?? order.id),
+    total: Number(order.total ?? 0),
     status: String(order.status ?? ""),
     paymentStatus: String(payment?.status ?? order.payment_status ?? ""),
     orderPaymentStatus: String(order.payment_status ?? "")

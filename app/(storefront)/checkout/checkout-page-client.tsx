@@ -6,6 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { isValidCheckoutEmail, isValidCheckoutPhone, isCompleteGuestAddress } from "@/lib/api/checkout-schema";
 import { buildGuestRequestHeaders } from "@/lib/api/client-audit-token-client";
+import {
+  clearPendingPaymentVerification,
+  readPendingPaymentVerification,
+  savePendingPaymentVerification
+} from "@/lib/checkout/pending-payment";
 import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { Button } from "@/components/ui/button";
@@ -230,6 +235,13 @@ export function CheckoutPageClient() {
   const [paymentProviders, setPaymentProviders] = useState<string[]>([]);
   const [paymentProvider, setPaymentProvider] = useState("");
   const checkoutIdempotencyKeyRef = useRef<string | null>(null);
+  const verifyingPaymentRef = useRef(false);
+
+  const buildPaymentSuccessUrl = useCallback((orderId: string, signedIn: boolean) => {
+    const params = new URLSearchParams({ orderId });
+    if (!signedIn) params.set("email", checkout.email.trim());
+    return `/checkout/success?${params.toString()}`;
+  }, [checkout.email]);
 
   const getCheckoutIdempotencyKey = useCallback(() => {
     if (!checkoutIdempotencyKeyRef.current) {
@@ -530,6 +542,49 @@ export function CheckoutPageClient() {
     };
   }, [cashfreeReturnOrderId, cashfreeReturnFlag, completed, checkout.email, checkout.paymentIntentId, isSignedIn, markComplete, router]);
 
+  useEffect(() => {
+    const pending = readPendingPaymentVerification();
+    if (!pending || completed || loading) return;
+
+    let active = true;
+    (async () => {
+      setLoading("payment");
+      const guestHeaders = pending.signedIn ? null : await buildGuestRequestHeaders();
+      if (!pending.signedIn && !guestHeaders?.token) {
+        setLoading(null);
+        return;
+      }
+
+      const response = await fetch("/api/payments/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(pending.signedIn ? {} : (guestHeaders!.headers as Record<string, string>))
+        },
+        body: JSON.stringify({
+          orderId: pending.orderId,
+          provider: "razorpay",
+          email: pending.email,
+          razorpayOrderId: pending.razorpayOrderId,
+          razorpayPaymentId: pending.razorpayPaymentId,
+          razorpaySignature: pending.razorpaySignature
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!active) return;
+      setLoading(null);
+
+      if (response.ok && payload.paid) {
+        clearPendingPaymentVerification();
+        router.replace(buildPaymentSuccessUrl(pending.orderId, pending.signedIn));
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [buildPaymentSuccessUrl, completed, loading, router]);
+
   function validateBase(requireAddress: boolean) {
     if (!items.length) {
       setError("Your cart is empty.");
@@ -617,7 +672,7 @@ export function CheckoutPageClient() {
     razorpayPaymentId?: string;
     razorpaySignature?: string;
     cashfreeOrderId?: string;
-  }): Promise<{ paid: boolean; error?: string }> {
+  }): Promise<{ paid: boolean; orderNumber?: string; error?: string }> {
     const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
     if (!input.signedIn && !guestHeaders?.token) {
       return { paid: false, error: "Unable to verify this browser session. Refresh the page and try again." };
@@ -646,18 +701,31 @@ export function CheckoutPageClient() {
         error: typeof payload.error === "string" ? payload.error : "Payment verification failed."
       };
     }
-    if (payload.paid) return { paid: true };
+    if (payload.paid) {
+      clearPendingPaymentVerification();
+      return {
+        paid: true,
+        orderNumber: typeof payload.orderNumber === "string" ? payload.orderNumber : undefined
+      };
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim()) {
+      return { paid: false, error: payload.error.trim() };
+    }
+
     const confirmed = await waitForCheckoutPaymentConfirmation({
       orderId: input.orderId,
       email: input.email,
       signedIn: input.signedIn
     });
-    if (confirmed) return { paid: true };
+    if (confirmed) {
+      clearPendingPaymentVerification();
+      return { paid: true };
+    }
+
     return {
       paid: false,
-      error: typeof payload.error === "string"
-        ? payload.error
-        : "Payment is still processing. Refresh this page shortly or check your email for confirmation."
+      error: "Payment is still being confirmed on our server. Keep this page open or check your email shortly."
     };
   }
 
@@ -700,28 +768,56 @@ export function CheckoutPageClient() {
           razorpay_payment_id?: string;
           razorpay_signature?: string;
         }) => {
-          setLoading("payment");
-          const verification = await verifyPaymentOnServer({
+          if (verifyingPaymentRef.current) return;
+          verifyingPaymentRef.current = true;
+
+          const razorpayOrderId = response.razorpay_order_id ?? input.razorpayOrderId;
+          const razorpayPaymentId = response.razorpay_payment_id ?? "";
+          const razorpaySignature = response.razorpay_signature ?? "";
+
+          savePendingPaymentVerification({
             orderId: input.orderId,
+            orderNumber: input.orderNumber,
             provider: "razorpay",
             email: input.email,
             signedIn: input.signedIn,
-            razorpayOrderId: response.razorpay_order_id ?? input.razorpayOrderId,
-            razorpayPaymentId: response.razorpay_payment_id,
-            razorpaySignature: response.razorpay_signature
+            razorpayOrderId,
+            razorpayPaymentId,
+            razorpaySignature
           });
-          setLoading(null);
-          if (verification.paid) {
-            markComplete("payment", input.orderId, input.orderNumber);
-            resolve(true);
-            return;
+
+          setLoading("payment");
+          try {
+            const verification = await verifyPaymentOnServer({
+              orderId: input.orderId,
+              provider: "razorpay",
+              email: input.email,
+              signedIn: input.signedIn,
+              razorpayOrderId,
+              razorpayPaymentId,
+              razorpaySignature
+            });
+            setLoading(null);
+            if (verification.paid) {
+              router.push(buildPaymentSuccessUrl(input.orderId, input.signedIn));
+              resolve(true);
+              return;
+            }
+            setError(
+              verification.error
+              ?? "We could not confirm payment on our server yet. Keep this page open while we retry."
+            );
+            resolve(false);
+          } finally {
+            verifyingPaymentRef.current = false;
           }
-          setError(verification.error ?? "Payment is still processing. Refresh this page shortly or check your email for confirmation.");
-          resolve(false);
         },
         modal: {
           confirm_close: true,
-          ondismiss: () => resolve(false)
+          ondismiss: () => {
+            setError("Payment window closed. You have not been charged.");
+            resolve(false);
+          }
         }
       });
 
@@ -783,10 +879,10 @@ export function CheckoutPageClient() {
     });
     setLoading(null);
     if (verification.paid) {
-      markComplete("payment", input.orderId, input.orderNumber);
+      router.push(buildPaymentSuccessUrl(input.orderId, input.signedIn));
       return true;
     }
-    setError(verification.error ?? "Payment is still processing. Refresh this page shortly or check your email for confirmation.");
+    setError(verification.error ?? "We could not confirm payment on our server yet. Keep this page open while we retry.");
     return false;
   }
 
@@ -850,7 +946,7 @@ export function CheckoutPageClient() {
         signedIn: isSignedIn
       });
       setLoading(null);
-      if (!paid) setError("Payment was not completed.");
+      if (paid) return;
       return;
     }
 
@@ -865,7 +961,9 @@ export function CheckoutPageClient() {
         signedIn: isSignedIn
       });
       setLoading(null);
-      if (!paid) setError("Payment was not completed.");
+      if (paid) {
+        router.push(buildPaymentSuccessUrl(payload.orderId, isSignedIn));
+      }
       return;
     }
 
