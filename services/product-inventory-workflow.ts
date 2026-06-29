@@ -28,8 +28,9 @@ function readOptionalInteger(formData: FormData, key: string) {
 }
 
 function readTrackInventory(formData: FormData, key = "inventory_track") {
-  const value = String(formData.get(key) ?? "on").trim().toLowerCase();
-  return !(value === "0" || value === "off" || value === "false");
+  const values = formData.getAll(key).map((value) => String(value).trim().toLowerCase());
+  if (!values.length) return true;
+  return values.some((value) => value === "on" || value === "true" || value === "1");
 }
 
 export async function assertInventorySkuAvailable(
@@ -60,10 +61,9 @@ export function parseProductCreateInventoryFromFormData(
   const warehouseCode = String(formData.get("inventory_warehouse_code") ?? "").trim();
   const initialQuantity = readOptionalInteger(formData, "inventory_initial_quantity") ?? 0;
   const reorderThreshold = readOptionalInteger(formData, "inventory_reorder_threshold") ?? 0;
-  const skuOverride = String(formData.get("inventory_sku_override") ?? "").trim();
 
-  if (!warehouseCode && initialQuantity <= 0 && !skuOverride) return null;
   if (!warehouseCode) {
+    if (initialQuantity <= 0) return null;
     throw new Error("Warehouse is required when setting initial inventory.");
   }
   if (initialQuantity < 0) {
@@ -76,7 +76,7 @@ export function parseProductCreateInventoryFromFormData(
     throw new Error("Reorder threshold cannot exceed initial quantity.");
   }
 
-  const sku = skuOverride || deriveProductSku(productSlug);
+  const sku = deriveProductSku(productSlug);
   const stockStatus = initialQuantity <= 0
     ? "out_of_stock"
     : reorderThreshold > 0 && initialQuantity <= reorderThreshold
@@ -162,31 +162,40 @@ export async function syncProductInventoryWorkflow(
 ) {
   const env = options.env ?? process.env;
   const now = new Date().toISOString();
+  const normalizedInput: ProductInventoryWorkflowInput = {
+    ...input,
+    sku: deriveProductSku(input.productSlug)
+  };
 
-  await assertValidWarehouseCode(input.warehouseCode, env);
-  await assertInventorySkuAvailable(input.sku, input.productSlug, env);
+  await assertValidWarehouseCode(normalizedInput.warehouseCode, env);
+  await assertInventorySkuAvailable(normalizedInput.sku, normalizedInput.productSlug, env);
 
-  const previousStock = await fetchWarehouseStockBySku(input.productSlug, input.sku, input.warehouseCode, env);
+  const previousStock = await fetchWarehouseStockBySku(
+    normalizedInput.productSlug,
+    normalizedInput.sku,
+    normalizedInput.warehouseCode,
+    env
+  );
   const quantityBefore = Number(previousStock?.available_quantity ?? 0);
-  const records = buildInventoryLinkageRecords(input, { actorId, at: now });
+  const records = buildInventoryLinkageRecords(normalizedInput, { actorId, at: now });
 
   const inventoryRecord = await upsertInventoryRecord(records.inventoryRecord, actorId, env);
   const stockRecord = await upsertWarehouseStockRecord(records.warehouseStockRecord, actorId, env);
   const warehouseStockId = String((stockRecord as Record<string, unknown>).id ?? previousStock?.id ?? "") || null;
 
-  if (input.availableQuantity !== quantityBefore) {
+  if (normalizedInput.availableQuantity !== quantityBefore) {
     await recordInventoryMovementForStockChange(
       {
-        productId: input.productSlug,
-        sku: input.sku,
-        variantId: input.variantId,
-        warehouseCode: input.warehouseCode,
+        productId: normalizedInput.productSlug,
+        sku: normalizedInput.sku,
+        variantId: normalizedInput.variantId,
+        warehouseCode: normalizedInput.warehouseCode,
         warehouseStockId,
-        movementType: quantityBefore === 0 && input.availableQuantity > 0 ? "stock_in" : "adjustment",
+        movementType: quantityBefore === 0 && normalizedInput.availableQuantity > 0 ? "stock_in" : "adjustment",
         quantityBefore,
-        quantityAfter: input.availableQuantity,
+        quantityAfter: normalizedInput.availableQuantity,
         reasonCode: options.auditAction ?? "admin_inventory_init",
-        notes: input.changeSummary,
+        notes: normalizedInput.changeSummary,
         actorUserId: actorId,
         relatedOrderId: null,
         relatedShipmentId: null,
@@ -199,14 +208,14 @@ export async function syncProductInventoryWorkflow(
 
   await recordEntityRevisionSnapshot(
     "inventory",
-    `${input.productSlug}:${input.sku}`,
+    `${normalizedInput.productSlug}:${normalizedInput.sku}`,
     {
       inventory: inventoryRecord,
       warehouse_stock: stockRecord,
-      variant_id: input.variantId
+      variant_id: normalizedInput.variantId
     },
     actorId,
-    input.changeSummary,
+    normalizedInput.changeSummary,
     env
   );
 
@@ -215,19 +224,19 @@ export async function syncProductInventoryWorkflow(
       actor_id: actorId,
       action: options.auditAction ?? "inventory.sync",
       entity_table: "inventory",
-      entity_id: `${input.productSlug}:${input.sku}`,
+      entity_id: `${normalizedInput.productSlug}:${normalizedInput.sku}`,
       severity: records.lowStock ? "warning" : "info",
       metadata: {
-        product_slug: input.productSlug,
-        sku: input.sku,
-        variant_id: input.variantId,
-        warehouse_code: input.warehouseCode,
+        product_slug: normalizedInput.productSlug,
+        sku: normalizedInput.sku,
+        variant_id: normalizedInput.variantId,
+        warehouse_code: normalizedInput.warehouseCode,
         stock_status: records.inventoryRecord.stock_status,
-        quantity: input.quantity,
-        reserved_quantity: input.reservedQuantity,
-        reorder_threshold: input.reorderThreshold,
-        available_quantity: input.availableQuantity,
-        committed_quantity: input.committedQuantity
+        quantity: normalizedInput.quantity,
+        reserved_quantity: normalizedInput.reservedQuantity,
+        reorder_threshold: normalizedInput.reorderThreshold,
+        available_quantity: normalizedInput.availableQuantity,
+        committed_quantity: normalizedInput.committedQuantity
       }
     },
     actorId,
@@ -244,7 +253,7 @@ export async function syncProductInventoryWorkflow(
     await updateAdminRecord(
       "mithron_products",
       "slug",
-      input.productSlug,
+      normalizedInput.productSlug,
       {
         source_availability: availabilityLabel,
         updated_at: now
@@ -254,7 +263,7 @@ export async function syncProductInventoryWorkflow(
     );
   }
 
-  revalidateCatalogSurfaces(input.productSlug);
+  revalidateCatalogSurfaces(normalizedInput.productSlug);
 
   return { inventoryRecord, stockRecord };
 }

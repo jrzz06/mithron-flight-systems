@@ -6,6 +6,7 @@ import {
   buildProductInventoryWorkflowFromFormData,
   buildSimpleInventoryUpdateFromFormData
 } from "@/services/enterprise-admin-forms";
+import { parseProductCreateInventoryFromFormData } from "@/services/product-inventory-workflow";
 
 function formData(entries: Record<string, string>) {
   const data = new FormData();
@@ -38,7 +39,7 @@ describe("product inventory enterprise workflow", () => {
 
     expect(records.inventoryRecord).toEqual({
       product_slug: "source-agri-kisan-drone-small-8-liter",
-      sku: "AG-8L-BASE",
+      sku: "SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER",
       variant_id: "base",
       stock_status: "low_stock",
       quantity: 4,
@@ -50,7 +51,7 @@ describe("product inventory enterprise workflow", () => {
     expect(records.warehouseStockRecord).toEqual({
       warehouse_code: "IN-WEST-01",
       product_slug: "source-agri-kisan-drone-small-8-liter",
-      sku: "AG-8L-BASE",
+      sku: "SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER",
       variant_id: "base",
       available_quantity: 3,
       committed_quantity: 1,
@@ -59,6 +60,57 @@ describe("product inventory enterprise workflow", () => {
       updated_at: "2026-05-24T10:00:00.000Z"
     });
     expect(records.lowStock).toBe(true);
+  });
+
+  it("derives sellable warehouse stock from quantity minus reserved", () => {
+    const input = buildProductInventoryWorkflowFromFormData(formData({
+      product_slug: "source-agri-kisan-drone-small-8-liter",
+      sku: "IGNORED",
+      warehouse_code: "IN-WEST-01",
+      stock_status: "available",
+      quantity: "10",
+      reserved_quantity: "0",
+      reorder_threshold: "1"
+    }));
+
+    expect(input.sku).toBe("SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER");
+    expect(input.availableQuantity).toBe(10);
+    expect(input.committedQuantity).toBe(0);
+  });
+
+  it("parses create inventory when checkbox sends off then on", () => {
+    const data = new FormData();
+    data.append("inventory_track", "off");
+    data.append("inventory_track", "on");
+    data.append("inventory_warehouse_code", "IN-WEST-01");
+    data.append("inventory_initial_quantity", "6");
+
+    const parsed = parseProductCreateInventoryFromFormData(data, "agri-drone-x1");
+    expect(parsed).toEqual({
+      productSlug: "agri-drone-x1",
+      sku: "AGRI-DRONE-X1",
+      variantId: null,
+      stockStatus: "available",
+      quantity: 6,
+      reservedQuantity: 0,
+      reorderThreshold: 0,
+      warehouseCode: "IN-WEST-01",
+      availableQuantity: 6,
+      committedQuantity: 0,
+      changeSummary: "Initial inventory on product creation"
+    });
+  });
+
+  it("seeds warehouse linkage on create even when initial quantity is zero", () => {
+    const parsed = parseProductCreateInventoryFromFormData(formData({
+      inventory_track: "on",
+      inventory_warehouse_code: "IN-WEST-01",
+      inventory_initial_quantity: "0"
+    }), "agri-drone-x1");
+
+    expect(parsed?.quantity).toBe(0);
+    expect(parsed?.availableQuantity).toBe(0);
+    expect(parsed?.warehouseCode).toBe("IN-WEST-01");
   });
 
   it("rejects inconsistent reserved and committed quantities before mutation", () => {
@@ -109,11 +161,14 @@ describe("product inventory enterprise workflow", () => {
     const adminPage = readFileSync(join(process.cwd(), "app/admin/products/page.tsx"), "utf8");
     const warehousePage = readFileSync(join(process.cwd(), "app/warehouse/inventory/page.tsx"), "utf8");
 
-    expect(productActions).toContain("buildInventoryLinkageRecords");
+    expect(productActions).toContain("syncProductInventoryWorkflow");
+    expect(productActions).toContain("buildProductInventoryWorkflowFromFormData");
     expect(warehouseActions).toContain("buildInventoryLinkageRecords");
     expect(warehouseActions).toContain("saveSimpleInventoryFormAction");
     expect(warehouseActions).toContain("saveInventoryQuickEditFormAction");
     expect(adminPage).toContain("data-product-inventory-table=\"inventory\"");
+    expect(adminPage).toContain("defaultValue={activeProductSlug}");
+    expect(adminPage).toContain("defaultValue={checkoutWarehouseCode}");
     expect(warehousePage).toContain("InventoryManager");
     expect(warehousePage).toContain("saveWarehouseInventoryWithFeedback");
   });

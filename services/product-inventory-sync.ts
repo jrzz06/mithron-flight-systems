@@ -1,4 +1,5 @@
 import { assertSupabaseAdminConfig, getSupabaseAdminConfig } from "@/lib/env";
+import { deriveProductSku } from "@/lib/product-sku";
 import {
   createAdminRecord,
   fetchAdminRecordsByColumn,
@@ -14,10 +15,7 @@ type EnvSource = Record<string, string | undefined>;
 
 const PAGE_SIZE = 500;
 
-export function deriveProductSku(slug: string) {
-  const cleaned = slug.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return cleaned || "SKU";
-}
+export { deriveProductSku };
 
 function adminHeaders(serviceRoleKey: string) {
   return {

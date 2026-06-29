@@ -90,15 +90,14 @@ export function ProductCreateDetailFields({
             />
           </label>
           <label className="grid gap-1.5 text-sm sm:col-span-2">
-            <ProductFieldLabel>SKU override</ProductFieldLabel>
+            <ProductFieldLabel>SKU</ProductFieldLabel>
             <input
-              name="inventory_sku_override"
-              placeholder="Optional — defaults from product slug"
-              className="h-10 w-full rounded-[10px] border-0 bg-[var(--platform-surface-muted)] px-3 text-sm text-[var(--platform-text-primary)] outline-none focus:ring-2 focus:ring-[var(--platform-focus-ring)]"
+              readOnly
+              value="Derived automatically from product slug"
+              className="h-10 w-full rounded-[10px] border-0 bg-[var(--platform-surface-muted)] px-3 text-sm text-[var(--platform-text-muted)] outline-none"
             />
           </label>
           <label className="inline-flex items-center gap-2 text-sm text-[var(--platform-text-secondary)] sm:col-span-2">
-            <input type="hidden" name="inventory_track" value="off" />
             <input type="checkbox" name="inventory_track" value="on" defaultChecked className="h-4 w-4 rounded border-[var(--platform-border)]" />
             Track inventory for this product
           </label>

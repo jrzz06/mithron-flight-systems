@@ -11,7 +11,8 @@ import { ProductCategoryField, type ProductCategoryOption } from "./product-cate
 import { connectivityMessage, emptyMessage } from "@/lib/platform/copy";
 import { ProductCreateDetailFields } from "./product-create-detail-fields";
 import { WarehouseCodeSelect } from "@/components/warehouse/warehouse-code-select";
-import { getCheckoutWarehouseCode, getDefaultWarehouseCode } from "@/services/warehouse-config";
+import { deriveProductSku } from "@/lib/product-sku";
+import { getCheckoutWarehouseCode } from "@/services/warehouse-config";
 import { pickWarehouseStockRow, isInventoryWarehouseDesynced } from "@/services/simple-inventory-view";
 import { listActiveWarehouses } from "@/services/warehouses";
 
@@ -113,10 +114,9 @@ function readProductTool(value: string): ProductToolKey | "" {
 }
 
 export default async function AdminProductsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const [snapshot, warehouses, defaultWarehouseCode, checkoutWarehouseCode, catalogMetrics] = await Promise.all([
+  const [snapshot, warehouses, checkoutWarehouseCode, catalogMetrics] = await Promise.all([
     getProductManagerSnapshot(),
     listActiveWarehouses(),
-    getDefaultWarehouseCode(),
     getCheckoutWarehouseCode(),
     getProductCatalogMetrics()
   ]);
@@ -144,6 +144,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     return matchesStatus && matchesQuery;
   });
   const activeProductSlug = selectedProductSlug || String(filteredProducts[0]?.slug ?? snapshot.data.products[0]?.slug ?? "");
+  const activeProductSku = activeProductSlug ? deriveProductSku(activeProductSlug) : "";
   const inventoryBySlug = new Map(snapshot.data.inventory.map((row) => [String(row.product_slug ?? ""), row]));
   const productRows: ProductCatalogGridRow[] = filteredProducts.map((product) => {
     const slug = String(product.slug ?? "");
@@ -296,7 +297,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               </div>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="grid gap-4">
-                  <ProductCreateDetailFields warehouses={warehouses} defaultWarehouseCode={defaultWarehouseCode} />
+                  <ProductCreateDetailFields warehouses={warehouses} defaultWarehouseCode={checkoutWarehouseCode} />
                   <div data-product-create-primary-fields className="grid gap-3">
                     <ProductCategoryField
                       categories={categoryOptions}
@@ -511,11 +512,11 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <div className="grid gap-4 md:grid-cols-2">
             <label className="grid gap-2 text-sm">
               <span className={platformLabelClass}>Product slug</span>
-              <input name="product_slug" defaultValue="" placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
+              <input name="product_slug" required defaultValue={activeProductSlug} placeholder="source-agri-kisan-drone-small-8-liter" className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className={platformLabelClass}>SKU</span>
-              <input name="sku" defaultValue="" placeholder="AGRI-8L-BASIC" className={platformFieldClass} />
+              <input name="sku" readOnly defaultValue={activeProductSku} className={platformFieldClass} />
             </label>
             <label className="grid gap-2 text-sm">
               <span className={platformLabelClass}>Variant ID</span>
@@ -523,7 +524,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
             </label>
             <WarehouseCodeSelect
               warehouses={warehouses}
-              defaultValue={defaultWarehouseCode}
+              defaultValue={checkoutWarehouseCode}
               className={platformFieldClass}
               label="Warehouse code"
             />
@@ -547,15 +548,10 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               <span className={platformLabelClass}>Reorder threshold</span>
               <input name="reorder_threshold" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
             </label>
-            <label className="grid gap-2 text-sm">
-              <span className={platformLabelClass}>Warehouse available</span>
-              <input name="available_quantity" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
-            </label>
-            <label className="grid gap-2 text-sm">
-              <span className={platformLabelClass}>Warehouse committed</span>
-              <input name="committed_quantity" defaultValue="0" inputMode="numeric" className={platformFieldClass} />
-            </label>
           </div>
+          <p className="text-xs leading-5 text-[var(--platform-text-muted)]">
+            Sellable warehouse stock is synced from quantity minus reserved. SKU is derived from the product slug.
+          </p>
 
           <label className="grid gap-2 text-sm">
             <span className={platformLabelClass}>Change summary</span>

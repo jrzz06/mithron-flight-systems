@@ -269,6 +269,7 @@ describe("product admin draft form", () => {
     expect(actionSource).toContain("buildProductQuickEditFromFormData");
     expect(actionSource).toContain("saveProductQuickEditFormAction");
     expect(actionSource).toContain("products.quick_edit");
+    expect(actionSource).toContain("revalidateCatalogSurfaces(quickInput.identity.slug)");
   });
 
   it("exposes row-level product delete while keeping parser confirmation deterministic", () => {

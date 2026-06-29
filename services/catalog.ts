@@ -1029,7 +1029,7 @@ async function fetchSupabaseRows<T>(table: string, query: string, useServiceRole
           apikey: key,
           Authorization: `Bearer ${key}`
         },
-        next: { revalidate: 300, tags: ["catalog", "catalog-products"] }
+        next: { revalidate: 60, tags: ["catalog", "catalog-products"] }
       });
 
       if (!response.ok) {

@@ -1,6 +1,7 @@
 import type { CheckoutOrderInput, CheckoutOrderItemInput } from "@/services/orders";
 import type { DeploymentRequestInput, StaffTaskInput } from "@/services/operations-actions";
 import type { ManualOrderPaymentMethod, ManualOrderWorkflowInput } from "@/services/manual-order";
+import { deriveProductSku } from "@/lib/product-sku";
 
 type JsonRecord = Record<string, unknown>;
 type StockStatus = "available" | "low_stock" | "out_of_stock";
@@ -308,14 +309,15 @@ export function assertOrderFulfillmentTransition(current: string | null | undefi
 
 export function buildProductInventoryWorkflowFromFormData(formData: FormData): ProductInventoryWorkflowInput {
   const productSlug = readRequiredString(formData, "product_slug", "Inventory");
-  const sku = readRequiredString(formData, "sku", "Inventory");
+  const sku = deriveProductSku(productSlug);
   const warehouseCode = readRequiredString(formData, "warehouse_code", "Inventory");
   const stockStatus = readRequiredEnum(formData, "stock_status", ["available", "low_stock", "out_of_stock"] as const, "Inventory");
   const quantity = readOptionalInteger(formData, "quantity", "Inventory quantity") ?? 0;
   const reservedQuantity = readOptionalInteger(formData, "reserved_quantity", "Inventory reserved quantity") ?? 0;
   const reorderThreshold = readOptionalInteger(formData, "reorder_threshold", "Inventory reorder threshold") ?? 0;
-  const availableQuantity = readOptionalInteger(formData, "available_quantity", "Warehouse available quantity") ?? quantity;
-  const committedQuantity = readOptionalInteger(formData, "committed_quantity", "Warehouse committed quantity") ?? reservedQuantity;
+  const sellableQuantity = Math.max(0, quantity - reservedQuantity);
+  const availableQuantity = sellableQuantity;
+  const committedQuantity = reservedQuantity;
   const variantId = readOptionalString(formData, "variant_id") ?? null;
   const changeSummary = readOptionalString(formData, "change_summary") ?? `Sync inventory for ${productSlug}:${sku}`;
 

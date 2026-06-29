@@ -362,7 +362,7 @@ export async function saveProductDraftFormAction(formData: FormData) {
     );
     await ensureProductCatalogInventoryRecord(draftInput.identity.slug, actorId);
     const inventoryInput = parseProductCreateInventoryFromFormData(formData, draftInput.identity.slug);
-    if (inventoryInput && inventoryInput.quantity > 0) {
+    if (inventoryInput) {
       if (!actorId) throw new Error("Authentication required.");
       await syncProductInventoryWorkflow(inventoryInput, actorId, {
         actorRole,
@@ -603,9 +603,8 @@ export async function saveProductQuickEditFormAction(formData: FormData) {
       }
     );
 
+    revalidateCatalogSurfaces(quickInput.identity.slug);
     revalidatePath("/admin/products");
-    revalidatePath("/products");
-    revalidatePath(`/product/${quickInput.identity.slug}`);
   });
 }
 
@@ -646,6 +645,7 @@ export async function saveProductMediaLinkFormAction(formData: FormData) {
         }
       }
     );
+    revalidateCatalogSurfaces(draftInput.identity.product_slug);
     revalidatePath("/admin/products");
   });
 }
@@ -679,6 +679,7 @@ export async function saveProductVariantsFormAction(formData: FormData) {
         }
       }
     );
+    revalidateCatalogSurfaces(draftInput.identity.slug);
     revalidatePath("/admin/products");
   });
 }
