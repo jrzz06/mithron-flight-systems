@@ -39,9 +39,11 @@ export function mapRazorpayPaymentEntityStatus(
     eventName === "payment.captured"
     || eventName === "payment.authorized"
     || eventName === "order.paid"
+    || eventName === "qr_code.credited"
     || paymentStatus === "captured"
     || paymentStatus === "paid"
     || paymentStatus === "authorized"
+    || paymentStatus === "credited"
   ) {
     return "succeeded";
   }

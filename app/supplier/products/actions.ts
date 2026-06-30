@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isActionNavigationError } from "@/lib/server-action-errors";
 import { readEditorDocumentFields } from "@/lib/editor/read-form-content";
+import { normalizeProductDescriptionForSave } from "@/lib/product-description-ai-normalize";
 import { readExpectedUpdatedAt } from "@/lib/admin/conflict-handling";
 import { parseSupplierProductForm, parseSupplierInventoryInit } from "@/lib/supplier/product-form";
 import { logSupplierProductFormDebug } from "@/lib/supplier/product-form-debug";
@@ -33,11 +34,11 @@ function supplierProductRedirect(path: string, status: "success" | "error", mess
   redirect(`${path}?product_status=${status}&product_message=${encodeURIComponent(message.slice(0, 240))}`);
 }
 
-function readSupplierProductDescriptionFields(formData: FormData) {
+async function readSupplierProductDescriptionFields(formData: FormData) {
   const editor = readEditorDocumentFields(formData, "description_json", "description");
   if (!editor) return {};
   return {
-    description: editor.html || null,
+    description: await normalizeProductDescriptionForSave(editor.html),
     description_json: editor.json
   };
 }
@@ -115,7 +116,7 @@ async function saveSupplierProductDraft(formData: FormData) {
     specs: {},
     anchors: [],
     interests: [],
-    ...readSupplierProductDescriptionFields(formData),
+    ...await readSupplierProductDescriptionFields(formData),
     ...(inventoryInit ? { inventory_init: inventoryInit } : {})
   };
 
@@ -266,7 +267,7 @@ export async function updateSupplierProductFormStateAction(
         image,
         hero,
         gallery,
-        ...readSupplierProductDescriptionFields(formData),
+        ...await readSupplierProductDescriptionFields(formData),
         inventory_init: inventoryInit,
         updated_at: new Date().toISOString()
       },

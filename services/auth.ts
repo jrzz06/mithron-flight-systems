@@ -2,7 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { authorizeRoute, defaultPathForRole, isStrictAdminRole } from "@/lib/auth/access-control";
 import { readSessionHandoff } from "@/lib/auth/session-handoff";
-import { assertRolePermission, PermissionDeniedError, normalizeCmsRole, type EnterprisePermission } from "@/lib/auth/permissions";
+import { assertRolePermission, assertAnyRolePermission, PermissionDeniedError, normalizeCmsRole, type EnterprisePermission } from "@/lib/auth/permissions";
 import { ProfileDisabledError } from "@/lib/auth/profile-disabled";
 import { createClient } from "@/lib/server";
 import { provisionAuthenticatedUserIfMissing } from "@/services/auth-provisioning";
@@ -144,6 +144,37 @@ export async function requirePermission(permission: EnterprisePermission) {
         source: "server-action",
         metadata: {
           required_permission: permission,
+          claims_role: context.claimsRole
+        }
+      }).catch((securityError) => console.error("[mithron-security] Failed to log permission denial.", securityError));
+    }
+    throw error;
+  }
+  return context;
+}
+
+const EDITOR_AI_PERMISSIONS = ["cms.write", "products.write", "products.submit"] as const satisfies readonly EnterprisePermission[];
+
+export async function requireEditorAiPermission() {
+  const context = await getCurrentAuthContext();
+  if (context.disabled) {
+    throw new ProfileDisabledError();
+  }
+  try {
+    assertAnyRolePermission(context.role, EDITOR_AI_PERMISSIONS);
+  } catch (error) {
+    if (error instanceof PermissionDeniedError) {
+      await recordSecurityEvent({
+        actorUserId: context.userId,
+        actorRole: context.role,
+        eventType: "security.permission_denied",
+        attemptedResource: EDITOR_AI_PERMISSIONS.join("|"),
+        denialReason: error.message,
+        httpStatus: context.userId ? 403 : 401,
+        severity: "warning",
+        source: "server-action",
+        metadata: {
+          required_permissions: [...EDITOR_AI_PERMISSIONS],
           claims_role: context.claimsRole
         }
       }).catch((securityError) => console.error("[mithron-security] Failed to log permission denial.", securityError));

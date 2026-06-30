@@ -159,7 +159,7 @@ export function RichTextEditor({
             : undefined
         }
       />
-      {features.ai ? <EditorAiMenu editor={editor} /> : null}
+      {features.ai ? <EditorAiMenu editor={editor} documentType={documentType} /> : null}
       <EditorBubbleMenu editor={editor} />
       <EditorContent editor={editor} />
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--platform-border)] px-3 py-2 text-xs text-[var(--platform-text-muted)]">

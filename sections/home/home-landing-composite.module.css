@@ -2147,6 +2147,7 @@
   --mission-section-muted: rgba(245, 245, 247, 0.62);
   --mission-aurora-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --mission-bento-gap: clamp(14px, 1.6vw, 22px);
+  --mission-card-radius: 2px;
   --mission-card-inset: 0;
   --mission-row-primary: minmax(0, 1.55fr);
   --mission-row-secondary: minmax(0, 1fr);
@@ -2440,12 +2441,10 @@
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: 18px;
-  border: 0.5px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--mission-card-radius, 0);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: #0c1218;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 8px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
   text-decoration: none;
   cursor: pointer;
   isolation: isolate;
@@ -2584,27 +2583,24 @@
 .agriSection .agriCard,
 .citySection .agriCard {
   background: #0c1218;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 8px 24px rgba(0, 0, 0, 0.1);
+  border-radius: var(--mission-card-radius, 0);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 
 .agriSection:not(.citySection) .agriCard {
-  border: 0.5px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .citySection .agriCard {
-  border: 0.5px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .agriSection .agriCard:hover,
 .agriSection .agriCard:focus-visible,
 .citySection .agriCard:hover,
 .citySection .agriCard:focus-visible {
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.12),
-    0 20px 48px rgba(0, 0, 0, 0.16);
-  transform: translateY(-3px) scale(1.004);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  transform: translateY(-2px);
 }
 
 .agriCard:focus-visible {
@@ -2624,6 +2620,7 @@
   inset: 0;
   z-index: 0;
   height: 100%;
+  border-radius: var(--mission-card-radius, 0);
 }
 
 .missionCardImageStage {
@@ -2631,13 +2628,14 @@
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  border-radius: inherit;
+  border-radius: var(--mission-card-radius, 0);
 }
 
 .missionCardImageStage :global(.mithron-responsive-image-frame) {
   position: absolute;
   inset: 0;
   height: 100%;
+  border-radius: var(--mission-card-radius, 0);
 }
 
 .agriCardImage {
@@ -2749,7 +2747,7 @@
   z-index: 2;
   overflow: hidden;
   pointer-events: none;
-  border-radius: inherit;
+  border-radius: var(--mission-card-radius, 0);
 }
 
 .agriCardAmbient::after,

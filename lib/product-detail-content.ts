@@ -2,7 +2,7 @@ import type { Product } from "@/config/types";
 import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
 import { sanitizeProductHtml } from "@/lib/sanitize-html";
-import { plainTextToDescriptionHtml } from "@/lib/product-reconcile/score-canonical";
+import { normalizeProductDescriptionHtml, decodeDescriptionEntities, isUnstructuredDescription, descriptionNormalizePlainText } from "@/lib/product-description-normalize";
 import { isSpecLikeBlob, sortSpecEntries, expandSpecEntries, isHighlightSpecValue } from "@/lib/product-spec-text";
 const HIDDEN_SPEC_KEYS = new Set(["Product ID", "Source", "Currency", "Category", "Availability"]);
 
@@ -68,10 +68,23 @@ function hasHtmlTags(value: string) {
 function normalizeStoredDescriptionHtml(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  if (hasHtmlTags(trimmed)) {
-    return sanitizeEditorHtml(trimmed);
+
+  const decoded = decodeDescriptionEntities(trimmed);
+  const plain = descriptionNormalizePlainText(decoded);
+  const needsStructuralNormalize =
+    /&#\d+;|&#x[0-9a-f]+;/i.test(trimmed)
+    || /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFEFF]/.test(decoded)
+    || isSpecLikeBlob(plain)
+    || isUnstructuredDescription(plain, trimmed)
+    || (!hasHtmlTags(trimmed) && plain.includes(":"));
+
+  if (!needsStructuralNormalize && hasHtmlTags(trimmed)) {
+    return sanitizeEditorHtml(decoded);
   }
-  return plainTextToDescriptionHtml(trimmed);
+
+  const normalized = normalizeProductDescriptionHtml(trimmed);
+  if (!normalized) return null;
+  return sanitizeEditorHtml(normalized);
 }
 
 export function getProductDescriptionHtml(product: Product): string | null {

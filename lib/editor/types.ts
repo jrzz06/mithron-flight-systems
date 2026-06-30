@@ -12,7 +12,8 @@ export type EditorAiAction =
   | "professional"
   | "marketing"
   | "technical"
-  | "translate";
+  | "translate"
+  | "normalize_structure";
 
 export type RichTextEditorFeatures = {
   ai?: boolean;

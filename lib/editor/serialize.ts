@@ -1,4 +1,4 @@
-import { generateHTML } from "@tiptap/html";
+import { generateHTML, generateJSON } from "@tiptap/html";
 import type { JSONContent } from "@tiptap/core";
 import { createEditorExtensions } from "@/lib/editor/extensions";
 import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
@@ -23,18 +23,41 @@ export function emptyEditorDocument(): JSONContent {
   return { type: "doc", content: [{ type: "paragraph" }] };
 }
 
-export function htmlToEditorDocument(html: string): JSONContent {
-  const trimmed = html.trim();
-  if (!trimmed) return emptyEditorDocument();
+function plainTextToEditorDocument(text: string): JSONContent {
+  const paragraphs = text
+    .replace(/\r\n/g, "\n")
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!paragraphs.length) return emptyEditorDocument();
+
   return {
     type: "doc",
-    content: [
-      {
-        type: "paragraph",
-        content: [{ type: "text", text: trimmed.replace(/<[^>]+>/g, " ") }]
-      }
-    ]
+    content: paragraphs.map((part) => ({
+      type: "paragraph",
+      content: [{ type: "text", text: part }]
+    }))
   };
+}
+
+export function htmlToEditorDocument(html: string): JSONContent {
+  const trimmed = sanitizeEditorHtml(html.trim());
+  if (!trimmed) return emptyEditorDocument();
+  if (!/<[^>]+>/.test(trimmed)) {
+    return plainTextToEditorDocument(trimmed);
+  }
+
+  try {
+    const parsed = generateJSON(trimmed, createEditorExtensions()) as JSONContent;
+    if (parsed?.type === "doc" && Array.isArray(parsed.content) && parsed.content.length) {
+      return parsed;
+    }
+  } catch {
+    // fall through to plain-text extraction
+  }
+
+  return plainTextToEditorDocument(trimmed.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
 }
 
 export function extractMediaAssetIds(json: JSONContent | null | undefined): string[] {

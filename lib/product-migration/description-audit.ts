@@ -2,6 +2,7 @@ import type { WixProductSnapshot } from "../wix/catalog-client.ts";
 import { decodeHtml } from "../wix/catalog-normalize.ts";
 import { isPollutedSpecEntry } from "../wix/semantic-content-parser.ts";
 import { plainTextToDescriptionHtml } from "../product-reconcile/score-canonical.ts";
+import { normalizeProductDescriptionHtml } from "../product-description-normalize.ts";
 import {
   matchDbRowToWixProduct,
   type CategoryAuditDbRow,
@@ -185,9 +186,10 @@ export function dedupeDescriptionHtml(html: string) {
 export function normalizeDescriptionHtml(html: string) {
   const stripped = stripMigrationArtifactsFromHtml(html);
   const deduped = dedupeDescriptionHtml(stripped);
+  const normalized = normalizeProductDescriptionHtml(deduped);
+  if (normalized) return normalized;
   const plain = descriptionPlainText(deduped);
   if (!plain) return null;
-  if (hasStructuredDescriptionHtml(deduped)) return deduped.trim();
   return plainTextToDescriptionHtml(plain);
 }
 

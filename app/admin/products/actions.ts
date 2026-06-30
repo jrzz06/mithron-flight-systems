@@ -13,7 +13,8 @@ import {
   buildProductPublishStateFromFormData,
   buildProductQuickEditFromFormData,
   buildProductSeoDraftFromFormData,
-  buildProductVariantsWorkflowFromFormData
+  buildProductVariantsWorkflowFromFormData,
+  applyProductDescriptionSaveNormalization
 } from "@/services/product-admin-forms";
 import {
   createActivityLogRecord,
@@ -350,6 +351,7 @@ export async function saveProductDraftFormAction(formData: FormData) {
       throw new Error("Add an image by uploading a local file or pasting an image URL.");
     }
     const draftInput = buildProductDraftFromFormData(formData);
+    draftInput.fields = await applyProductDescriptionSaveNormalization(draftInput.fields);
     const record = await upsertProductRecord(
       {
         slug: draftInput.identity.slug,
@@ -570,6 +572,7 @@ export async function deleteProductCategoryFormAction(formData: FormData) {
 export async function saveProductQuickEditFormAction(formData: FormData) {
   await runProductAction("Product updated.", async () => {
     const quickInput = buildProductQuickEditFromFormData(formData);
+    quickInput.fields = await applyProductDescriptionSaveNormalization(quickInput.fields);
     const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "").trim() || null;
     const { actorId, actorRole } = await currentActorContext();
     const snapshot = await getProductManagerSnapshot();

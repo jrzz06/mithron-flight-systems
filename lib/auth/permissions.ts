@@ -73,6 +73,24 @@ export function roleHasPermission(role: CmsRole | string | null | undefined, per
   return rolePermissions[normalized]?.includes(permission) ?? false;
 }
 
+export function roleHasAnyPermission(
+  role: CmsRole | string | null | undefined,
+  permissions: readonly EnterprisePermission[]
+) {
+  return permissions.some((permission) => roleHasPermission(role, permission));
+}
+
+export function assertAnyRolePermission(
+  role: CmsRole | string | null | undefined,
+  permissions: readonly EnterprisePermission[]
+) {
+  if (!roleHasAnyPermission(role, permissions)) {
+    throw new PermissionDeniedError(
+      `Role ${role ?? "anonymous"} cannot perform any of: ${permissions.join(", ")}.`
+    );
+  }
+}
+
 export function assertRolePermission(role: CmsRole | string | null | undefined, permission: EnterprisePermission) {
   if (!roleHasPermission(role, permission)) {
     throw new PermissionDeniedError(`Role ${role ?? "anonymous"} cannot perform ${permission}.`);

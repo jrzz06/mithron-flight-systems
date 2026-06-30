@@ -44,6 +44,7 @@ const ROUTE_CATEGORIES: Record<string, RouteSecurityCategory> = {
   "app/api/security/denials/route.ts": "staff_bearer_jwt",
   "app/api/upload/route.ts": "token_auth",
   "app/api/editor/ai/route.ts": "staff_permission_auth",
+  "app/api/editor/generate-image/route.ts": "staff_permission_auth",
   "app/api/editor/upload-image/route.ts": "staff_permission_auth",
   "app/api/dev/load-test/route.ts": "dev_only",
   "app/api/health/route.ts": "health"

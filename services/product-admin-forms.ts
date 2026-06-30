@@ -1,5 +1,7 @@
 import { readEditorDocumentFields } from "@/lib/editor/read-form-content";
 import { readProductBadgeFieldsFromFormData } from "@/lib/product-badge";
+import { maybeNormalizeProductDescription } from "@/lib/product-description-normalize";
+import { normalizeProductDescriptionForSave } from "@/lib/product-description-ai-normalize";
 import { resolveProductPricing, type ProductDiscountType } from "@/lib/product-pricing";
 import { getProductTaxGroup, isProductTaxGroupId } from "@/lib/product-tax-groups";
 
@@ -467,11 +469,11 @@ function readProductCommerceFields(formData: FormData): ProductCommerceFields {
   const fields: ProductCommerceFields = {};
   const editorContent = readEditorDocumentFields(formData, "description_json", "description");
   if (editorContent) {
-    fields.description = editorContent.html || null;
+    fields.description = maybeNormalizeProductDescription(editorContent.html) || null;
     fields.description_json = editorContent.json as Record<string, unknown> | null;
   } else {
     const description = readOptionalString(formData, "description");
-    if (description !== undefined) fields.description = description;
+    if (description !== undefined) fields.description = maybeNormalizeProductDescription(description);
   }
 
   const badgeFields = readProductBadgeFieldsFromFormData(formData);
@@ -544,6 +546,17 @@ function readProductCommerceFields(formData: FormData): ProductCommerceFields {
   }
 
   return fields;
+}
+
+export async function applyProductDescriptionSaveNormalization<T extends { description?: string | null }>(
+  fields: T,
+  env: Record<string, string | undefined> = process.env
+): Promise<T> {
+  if (fields.description === undefined) return fields;
+  return {
+    ...fields,
+    description: await normalizeProductDescriptionForSave(fields.description, env)
+  };
 }
 
 function readProductCategory(formData: FormData) {

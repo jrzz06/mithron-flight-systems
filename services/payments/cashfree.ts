@@ -122,6 +122,15 @@ export class CashfreeGateway implements PaymentGateway {
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
+      logPaymentError("cashfree_order_create_failed", new Error(`HTTP ${response.status}`), {
+        orderId: input.orderId,
+        merchantOrderId,
+        orderAmount,
+        currency: input.currency || "INR",
+        apiBase: cashfreeApiBase(this.env),
+        status: response.status,
+        bodyPreview: body.slice(0, 240) || null
+      });
       throw new Error(`Cashfree order creation failed (${response.status})${body ? `: ${body.slice(0, 240)}` : ""}`);
     }
 
