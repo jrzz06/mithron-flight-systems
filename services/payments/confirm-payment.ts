@@ -1,10 +1,10 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { mergePaymentLifecycleMetadata } from "@/lib/orders/payment-lifecycle";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
-import { releaseCheckoutStock } from "@/services/checkout-stock";
 import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } from "@/services/orders";
 import { inrAmountsMatch, inrToPaise } from "./amount";
 import { cashfreeCheckoutMode } from "./config";
+import { razorpayKeyMode } from "./razorpay-payment-resolution";
 import { confirmVerifiedPayment } from "./confirm-verified-payment";
 import { fulfillOrderOnPaymentVerified } from "@/services/invoice/payment-fulfillment";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
@@ -46,6 +46,10 @@ export function buildCheckoutPaymentResponse(input: {
     amount: input.amount,
     currency: input.currency,
     razorpayKeyId: input.provider === "razorpay" ? env.RAZORPAY_KEY_ID?.trim() ?? null : null,
+    razorpayKeyMode:
+      input.provider === "razorpay" && env.RAZORPAY_KEY_ID?.trim()
+        ? razorpayKeyMode(env.RAZORPAY_KEY_ID)
+        : null,
     cashfreeMode: input.provider === "cashfree" ? cashfreeCheckoutMode(env) : null,
     amountPaise: input.intent.amountPaise ?? inrToPaise(input.amount)
   };
@@ -398,15 +402,6 @@ export async function applyPaymentEvent(input: {
     (order.metadata && typeof order.metadata === "object" ? order.metadata : {}) as JsonRecord;
 
   if (event.status === "failed") {
-    try {
-      await releaseCheckoutStock(orderId);
-    } catch (releaseError) {
-      logPaymentWarning("stock_release_failed", {
-        orderId,
-        error: releaseError instanceof Error ? releaseError.message : String(releaseError)
-      });
-    }
-
     await updateAdminRecord(
       "orders",
       "id",
@@ -457,15 +452,6 @@ export async function applyPaymentEvent(input: {
   }
 
   if (event.status === "refunded") {
-    try {
-      await releaseCheckoutStock(orderId);
-    } catch (releaseError) {
-      logPaymentWarning("refund_stock_release_failed", {
-        orderId,
-        error: releaseError instanceof Error ? releaseError.message : String(releaseError)
-      });
-    }
-
     const currentStatus = String(order.status ?? "paid");
     let nextStatus: string = "refunded";
     try {

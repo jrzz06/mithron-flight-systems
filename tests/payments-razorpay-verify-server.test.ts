@@ -47,10 +47,10 @@ describe("server-side Razorpay verification", () => {
     ).rejects.toThrow(/does not match this checkout session/i);
   });
 
-  it("routes payment confirmation through atomic RPC", () => {
+  it("routes payment confirmation through atomic RPC without payment-time stock deduction", () => {
     expect(source("services/payments/confirm-verified-payment.ts")).toContain("confirm_verified_payment");
     expect(source("services/payments/confirm-payment.ts")).toContain("confirmVerifiedPayment");
-    expect(source("supabase/migrations/20260629000100_confirm_verified_payment_rpc.sql")).toContain("fulfill_reserved_stock");
+    expect(source("supabase/migrations/20260712000100_simplified_inventory_model.sql")).toContain("inventory_skipped");
   });
 
   it("verifies payments only through dedicated server module", () => {

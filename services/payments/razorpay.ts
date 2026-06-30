@@ -6,8 +6,10 @@ import {
   fetchRazorpayPaymentEntity,
   mapRazorpayPaymentEntityStatus,
   razorpayEnvCredentials,
+  razorpayKeyMode,
   resolveVerifiedRazorpayPayment
 } from "./razorpay-payment-resolution";
+import { logPaymentError, logPaymentEvent } from "./logger";
 import type {
   ClientPaymentVerificationInput,
   CreateIntentInput,
@@ -70,6 +72,22 @@ export class RazorpayGateway implements PaymentGateway {
     const amountPaise = inrToPaise(normalizedAmount);
     const receipt = (input.metadata?.receipt ?? input.orderId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+    const checkoutConfigId = this.env.RAZORPAY_CHECKOUT_CONFIG_ID?.trim();
+
+    const orderBody: Record<string, unknown> = {
+      amount: amountPaise,
+      currency: input.currency || "INR",
+      receipt: receipt || input.orderId.slice(0, 40),
+      payment_capture: 1,
+      notes: {
+        order_id: input.orderId,
+        customer_email: input.customerEmail,
+        ...input.metadata
+      }
+    };
+    if (checkoutConfigId) {
+      orderBody.checkout_config_id = checkoutConfigId;
+    }
 
     const response = await fetch("https://api.razorpay.com/v1/orders", {
       method: "POST",
@@ -77,25 +95,32 @@ export class RazorpayGateway implements PaymentGateway {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        amount: amountPaise,
-        currency: input.currency || "INR",
-        receipt: receipt || input.orderId.slice(0, 40),
-        payment_capture: 1,
-        notes: {
-          order_id: input.orderId,
-          customer_email: input.customerEmail,
-          ...input.metadata
-        }
-      })
+      body: JSON.stringify(orderBody)
     });
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
+      logPaymentError("razorpay_order_create_failed", new Error(`HTTP ${response.status}`), {
+        orderId: input.orderId,
+        amountPaise,
+        currency: input.currency || "INR",
+        keyMode: razorpayKeyMode(keyId),
+        status: response.status,
+        bodyPreview: body.slice(0, 240) || null
+      });
       throw new Error(`Razorpay order creation failed (${response.status})${body ? `: ${body.slice(0, 240)}` : ""}`);
     }
 
     const order = (await response.json()) as RazorpayOrderResponse;
+    logPaymentEvent("razorpay_order_created", {
+      orderId: input.orderId,
+      razorpayOrderId: order.id,
+      amountPaise: order.amount,
+      currency: order.currency,
+      keyMode: razorpayKeyMode(keyId),
+      receipt: receipt || input.orderId.slice(0, 40),
+      checkoutConfigId: checkoutConfigId ?? null
+    });
     return {
       intentId: order.id,
       providerOrderId: order.id,

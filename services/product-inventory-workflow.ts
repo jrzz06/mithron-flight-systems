@@ -7,6 +7,7 @@ import {
   buildInventoryLinkageRecords,
   type ProductInventoryWorkflowInput
 } from "@/services/enterprise-admin-forms";
+import { stockStatusFromQuantity } from "@/services/inventory";
 import { revalidateCatalogSurfaces } from "@/lib/catalog-cache";
 import { deriveProductSku, upsertProductInventoryRecord } from "@/services/product-inventory";
 import { fetchWarehouseStockBySku, recordInventoryMovementForStockChange } from "@/services/warehouse-movements";
@@ -57,7 +58,6 @@ export function parseProductCreateInventoryFromFormData(
 
   const warehouseCode = String(formData.get("inventory_warehouse_code") ?? "").trim();
   const initialQuantity = readOptionalInteger(formData, "inventory_initial_quantity") ?? 0;
-  const reorderThreshold = readOptionalInteger(formData, "inventory_reorder_threshold") ?? 0;
 
   if (!warehouseCode) {
     if (initialQuantity <= 0) return null;
@@ -66,31 +66,16 @@ export function parseProductCreateInventoryFromFormData(
   if (initialQuantity < 0) {
     throw new Error("Initial quantity cannot be negative.");
   }
-  if (reorderThreshold < 0) {
-    throw new Error("Reorder threshold cannot be negative.");
-  }
-  if (initialQuantity > 0 && reorderThreshold > initialQuantity) {
-    throw new Error("Reorder threshold cannot exceed initial quantity.");
-  }
 
   const sku = deriveProductSku(productSlug);
-  const stockStatus = initialQuantity <= 0
-    ? "out_of_stock"
-    : reorderThreshold > 0 && initialQuantity <= reorderThreshold
-      ? "low_stock"
-      : "available";
 
   return {
     productSlug,
     sku,
     variantId: null,
-    stockStatus,
+    stockStatus: stockStatusFromQuantity(initialQuantity),
     quantity: initialQuantity,
-    reservedQuantity: 0,
-    reorderThreshold,
     warehouseCode,
-    availableQuantity: initialQuantity,
-    committedQuantity: 0,
     changeSummary: "Initial inventory on product creation"
   };
 }
@@ -104,9 +89,6 @@ export function parseApprovalInventoryFromFormData(
   const initialQuantity = readOptionalInteger(formData, "approval_initial_quantity")
     ?? fallback?.initial_quantity
     ?? 0;
-  const reorderThreshold = readOptionalInteger(formData, "approval_reorder_threshold")
-    ?? fallback?.reorder_threshold
-    ?? 0;
   const sku = String(formData.get("approval_sku") ?? fallback?.sku ?? "").trim() || deriveProductSku(productSlug);
   const trackInventory = fallback?.track_inventory !== false;
 
@@ -118,18 +100,6 @@ export function parseApprovalInventoryFromFormData(
   if (initialQuantity < 0) {
     throw new Error("Initial quantity cannot be negative.");
   }
-  if (reorderThreshold < 0) {
-    throw new Error("Reorder threshold cannot be negative.");
-  }
-  if (initialQuantity > 0 && reorderThreshold > initialQuantity) {
-    throw new Error("Reorder threshold cannot exceed initial quantity.");
-  }
-
-  const stockStatus = initialQuantity <= 0
-    ? "out_of_stock"
-    : reorderThreshold > 0 && initialQuantity <= reorderThreshold
-      ? "low_stock"
-      : "available";
 
   const stockNotes = String(formData.get("approval_stock_notes") ?? fallback?.stock_notes ?? "").trim();
 
@@ -137,13 +107,9 @@ export function parseApprovalInventoryFromFormData(
     productSlug,
     sku,
     variantId: null,
-    stockStatus,
+    stockStatus: stockStatusFromQuantity(initialQuantity),
     quantity: initialQuantity,
-    reservedQuantity: 0,
-    reorderThreshold,
     warehouseCode,
-    availableQuantity: initialQuantity,
-    committedQuantity: 0,
     changeSummary: stockNotes || "Initial inventory on supplier approval"
   };
 }
@@ -161,7 +127,8 @@ export async function saveProductInventory(
   const now = new Date().toISOString();
   const normalizedInput: ProductInventoryWorkflowInput = {
     ...input,
-    sku: deriveProductSku(input.productSlug)
+    sku: deriveProductSku(input.productSlug),
+    stockStatus: stockStatusFromQuantity(input.quantity)
   };
 
   await assertValidWarehouseCode(normalizedInput.warehouseCode, env);
@@ -178,7 +145,7 @@ export async function saveProductInventory(
 
   const saved = await upsertProductInventoryRecord(normalizedInput, actorId, env);
 
-  if (saved.availableQuantity !== quantityBefore) {
+  if (saved.quantity !== quantityBefore) {
     await recordInventoryMovementForStockChange(
       {
         productId: normalizedInput.productSlug,
@@ -186,9 +153,9 @@ export async function saveProductInventory(
         variantId: normalizedInput.variantId,
         warehouseCode: normalizedInput.warehouseCode,
         warehouseStockId: String(previousStock?.id ?? "") || null,
-        movementType: quantityBefore === 0 && saved.availableQuantity > 0 ? "stock_in" : "adjustment",
+        movementType: quantityBefore === 0 && saved.quantity > 0 ? "stock_in" : "adjustment",
         quantityBefore,
-        quantityAfter: saved.availableQuantity,
+        quantityAfter: saved.quantity,
         reasonCode: options.auditAction ?? "inventory.update",
         notes: normalizedInput.changeSummary,
         actorUserId: actorId,
@@ -228,11 +195,7 @@ export async function saveProductInventory(
         variant_id: normalizedInput.variantId,
         warehouse_code: normalizedInput.warehouseCode,
         stock_status: saved.stockStatus,
-        quantity: normalizedInput.quantity,
-        reserved_quantity: normalizedInput.reservedQuantity,
-        reorder_threshold: normalizedInput.reorderThreshold,
-        available_quantity: saved.availableQuantity,
-        committed_quantity: saved.committedQuantity
+        quantity: saved.quantity
       }
     },
     actorId,

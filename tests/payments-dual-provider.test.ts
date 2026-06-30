@@ -103,7 +103,7 @@ describe("dual-provider payment integration", () => {
     const confirm = source("services/payments/confirm-payment.ts");
     expect(confirm).toContain("applyPaymentEvent");
     expect(confirm).toContain("resolvePaymentRecordForEvent");
-    expect(confirm).toContain("releaseCheckoutStock");
+    expect(confirm).not.toContain("releaseCheckoutStock");
     expect(confirm).toContain("confirmVerifiedPayment");
     const atomic = source("services/payments/confirm-verified-payment.ts");
     expect(atomic).toContain("notifyAdminsAboutPaidOrder");

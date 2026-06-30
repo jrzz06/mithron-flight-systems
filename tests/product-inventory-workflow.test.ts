@@ -18,18 +18,11 @@ function formData(entries: Record<string, string>) {
 }
 
 describe("product inventory enterprise workflow", () => {
-  it("builds SKU-safe inventory and warehouse records with persisted variant linkage", () => {
+  it("builds inventory and warehouse records with quantity as the single source of truth", () => {
     const input = buildProductInventoryWorkflowFromFormData(formData({
       product_slug: "source-agri-kisan-drone-small-8-liter",
-      sku: " AG-8L-BASE ",
-      variant_id: "base",
       warehouse_code: " IN-WEST-01 ",
-      stock_status: "available",
       quantity: "4",
-      reserved_quantity: "1",
-      reorder_threshold: "5",
-      available_quantity: "3",
-      committed_quantity: "1",
       change_summary: "Link base variant stock"
     }));
 
@@ -41,11 +34,11 @@ describe("product inventory enterprise workflow", () => {
     expect(records.inventoryRecord).toEqual({
       product_slug: "source-agri-kisan-drone-small-8-liter",
       sku: "SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER",
-      variant_id: "base",
-      stock_status: "low_stock",
+      variant_id: null,
+      stock_status: "available",
       quantity: 4,
-      reserved_quantity: 1,
-      reorder_threshold: 5,
+      reserved_quantity: 0,
+      reorder_threshold: 0,
       updated_by: "00000000-0000-0000-0000-000000000001",
       updated_at: "2026-05-24T10:00:00.000Z"
     });
@@ -53,30 +46,25 @@ describe("product inventory enterprise workflow", () => {
       warehouse_code: "IN-WEST-01",
       product_slug: "source-agri-kisan-drone-small-8-liter",
       sku: "SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER",
-      variant_id: "base",
-      available_quantity: 3,
-      committed_quantity: 1,
+      variant_id: null,
+      available_quantity: 4,
+      committed_quantity: 0,
       last_counted_at: "2026-05-24T10:00:00.000Z",
       updated_by: "00000000-0000-0000-0000-000000000001",
       updated_at: "2026-05-24T10:00:00.000Z"
     });
-    expect(records.lowStock).toBe(true);
+    expect(records.lowStock).toBe(false);
   });
 
-  it("derives sellable warehouse stock from quantity minus reserved", () => {
+  it("derives stock status from quantity", () => {
     const input = buildProductInventoryWorkflowFromFormData(formData({
       product_slug: "source-agri-kisan-drone-small-8-liter",
-      sku: "IGNORED",
       warehouse_code: "IN-WEST-01",
-      stock_status: "available",
-      quantity: "10",
-      reserved_quantity: "0",
-      reorder_threshold: "1"
+      quantity: "0"
     }));
 
     expect(input.sku).toBe("SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER");
-    expect(input.availableQuantity).toBe(10);
-    expect(input.committedQuantity).toBe(0);
+    expect(input.stockStatus).toBe("out_of_stock");
   });
 
   it("parses create inventory when checkbox sends off then on", () => {
@@ -93,11 +81,7 @@ describe("product inventory enterprise workflow", () => {
       variantId: null,
       stockStatus: "available",
       quantity: 6,
-      reservedQuantity: 0,
-      reorderThreshold: 0,
       warehouseCode: "IN-WEST-01",
-      availableQuantity: 6,
-      committedQuantity: 0,
       changeSummary: "Initial inventory on product creation"
     });
   });
@@ -110,127 +94,30 @@ describe("product inventory enterprise workflow", () => {
     }), "agri-drone-x1");
 
     expect(parsed?.quantity).toBe(0);
-    expect(parsed?.availableQuantity).toBe(0);
     expect(parsed?.warehouseCode).toBe("IN-WEST-01");
   });
 
-  it("rejects inconsistent reserved and committed quantities before mutation", () => {
-    const input = buildProductInventoryWorkflowFromFormData(formData({
-      product_slug: "source-agri-kisan-drone-small-8-liter",
-      sku: "AG-8L-BASE",
-      warehouse_code: "IN-WEST-01",
-      stock_status: "available",
-      quantity: "2",
-      reserved_quantity: "3",
-      reorder_threshold: "1",
-      available_quantity: "5",
-      committed_quantity: "6"
-    }));
-
-    expect(() => buildInventoryLinkageRecords(input, {
-      actorId: "00000000-0000-0000-0000-000000000001",
-      at: "2026-05-24T10:00:00.000Z"
-    })).toThrow("Reserved quantity cannot exceed inventory quantity.");
+  it("reconciles admin stock quantities to a single quantity value", () => {
+    expect(reconcileAdminInventoryQuantities({ quantity: 10 })).toEqual({ quantity: 10 });
   });
 
-  it("reconciles admin stock quantities when committed exceeds sellable", () => {
-    const reconciled = reconcileAdminInventoryQuantities({
-      quantity: 10,
-      previousReserved: 3,
-      previousCommitted: 8
-    });
-
-    expect(reconciled).toEqual({
-      reservedQuantity: 3,
-      sellableQuantity: 7,
-      committedQuantity: 7
-    });
-  });
-
-  it("builds linkage records from reconciled admin stock quantities", () => {
-    const { reservedQuantity, sellableQuantity, committedQuantity } = reconcileAdminInventoryQuantities({
-      quantity: 10,
-      previousReserved: 3,
-      previousCommitted: 8
-    });
-
-    const records = buildInventoryLinkageRecords(
-      {
-        productSlug: "source-agri-kisan-drone-small-8-liter",
-        sku: "SOURCE-AGRI-KISAN-DRONE-SMALL-8-LITER",
-        variantId: null,
-        stockStatus: "available",
-        quantity: 10,
-        reservedQuantity,
-        reorderThreshold: 0,
-        warehouseCode: "IN-WEST-01",
-        availableQuantity: sellableQuantity,
-        committedQuantity,
-        changeSummary: "Admin stock override"
-      },
-      {
-        actorId: "00000000-0000-0000-0000-000000000001",
-        at: "2026-06-29T10:00:00.000Z"
-      }
-    );
-
-    expect(records.warehouseStockRecord.available_quantity).toBe(7);
-    expect(records.warehouseStockRecord.committed_quantity).toBe(7);
-  });
-
-  it("maps Wix-style stock edits into the existing inventory and warehouse contract", () => {
+  it("builds simple inventory updates from quantity", () => {
     const input = buildSimpleInventoryUpdateFromFormData(formData({
-      product_slug: "source-agri-kisan-drone-small-8-liter",
-      sku: " AG-8L-BASE ",
-      variant_id: "base",
-      warehouse_code: " IN-WEST-01 ",
-      stock_status: "out_of_stock",
-      quantity: "0",
-      note: "Manual count from simple inventory"
+      product_slug: "agri-drone-x1",
+      sku: "AGRI-DRONE-X1",
+      warehouse_code: "IN-WEST-01",
+      quantity: "3"
     }));
 
-    expect(input).toEqual({
-      productSlug: "source-agri-kisan-drone-small-8-liter",
-      sku: "AG-8L-BASE",
-      variantId: "base",
-      warehouseCode: "IN-WEST-01",
-      stockStatus: "out_of_stock",
-      quantity: 0,
-      note: "Manual count from simple inventory",
-      changeSummary: "Update stock for source-agri-kisan-drone-small-8-liter:AG-8L-BASE"
-    });
+    expect(input.stockStatus).toBe("available");
+    expect(input.quantity).toBe(3);
   });
 
-  it("wires product and warehouse inventory forms through one shared linkage builder", () => {
-    const productActions = readFileSync(join(process.cwd(), "app/admin/products/actions.ts"), "utf8");
-    const warehouseActions = readFileSync(join(process.cwd(), "app/warehouse/actions.ts"), "utf8");
-    const adminPage = readFileSync(join(process.cwd(), "app/admin/products/page.tsx"), "utf8");
-    const warehousePage = readFileSync(join(process.cwd(), "app/warehouse/inventory/page.tsx"), "utf8");
-
-    expect(productActions).toContain("saveProductInventory");
-    expect(productActions).toContain("buildProductInventoryWorkflowFromFormData");
-    expect(warehouseActions).toContain("saveProductInventory");
-    expect(warehouseActions).toContain("upsertProductInventoryRecord");
-    expect(warehouseActions).toContain("saveSimpleInventoryFormAction");
-    expect(warehouseActions).toContain("saveInventoryQuickEditFormAction");
-    expect(adminPage).toContain("data-product-inventory-table=\"inventory\"");
-    expect(adminPage).toContain("defaultValue={activeProductSlug}");
-    expect(adminPage).toContain("defaultValue={checkoutWarehouseCode}");
-    expect(warehousePage).toContain("WarehouseInventoryManager");
-    expect(warehousePage).toContain("getCsvInventoryRows");
-  });
-
-  it("adds additive schema support for variant-linked, SKU-required inventory rows", () => {
-    const migrationPath = join(process.cwd(), "supabase", "migrations", "20260524000400_product_inventory_linkage.sql");
+  it("includes simplified inventory migration", () => {
+    const migrationPath = join(process.cwd(), "supabase", "migrations", "20260712000100_simplified_inventory_model.sql");
     expect(existsSync(migrationPath)).toBe(true);
-    const sql = readFileSync(migrationPath, "utf8").toLowerCase();
-
-    expect(sql).toContain("alter table public.inventory");
-    expect(sql).toContain("add column if not exists variant_id text");
-    expect(sql).toContain("alter table public.warehouse_stock");
-    expect(sql).toContain("inventory_sku_required_chk");
-    expect(sql).toContain("warehouse_stock_sku_required_chk");
-    expect(sql).toContain("inventory_variant_lookup_idx");
-    expect(sql).toContain("warehouse_stock_variant_lookup_idx");
+    const sql = readFileSync(migrationPath, "utf8");
+    expect(sql).toContain("upsert_product_inventory");
+    expect(sql).toContain("stock_deduction_trigger");
   });
 });

@@ -1,6 +1,6 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { AdminRecordConflictError } from "@/services/admin-actions";
-import { fulfillReservedStock } from "@/services/checkout-stock";
+import { deductInventoryForOrder } from "@/services/inventory";
 import {
   createActivityLogRecord,
   createInventoryMovementRecord,
@@ -165,11 +165,8 @@ function normalizeTimestamp(value: string | Date) {
   return timestamp;
 }
 
-function stockStatusFor(quantity: number, reservedQuantity: number, reorderThreshold: number): ProductInventoryWorkflowInput["stockStatus"] {
-  const sellable = quantity - reservedQuantity;
-  if (sellable <= 0) return "out_of_stock";
-  if (reorderThreshold > 0 && sellable <= reorderThreshold) return "low_stock";
-  return "available";
+function stockStatusFor(quantity: number): ProductInventoryWorkflowInput["stockStatus"] {
+  return quantity > 0 ? "available" : "out_of_stock";
 }
 
 function numberField(record: JsonRecord | null, key: string, fallback = 0) {
@@ -312,11 +309,20 @@ export function buildWarehouseMovementFormFromFormData(formData: FormData): Ware
   };
 }
 
-export function shouldDeductFulfillmentStock(previousStatus: string | null | undefined, nextStatus: string | null | undefined) {
-  const executionStates = new Set(["packed", "ready_to_dispatch", "shipped", "fulfilled", "completed", "delivered"]);
+export type StockDeductionTrigger = "packed" | "dispatched";
+
+export function shouldDeductFulfillmentStock(
+  previousStatus: string | null | undefined,
+  nextStatus: string | null | undefined,
+  trigger: StockDeductionTrigger = "dispatched"
+) {
   const previous = previousStatus?.trim().toLowerCase() ?? "";
   const next = nextStatus?.trim().toLowerCase() ?? "";
-  return executionStates.has(next) && !executionStates.has(previous);
+  if (trigger === "packed") {
+    return next === "packed" && previous !== "packed";
+  }
+  const dispatchStates = new Set(["ready_to_dispatch", "shipped", "delivered"]);
+  return dispatchStates.has(next) && !dispatchStates.has(previous);
 }
 
 export async function recordInventoryMovementForStockChange(
@@ -458,30 +464,16 @@ export async function applyWarehouseStockMovement(
     throw new Error("Warehouse movement would make available stock negative.");
   }
 
-  const currentCommitted = numberField(existingStock, "committed_quantity");
-  const committedQuantity = options.committedQuantityAfter ?? currentCommitted;
-  if (committedQuantity > quantityAfter) {
-    throw new Error("Committed warehouse quantity cannot exceed available warehouse quantity after movement.");
-  }
-
   const inventoryQuantityBefore = existingInventory ? numberField(existingInventory, "quantity") : quantityBefore;
   const inventoryQuantity = Math.max(0, inventoryQuantityBefore + quantityDelta);
-  const currentReserved = numberField(existingInventory, "reserved_quantity");
-  const reservedQuantity = options.reservedQuantityAfter ?? Math.min(currentReserved, inventoryQuantity);
-  const reorderThreshold = numberField(existingInventory, "reorder_threshold");
   const variantId = input.variantId ?? normalizeOptional(String(existingStock?.variant_id ?? existingInventory?.variant_id ?? ""));
-  const stockStatus = stockStatusFor(inventoryQuantity, reservedQuantity, reorderThreshold);
   const workflowInput: ProductInventoryWorkflowInput = {
     productSlug: input.productSlug,
     sku: input.sku,
     variantId,
-    stockStatus,
+    stockStatus: stockStatusFor(inventoryQuantity),
     quantity: inventoryQuantity,
-    reservedQuantity,
-    reorderThreshold,
     warehouseCode: input.warehouseCode,
-    availableQuantity: quantityAfter,
-    committedQuantity,
     changeSummary: input.changeSummary
   };
   const warehouseStockId = normalizeOptional(String(existingStock?.id ?? ""));
@@ -542,6 +534,6 @@ export async function applyFulfillmentStockMovements(input: {
   at: string;
   env?: EnvSource;
 }) {
-  await fulfillReservedStock(input.orderId, input.actorId, input.env, input.warehouseCode);
-  return [{ movement_type: "fulfillment", related_order_id: input.orderId, created_at: input.at }];
+  const result = await deductInventoryForOrder(input.orderId, input.actorId, input.env, input.warehouseCode);
+  return [{ movement_type: "fulfillment", related_order_id: input.orderId, created_at: input.at, result }];
 }

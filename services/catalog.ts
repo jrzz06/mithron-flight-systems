@@ -23,6 +23,7 @@ import {
 } from "@/lib/catalog-search-index";
 import { formatAvailability, isSpecLikeBlob, parseInlineSpecPairs } from "@/lib/product-spec-text";
 import { customerFacingAvailability } from "@/services/inventory-csv";
+import { availabilityLabelFromQuantity, getInventoryQuantitiesBySlug } from "@/services/inventory";
 import type { OrderCatalogProduct } from "@/services/orders";
 import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
 import { buildProductResponsiveAsset } from "@/lib/media/product-responsive";
@@ -500,6 +501,17 @@ function dedupeMediaAssets(items: MediaAsset[]) {
 
 function postgrestIn(values: string[]) {
   return `in.(${values.map((value) => `"${value.replace(/"/g, "\"\"")}"`).join(",")})`;
+}
+
+async function overlayLiveInventoryAvailability<T extends { slug: string; source_availability?: string | null }>(rows: T[]): Promise<T[]> {
+  const slugs = rows.map((row) => row.slug).filter(Boolean);
+  if (!slugs.length) return rows;
+  const quantities = await getInventoryQuantitiesBySlug(slugs);
+  return rows.map((row) => {
+    const entry = quantities.get(row.slug);
+    if (!entry) return row;
+    return { ...row, source_availability: availabilityLabelFromQuantity(entry.quantity) };
+  });
 }
 
 function chunkItems<T>(items: T[], size: number) {
@@ -1502,7 +1514,7 @@ function mapHomepageProductRow(row: MithronProductRow, linkedPrimaryImage?: Medi
 
 
 export const getProducts = cache(async (): Promise<Product[]> => {
-  const rows = await fetchAllCatalogRows<MithronProductRow>(catalogListSelect);
+  const rows = await overlayLiveInventoryAvailability(await fetchAllCatalogRows<MithronProductRow>(catalogListSelect));
   const products = await mapRowsWithCatalogMedia(rows, mapProductRow);
   return dedupeProductsBySlug(products);
 });
@@ -1579,6 +1591,7 @@ export async function getProductBySlug(slug: string) {
   try {
     const row = await getProductRowBySlug(slug);
     if (!row) return undefined;
+    const [liveRow] = await overlayLiveInventoryAvailability([row]);
     const primaryMedia = await getPrimaryProductMediaLookup();
     let catalogCutouts = new Map<string, MediaAsset>();
 
@@ -1590,7 +1603,7 @@ export async function getProductBySlug(slug: string) {
     }
 
     try {
-      return mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug));
+      return mapProductRow(liveRow, catalogCutouts.get(liveRow.slug) ?? primaryMedia.get(liveRow.slug));
     } catch (error) {
       if (isMissingSourceImageError(error)) {
         console.warn(`[catalog] ${error.message}`);
@@ -1609,6 +1622,7 @@ export async function loadProductForPage(slug: string): Promise<ProductPageLoadR
   try {
     const row = await getProductRowBySlug(slug);
     if (!row) return { status: "not_found" };
+    const [liveRow] = await overlayLiveInventoryAvailability([row]);
 
     const primaryMedia = await getPrimaryProductMediaLookup();
     let catalogCutouts = new Map<string, MediaAsset>();
@@ -1623,7 +1637,7 @@ export async function loadProductForPage(slug: string): Promise<ProductPageLoadR
     try {
       return {
         status: "ready",
-        product: mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug))
+        product: mapProductRow(liveRow, catalogCutouts.get(liveRow.slug) ?? primaryMedia.get(liveRow.slug))
       };
     } catch (error) {
       if (isMissingSourceImageError(error)) {

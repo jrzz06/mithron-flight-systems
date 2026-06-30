@@ -1,6 +1,7 @@
 import { deriveProductSku } from "@/lib/product-sku";
+import { stockStatusFromQuantity } from "@/services/inventory";
 
-export type SimpleInventoryStatus = "available" | "low_stock" | "out_of_stock" | "archived" | "discontinued" | "reserved";
+export type SimpleInventoryStatus = "available" | "out_of_stock" | "archived" | "discontinued";
 
 export type SimpleInventoryRow = {
   id: string;
@@ -12,17 +13,12 @@ export type SimpleInventoryRow = {
   warehouseCode: string;
   stockStatus: SimpleInventoryStatus;
   quantity: number;
-  onHandQuantity: number;
   category: string;
   price: number;
   inventoryValue: number;
   lastUpdated: string | null;
   warehouseUpdatedAt: string | null;
   inventoryUpdatedAt: string | null;
-  reservedQuantity: number;
-  reorderThreshold: number;
-  availableQuantity: number;
-  committedQuantity: number;
   supplierName: string;
   isArchived: boolean;
 };
@@ -44,11 +40,8 @@ export function resolveStockStatus(value: unknown, quantity: number, product?: A
   if (workflowStatus === "archived" || archivedAt) return "archived";
   if (value === "archived") return "archived";
   if (value === "discontinued") return "discontinued";
-  if (value === "reserved") return "reserved";
   if (value === "inactive" || value === "hidden") return "discontinued";
-  if (quantity <= 0) return "out_of_stock";
-  if (value === "low_stock" || value === "out_of_stock" || value === "available") return value;
-  return "available";
+  return stockStatusFromQuantity(quantity);
 }
 
 function asStockStatus(value: unknown, quantity: number, product?: AdminRow): SimpleInventoryStatus {
@@ -122,9 +115,7 @@ export function buildSimpleInventoryRows(
     const stockRow = pickWarehouseStockRow(stock, productSlug, preferredWarehouseCode);
     const sku = asText(inv?.sku, deriveProductSku(productSlug));
     const warehouseCode = asText(stockRow?.warehouse_code, preferredWarehouseCode);
-    const onHandQuantity = asNumber(inv?.quantity);
-    const availableQuantity = asNumber(stockRow?.available_quantity, onHandQuantity);
-    const quantity = availableQuantity;
+    const quantity = asNumber(inv?.quantity);
     const price = asNumber(product.price);
 
     return {
@@ -137,17 +128,12 @@ export function buildSimpleInventoryRows(
       warehouseCode,
       stockStatus: asStockStatus(inv?.stock_status, quantity, product),
       quantity,
-      onHandQuantity,
       category: asText(product.category, "Uncategorized"),
       price,
       inventoryValue: price * quantity,
       lastUpdated: asText(inv?.updated_at ?? stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
       warehouseUpdatedAt: asText(stockRow?.updated_at ?? stockRow?.last_counted_at, "") || null,
       inventoryUpdatedAt: asText(inv?.updated_at, "") || null,
-      reservedQuantity: asNumber(inv?.reserved_quantity),
-      reorderThreshold: asNumber(inv?.reorder_threshold),
-      availableQuantity,
-      committedQuantity: asNumber(stockRow?.committed_quantity),
       supplierName: asText(product.supplier_name, ""),
       isArchived: isProductArchived(product)
     } satisfies SimpleInventoryRow;

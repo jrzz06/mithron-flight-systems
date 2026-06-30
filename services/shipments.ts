@@ -11,7 +11,6 @@ import {
 } from "@/services/admin-actions";
 import { appendOrderTimeline, buildOrderTimelineEntry } from "@/services/orders";
 import { applyWarehouseStockMovement } from "@/services/warehouse-movements";
-import { fulfillReservedStock, orderHasCheckoutReservations, releaseCheckoutStock } from "@/services/checkout-stock";
 
 type EnvSource = Record<string, string | undefined>;
 type JsonRecord = Record<string, unknown>;
@@ -579,14 +578,6 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
 
   const orderItemMap = new Map(orderItems.map((item) => [String(item.id ?? ""), item]));
   const createdItems: JsonRecord[] = [];
-  const stockDeductions: Array<{
-    productSlug: string;
-    sku: string;
-    variantId: string | null;
-    quantity: number;
-  }> = [];
-  const hasCheckoutReservation = await orderHasCheckoutReservations(input.orderId, env);
-  let fulfilledReservations = false;
 
   try {
     for (const item of input.items) {
@@ -609,44 +600,6 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
         env
       );
       createdItems.push(shipmentItem);
-
-      if (!hasCheckoutReservation) {
-        stockDeductions.push({
-          productSlug: item.productId,
-          sku,
-          variantId: item.variantId,
-          quantity: item.quantity
-        });
-      }
-    }
-
-    for (const deduction of stockDeductions) {
-      await applyWarehouseStockMovement(
-        {
-          productSlug: deduction.productSlug,
-          sku: deduction.sku,
-          variantId: deduction.variantId,
-          warehouseCode: input.warehouseId,
-          movementType: "fulfillment",
-          quantityDelta: -deduction.quantity,
-          targetQuantity: null,
-          reasonCode: "shipment_created",
-          notes: `Shipment ${shipmentNumber} created for order ${input.orderId}.`,
-          relatedOrderId: input.orderId,
-          relatedShipmentId: shipmentId,
-          changeSummary: `Deduct shipment ${shipmentNumber} stock`
-        },
-        {
-          actorId: options.actorId,
-          at,
-          env
-        }
-      );
-    }
-
-    if (hasCheckoutReservation) {
-      await fulfillReservedStock(input.orderId, options.actorId, env, input.warehouseId);
-      fulfilledReservations = true;
     }
 
     const timeline = await createShipmentTimelineRecord(
@@ -684,9 +637,6 @@ export async function createShipmentWorkflow(input: ShipmentCreateWorkflowInput,
       shipmentNumber,
       shipment,
       orderId: input.orderId,
-      warehouseCode: input.warehouseId,
-      stockDeductions,
-      fulfilledReservations,
       orderItems,
       actorId: options.actorId,
       at,
@@ -701,50 +651,11 @@ async function cancelShipmentAndRestoreStock(input: {
   shipmentNumber: string;
   shipment: JsonRecord;
   orderId: string;
-  warehouseCode: string;
-  stockDeductions: Array<{ productSlug: string; sku: string; variantId: string | null; quantity: number }>;
-  fulfilledReservations?: boolean;
   orderItems: JsonRecord[];
   actorId: string | null;
   at: string;
   env: EnvSource;
 }) {
-  if (input.fulfilledReservations) {
-    try {
-      await releaseCheckoutStock(input.orderId, input.env, input.warehouseCode);
-    } catch {
-      // Best-effort reservation rollback.
-    }
-  }
-
-  for (const deduction of input.stockDeductions) {
-    try {
-      await applyWarehouseStockMovement(
-        {
-          productSlug: deduction.productSlug,
-          sku: deduction.sku,
-          variantId: deduction.variantId,
-          warehouseCode: input.warehouseCode,
-          movementType: "return",
-          quantityDelta: deduction.quantity,
-          targetQuantity: null,
-          reasonCode: "shipment_create_rollback",
-          notes: `Rollback failed shipment ${input.shipmentNumber} for order ${input.orderId}.`,
-          relatedOrderId: input.orderId,
-          relatedShipmentId: input.shipmentId,
-          changeSummary: `Restore stock after failed shipment ${input.shipmentNumber}`
-        },
-        {
-          actorId: input.actorId,
-          at: input.at,
-          env: input.env
-        }
-      );
-    } catch {
-      // Best-effort rollback; shipment still marked cancelled.
-    }
-  }
-
   try {
     await updateShipmentRecord(
       input.shipmentId,

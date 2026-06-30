@@ -4,7 +4,7 @@ import type { ManualOrderPaymentMethod, ManualOrderWorkflowInput } from "@/servi
 import { deriveProductSku } from "@/lib/product-sku";
 
 type JsonRecord = Record<string, unknown>;
-type StockStatus = "available" | "low_stock" | "out_of_stock";
+type StockStatus = "available" | "out_of_stock";
 
 export type ProductInventoryWorkflowInput = {
   productSlug: string;
@@ -12,11 +12,7 @@ export type ProductInventoryWorkflowInput = {
   variantId: string | null;
   stockStatus: StockStatus;
   quantity: number;
-  reservedQuantity: number;
-  reorderThreshold: number;
   warehouseCode: string;
-  availableQuantity: number;
-  committedQuantity: number;
   changeSummary: string;
 };
 
@@ -311,13 +307,8 @@ export function buildProductInventoryWorkflowFromFormData(formData: FormData): P
   const productSlug = readRequiredString(formData, "product_slug", "Inventory");
   const sku = deriveProductSku(productSlug);
   const warehouseCode = readRequiredString(formData, "warehouse_code", "Inventory");
-  const stockStatus = readRequiredEnum(formData, "stock_status", ["available", "low_stock", "out_of_stock"] as const, "Inventory");
   const quantity = readOptionalInteger(formData, "quantity", "Inventory quantity") ?? 0;
-  const reservedQuantity = readOptionalInteger(formData, "reserved_quantity", "Inventory reserved quantity") ?? 0;
-  const reorderThreshold = readOptionalInteger(formData, "reorder_threshold", "Inventory reorder threshold") ?? 0;
-  const sellableQuantity = Math.max(0, quantity - reservedQuantity);
-  const availableQuantity = sellableQuantity;
-  const committedQuantity = reservedQuantity;
+  const stockStatus: StockStatus = quantity > 0 ? "available" : "out_of_stock";
   const variantId = readOptionalString(formData, "variant_id") ?? null;
   const changeSummary = readOptionalString(formData, "change_summary") ?? `Update inventory for ${productSlug}:${sku}`;
 
@@ -327,11 +318,7 @@ export function buildProductInventoryWorkflowFromFormData(formData: FormData): P
     variantId,
     stockStatus,
     quantity,
-    reservedQuantity,
-    reorderThreshold,
     warehouseCode,
-    availableQuantity,
-    committedQuantity,
     changeSummary
   };
 }
@@ -339,8 +326,8 @@ export function buildProductInventoryWorkflowFromFormData(formData: FormData): P
 export function buildSimpleInventoryUpdateFromFormData(formData: FormData): SimpleInventoryUpdateInput {
   const productSlug = readRequiredString(formData, "product_slug", "Inventory");
   const sku = readRequiredString(formData, "sku", "Inventory");
-  const stockStatus = readRequiredEnum(formData, "stock_status", ["available", "low_stock", "out_of_stock"] as const, "Inventory");
   const quantity = readOptionalInteger(formData, "quantity", "Inventory quantity") ?? 0;
+  const stockStatus: StockStatus = quantity > 0 ? "available" : "out_of_stock";
   const variantId = readOptionalString(formData, "variant_id") ?? null;
   const warehouseCode = readOptionalString(formData, "warehouse_code") ?? "";
   const note = readOptionalString(formData, "note") ?? null;
@@ -358,56 +345,18 @@ export function buildSimpleInventoryUpdateFromFormData(formData: FormData): Simp
   };
 }
 
-function stockSeverity(status: StockStatus) {
-  if (status === "out_of_stock") return 2;
-  if (status === "low_stock") return 1;
-  return 0;
-}
-
-function stockStatusFromSeverity(severity: number): StockStatus {
-  if (severity >= 2) return "out_of_stock";
-  if (severity >= 1) return "low_stock";
-  return "available";
-}
-
 function deriveInventoryStockStatus(input: ProductInventoryWorkflowInput): StockStatus {
-  const sellableQuantity = input.quantity - input.reservedQuantity;
-  const quantityStatus: StockStatus = sellableQuantity <= 0
-    ? "out_of_stock"
-    : input.reorderThreshold > 0 && sellableQuantity <= input.reorderThreshold
-      ? "low_stock"
-      : "available";
-
-  return stockStatusFromSeverity(Math.max(stockSeverity(input.stockStatus), stockSeverity(quantityStatus)));
+  return input.quantity > 0 ? "available" : "out_of_stock";
 }
 
-export function reconcileAdminInventoryQuantities(input: {
-  quantity: number;
-  previousReserved?: number;
-  previousCommitted?: number;
-}) {
-  const reservedQuantity = Math.min(Math.max(0, input.previousReserved ?? 0), input.quantity);
-  const sellableQuantity = Math.max(0, input.quantity - reservedQuantity);
-  const committedQuantity = Math.min(
-    Math.max(0, input.previousCommitted ?? reservedQuantity),
-    sellableQuantity
-  );
-
-  return { reservedQuantity, sellableQuantity, committedQuantity };
+export function reconcileAdminInventoryQuantities(input: { quantity: number }) {
+  return { quantity: Math.max(0, input.quantity) };
 }
 
 export function buildInventoryLinkageRecords(
   input: ProductInventoryWorkflowInput,
   options: { actorId: string | null; at: string }
 ): ProductInventoryLinkageRecords {
-  if (input.reservedQuantity > input.quantity) {
-    throw new Error("Reserved quantity cannot exceed inventory quantity.");
-  }
-
-  if (input.committedQuantity > input.availableQuantity) {
-    throw new Error("Committed warehouse quantity cannot exceed available warehouse quantity.");
-  }
-
   const stockStatus = deriveInventoryStockStatus(input);
 
   return {
@@ -417,8 +366,8 @@ export function buildInventoryLinkageRecords(
       variant_id: input.variantId,
       stock_status: stockStatus,
       quantity: input.quantity,
-      reserved_quantity: input.reservedQuantity,
-      reorder_threshold: input.reorderThreshold,
+      reserved_quantity: 0,
+      reorder_threshold: 0,
       updated_by: options.actorId,
       updated_at: options.at
     },
@@ -427,13 +376,13 @@ export function buildInventoryLinkageRecords(
       product_slug: input.productSlug,
       sku: input.sku,
       variant_id: input.variantId,
-      available_quantity: input.availableQuantity,
-      committed_quantity: input.committedQuantity,
+      available_quantity: input.quantity,
+      committed_quantity: 0,
       last_counted_at: options.at,
       updated_by: options.actorId,
       updated_at: options.at
     },
-    lowStock: stockStatus === "low_stock" || stockStatus === "out_of_stock"
+    lowStock: stockStatus === "out_of_stock"
   };
 }
 

@@ -61,6 +61,7 @@ export type CheckoutPaymentResponse = {
   amount: number;
   currency: string;
   razorpayKeyId: string | null;
+  razorpayKeyMode?: "test" | "live" | "unknown" | null;
   cashfreeMode: "sandbox" | "production" | null;
   amountPaise?: number | null;
 };

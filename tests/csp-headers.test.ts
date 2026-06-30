@@ -39,6 +39,8 @@ describe("CSP headers", () => {
     expect(paymentPolicy).toContain("connect-src 'self' https:");
     expect(paymentPolicy).toContain("img-src 'self' data: blob: https:");
     expect(paymentPolicy).toContain("worker-src 'self' blob:");
+    expect(paymentPolicy).toContain("media-src 'self' blob: data:");
+    expect(paymentPolicy).toContain("checkout.razorpay.com");
     expect(paymentPolicy).not.toContain("'nonce-test-nonce'");
   });
 });

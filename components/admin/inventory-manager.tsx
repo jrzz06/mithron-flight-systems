@@ -42,9 +42,7 @@ const adjustmentReasonOptions = [
 
 const statusOptions: Array<{ value: SimpleInventoryStatus; label: string }> = [
   { value: "available", label: "In stock" },
-  { value: "low_stock", label: "Low stock" },
   { value: "out_of_stock", label: "Out of stock" },
-  { value: "reserved", label: "Reserved" },
   { value: "discontinued", label: "Discontinued" },
   { value: "archived", label: "Archived" }
 ];
@@ -288,9 +286,6 @@ const InventoryRow = memo(function InventoryRow({
       </td>
       <td className="min-w-[120px] px-3 py-2.5 text-xs text-slate-400">{row.warehouseCode || "—"}</td>
       <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-200">{formatNumber(row.quantity)}</td>
-      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-300">{formatNumber(row.reservedQuantity)}</td>
-      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-300">{formatNumber(row.availableQuantity)}</td>
-      <td className="min-w-[90px] px-3 py-2.5 text-sm text-slate-300">{formatNumber(row.reorderThreshold)}</td>
       <td className="min-w-[132px] px-3 py-2.5">
         <StatusPill status={row.stockStatus} />
       </td>
@@ -407,7 +402,7 @@ export function InventoryManager({
         : stockRangeFilter === "zero"
           ? row.quantity <= 0
           : stockRangeFilter === "low"
-            ? row.quantity > 0 && row.quantity <= Math.max(5, row.reorderThreshold)
+            ? row.quantity > 0 && row.quantity <= 5
             : row.quantity > 10;
       return matchesSearch && matchesStatus && matchesRange;
     });
@@ -456,9 +451,8 @@ export function InventoryManager({
 
     updateRow(adjustingRow.id, {
       quantity: nextQuantity,
-      availableQuantity: nextQuantity,
       inventoryValue: nextQuantity * adjustingRow.price,
-      stockStatus: nextQuantity <= 0 ? "out_of_stock" : adjustingRow.stockStatus === "out_of_stock" ? "available" : adjustingRow.stockStatus
+      stockStatus: nextQuantity <= 0 ? "out_of_stock" : "available"
     });
     setAdjustingRow(null);
   }
@@ -610,9 +604,6 @@ export function InventoryManager({
               <th className="px-3 py-3">Product</th>
               <th className="px-3 py-3">Warehouse</th>
               <th className="px-3 py-3">Qty</th>
-              <th className="px-3 py-3">Reserved</th>
-              <th className="px-3 py-3">Available</th>
-              <th className="px-3 py-3">Reorder</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Updated</th>
               {!readOnly ? (
@@ -640,7 +631,7 @@ export function InventoryManager({
               />
             )) : (
               <tr>
-                <td colSpan={readOnly ? 9 : 11} className="px-4 py-10 text-center text-sm text-slate-500">No inventory rows match the current filters.</td>
+                <td colSpan={readOnly ? 7 : 9} className="px-4 py-10 text-center text-sm text-slate-500">No inventory rows match the current filters.</td>
               </tr>
             )}
           </tbody>
@@ -742,7 +733,7 @@ export function InventoryManager({
               Upload
             </OperationalSubmitButton>
           </form>
-          <span data-inventory-audit-table="inventory_movements" className="self-center text-xs text-slate-500">Reserved and committed stock stay out of the scan table.</span>
+          <span data-inventory-audit-table="inventory_movements" className="self-center text-xs text-slate-500">Stock movements are recorded in the audit table.</span>
         </div>
       </details>
       ) : null}
@@ -771,10 +762,8 @@ export function InventoryManager({
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            <div className="mt-4 grid gap-3 rounded-xl border border-slate-800 bg-[#0b1017] p-3 text-xs text-slate-500 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 rounded-xl border border-slate-800 bg-[#0b1017] p-3 text-xs text-slate-500">
               <p className="flex items-center justify-between gap-3 sm:block"><span>Current stock</span><strong className="text-slate-100">{formatNumber(adjustingRow.quantity)}</strong></p>
-              <p className="flex items-center justify-between gap-3 sm:block"><span>Reserved</span><strong className="text-slate-100">{formatNumber(adjustingRow.reservedQuantity)}</strong></p>
-              <p className="flex items-center justify-between gap-3 sm:block"><span>Available</span><strong className="text-slate-100">{formatNumber(adjustingRow.availableQuantity)}</strong></p>
             </div>
             <form
               action={adjustAction}
@@ -882,10 +871,6 @@ export function InventoryManager({
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-            </label>
-            <label className="grid gap-1 text-xs font-medium text-slate-500">
-              Reorder level
-              <input name="bulk_reorder_threshold" type="number" min={0} placeholder="Optional reorder level" className="h-10 rounded-lg border border-slate-700 bg-[#0b1017] px-3 text-sm text-slate-100 placeholder:text-slate-600" />
             </label>
             <OperationalSubmitButton
               pendingLabel="Updating"

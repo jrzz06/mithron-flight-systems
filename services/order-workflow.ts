@@ -10,7 +10,6 @@ import {
   updateAdminRecord
 } from "@/services/admin-actions";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
-import { orderHasCheckoutReservations, releaseCheckoutStock } from "@/services/checkout-stock";
 import {
   buildOrderTimelineEntry,
   buildWarehouseAssignmentUpdate,
@@ -513,11 +512,6 @@ export async function softDeleteAdminOrderWorkflow(
   const reason = input.reason.trim();
   if (!reason) throw new Error("A deletion reason is required.");
 
-  const hasReservations = await orderHasCheckoutReservations(input.orderId, env).catch(() => false);
-  if (hasReservations) {
-    await releaseCheckoutStock(input.orderId, env);
-  }
-
   const now = new Date().toISOString();
   const updated = await updateAdminRecord(
     "orders",
@@ -610,11 +604,6 @@ export async function permanentDeleteAdminOrderWorkflow(
 
   const reason = input.reason.trim();
   if (!reason) throw new Error("A deletion reason is required.");
-
-  const hasReservations = await orderHasCheckoutReservations(input.orderId, env).catch(() => false);
-  if (hasReservations) {
-    await releaseCheckoutStock(input.orderId, env);
-  }
 
   const linkedEnquiries = await fetchAdminRecordsByColumn("enquiries", "converted_order_id", input.orderId, env);
   for (const enquiry of linkedEnquiries) {

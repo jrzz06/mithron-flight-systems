@@ -1,14 +1,58 @@
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRazorpayGateway } from "@/services/payments/razorpay";
+import { razorpayKeyMode } from "@/services/payments/razorpay-payment-resolution";
 
 function source(path: string) {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
 describe("Razorpay payment gateway", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("detects razorpay key mode from key id prefix", () => {
+    expect(razorpayKeyMode("rzp_test_abc")).toBe("test");
+    expect(razorpayKeyMode("rzp_live_abc")).toBe("live");
+    expect(razorpayKeyMode("unknown")).toBe("unknown");
+  });
+
+  it("creates orders with checkout_config_id when configured", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "order_cfg", amount: 10000, currency: "INR", status: "created" })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const gateway = createRazorpayGateway({
+      RAZORPAY_KEY_ID: "rzp_test_key",
+      RAZORPAY_KEY_SECRET: "secret",
+      RAZORPAY_WEBHOOK_SECRET: "whsec",
+      RAZORPAY_CHECKOUT_CONFIG_ID: "config_test123"
+    });
+
+    const result = await gateway.createIntent({
+      orderId: "internal-order-1",
+      amount: 100,
+      currency: "INR",
+      customerEmail: "buyer@example.com",
+      metadata: { receipt: "ORD-123" }
+    });
+
+    expect(result.intentId).toBe("order_cfg");
+    expect(result.amountPaise).toBe(10000);
+    const [, requestInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(requestInit.body));
+    expect(body.checkout_config_id).toBe("config_test123");
+    expect(body.amount).toBe(10000);
+    expect(body.currency).toBe("INR");
+    expect(body.payment_capture).toBe(1);
+  });
+
   it("verifies webhook HMAC signatures", async () => {
     const secret = "test_webhook_secret";
     const payload = {
@@ -123,34 +167,32 @@ describe("Razorpay payment gateway", () => {
 });
 
 describe("commerce lifecycle hardening", () => {
-  it("uses fulfill_reserved_stock RPC instead of double available deduction in warehouse fulfillment helper", () => {
+  it("routes warehouse fulfillment through deduct_order_inventory_on_fulfillment", () => {
     const movements = source("services/warehouse-movements.ts");
-    expect(movements).toContain("fulfillReservedStock");
-    expect(movements).not.toContain("quantityDelta: -quantity");
+    expect(movements).toContain("deductInventoryForOrder");
   });
 
-  it("routes shipment creation through reservation fulfillment when checkout reserved stock exists", () => {
+  it("does not deduct stock during shipment creation", () => {
     const shipments = source("services/shipments.ts");
-    expect(shipments).toContain("orderHasCheckoutReservations");
-    expect(shipments).toContain("fulfillReservedStock");
+    expect(shipments).not.toContain("fulfillReservedStock");
+    expect(shipments).not.toContain("orderHasCheckoutReservations");
   });
 
-  it("releases stock on payment webhook failure", () => {
+  it("does not release stock on payment webhook failure", () => {
     const confirm = source("services/payments/confirm-payment.ts");
     expect(confirm).toContain('event.status === "failed"');
-    expect(confirm).toContain("releaseCheckoutStock");
+    expect(confirm).not.toContain("releaseCheckoutStock");
   });
 
-  it("handles payment refunds with stock release and order status update", () => {
+  it("handles payment refunds with order status update only", () => {
     const confirm = source("services/payments/confirm-payment.ts");
     expect(confirm).toContain('event.status === "refunded"');
-    expect(confirm).toContain('payment_status: "refunded"');
+    expect(confirm).not.toContain("releaseCheckoutStock");
   });
 
-  it("defines idempotent reservation migration", () => {
-    const migration = source("supabase/migrations/20260618000200_commerce_lifecycle_rpcs.sql");
-    expect(migration).toContain("movement_type = 'reservation'");
-    expect(migration).toContain("fulfill_reserved_stock");
-    expect(migration).toContain("payment_webhook_events");
+  it("defines simplified inventory migration with fulfillment deduction", () => {
+    const migration = source("supabase/migrations/20260712000100_simplified_inventory_model.sql");
+    expect(migration).toContain("deduct_order_inventory_on_fulfillment");
+    expect(migration).toContain("inventory_skipped");
   });
 });

@@ -12,9 +12,8 @@ type InventoryAction = (formData: FormData) => void | Promise<void>;
 
 const STATUS_OPTIONS: Array<{ value: "all" | SimpleInventoryStatus; label: string }> = [
   { value: "all", label: "All statuses" },
-  { value: "available", label: "In Stock" },
-  { value: "low_stock", label: "Low Stock" },
-  { value: "out_of_stock", label: "Out of Stock" }
+  { value: "available", label: "In stock" },
+  { value: "out_of_stock", label: "Out of stock" }
 ];
 
 function formatUpdated(value: string | null) {
@@ -24,15 +23,13 @@ function formatUpdated(value: string | null) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(parsed);
 }
 
-function stockBarTone(status: SimpleInventoryStatus): "success" | "warning" | "danger" {
-  if (status === "low_stock") return "warning";
+function stockBarTone(status: SimpleInventoryStatus): "success" | "danger" {
   if (status === "out_of_stock" || status === "archived") return "danger";
   return "success";
 }
 
 function stockFillPercent(row: SimpleInventoryRow) {
-  const total = Math.max(row.quantity + row.reservedQuantity, 1);
-  return Math.min(100, Math.round((row.availableQuantity / total) * 100));
+  return row.quantity > 0 ? 100 : 0;
 }
 
 function HiddenFields({ row, quantity, stockStatus }: { row: SimpleInventoryRow; quantity: number; stockStatus: SimpleInventoryStatus }) {
@@ -58,7 +55,7 @@ function StockLevelBar({ row }: { row: SimpleInventoryRow }) {
   return (
     <div className="grid min-w-[120px] gap-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-[var(--platform-text-secondary)]">{row.availableQuantity} avail.</span>
+        <span className="text-[var(--platform-text-secondary)]">{row.quantity} units</span>
         <span className="text-[var(--platform-text-muted)]">{percent}%</span>
       </div>
       <div className="platform-stock-bar">
@@ -108,10 +105,8 @@ export function WarehouseInventoryManager({
   }, [categoryFilter, deferredQuery, rows, statusFilter, supplierFilter]);
 
   const summary = useMemo(() => ({
-    available: rows.filter((row) => row.stockStatus === "available" && row.quantity > 0).length,
-    lowStock: rows.filter((row) => row.stockStatus === "low_stock").length,
+    inStock: rows.filter((row) => row.stockStatus === "available" && row.quantity > 0).length,
     outOfStock: rows.filter((row) => row.stockStatus === "out_of_stock" || row.quantity <= 0).length,
-    reservedUnits: rows.reduce((sum, row) => sum + row.reservedQuantity, 0),
     totalUnits: rows.reduce((sum, row) => sum + row.quantity, 0)
   }), [rows]);
 
@@ -119,26 +114,16 @@ export function WarehouseInventoryManager({
 
   return (
     <section className="grid gap-4">
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         <div className="platform-stock-tier platform-stock-tier--success">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--platform-success)]">Available</p>
-          <p className="text-2xl font-semibold text-[var(--platform-text-primary)]">{summary.available}</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--platform-success)]">In stock</p>
+          <p className="text-2xl font-semibold text-[var(--platform-text-primary)]">{summary.inStock}</p>
           <p className="text-xs text-[var(--platform-text-muted)]">{summary.totalUnits} total units</p>
-        </div>
-        <div className="platform-stock-tier platform-stock-tier--warning">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--platform-warning)]">Low stock</p>
-          <p className="text-2xl font-semibold text-[var(--platform-text-primary)]">{summary.lowStock}</p>
-          <p className="text-xs text-[var(--platform-text-muted)]">Needs replenishment</p>
         </div>
         <div className="platform-stock-tier platform-stock-tier--danger">
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--platform-danger)]">Out of stock</p>
           <p className="text-2xl font-semibold text-[var(--platform-text-primary)]">{summary.outOfStock}</p>
           <p className="text-xs text-[var(--platform-text-muted)]">Unavailable for sale</p>
-        </div>
-        <div className="platform-stock-tier platform-stock-tier--neutral">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--platform-text-muted)]">Reserved</p>
-          <p className="text-2xl font-semibold text-[var(--platform-text-primary)]">{summary.reservedUnits}</p>
-          <p className="text-xs text-[var(--platform-text-muted)]">Committed to orders</p>
         </div>
       </div>
 
@@ -169,15 +154,14 @@ export function WarehouseInventoryManager({
       </div>
 
       <div className="overflow-x-auto rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface)]">
-        <table className="platform-table min-w-[1200px] w-full border-collapse text-left text-sm">
+        <table className="platform-table min-w-[1000px] w-full border-collapse text-left text-sm">
           <thead className="text-[11px] uppercase tracking-[0.08em] text-[var(--platform-text-muted)]">
             <tr>
               <th className="px-3 py-3">Image</th>
               <th className="px-3 py-3">Product</th>
               <th className="px-3 py-3">SKU</th>
-              <th className="px-3 py-3">On hand</th>
-              <th className="px-3 py-3">Reserved</th>
-              <th className="px-3 py-3">Availability</th>
+              <th className="px-3 py-3">Qty</th>
+              <th className="px-3 py-3">Level</th>
               <th className="px-3 py-3">Status</th>
               <th className="px-3 py-3">Last updated</th>
               <th className="px-3 py-3">{readOnly ? "History" : "Actions"}</th>
@@ -198,7 +182,6 @@ export function WarehouseInventoryManager({
                 <td className="px-3 py-3 font-medium text-[var(--platform-text-primary)]">{row.productName}</td>
                 <td className="px-3 py-3 font-mono text-xs text-[var(--platform-text-secondary)]">{row.sku}</td>
                 <td className="px-3 py-3 text-[var(--platform-text-primary)]">{row.quantity}</td>
-                <td className="px-3 py-3 text-[var(--platform-text-secondary)]">{row.reservedQuantity}</td>
                 <td className="px-3 py-3"><StockLevelBar row={row} /></td>
                 <td className="px-3 py-3"><StatusPill status={row.stockStatus} /></td>
                 <td className="px-3 py-3 text-[var(--platform-text-muted)]">{formatUpdated(row.lastUpdated)}</td>
@@ -231,7 +214,7 @@ export function WarehouseInventoryManager({
               </tr>
             )) : (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-[var(--platform-text-muted)]">
+                <td colSpan={8} className="px-4 py-10 text-center text-[var(--platform-text-muted)]">
                   No products currently require attention.
                 </td>
               </tr>

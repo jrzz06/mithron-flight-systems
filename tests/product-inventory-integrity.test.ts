@@ -11,34 +11,33 @@ describe("product inventory integrity", () => {
     expect(deriveProductSku("---")).toBe("SKU");
   });
 
-  it("builds exactly one warehouse row per product without virtual fallbacks", () => {
+  it("builds exactly one warehouse row per product using inventory.quantity as source of truth", () => {
     const products = [
       { slug: "agri-drone-x1", name: "Agri Drone", workflow_status: "published" },
       { slug: "archived-kit", name: "Archived Kit", workflow_status: "archived", archived_at: "2026-01-01T00:00:00.000Z" }
     ];
     const inventory = [
-      { product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", quantity: 4, stock_status: "available", reserved_quantity: 1, reorder_threshold: 2 }
+      { product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", quantity: 4, stock_status: "available" }
     ];
     const stock = [
-      { warehouse_code: "IN-WEST-01", product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", available_quantity: 3, committed_quantity: 0 }
+      { warehouse_code: "IN-WEST-01", product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", available_quantity: 3 }
     ];
 
     const rows = buildSimpleInventoryRows(products, inventory, stock, "IN-WEST-01");
     expect(rows).toHaveLength(2);
-    expect(rows.find((row) => row.productSlug === "agri-drone-x1")?.quantity).toBe(3);
-    expect(rows.find((row) => row.productSlug === "agri-drone-x1")?.onHandQuantity).toBe(4);
+    expect(rows.find((row) => row.productSlug === "agri-drone-x1")?.quantity).toBe(4);
     expect(rows.find((row) => row.productSlug === "archived-kit")?.isArchived).toBe(true);
     expect(rows.find((row) => row.productSlug === "archived-kit")?.quantity).toBe(0);
   });
 
-  it("uses checkout warehouse availability as the sellable quantity", () => {
+  it("derives in stock / out of stock from quantity only", () => {
     const products = [{ slug: "agri-drone-x1", name: "Agri Drone", workflow_status: "published" }];
-    const inventory = [{ product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", quantity: 10, stock_status: "available" }];
+    const inventory = [{ product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", quantity: 0, stock_status: "out_of_stock" }];
     const stock = [{ warehouse_code: "IN-WEST-01", product_slug: "agri-drone-x1", sku: "AGRI-DRONE-X1", available_quantity: 8 }];
 
     const rows = buildSimpleInventoryRows(products, inventory, stock, "IN-WEST-01");
-    expect(rows[0]?.quantity).toBe(8);
-    expect(rows[0]?.onHandQuantity).toBe(10);
+    expect(rows[0]?.quantity).toBe(0);
+    expect(rows[0]?.stockStatus).toBe("out_of_stock");
   });
 
   it("picks the preferred warehouse row for admin product stock display", () => {
@@ -46,11 +45,23 @@ describe("product inventory integrity", () => {
       { warehouse_code: "IN-EAST-01", product_slug: "agri-drone-x1", available_quantity: 2 },
       { warehouse_code: "IN-WEST-01", product_slug: "agri-drone-x1", available_quantity: 7 }
     ];
-    expect(pickWarehouseStockRow(stock, "agri-drone-x1", "IN-WEST-01")?.available_quantity).toBe(7);
+    expect(pickWarehouseStockRow(stock, "agri-drone-x1", "IN-WEST-01")?.warehouse_code).toBe("IN-WEST-01");
   });
 });
 
 describe("product inventory integrity migration", () => {
+  it("simplifies inventory to single-quantity model", () => {
+    const migration = readFileSync(
+      join(process.cwd(), "supabase/migrations/20260712000100_simplified_inventory_model.sql"),
+      "utf8"
+    );
+
+    expect(migration).toContain("deduct_order_inventory_on_fulfillment");
+    expect(migration).toContain("reserved_quantity = 0");
+    expect(migration).toContain("inventory_skipped");
+    expect(migration).not.toContain("fulfill_reserved_stock(p_order_id");
+  });
+
   it("enforces one inventory row per product", () => {
     const migration = readFileSync(
       join(process.cwd(), "supabase/migrations/20260701000100_inventory_one_per_product.sql"),
@@ -59,47 +70,5 @@ describe("product inventory integrity migration", () => {
 
     expect(migration).toContain("reconcile_product_inventory_integrity");
     expect(migration).toContain("inventory_one_per_product");
-    expect(migration).toContain("inventory_reconcile_reports");
-    expect(migration).toContain("enforce_canonical_inventory_sku");
-  });
-
-  it("seeds inventory rows from product inserts", () => {
-    const migration = readFileSync(
-      join(process.cwd(), "supabase/migrations/20260628000100_product_inventory_integrity.sql"),
-      "utf8"
-    );
-
-    expect(migration).toContain("ensure_product_inventory_row");
-    expect(migration).toContain("trg_mithron_products_ensure_inventory");
-  });
-
-  it("provides a single atomic write path for inventory updates", () => {
-    const migration = readFileSync(
-      join(process.cwd(), "supabase/migrations/20260707000100_unified_product_inventory_writes.sql"),
-      "utf8"
-    );
-
-    expect(migration).toContain("upsert_product_inventory");
-    expect(migration).toContain("drop trigger if exists trg_sync_inventory_on_update");
-    expect(migration).toContain("drop trigger if exists trg_sync_inventory_on_insert");
-  });
-
-  it("aligns inventory upsert conflict with one-row-per-product constraint", () => {
-    const migration = readFileSync(
-      join(process.cwd(), "supabase/migrations/20260709000100_fix_upsert_product_inventory_conflict.sql"),
-      "utf8"
-    );
-
-    expect(migration).toContain("on conflict (product_slug)");
-  });
-
-  it("allows admin inventory corrections to reduce committed warehouse stock", () => {
-    const migration = readFileSync(
-      join(process.cwd(), "supabase/migrations/20260710000100_admin_inventory_committed_reconcile.sql"),
-      "utf8"
-    );
-
-    expect(migration).toContain("committed_quantity = excluded.committed_quantity");
-    expect(migration).not.toContain("greatest(warehouse_stock.committed_quantity, excluded.committed_quantity)");
   });
 });

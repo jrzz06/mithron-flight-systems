@@ -10,7 +10,7 @@ import {
 } from "@/services/admin-actions";
 import { requirePermission } from "@/services/auth";
 import { buildValidatedOrderDraft, type CheckoutOrderInput, type OrderCatalogProduct } from "@/services/orders";
-import { reserveCheckoutStock, resolveCheckoutStockSkus } from "@/services/checkout-stock";
+import { resolveCheckoutStockSkus } from "@/services/checkout-stock";
 import { notifyCustomerAboutOrder } from "@/services/order-workflow";
 import {
   type AdminEnquiryRow,
@@ -1201,26 +1201,6 @@ export async function convertEnquiryToOrderAtomic(
   const orderId = text(result.order_id);
   const orderRow = isPlainRecord(result.row) ? result.row : { id: orderId, order_number: result.order_number };
 
-  const reservationItems = orderItems
-    .map((item) => ({
-      productSlug: String(item.product_slug ?? ""),
-      quantity: Number(item.quantity ?? 0),
-      sku: String(item.sku ?? "").trim() || null
-    }))
-    .filter((item) => item.productSlug && item.sku && item.quantity > 0);
-
-  if (orderId && reservationItems.length && result.idempotent !== true) {
-    try {
-      await reserveCheckoutStock(orderId, reservationItems, env);
-    } catch (error) {
-      console.warn("[enquiries] stock reservation failed during atomic enquiry conversion", {
-        enquiryId,
-        orderId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }
-
   if (orderId && result.idempotent !== true) {
     const enquiry = await getEnquiryById(enquiryId, env);
     const customerUserId = text(enquiry?.customer_user_id) || null;
@@ -1289,26 +1269,6 @@ export async function convertEnquiryToOrder(
   const orderId = String(order.id ?? "");
   for (const item of draft.orderItems) {
     await createAdminRecord("order_items", { ...item, order_id: orderId }, actorId, env);
-  }
-
-  const reservationItems = draft.orderItems
-    .map((item) => ({
-      productSlug: String(item.product_slug ?? ""),
-      quantity: Number(item.quantity ?? 0),
-      sku: String(item.sku ?? "").trim() || null
-    }))
-    .filter((item) => item.productSlug && item.sku && item.quantity > 0);
-
-  if (reservationItems.length) {
-    try {
-      await reserveCheckoutStock(orderId, reservationItems, env);
-    } catch (error) {
-      console.warn("[enquiries] stock reservation failed during enquiry conversion", {
-        enquiryId,
-        orderId,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
   }
 
   const payload = readPayload(enquiry.payload);

@@ -15,67 +15,48 @@ const env = {
 };
 
 function mockFetch(handler: (url: string, init?: RequestInit) => Promise<{ ok: boolean; json: () => Promise<unknown> }>) {
-  vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-    const target = String(url);
-    if (target.includes("warehouse_configuration")) {
-      return { ok: false, json: async () => [] };
-    }
-    return handler(target, init);
-  }));
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string, init?: RequestInit) => handler(String(url), init)));
 }
 
-describe("checkout stock RPC contracts", () => {
+describe("checkout stock contracts", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("resolves checkout SKUs from warehouse stock", async () => {
+  it("resolves checkout SKUs from inventory", async () => {
     mockFetch(async () => ({
       ok: true,
-      json: async () => [{ product_slug: "ag10", sku: "AG10-STD", available_quantity: 5 }]
+      json: async () => [{ product_slug: "ag10", sku: "AG10-STD", quantity: 5 }]
     }));
 
     const items = await resolveCheckoutStockSkus([{ productSlug: "ag10", quantity: 2 }], env);
     expect(items).toEqual([{ productSlug: "ag10", quantity: 2, sku: "AG10-STD" }]);
-    const stockCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([callUrl]) => String(callUrl).includes("warehouse_stock"));
+    const stockCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([callUrl]) => String(callUrl).includes("/inventory?"));
     expect(stockCall).toBeTruthy();
   });
 
-  it("calls reserve_checkout_stock RPC with order and warehouse code", async () => {
-    mockFetch(async () => ({
-      ok: true,
-      json: async () => ({ order_id: "order-1", rows_reserved: 1 })
-    }));
-
-    await reserveCheckoutStock("order-1", [{ productSlug: "ag10", quantity: 1, sku: "AG10-STD" }], env);
+  it("does not call reserve_checkout_stock RPC (verify-only checkout)", async () => {
+    const result = await reserveCheckoutStock("order-1", [{ productSlug: "ag10", quantity: 1, sku: "AG10-STD" }], env);
+    expect(result).toEqual({ skipped: true, rows_reserved: 0 });
     const rpcCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([callUrl]) => String(callUrl).includes("/rpc/reserve_checkout_stock"));
-    const [, init] = rpcCall ?? [];
-    expect(rpcCall).toBeTruthy();
-    expect(JSON.parse(String(init?.body))).toMatchObject({
-      p_order_id: "order-1",
-      p_warehouse_code: "IN-WEST-01"
-    });
+    expect(rpcCall).toBeUndefined();
   });
 
-  it("calls release_checkout_stock RPC for cancellations", async () => {
-    mockFetch(async () => ({
-      ok: true,
-      json: async () => ({ ok: true })
-    }));
-
-    await releaseCheckoutStock("order-1", env);
+  it("does not call release_checkout_stock RPC", async () => {
+    const result = await releaseCheckoutStock("order-1", env);
+    expect(result).toEqual({ skipped: true, rows_released: 0 });
     const rpcCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([callUrl]) => String(callUrl).includes("/rpc/release_checkout_stock"));
-    expect(rpcCall).toBeTruthy();
+    expect(rpcCall).toBeUndefined();
   });
 
-  it("calls fulfill_reserved_stock RPC for fulfillment", async () => {
+  it("routes fulfillment through deduct_order_inventory_on_fulfillment RPC", async () => {
     mockFetch(async () => ({
       ok: true,
-      json: async () => ({ ok: true })
+      json: async () => ({ order_id: "order-1", rows_deducted: 1 })
     }));
 
     await fulfillReservedStock("order-1", "actor-1", env);
-    const rpcCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([callUrl]) => String(callUrl).includes("/rpc/fulfill_reserved_stock"));
+    const rpcCall = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(([callUrl]) => String(callUrl).includes("/rpc/deduct_order_inventory_on_fulfillment"));
     const [, init] = rpcCall ?? [];
     expect(rpcCall).toBeTruthy();
     expect(JSON.parse(String(init?.body))).toMatchObject({
@@ -87,7 +68,7 @@ describe("checkout stock RPC contracts", () => {
   it("aggregates duplicate slug quantities before stock verification", async () => {
     mockFetch(async () => ({
       ok: true,
-      json: async () => [{ product_slug: "ag10", sku: "AG10-STD", available_quantity: 100 }]
+      json: async () => [{ product_slug: "ag10", sku: "AG10-STD", quantity: 100 }]
     }));
 
     await expect(

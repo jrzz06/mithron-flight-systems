@@ -1,6 +1,9 @@
-import { assertSupabaseAdminConfig } from "@/lib/env";
-import { deriveProductSku } from "@/services/product-inventory-sync";
-import { getCheckoutWarehouseCode } from "@/services/warehouse-config";
+import {
+  deductInventoryForOrder,
+  orderInventoryDeducted,
+  resolveOrderStockSkus,
+  verifyOrderStockAvailability
+} from "@/services/inventory";
 
 type EnvSource = Record<string, string | undefined>;
 
@@ -35,14 +38,6 @@ export type CheckoutStockItem = {
   sku?: string | null;
 };
 
-function headers(serviceRoleKey: string) {
-  return {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    "Content-Type": "application/json"
-  };
-}
-
 export class CheckoutWarehouseConfigurationError extends Error {
   constructor() {
     super("Checkout warehouse is not configured. Set DEFAULT_WAREHOUSE_CODE or warehouse settings.");
@@ -50,54 +45,11 @@ export class CheckoutWarehouseConfigurationError extends Error {
   }
 }
 
-async function resolveWarehouseCode(warehouseCode: string | undefined, env: EnvSource) {
-  if (warehouseCode?.trim()) return warehouseCode.trim();
-  const resolved = (await getCheckoutWarehouseCode(env)).trim();
-  if (!resolved) {
-    throw new CheckoutWarehouseConfigurationError();
-  }
-  return resolved;
-}
-
 export async function resolveCheckoutStockSkus(
   items: Array<{ productSlug: string; quantity: number }>,
-  env: EnvSource = process.env,
-  warehouseCode?: string
+  env: EnvSource = process.env
 ): Promise<CheckoutStockItem[]> {
-  const config = assertSupabaseAdminConfig(env);
-  if (!items.length) return [];
-
-  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
-  const slugs = [...new Set(items.map((item) => item.productSlug))];
-  const slugFilter = slugs.map((slug) => encodeURIComponent(slug)).join(",");
-  const response = await fetch(
-    `${config.url}/rest/v1/warehouse_stock?select=product_slug,sku,available_quantity&product_slug=in.(${slugFilter})&warehouse_code=eq.${encodeURIComponent(resolvedWarehouseCode)}&order=available_quantity.desc`,
-    { headers: headers(config.serviceRoleKey), cache: "no-store" }
-  );
-
-  if (!response.ok) {
-    throw new Error("Unable to resolve product inventory for checkout.");
-  }
-
-  const rows = (await response.json()) as Array<{ product_slug?: string; sku?: string | null; available_quantity?: number }>;
-  const bestBySlug = new Map<string, { sku: string; available: number }>();
-
-  for (const row of rows) {
-    const slug = String(row.product_slug ?? "");
-    if (!slug) continue;
-    const available = Number(row.available_quantity ?? 0);
-    const sku = row.sku?.trim() || deriveProductSku(slug);
-    const existing = bestBySlug.get(slug);
-    if (!existing || available > existing.available) {
-      bestBySlug.set(slug, { sku, available });
-    }
-  }
-
-  return items.map((item) => ({
-    productSlug: item.productSlug,
-    quantity: item.quantity,
-    sku: bestBySlug.get(item.productSlug)?.sku ?? deriveProductSku(item.productSlug)
-  }));
+  return resolveOrderStockSkus(items, env);
 }
 
 export async function verifyCheckoutStockAvailability(
@@ -105,175 +57,53 @@ export async function verifyCheckoutStockAvailability(
   env: EnvSource = process.env,
   warehouseCode?: string
 ) {
-  const config = assertSupabaseAdminConfig(env);
-  if (!items.length) return;
-
-  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
-  const slugs = [...new Set(items.map((item) => item.productSlug))];
-  const slugFilter = slugs.map((slug) => encodeURIComponent(slug)).join(",");
-  const response = await fetch(
-    `${config.url}/rest/v1/warehouse_stock?select=product_slug,sku,available_quantity&product_slug=in.(${slugFilter})&warehouse_code=eq.${encodeURIComponent(resolvedWarehouseCode)}`,
-    { headers: headers(config.serviceRoleKey), cache: "no-store" }
-  );
-
-  if (!response.ok) {
-    throw new Error("Unable to verify product inventory for checkout.");
-  }
-
-  const rows = (await response.json()) as Array<{ product_slug?: string; available_quantity?: number }>;
-  const availableBySlug = new Map<string, number>();
-  const hasWarehouseRow = new Set<string>();
-  for (const row of rows) {
-    const slug = String(row.product_slug ?? "");
-    if (!slug) continue;
-    hasWarehouseRow.add(slug);
-    const available = Number(row.available_quantity ?? 0);
-    availableBySlug.set(slug, Math.max(availableBySlug.get(slug) ?? 0, available));
-  }
-
-  const requestedBySlug = new Map<string, number>();
-  for (const item of items) {
-    requestedBySlug.set(item.productSlug, (requestedBySlug.get(item.productSlug) ?? 0) + item.quantity);
-  }
-
-  const issues: CheckoutStockIssue[] = [];
-  for (const [slug, requested] of requestedBySlug) {
-    const available = availableBySlug.get(slug) ?? 0;
-    if (available < requested) {
-      issues.push({
-        productSlug: slug,
-        requested,
-        available,
-        warehouseCode: resolvedWarehouseCode,
-        hasWarehouseRow: hasWarehouseRow.has(slug)
-      });
-    }
-  }
-
-  if (issues.length) {
-    throw new CheckoutStockVerificationError(issues, resolvedWarehouseCode);
+  try {
+    await verifyOrderStockAvailability(items, env);
+  } catch (error) {
+    const issues = (error as Error & { issues?: Array<{ productSlug: string; requested: number; available: number; hasInventoryRow: boolean }> }).issues ?? [];
+    if (!issues.length) throw error;
+    throw new CheckoutStockVerificationError(
+      issues.map((issue) => ({
+        productSlug: issue.productSlug,
+        requested: issue.requested,
+        available: issue.available,
+        warehouseCode: warehouseCode?.trim() || "IN-WEST-01",
+        hasWarehouseRow: issue.hasInventoryRow
+      })),
+      warehouseCode?.trim() || "IN-WEST-01"
+    );
   }
 }
 
+/** @deprecated Reservations removed — checkout is verify-only. */
 export async function reserveCheckoutStock(
-  orderId: string,
-  items: CheckoutStockItem[],
-  env: EnvSource = process.env,
-  warehouseCode?: string
+  _orderId: string,
+  _items: CheckoutStockItem[],
+  _env: EnvSource = process.env,
+  _warehouseCode?: string
 ) {
-  const config = assertSupabaseAdminConfig(env);
-  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
-  const payload = items.map((item) => ({
-    product_slug: item.productSlug,
-    quantity: item.quantity,
-    sku: item.sku ?? null
-  }));
-
-  const response = await fetch(`${config.url}/rest/v1/rpc/reserve_checkout_stock`, {
-    method: "POST",
-    headers: headers(config.serviceRoleKey),
-    body: JSON.stringify({
-      p_order_id: orderId,
-      p_items: payload,
-      p_warehouse_code: resolvedWarehouseCode
-    }),
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    const message = body.includes("Insufficient stock")
-      ? body.match(/Insufficient stock[^"]*/)?.[0] ?? body
-      : body.includes("No warehouse stock")
-        ? body.match(/No warehouse stock[^"]*/)?.[0] ?? body
-        : `Stock reservation failed (${response.status})`;
-    throw new Error(message);
-  }
-
-  return (await response.json()) as { order_id?: string; rows_reserved?: number };
+  return { skipped: true, rows_reserved: 0 };
 }
 
+/** @deprecated Fulfillment deduction uses deductInventoryForOrder on warehouse transition. */
 export async function fulfillReservedStock(
   orderId: string,
   actorId: string | null,
   env: EnvSource = process.env,
   warehouseCode?: string
 ) {
-  const config = assertSupabaseAdminConfig(env);
-  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
-  const response = await fetch(`${config.url}/rest/v1/rpc/fulfill_reserved_stock`, {
-    method: "POST",
-    headers: headers(config.serviceRoleKey),
-    body: JSON.stringify({
-      p_order_id: orderId,
-      p_actor_id: actorId,
-      p_warehouse_code: resolvedWarehouseCode
-    }),
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Fulfillment stock RPC failed (${response.status})${body ? `: ${body.slice(0, 300)}` : ""}`);
-  }
-
-  return response.json();
+  return deductInventoryForOrder(orderId, actorId, env, warehouseCode);
 }
 
-export async function orderHasCheckoutReservations(
-  orderId: string,
-  env: EnvSource = process.env
-) {
-  const config = assertSupabaseAdminConfig(env);
-  const response = await fetch(`${config.url}/rest/v1/rpc/order_has_checkout_reservations`, {
-    method: "POST",
-    headers: headers(config.serviceRoleKey),
-    body: JSON.stringify({ p_order_id: orderId }),
-    cache: "no-store"
-  });
-
-  if (response.ok) {
-    return Boolean(await response.json());
-  }
-
-  if (response.status === 404) {
-    const fallback = await fetch(
-      `${config.url}/rest/v1/inventory_movements?select=id&related_order_id=eq.${encodeURIComponent(orderId)}&movement_type=eq.reservation&limit=1`,
-      { headers: headers(config.serviceRoleKey), cache: "no-store" }
-    );
-    if (!fallback.ok) {
-      const body = await fallback.text().catch(() => "");
-      throw new Error(`Unable to verify checkout reservations (${fallback.status})${body ? `: ${body.slice(0, 200)}` : ""}`);
-    }
-    const rows = (await fallback.json()) as unknown[];
-    return rows.length > 0;
-  }
-
-  const body = await response.text().catch(() => "");
-  throw new Error(`Unable to verify checkout reservations (${response.status})${body ? `: ${body.slice(0, 200)}` : ""}`);
+export async function orderHasCheckoutReservations(orderId: string, env: EnvSource = process.env) {
+  return orderInventoryDeducted(orderId, env);
 }
 
+/** @deprecated Nothing to release — checkout no longer reserves stock. */
 export async function releaseCheckoutStock(
-  orderId: string,
-  env: EnvSource = process.env,
-  warehouseCode?: string
+  _orderId: string,
+  _env: EnvSource = process.env,
+  _warehouseCode?: string
 ) {
-  const config = assertSupabaseAdminConfig(env);
-  const resolvedWarehouseCode = await resolveWarehouseCode(warehouseCode, env);
-  const response = await fetch(`${config.url}/rest/v1/rpc/release_checkout_stock`, {
-    method: "POST",
-    headers: headers(config.serviceRoleKey),
-    body: JSON.stringify({
-      p_order_id: orderId,
-      p_warehouse_code: resolvedWarehouseCode
-    }),
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`Stock release failed (${response.status})${body ? `: ${body.slice(0, 300)}` : ""}`);
-  }
-
-  return response.json();
+  return { skipped: true, rows_released: 0 };
 }

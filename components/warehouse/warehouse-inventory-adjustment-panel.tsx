@@ -50,8 +50,7 @@ export function WarehouseInventoryAdjustmentPanel({
         ) : null}
 
         <div className="mt-4 grid gap-2 text-sm text-[var(--platform-text-secondary)]">
-          <p>Current Stock: <span className="font-semibold text-[var(--platform-text-primary)]">{row.quantity}</span></p>
-          <p>Reserved: {row.reservedQuantity} · Available: {row.availableQuantity}</p>
+          <p>Current stock: <span className="font-semibold text-[var(--platform-text-primary)]">{row.quantity}</span></p>
         </div>
 
         <form action={action} className="mt-6 grid gap-4">

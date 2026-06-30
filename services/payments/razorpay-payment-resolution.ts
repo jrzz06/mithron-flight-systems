@@ -11,6 +11,13 @@ export type RazorpayPaymentEntity = {
   captured?: boolean;
 };
 
+export function razorpayKeyMode(keyId: string): "test" | "live" | "unknown" {
+  const normalized = keyId.trim().toLowerCase();
+  if (normalized.startsWith("rzp_test_")) return "test";
+  if (normalized.startsWith("rzp_live_")) return "live";
+  return "unknown";
+}
+
 export function razorpayEnvCredentials(env: Record<string, string | undefined>) {
   const keyId = env.RAZORPAY_KEY_ID?.trim() ?? "";
   const keySecret = env.RAZORPAY_KEY_SECRET?.trim() ?? "";

@@ -9,7 +9,7 @@ import {
   updateAdminRecord
 } from "@/services/admin-actions";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
-import { releaseCheckoutStock, reserveCheckoutStock, resolveCheckoutStockSkus } from "@/services/checkout-stock";
+import { resolveCheckoutStockSkus } from "@/services/checkout-stock";
 import { resolveManualOrderCustomer } from "@/services/customer-provisioning";
 import {
   appendOrderTimeline,
@@ -171,12 +171,6 @@ async function findManualOrderByIdempotencyKey(
 }
 
 export async function cancelManualOrder(orderId: string, actorId: string, reason: string, env: EnvSource = process.env) {
-  try {
-    await releaseCheckoutStock(orderId, env);
-  } catch {
-    // Best-effort release.
-  }
-
   await updateAdminRecord(
     "orders",
     "id",
@@ -268,17 +262,6 @@ export async function persistValidatedOrderDraft(
       );
     }
 
-    const reservationItems = draft.orderItems
-      .filter((item) => item.sku)
-      .map((item) => ({
-        productSlug: item.product_slug,
-        quantity: item.quantity,
-        sku: item.sku as string
-      }));
-
-    if (reservationItems.length) {
-      await reserveCheckoutStock(orderId, reservationItems, env, options.warehouseCode);
-    }
   } catch (error) {
     await cancelManualOrder(orderId, options.actorId, "manual_order_persist_failed", env);
     throw error;

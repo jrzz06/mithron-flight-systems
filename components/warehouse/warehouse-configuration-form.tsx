@@ -17,8 +17,8 @@ export function WarehouseConfigurationForm({ config, warehouses, carrierNames, s
   return (
     <form action={saveAction ?? saveWarehouseConfigurationFormAction} data-warehouse-configuration className="grid gap-5">
       <p className="platform-type-body">
-        Global warehouse defaults are stored in the database and used by allocation, checkout reservations, and supplier intake.
-        Checkout deducts stock from the checkout warehouse. Inventory edits default to the default warehouse unless a warehouse is specified on the row.
+        Global warehouse defaults are stored in the database and used by fulfillment, checkout availability checks, and supplier intake.
+        Stock is deducted when orders reach the configured fulfillment stage (packed or dispatched).
       </p>
       {config.checkoutWarehouseCode !== config.defaultWarehouseCode ? (
         <p className="rounded-[var(--platform-radius)] border border-amber-500/30 bg-amber-950/20 px-4 py-3 text-sm text-amber-100">
@@ -47,14 +47,16 @@ export function WarehouseConfigurationForm({ config, warehouses, carrierNames, s
         />
       </div>
 
-      <label className="flex items-center justify-between gap-3 rounded-[var(--platform-radius)] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3 text-sm text-[var(--platform-text-primary)]">
-        Reserve stock when allocating orders
-        <input
-          type="checkbox"
-          name="auto_reserve_on_allocate"
-          defaultChecked={config.autoReserveOnAllocate}
-          className="h-4 w-4 accent-[var(--platform-accent)]"
-        />
+      <label className="grid gap-1.5 md:col-span-3">
+        <span className={fieldLabelClass}>Deduct stock when order reaches</span>
+        <select
+          name="stock_deduction_trigger"
+          defaultValue={config.stockDeductionTrigger}
+          className="h-10 rounded-md border border-[var(--platform-border)] bg-[var(--platform-surface)] px-3 text-sm text-[var(--platform-text-primary)]"
+        >
+          <option value="dispatched">Dispatched (ready to dispatch / shipped / delivered)</option>
+          <option value="packed">Packed</option>
+        </select>
       </label>
 
       <div className="grid gap-4 md:grid-cols-2">

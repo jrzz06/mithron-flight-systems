@@ -44,10 +44,10 @@ describe("payment webhook hardening", () => {
     expect(canTransitionOrderStatus("pending_payment", "refunded")).toBe(false);
   });
 
-  it("handles refunded webhook with stock release and timeline update", () => {
+  it("handles refunded webhook with timeline update without stock release", () => {
     const confirm = source("services/payments/confirm-payment.ts");
     expect(confirm).toContain('event.status === "refunded"');
-    expect(confirm).toContain("releaseCheckoutStock");
+    expect(confirm).not.toContain("releaseCheckoutStock");
     expect(confirm).toContain('payment_status: "refunded"');
     expect(confirm).toContain("payment.refunded");
   });

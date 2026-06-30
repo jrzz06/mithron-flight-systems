@@ -27,8 +27,7 @@ import {
   buildOrderCreateWorkflowFromFormData,
   buildOrderLifecycleUpdateFromFormData,
   buildProductInventoryWorkflowFromFormData,
-  buildSimpleInventoryUpdateFromFormData,
-  reconcileAdminInventoryQuantities
+  buildSimpleInventoryUpdateFromFormData
 } from "@/services/enterprise-admin-forms";
 import {
   CSV_IMPORT_SOURCE_TAGS,
@@ -40,7 +39,7 @@ import {
 import { buildOrderTimelineEntry, appendOrderTimeline, syncOrderStatusFromFulfillment } from "@/services/orders";
 import { createStaffOrderFromWorkflowInput } from "@/services/manual-order";
 import { generateWarehouseOrderNumber } from "@/lib/orders/order-number";
-import { orderHasCheckoutReservations, releaseCheckoutStock, reserveCheckoutStock } from "@/services/checkout-stock";
+import { orderInventoryDeducted } from "@/services/inventory";
 import { deriveProductSku } from "@/lib/product-sku";
 import { upsertProductInventoryRecord } from "@/services/product-inventory";
 import { saveProductInventory } from "@/services/product-inventory-workflow";
@@ -253,34 +252,6 @@ async function resolveWarehouseCodeFromFormData(formData: FormData) {
   return assertValidWarehouseCode(raw);
 }
 
-async function reserveOrderStockForAllocation(orderId: string, warehouseCode: string) {
-  const config = await getWarehouseConfiguration();
-  if (!config.autoReserveOnAllocate) return 0;
-
-  const hasReservations = await orderHasCheckoutReservations(orderId).catch(() => false);
-  if (hasReservations) return 0;
-
-  const orderItems = await fetchShipmentOrderItems(orderId);
-  const reservationItems = orderItems
-    .map((item) => ({
-      productSlug: String(item.product_slug ?? ""),
-      quantity: Number(item.quantity ?? 0),
-      sku: String(item.sku ?? "").trim() || null
-    }))
-    .filter((item) => item.productSlug && item.sku && item.quantity > 0);
-
-  if (!reservationItems.length) {
-    throw new Error("Cannot allocate order without line items that have SKU and quantity.");
-  }
-
-  const result = await reserveCheckoutStock(orderId, reservationItems, process.env, warehouseCode);
-  const reservedRows = Number(result.rows_reserved ?? reservationItems.length);
-  if (reservedRows <= 0) {
-    throw new Error("Stock reservation failed during allocation. Verify warehouse stock and SKU mappings.");
-  }
-  return reservedRows;
-}
-
 function readInventoryString(formData: FormData, key: string, fallback = "") {
   const value = formData.get(key);
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -309,8 +280,8 @@ function readInventoryNumber(formData: FormData, key: string, fallback = 0) {
 function normalizeLinkageStockStatus(
   status: string,
   quantity: number
-): "available" | "low_stock" | "out_of_stock" {
-  if (status === "low_stock" || status === "out_of_stock" || status === "available") return status;
+): "available" | "out_of_stock" {
+  if (status === "out_of_stock" || status === "available") return status;
   return quantity <= 0 ? "out_of_stock" : "available";
 }
 
@@ -450,12 +421,6 @@ export async function saveSimpleInventoryFormAction(formData: FormData) {
 
   const previousInventory = await fetchInventoryBySku(input.productSlug, input.sku);
   const previousStock = await fetchWarehouseStockBySku(input.productSlug, input.sku, input.warehouseCode);
-  const reorderThreshold = Number(previousInventory?.reorder_threshold ?? 0);
-  const { reservedQuantity, sellableQuantity, committedQuantity } = reconcileAdminInventoryQuantities({
-    quantity: input.quantity,
-    previousReserved: Number(previousInventory?.reserved_quantity ?? 0),
-    previousCommitted: Number(previousStock?.committed_quantity ?? 0)
-  });
   const previousVariantId = String(previousStock?.variant_id ?? previousInventory?.variant_id ?? "").trim();
   const variantId = input.variantId ?? (previousVariantId || null);
 
@@ -466,11 +431,7 @@ export async function saveSimpleInventoryFormAction(formData: FormData) {
       variantId,
       stockStatus: input.stockStatus,
       quantity: input.quantity,
-      reservedQuantity,
-      reorderThreshold,
       warehouseCode: input.warehouseCode,
-      availableQuantity: sellableQuantity,
-      committedQuantity,
       changeSummary: input.note ?? input.changeSummary
     },
     actorId,
@@ -514,7 +475,7 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   const now = new Date().toISOString();
   const previousInventory = await fetchInventoryBySku(productSlug, sku);
   const previousStock = await fetchWarehouseStockBySku(productSlug, sku, warehouseCode);
-  const quantityBefore = Number(previousStock?.available_quantity ?? previousInventory?.quantity ?? 0);
+  const quantityBefore = Number(previousInventory?.quantity ?? previousStock?.available_quantity ?? 0);
 
   if (adjustmentMode === "increase") {
     quantity = quantityBefore + (adjustmentQuantity ?? quantity);
@@ -527,12 +488,6 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
   if (quantity < 0) {
     throw new Error("Stock cannot go below zero.");
   }
-  const reorderThreshold = Number(previousInventory?.reorder_threshold ?? 0);
-  const { reservedQuantity, sellableQuantity, committedQuantity } = reconcileAdminInventoryQuantities({
-    quantity,
-    previousReserved: Number(previousInventory?.reserved_quantity ?? 0),
-    previousCommitted: Number(previousStock?.committed_quantity ?? 0)
-  });
   const shouldArchiveProduct = stockStatus === "archived";
   if (shouldArchiveProduct) await assertAdminMutationPermission("mithron_products", actorId);
   const persistedStatus = stockStatus === "archived" ? "out_of_stock" : stockStatus;
@@ -565,11 +520,7 @@ export async function saveInventoryQuickEditFormAction(formData: FormData) {
       variantId,
       stockStatus: normalizeLinkageStockStatus(persistedStatus, quantity),
       quantity,
-      reservedQuantity,
-      reorderThreshold,
       warehouseCode,
-      availableQuantity: sellableQuantity,
-      committedQuantity,
       changeSummary: note ?? `Update inventory for ${productSlug}:${sku}`
     },
     actorId!,
@@ -609,7 +560,7 @@ async function importInventoryCsvRecord(
   }
 
   const previousStock = await fetchWarehouseStockBySku(productSlug, canonicalSku, warehouseCode);
-  const quantityBefore = Number(previousStock?.available_quantity ?? 0);
+  const quantityBefore = Number(previousInventory?.quantity ?? previousStock?.available_quantity ?? 0);
   const product = existingProducts[0];
 
   await upsertProductInventoryRecord(
@@ -619,11 +570,7 @@ async function importInventoryCsvRecord(
       variantId: null,
       stockStatus: normalizeLinkageStockStatus(record.stockStatus, record.stock),
       quantity: record.stock,
-      reservedQuantity: 0,
-      reorderThreshold: 0,
       warehouseCode,
-      availableQuantity: record.stock,
-      committedQuantity: 0,
       changeSummary: `Imported from inventory CSV row ${record.sourceRow}.`
     },
     actorId
@@ -720,13 +667,7 @@ export async function saveInventoryBulkUpdateFormAction(formData: FormData) {
     if (!productSlug || !sku) continue;
     const previousInventory = await fetchInventoryBySku(productSlug, sku);
     const previousStock = await fetchWarehouseStockBySku(productSlug, sku, warehouseCode);
-    const onHandQuantity = Number(previousInventory?.quantity ?? previousStock?.available_quantity ?? 0);
-    const reorderThreshold = Number(previousInventory?.reorder_threshold ?? 0);
-    const { reservedQuantity, sellableQuantity, committedQuantity } = reconcileAdminInventoryQuantities({
-      quantity: onHandQuantity,
-      previousReserved: Number(previousInventory?.reserved_quantity ?? 0),
-      previousCommitted: Number(previousStock?.committed_quantity ?? 0)
-    });
+    const onHandQuantity = Number(previousInventory?.quantity ?? 0);
     const variantId = String(previousInventory?.variant_id ?? previousStock?.variant_id ?? "").trim() || null;
     const persistedStatus = nextStatus === "archived" ? "out_of_stock" : nextStatus;
 
@@ -737,11 +678,7 @@ export async function saveInventoryBulkUpdateFormAction(formData: FormData) {
         variantId,
         stockStatus: normalizeLinkageStockStatus(persistedStatus || inventoryStatusForQuantity(onHandQuantity), onHandQuantity),
         quantity: onHandQuantity,
-        reservedQuantity,
-        reorderThreshold,
         warehouseCode,
-        availableQuantity: sellableQuantity,
-        committedQuantity,
         changeSummary: "Bulk inventory update"
       },
       actorId
@@ -839,11 +776,7 @@ export async function duplicateInventoryProductFormAction(formData: FormData) {
         variantId: null,
         stockStatus: normalizeLinkageStockStatus(stockStatus, quantity),
         quantity,
-        reservedQuantity: 0,
-        reorderThreshold: 0,
         warehouseCode: scope.warehouseCode,
-        availableQuantity: quantity,
-        committedQuantity: 0,
         changeSummary: `Duplicate inventory from ${productSlug}`
       },
       actorId!,
@@ -932,23 +865,10 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
     nextStatus = syncOrderStatusFromFulfillment(nextStatus, nextFulfillment);
   }
 
-  let reservedRows = 0;
-  if (previousFulfillment === "pending" && nextFulfillment === "processing") {
-    reservedRows = await reserveOrderStockForAllocation(input.orderId, warehouseCode);
-  }
-
-  if (nextFulfillment === "cancelled" && previousFulfillment !== "cancelled") {
-    const hasReservations = await orderHasCheckoutReservations(input.orderId).catch(() => false);
-    if (hasReservations) {
-      await releaseCheckoutStock(input.orderId, process.env, warehouseCode);
-    }
-  }
-
-  const existingShipments = await fetchShipmentsByOrderId(input.orderId);
-  const hasReservations = await orderHasCheckoutReservations(input.orderId).catch(() => false);
-  const fulfillmentMovements = existingShipments.length === 0
-    && !hasReservations
-    && shouldDeductFulfillmentStock(previousFulfillment, nextFulfillment)
+  const warehouseConfig = await getWarehouseConfiguration();
+  const alreadyDeducted = await orderInventoryDeducted(input.orderId).catch(() => false);
+  const fulfillmentMovements = !alreadyDeducted
+    && shouldDeductFulfillmentStock(previousFulfillment, nextFulfillment, warehouseConfig.stockDeductionTrigger)
     ? await applyFulfillmentStockMovements({
       orderId: input.orderId,
       warehouseCode,
@@ -971,7 +891,7 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
         fulfillment_status: nextFulfillment,
         warehouse_code: warehouseCode,
         inventory_movements: fulfillmentMovements.length,
-        reserved_rows: reservedRows
+        stock_deduction_trigger: warehouseConfig.stockDeductionTrigger
       },
       at: now
     })
@@ -1008,7 +928,7 @@ export async function updateWarehouseOrderLifecycleFormAction(formData: FormData
         fulfillment_status: nextFulfillment,
         warehouse_code: warehouseCode,
         inventory_movements: fulfillmentMovements.length,
-        reserved_rows: reservedRows,
+        stock_deduction_trigger: warehouseConfig.stockDeductionTrigger,
         note: input.note
       }
     },
@@ -1114,7 +1034,8 @@ export async function saveWarehouseConfigurationFormAction(formData: FormData) {
     default_warehouse_code: input.defaultWarehouseCode,
     checkout_warehouse_code: input.checkoutWarehouseCode,
     supplier_intake_warehouse_code: input.supplierIntakeWarehouseCode,
-    auto_reserve_on_allocate: input.autoReserveOnAllocate,
+    auto_reserve_on_allocate: false,
+    stock_deduction_trigger: input.stockDeductionTrigger,
     default_carrier: input.defaultCarrier,
     barcode_prefix: input.barcodePrefix,
     printer_name: input.printerName,
@@ -1151,7 +1072,7 @@ export async function saveWarehouseConfigurationFormAction(formData: FormData) {
         default_warehouse_code: input.defaultWarehouseCode,
         checkout_warehouse_code: input.checkoutWarehouseCode,
         supplier_intake_warehouse_code: input.supplierIntakeWarehouseCode,
-        auto_reserve_on_allocate: input.autoReserveOnAllocate
+        stock_deduction_trigger: input.stockDeductionTrigger
       }
     },
     actorId

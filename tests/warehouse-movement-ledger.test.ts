@@ -141,12 +141,16 @@ describe("warehouse inventory movement ledger", () => {
     });
   });
 
-  it("deducts stock exactly once when orders enter fulfillment execution states", () => {
-    expect(shouldDeductFulfillmentStock("queued", "packed")).toBe(true);
-    expect(shouldDeductFulfillmentStock("pending", "fulfilled")).toBe(true);
-    expect(shouldDeductFulfillmentStock("packed", "fulfilled")).toBe(false);
-    expect(shouldDeductFulfillmentStock("fulfilled", "delivered")).toBe(false);
-    expect(shouldDeductFulfillmentStock("queued", "queued")).toBe(false);
+  it("deducts stock on packed when trigger is packed", () => {
+    expect(shouldDeductFulfillmentStock("processing", "packed", "packed")).toBe(true);
+    expect(shouldDeductFulfillmentStock("packed", "ready_to_dispatch", "packed")).toBe(false);
+  });
+
+  it("deducts stock on dispatch states when trigger is dispatched (default)", () => {
+    expect(shouldDeductFulfillmentStock("packed", "ready_to_dispatch", "dispatched")).toBe(true);
+    expect(shouldDeductFulfillmentStock("picked", "shipped", "dispatched")).toBe(true);
+    expect(shouldDeductFulfillmentStock("shipped", "delivered", "dispatched")).toBe(false);
+    expect(shouldDeductFulfillmentStock("processing", "packed", "dispatched")).toBe(false);
   });
 
   it("adds additive inventory_movements schema with RLS, indexes, FKs, and realtime readiness", () => {
@@ -186,7 +190,7 @@ describe("warehouse inventory movement ledger", () => {
   it("wires ledger creation through warehouse, admin inventory, and fulfillment flows", () => {
     const adminActions = readFileSync(join(process.cwd(), "services", "admin-actions.ts"), "utf8");
     const warehouseActions = readFileSync(join(process.cwd(), "app", "warehouse", "actions.ts"), "utf8");
-    const productActions = readFileSync(join(process.cwd(), "app", "admin", "products", "actions.ts"), "utf8");
+    const productWorkflow = readFileSync(join(process.cwd(), "services", "product-inventory-workflow.ts"), "utf8");
     const warehouseInventoryPage = readFileSync(join(process.cwd(), "app", "warehouse", "inventory", "page.tsx"), "utf8");
     const inventoryManager = readFileSync(join(process.cwd(), "components", "admin", "inventory-manager.tsx"), "utf8");
     const warehousePage = readFileSync(join(process.cwd(), "app", "warehouse", "page.tsx"), "utf8");
@@ -200,9 +204,10 @@ describe("warehouse inventory movement ledger", () => {
     expect(warehouseActions).toContain("saveInventoryQuickEditFormAction");
     expect(warehouseActions).toContain("recordInventoryMovementForStockChange");
     expect(warehouseActions).toContain("applyFulfillmentStockMovements");
-    expect(productActions).toContain("recordInventoryMovementForStockChange");
+    expect(productWorkflow).toContain("recordInventoryMovementForStockChange");
     expect(warehouseInventoryPage).toContain("InventoryManager");
-    expect(inventoryManager).toContain("data-inventory-quick-edit-form");
+    expect(inventoryManager).not.toContain("data-inventory-quick-edit-form");
+    expect(inventoryManager).toContain("data-inventory-adjust-form");
     expect(inventoryManager).toContain("name=\"stock_status\"");
     expect(inventoryManager).toContain("name=\"quantity\"");
     expect(inventoryManager).toContain("inventory_movements");

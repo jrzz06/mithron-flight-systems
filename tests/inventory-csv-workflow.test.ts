@@ -83,12 +83,10 @@ describe("inventory CSV workflow", () => {
         price: 250,
         inventoryValue: 1000,
         lastUpdated: "2026-05-25T10:00:00.000Z",
-        reservedQuantity: 0,
-        reorderThreshold: 0,
-        availableQuantity: 4,
-        committedQuantity: 0,
         warehouseUpdatedAt: "2026-05-25T10:00:00.000Z",
-        inventoryUpdatedAt: "2026-05-25T10:00:00.000Z"
+        inventoryUpdatedAt: "2026-05-25T10:00:00.000Z",
+        supplierName: "",
+        isArchived: false
       },
       {
         id: "IN-WEST-01:b:B",
@@ -104,12 +102,10 @@ describe("inventory CSV workflow", () => {
         price: 100,
         inventoryValue: 0,
         lastUpdated: null,
-        reservedQuantity: 0,
-        reorderThreshold: 0,
-        availableQuantity: 0,
-        committedQuantity: 0,
         warehouseUpdatedAt: null,
-        inventoryUpdatedAt: null
+        inventoryUpdatedAt: null,
+        supplierName: "",
+        isArchived: false
       }
     ];
 
@@ -209,18 +205,14 @@ describe("inventory CSV workflow", () => {
     const permissionGuard = quickEdit.indexOf('roleHasPermission(auth.role, "products.write")');
     const archiveGuard = quickEdit.indexOf('const shouldArchiveProduct = stockStatus === "archived";');
     const archivePreflight = quickEdit.indexOf('if (shouldArchiveProduct) await assertAdminMutationPermission("mithron_products", actorId);');
-    const movementWrite = quickEdit.indexOf("recordInventoryMovementForStockChange");
-    const productArchiveWrite = quickEdit.indexOf("const productRecord = shouldArchiveProduct");
+    const inventoryWrite = quickEdit.indexOf("saveProductInventory");
 
     expect(permissionGuard).toBeGreaterThan(-1);
-    expect(actions).toContain("reconcileAdminInventoryQuantities");
+    expect(actions).toContain("saveProductInventory");
     expect(archiveGuard).toBeGreaterThan(permissionGuard);
     expect(archivePreflight).toBeGreaterThan(archiveGuard);
-    expect(archivePreflight).toBeLessThan(movementWrite);
-    expect(productArchiveWrite).toBeGreaterThan(movementWrite);
+    expect(archivePreflight).toBeLessThan(inventoryWrite);
     expect(actions).toContain("requireProductCatalogActor");
-    expect(actions).toContain("const productRecord = shouldArchiveProduct");
-    expect(actions).toContain("? await updateProductPublicationRecord");
-    expect(actions).toContain(": null");
+    expect(actions).toContain("updateProductPublicationRecord");
   });
 });

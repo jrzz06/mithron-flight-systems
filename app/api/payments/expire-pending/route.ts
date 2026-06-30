@@ -3,7 +3,6 @@ import { authorizeBearerSecret } from "@/lib/api/bearer-auth";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { mergePaymentLifecycleMetadata } from "@/lib/orders/payment-lifecycle";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
-import { releaseCheckoutStock } from "@/services/checkout-stock";
 import { applyPaymentEvent } from "@/services/payments/confirm-payment";
 import {
   hasSuccessfulGatewayPayment,
@@ -95,9 +94,7 @@ export async function POST(request: Request) {
         }
       }
 
-      await releaseCheckoutStock(orderId);
-
-      for (const paymentRow of payments) {
+      await updateAdminRecord(
         if (["succeeded", "failed", "refunded"].includes(String(paymentRow.status ?? ""))) continue;
         await updateAdminRecord(
           "payments",

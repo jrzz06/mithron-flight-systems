@@ -1,6 +1,7 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { deriveProductSku } from "@/lib/product-sku";
 import { upsertInventoryRecord, upsertWarehouseStockRecord, updateAdminRecord } from "@/services/admin-actions";
+import { availabilityLabelFromQuantity, stockStatusFromQuantity } from "@/services/inventory";
 import type { ProductInventoryWorkflowInput } from "@/services/enterprise-admin-forms";
 
 export { deriveProductSku };
@@ -15,19 +16,13 @@ function headers(serviceRoleKey: string) {
   };
 }
 
-function availabilityLabel(stockStatus: string) {
-  if (stockStatus === "out_of_stock") return "Out of stock";
-  if (stockStatus === "low_stock") return "Low stock";
-  return "In stock";
-}
-
 async function upsertProductInventoryViaAdminRecords(
   input: ProductInventoryWorkflowInput,
   actorId: string | null,
   env: EnvSource
 ) {
   const sku = deriveProductSku(input.productSlug);
-  const sellableQuantity = Math.max(0, input.quantity - input.reservedQuantity);
+  const stockStatus = stockStatusFromQuantity(input.quantity);
   const now = new Date().toISOString();
 
   await upsertInventoryRecord(
@@ -35,10 +30,10 @@ async function upsertProductInventoryViaAdminRecords(
       product_slug: input.productSlug,
       sku,
       variant_id: input.variantId,
-      stock_status: input.stockStatus,
+      stock_status: stockStatus,
       quantity: input.quantity,
-      reserved_quantity: input.reservedQuantity,
-      reorder_threshold: input.reorderThreshold,
+      reserved_quantity: 0,
+      reorder_threshold: 0,
       updated_by: actorId,
       updated_at: now
     },
@@ -52,8 +47,8 @@ async function upsertProductInventoryViaAdminRecords(
       product_slug: input.productSlug,
       sku,
       variant_id: input.variantId,
-      available_quantity: sellableQuantity,
-      committed_quantity: input.committedQuantity,
+      available_quantity: input.quantity,
+      committed_quantity: 0,
       updated_by: actorId,
       updated_at: now,
       last_counted_at: now
@@ -67,7 +62,7 @@ async function upsertProductInventoryViaAdminRecords(
     "slug",
     input.productSlug,
     {
-      source_availability: availabilityLabel(input.stockStatus),
+      source_availability: availabilityLabelFromQuantity(input.quantity),
       updated_at: now
     },
     actorId,
@@ -77,10 +72,8 @@ async function upsertProductInventoryViaAdminRecords(
   return {
     productSlug: input.productSlug,
     sku,
-    stockStatus: input.stockStatus,
+    stockStatus,
     quantity: input.quantity,
-    availableQuantity: sellableQuantity,
-    committedQuantity: input.committedQuantity,
     warehouseCode: input.warehouseCode
   };
 }
@@ -93,7 +86,7 @@ export async function upsertProductInventoryRecord(
 ) {
   const config = assertSupabaseAdminConfig(env);
   const sku = deriveProductSku(input.productSlug);
-  const sellableQuantity = Math.max(0, input.quantity - input.reservedQuantity);
+  const stockStatus = stockStatusFromQuantity(input.quantity);
 
   const response = await fetch(`${config.url}/rest/v1/rpc/upsert_product_inventory`, {
     method: "POST",
@@ -103,9 +96,9 @@ export async function upsertProductInventoryRecord(
       p_sku: sku,
       p_warehouse_code: input.warehouseCode,
       p_quantity: input.quantity,
-      p_reserved_quantity: input.reservedQuantity,
-      p_reorder_threshold: input.reorderThreshold,
-      p_stock_status: input.stockStatus,
+      p_reserved_quantity: 0,
+      p_reorder_threshold: 0,
+      p_stock_status: stockStatus,
       p_variant_id: input.variantId,
       p_updated_by: actorId
     }),
@@ -128,10 +121,8 @@ export async function upsertProductInventoryRecord(
   return {
     productSlug: input.productSlug,
     sku: String(result.sku ?? sku),
-    stockStatus: String(result.stock_status ?? input.stockStatus),
+    stockStatus: String(result.stock_status ?? stockStatus),
     quantity: Number(result.quantity ?? input.quantity),
-    availableQuantity: Number(result.available_quantity ?? sellableQuantity),
-    committedQuantity: Number(result.committed_quantity ?? input.committedQuantity),
     warehouseCode: String(result.warehouse_code ?? input.warehouseCode)
   };
 }

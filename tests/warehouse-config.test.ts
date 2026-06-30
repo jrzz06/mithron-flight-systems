@@ -48,7 +48,8 @@ describe("warehouse configuration", () => {
     expect(config.defaultWarehouseCode).toBe("IN-WEST-01");
     expect(config.checkoutWarehouseCode).toBe("IN-WEST-01");
     expect(config.supplierIntakeWarehouseCode).toBe("IN-SOUTH-01");
-    expect(config.autoReserveOnAllocate).toBe(true);
+    expect(config.autoReserveOnAllocate).toBe(false);
+    expect(config.stockDeductionTrigger).toBe("dispatched");
     expect(config.barcodePrefix).toBe("MTH-");
   });
 
@@ -74,7 +75,7 @@ describe("warehouse configuration", () => {
     formData.set("default_warehouse_code", "IN-WEST-01");
     formData.set("checkout_warehouse_code", "IN-EAST-01");
     formData.set("supplier_intake_warehouse_code", "IN-SOUTH-01");
-    formData.set("auto_reserve_on_allocate", "on");
+    formData.set("stock_deduction_trigger", "packed");
     formData.set("default_carrier", "Mithron Field");
     formData.set("barcode_prefix", "MTH-");
     formData.set("printer_name", "Pack-Printer");
@@ -85,7 +86,8 @@ describe("warehouse configuration", () => {
       defaultWarehouseCode: "IN-WEST-01",
       checkoutWarehouseCode: "IN-EAST-01",
       supplierIntakeWarehouseCode: "IN-SOUTH-01",
-      autoReserveOnAllocate: true,
+      autoReserveOnAllocate: false,
+      stockDeductionTrigger: "packed",
       defaultCarrier: "Mithron Field",
       barcodePrefix: "MTH-",
       printerName: "Pack-Printer",
@@ -94,11 +96,11 @@ describe("warehouse configuration", () => {
     });
   });
 
-  it("reserves stock when allocating pending orders to processing", () => {
+  it("deducts stock on fulfillment transition using configurable trigger", () => {
     const actions = source("app/warehouse/actions.ts");
-    expect(actions).toContain("reserveOrderStockForAllocation");
-    expect(actions).toContain('previousFulfillment === "pending"');
-    expect(actions).toContain('nextFulfillment === "processing"');
-    expect(actions).toContain("completeWarehousePackingFormAction");
+    expect(actions).toContain("shouldDeductFulfillmentStock");
+    expect(actions).toContain("applyFulfillmentStockMovements");
+    expect(actions).toContain("stockDeductionTrigger");
+    expect(actions).not.toContain("reserveOrderStockForAllocation");
   });
 });

@@ -823,7 +823,7 @@ export async function saveProductInventoryWorkflowFormAction(formData: FormData)
           variant_id: draftInput.variantId,
           warehouse_code: draftInput.warehouseCode,
           quantity: draftInput.quantity,
-          available_quantity: draftInput.availableQuantity
+          available_quantity: draftInput.quantity
         },
         actorId,
         actorRole,

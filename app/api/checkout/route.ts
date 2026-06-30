@@ -14,7 +14,7 @@ import {
   updateAdminRecord
 } from "@/services/admin-actions";
 import { buildCustomerCheckoutDraft } from "@/services/orders";
-import { releaseCheckoutStock, reserveCheckoutStock, resolveCheckoutStockSkus, verifyCheckoutStockAvailability, CheckoutStockVerificationError, CheckoutWarehouseConfigurationError } from "@/services/checkout-stock";
+import { verifyCheckoutStockAvailability, CheckoutStockVerificationError, CheckoutWarehouseConfigurationError, resolveCheckoutStockSkus } from "@/services/checkout-stock";
 import {
   buildCheckoutPaymentResponse,
   markCheckoutPaymentInitiated
@@ -96,12 +96,6 @@ function isDuplicateIdempotencyError(error: unknown) {
 }
 
 async function cancelCheckoutOrder(orderId: string, actorId: string | null, reason: string) {
-  try {
-    await releaseCheckoutStock(orderId);
-  } catch {
-    // Best-effort release; order still marked cancelled.
-  }
-
   await updateAdminRecord(
     "orders",
     "id",
@@ -341,14 +335,6 @@ export async function POST(request: Request) {
     await cancelCheckoutOrder(orderId, userId, "order_items_failed");
     logPaymentError("checkout_order_items_failed", error, { orderId });
     return NextResponse.json({ error: "Unable to process your order at this time." }, { status: 500 });
-  }
-
-  try {
-    await reserveCheckoutStock(orderId, stockItems);
-  } catch (error) {
-    await cancelCheckoutOrder(orderId, userId, "stock_reservation_failed");
-    logPaymentError("checkout_stock_reservation_failed", error, { orderId });
-    return NextResponse.json({ error: "One or more items are no longer available." }, { status: 409 });
   }
 
   let intent;

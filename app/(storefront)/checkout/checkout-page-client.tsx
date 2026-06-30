@@ -12,6 +12,13 @@ import {
   savePendingPaymentVerification
 } from "@/lib/checkout/pending-payment";
 import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
+import {
+  buildRazorpayCheckoutDisplayConfig,
+  isRazorpayQrEligibleViewport,
+  loadRazorpayCheckoutScript,
+  logRazorpayClientEvent,
+  normalizeRazorpayContact
+} from "@/lib/payments/razorpay-checkout";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { Button } from "@/components/ui/button";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
@@ -112,25 +119,6 @@ function loadCashfreeScript() {
     script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
     script.async = true;
     script.onload = () => resolve(Boolean(window.Cashfree));
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
-
-function loadRazorpayScript() {
-  return new Promise<boolean>((resolve) => {
-    if (typeof window === "undefined") {
-      resolve(false);
-      return;
-    }
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => resolve(Boolean(window.Razorpay));
     script.onerror = () => resolve(false);
     document.body.appendChild(script);
   });
@@ -245,6 +233,8 @@ export function CheckoutPageClient() {
   const [paymentProvider, setPaymentProvider] = useState("");
   const checkoutIdempotencyKeyRef = useRef<string | null>(null);
   const verifyingPaymentRef = useRef(false);
+  const checkoutOpeningRef = useRef(false);
+  const [gatewayModalOpen, setGatewayModalOpen] = useState(false);
 
   const buildPaymentSuccessUrl = useCallback((orderId: string, signedIn: boolean) => {
     const params = new URLSearchParams({ orderId });
@@ -587,6 +577,13 @@ export function CheckoutPageClient() {
   }, []);
 
   useEffect(() => {
+    if (paymentProvider !== "razorpay") return;
+    void loadRazorpayCheckoutScript().then((loaded) => {
+      logRazorpayClientEvent("script_prefetch", { loaded, provider: "razorpay" });
+    });
+  }, [paymentProvider]);
+
+  useEffect(() => {
     if (!stubOrderId || stubFlag !== "1" || completed) return;
 
     let active = true;
@@ -741,9 +738,16 @@ export function CheckoutPageClient() {
     amountPaise: number;
     email: string;
     signedIn: boolean;
+    keyMode?: string | null;
   }) {
-    const loaded = await loadRazorpayScript();
+    if (checkoutOpeningRef.current) {
+      logRazorpayClientEvent("checkout_open_blocked", { reason: "already_open" }, "warn");
+      return false;
+    }
+
+    const loaded = await loadRazorpayCheckoutScript();
     if (!loaded || !window.Razorpay) {
+      logRazorpayClientEvent("checkout_script_unavailable", {}, "error");
       setError("Payment gateway failed to load. Please refresh and try again.");
       return false;
     }
@@ -753,20 +757,36 @@ export function CheckoutPageClient() {
       return false;
     }
 
+    checkoutOpeningRef.current = true;
+    setGatewayModalOpen(true);
+
+    logRazorpayClientEvent("checkout_init", {
+      orderId: input.orderId,
+      razorpayOrderId: input.razorpayOrderId,
+      amountPaise: input.amountPaise,
+      keyMode: input.keyMode ?? "unknown",
+      viewportWidth: typeof window !== "undefined" ? window.innerWidth : null,
+      qrEligible: isRazorpayQrEligibleViewport()
+    });
+
+    const contact = normalizeRazorpayContact(phone.trim());
+
     return new Promise<boolean>((resolve) => {
+      const finishCheckout = (paid: boolean) => {
+        checkoutOpeningRef.current = false;
+        setGatewayModalOpen(false);
+        resolve(paid);
+      };
+
       const rzp = new window.Razorpay!({
         key: input.key,
         name: "Mithron",
         description: `Order ${input.orderNumber}`,
         order_id: input.razorpayOrderId,
-        prefill: { email: input.email, contact: phone.trim() },
+        prefill: { email: input.email, contact },
         theme: { color: "#174d33", backdrop_color: "#f7faf8" },
         retry: { enabled: true, max_count: 3 },
-        config: {
-          display: {
-            preferences: { show_default_blocks: true }
-          }
-        },
+        config: buildRazorpayCheckoutDisplayConfig(),
         handler: async (response: {
           razorpay_order_id?: string;
           razorpay_payment_id?: string;
@@ -778,6 +798,12 @@ export function CheckoutPageClient() {
           const razorpayOrderId = response.razorpay_order_id ?? input.razorpayOrderId;
           const razorpayPaymentId = response.razorpay_payment_id ?? "";
           const razorpaySignature = response.razorpay_signature ?? "";
+
+          logRazorpayClientEvent("payment_handler", {
+            orderId: input.orderId,
+            razorpayOrderId,
+            razorpayPaymentId: razorpayPaymentId || null
+          });
 
           savePendingPaymentVerification({
             orderId: input.orderId,
@@ -804,14 +830,14 @@ export function CheckoutPageClient() {
             setLoading(null);
             if (verification.paid) {
               router.push(buildPaymentSuccessUrl(input.orderId, input.signedIn));
-              resolve(true);
+              finishCheckout(true);
               return;
             }
             setError(
               verification.error
               ?? "We could not confirm payment on our server yet. Keep this page open while we retry."
             );
-            resolve(false);
+            finishCheckout(false);
           } finally {
             verifyingPaymentRef.current = false;
           }
@@ -819,8 +845,9 @@ export function CheckoutPageClient() {
         modal: {
           confirm_close: true,
           ondismiss: () => {
+            logRazorpayClientEvent("checkout_dismissed", { orderId: input.orderId });
             setError("Payment window closed. You have not been charged.");
-            resolve(false);
+            finishCheckout(false);
           }
         }
       });
@@ -829,19 +856,37 @@ export function CheckoutPageClient() {
         const reason = typeof response.error === "object" && response.error && "description" in response.error
           ? String((response.error as { description?: string }).description ?? "")
           : "";
+        const code = typeof response.error === "object" && response.error && "code" in response.error
+          ? String((response.error as { code?: string }).code ?? "")
+          : "";
+        logRazorpayClientEvent("payment_failed", {
+          orderId: input.orderId,
+          code: code || null,
+          reason: reason || null
+        }, "warn");
         setError(reason.trim() || "Payment failed. Try another method or refresh and try again.");
-        resolve(false);
+        finishCheckout(false);
       });
 
       rzp.on("payment.error", (response) => {
         const reason = typeof response.error === "object" && response.error && "description" in response.error
           ? String((response.error as { description?: string }).description ?? "")
           : "";
+        const code = typeof response.error === "object" && response.error && "code" in response.error
+          ? String((response.error as { code?: string }).code ?? "")
+          : "";
+        logRazorpayClientEvent("payment_error", {
+          orderId: input.orderId,
+          code: code || null,
+          reason: reason || null
+        }, "error");
         setError(reason.trim() || "Payment gateway error. Try cards or another UPI app, or switch to Cashfree.");
-        resolve(false);
+        finishCheckout(false);
       });
 
+      setLoading(null);
       rzp.open();
+      logRazorpayClientEvent("checkout_opened", { orderId: input.orderId });
     });
   }
 
@@ -958,7 +1003,8 @@ export function CheckoutPageClient() {
         razorpayOrderId: payload.clientSecret,
         amountPaise: Number(payload.amountPaise ?? inrToPaise(Number(payload.amount ?? 0))),
         email: checkout.email,
-        signedIn: isSignedIn
+        signedIn: isSignedIn,
+        keyMode: payload.razorpayKeyMode ?? null
       });
       setLoading(null);
       if (paid) return;
@@ -1030,7 +1076,7 @@ export function CheckoutPageClient() {
     setLoading(null);
   }
 
-  const checkoutBusy = Boolean(loading);
+  const checkoutBusy = Boolean(loading) || gatewayModalOpen;
 
   return (
     <div className={styles.page}>

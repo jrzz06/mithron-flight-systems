@@ -8,13 +8,11 @@ function source(path: string) {
   return readFileSync(join(root, path), "utf8");
 }
 
-describe("shipment reservation fulfillment", () => {
-  it("fulfills checkout reservations instead of deducting available stock again", () => {
+describe("shipment fulfillment inventory", () => {
+  it("does not deduct stock during shipment creation", () => {
     const shipments = source("services/shipments.ts");
-    expect(shipments).toContain("orderHasCheckoutReservations");
-    expect(shipments).toContain("fulfillReservedStock");
-    expect(shipments).toContain("if (!hasCheckoutReservation)");
-    expect(shipments).toContain("if (hasCheckoutReservation)");
+    expect(shipments).not.toContain("fulfillReservedStock");
+    expect(shipments).not.toContain("orderHasCheckoutReservations");
   });
 
   it("defines reservation probe and atomic inventory adjustment RPCs", () => {
@@ -31,9 +29,9 @@ describe("shipment reservation fulfillment", () => {
     expect(movements).toContain("expectedUpdatedAt?: string | null");
   });
 
-  it("uses atomic checkout reservation for manual warehouse orders", () => {
+  it("deducts inventory on warehouse fulfillment lifecycle updates", () => {
     const actions = source("app/warehouse/actions.ts");
-    expect(actions).toContain("reserveCheckoutStock");
-    expect(actions).not.toContain("reasonCode: \"order_reservation\"");
+    expect(actions).toContain("applyFulfillmentStockMovements");
+    expect(actions).not.toContain("reserveCheckoutStock");
   });
 });

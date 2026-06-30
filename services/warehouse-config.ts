@@ -9,6 +9,7 @@ export type WarehouseConfiguration = {
   checkoutWarehouseCode: string;
   supplierIntakeWarehouseCode: string;
   autoReserveOnAllocate: boolean;
+  stockDeductionTrigger: "packed" | "dispatched";
   defaultCarrier: string;
   barcodePrefix: string;
   printerName: string;
@@ -21,12 +22,17 @@ type WarehouseConfigurationRow = {
   checkout_warehouse_code?: string | null;
   supplier_intake_warehouse_code?: string | null;
   auto_reserve_on_allocate?: boolean | null;
+  stock_deduction_trigger?: string | null;
   default_carrier?: string | null;
   barcode_prefix?: string | null;
   printer_name?: string | null;
   label_width_mm?: number | null;
   require_item_scan?: boolean | null;
 };
+
+function normalizeStockDeductionTrigger(value: string | null | undefined): "packed" | "dispatched" {
+  return value?.trim().toLowerCase() === "packed" ? "packed" : "dispatched";
+}
 
 function headers(serviceRoleKey: string) {
   return {
@@ -44,7 +50,8 @@ function buildFallbackWarehouseConfiguration(
     defaultWarehouseCode: envCode,
     checkoutWarehouseCode: envCode,
     supplierIntakeWarehouseCode: envCode,
-    autoReserveOnAllocate: row?.auto_reserve_on_allocate !== false,
+    autoReserveOnAllocate: false,
+    stockDeductionTrigger: normalizeStockDeductionTrigger(row?.stock_deduction_trigger),
     defaultCarrier: row?.default_carrier?.trim() || "Mithron Field",
     barcodePrefix: row?.barcode_prefix?.trim() || "MTH-",
     printerName: row?.printer_name?.trim() || "",
@@ -59,7 +66,7 @@ async function loadWarehouseConfigurationRow(env: EnvSource = process.env): Prom
 
   try {
     const response = await fetch(
-      `${config.url}/rest/v1/warehouse_configuration?id=eq.global&select=default_warehouse_code,checkout_warehouse_code,supplier_intake_warehouse_code,auto_reserve_on_allocate,default_carrier,barcode_prefix,printer_name,label_width_mm,require_item_scan&limit=1`,
+      `${config.url}/rest/v1/warehouse_configuration?id=eq.global&select=default_warehouse_code,checkout_warehouse_code,supplier_intake_warehouse_code,auto_reserve_on_allocate,stock_deduction_trigger,default_carrier,barcode_prefix,printer_name,label_width_mm,require_item_scan&limit=1`,
       { headers: headers(config.serviceRoleKey), cache: "no-store" }
     );
     if (!response.ok) return null;
@@ -121,7 +128,8 @@ export const getWarehouseConfiguration = cache(async (env: EnvSource = process.e
       defaultWarehouseCode: defaultWarehouseCode || readEnvWarehouseFallback(env),
       checkoutWarehouseCode: checkoutWarehouseCode || defaultWarehouseCode || readEnvWarehouseFallback(env),
       supplierIntakeWarehouseCode: supplierIntakeWarehouseCode || defaultWarehouseCode || readEnvWarehouseFallback(env),
-      autoReserveOnAllocate: row?.auto_reserve_on_allocate !== false,
+      autoReserveOnAllocate: false,
+      stockDeductionTrigger: normalizeStockDeductionTrigger(row?.stock_deduction_trigger),
       defaultCarrier: row?.default_carrier?.trim() || "Mithron Field",
       barcodePrefix: row?.barcode_prefix?.trim() || "MTH-",
       printerName: row?.printer_name?.trim() || "",
@@ -155,6 +163,7 @@ export type WarehouseConfigurationInput = {
   checkoutWarehouseCode: string;
   supplierIntakeWarehouseCode: string;
   autoReserveOnAllocate: boolean;
+  stockDeductionTrigger: "packed" | "dispatched";
   defaultCarrier: string;
   barcodePrefix: string;
   printerName: string;
@@ -164,11 +173,13 @@ export type WarehouseConfigurationInput = {
 
 export function parseWarehouseConfigurationFormData(formData: FormData): WarehouseConfigurationInput {
   const labelWidth = Number(formData.get("label_width_mm") ?? "100");
+  const trigger = String(formData.get("stock_deduction_trigger") ?? "dispatched").trim().toLowerCase();
   return {
     defaultWarehouseCode: String(formData.get("default_warehouse_code") ?? "").trim(),
     checkoutWarehouseCode: String(formData.get("checkout_warehouse_code") ?? "").trim(),
     supplierIntakeWarehouseCode: String(formData.get("supplier_intake_warehouse_code") ?? "").trim(),
-    autoReserveOnAllocate: formData.get("auto_reserve_on_allocate") === "on",
+    autoReserveOnAllocate: false,
+    stockDeductionTrigger: trigger === "packed" ? "packed" : "dispatched",
     defaultCarrier: String(formData.get("default_carrier") ?? "Mithron Field").trim() || "Mithron Field",
     barcodePrefix: String(formData.get("barcode_prefix") ?? "MTH-").trim() || "MTH-",
     printerName: String(formData.get("printer_name") ?? "").trim(),

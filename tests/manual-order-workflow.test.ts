@@ -115,7 +115,7 @@ describe("manual order workflow", () => {
   it("uses shared checkout persistence services in manual order orchestration", () => {
     const manualOrderService = readFileSync(join(process.cwd(), "services/manual-order.ts"), "utf8");
 
-    expect(manualOrderService).toContain("reserveCheckoutStock");
+    expect(manualOrderService).not.toContain("reserveCheckoutStock");
     expect(manualOrderService).toContain("createOrderRecord");
     expect(manualOrderService).not.toContain("insert into orders");
   });

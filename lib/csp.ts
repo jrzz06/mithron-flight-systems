@@ -119,6 +119,7 @@ export function buildPaymentContentSecurityPolicy(_nonce: string, env: EnvSource
     `connect-src ${connectSrc}`,
     `img-src ${imgSrc}`,
     "worker-src 'self' blob:",
+    `media-src 'self' blob: data: ${razorpayOrigins.join(" ")}`,
     "base-uri 'self'",
     "object-src 'none'",
     "form-action 'self' https://api.razorpay.com https://checkout.razorpay.com https://payments.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com",
