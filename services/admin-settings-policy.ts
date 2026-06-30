@@ -131,7 +131,8 @@ async function resolveAdminSettingsPolicy(env: EnvSource = process.env): Promise
       barcodePrefix: "MTH-",
       printerName: "",
       labelWidthMm: 100,
-      requireItemScan: true
+      requireItemScan: true,
+      stockDeductionTrigger: "dispatched"
     };
   }
   const configuredDefault = String(warehouse.default_warehouse_code ?? "").trim();

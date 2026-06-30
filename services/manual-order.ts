@@ -325,7 +325,7 @@ export async function createAdminManualOrderWorkflow(
     env
   );
 
-  const stockItems = await resolveCheckoutStockSkus(items, env, input.warehouseCode);
+  const stockItems = await resolveCheckoutStockSkus(items, env);
   const catalog = await getCheckoutPricingBySlugs(stockItems.map((item) => item.productSlug));
 
   const billingAddress = input.billingSameAsShipping !== false && !input.billingAddress
@@ -446,7 +446,7 @@ export async function createStaffOrderFromWorkflowInput(
   actorId: string,
   env: EnvSource = process.env
 ) {
-  const stockItems = await resolveCheckoutStockSkus(input.checkout.items, env, input.warehouseCode);
+  const stockItems = await resolveCheckoutStockSkus(input.checkout.items, env);
   const catalog = await getCheckoutPricingBySlugs(stockItems.map((item) => item.productSlug));
   const draft = buildValidatedOrderDraft(
     {

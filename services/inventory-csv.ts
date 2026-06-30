@@ -1,4 +1,5 @@
 import type { SimpleInventoryRow, SimpleInventoryStatus } from "@/services/simple-inventory-view";
+import { stockStatusFromQuantity } from "@/services/inventory";
 
 type RawCsvRow = Record<string, string>;
 
@@ -60,8 +61,6 @@ export type InventorySnapshot = {
   archivedCount: number;
 };
 
-const LOW_STOCK_THRESHOLD = 3;
-
 function csvCell(value: unknown) {
   const text = String(value ?? "");
   if (!/[",\n\r]/.test(text)) return text;
@@ -111,14 +110,13 @@ export function parseCurrencyValue(value: string) {
 }
 
 export function inventoryStatusForQuantity(quantity: number): SimpleInventoryStatus {
-  if (quantity <= 0) return "out_of_stock";
-  if (quantity <= LOW_STOCK_THRESHOLD) return "low_stock";
-  return "available";
+  return stockStatusFromQuantity(quantity);
 }
 
 export function inventoryStatusLabel(status: SimpleInventoryStatus) {
   if (status === "out_of_stock") return "Out of stock";
-  if (status === "low_stock") return "Low stock";
+  if (status === "archived") return "Archived";
+  if (status === "discontinued") return "Discontinued";
   return "In stock";
 }
 
@@ -263,7 +261,6 @@ export function buildInventorySnapshot(rows: SimpleInventoryRow[]): InventorySna
     snapshot.productCount += 1;
     snapshot.stockUnits += row.quantity;
     snapshot.totalValue += row.inventoryValue;
-    if (row.stockStatus === "low_stock") snapshot.lowStockCount += 1;
     if (row.stockStatus === "out_of_stock") snapshot.outOfStockCount += 1;
     if (row.stockStatus === "archived") snapshot.archivedCount += 1;
     if (row.stockStatus === "available") snapshot.availableCount += 1;

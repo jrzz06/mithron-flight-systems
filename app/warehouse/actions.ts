@@ -560,6 +560,7 @@ async function importInventoryCsvRecord(
   }
 
   const previousStock = await fetchWarehouseStockBySku(productSlug, canonicalSku, warehouseCode);
+  const previousInventory = await fetchInventoryBySku(productSlug, canonicalSku);
   const quantityBefore = Number(previousInventory?.quantity ?? previousStock?.available_quantity ?? 0);
   const product = existingProducts[0];
 
