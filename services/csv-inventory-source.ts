@@ -172,6 +172,15 @@ export async function getCsvInventoryRows(input: EnvSource | CsvInventoryOptions
     const inventorySlugFilter = columnInFilter("product_slug", productSlugList);
     const warehouseSlugFilter = columnInFilter("product_slug", productSlugList);
 
+    const supplierIds = [...new Set(
+      products
+        .map((row) => String(row.supplier_id ?? ""))
+        .filter(Boolean)
+    )];
+    const supplierQuery = supplierIds.length
+      ? `select=id,display_name,email&id=in.(${supplierIds.map(encodeURIComponent).join(",")})`
+      : null;
+
     const [inventory, stock, checkoutWarehouseCode, suppliers] = await Promise.all([
       fetchRows<AdminRow>(
         config,
@@ -194,7 +203,9 @@ export async function getCsvInventoryRows(input: EnvSource | CsvInventoryOptions
         ].join("&")
       ),
       getCheckoutWarehouseCode(env),
-      fetchRows<AdminRow>(config, "profiles", "select=id,display_name,email&limit=500")
+      supplierQuery
+        ? fetchRows<AdminRow>(config, "profiles", supplierQuery)
+        : Promise.resolve([] as AdminRow[])
     ]);
 
     const supplierNameById = new Map(

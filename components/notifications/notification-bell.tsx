@@ -61,24 +61,28 @@ export function NotificationBell({
     let active = true;
     const controller = new AbortController();
 
-    fetch(`/api/notifications?recipient=${encodeURIComponent(recipientId)}`, {
-      signal: controller.signal
-    })
-      .then((response) => (response.ok ? response.json() : { notifications: [] }))
-      .then((payload) => {
-        if (!active) return;
-        setRows(Array.isArray(payload.notifications) ? payload.notifications : []);
+    function loadNotifications() {
+      fetch(`/api/notifications?recipient=${encodeURIComponent(recipientId)}`, {
+        signal: controller.signal
       })
-      .catch(() => undefined);
+        .then((response) => (response.ok ? response.json() : { notifications: [] }))
+        .then((payload) => {
+          if (!active) return;
+          setRows(Array.isArray(payload.notifications) ? payload.notifications : []);
+        })
+        .catch(() => undefined);
+    }
 
+    const deferHandle = window.setTimeout(loadNotifications, 250);
     const interval = window.setInterval(() => {
-      if (!active) return;
+      if (!active || document.hidden) return;
       refreshNotifications();
     }, pollIntervalMs);
 
     return () => {
       active = false;
       controller.abort();
+      window.clearTimeout(deferHandle);
       window.clearInterval(interval);
     };
   }, [pollIntervalMs, recipientId, refreshNotifications]);

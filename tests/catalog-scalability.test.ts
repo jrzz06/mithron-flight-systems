@@ -7,7 +7,8 @@ describe("catalog scalability hardening", () => {
     const adminActions = readFileSync(join(process.cwd(), "services/admin-actions.ts"), "utf8");
 
     expect(adminActions).toContain("skipAuditLog");
-    expect(adminActions).toContain('createAdminRecord("inventory_movements", payload, actorId, env, { skipAuditLog: true })');
+    expect(adminActions).toContain("toInventoryMovementInsertPayload");
+    expect(adminActions).toContain('createAdminRecord("inventory_movements", toInventoryMovementInsertPayload(payload)');
     expect(adminActions).not.toContain('insertAuditLog("create", "activity_logs"');
   });
 

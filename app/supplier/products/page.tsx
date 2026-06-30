@@ -28,7 +28,7 @@ export default async function SupplierProductsPage() {
   }).length;
 
   return (
-    <div className="grid gap-5">
+    <div data-supplier-products-route className="grid gap-5">
       <p className="max-w-3xl text-sm leading-relaxed text-[var(--platform-text-secondary)]">
         Create and manage your product listings. Save a draft first, then send it for review when you are ready.
         Approved products go live on the store.

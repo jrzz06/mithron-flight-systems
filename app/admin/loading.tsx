@@ -1,5 +1,5 @@
-import { ControlPlaneLoading } from "@/components/ui/control-plane-loading";
+import { ControlPlaneContentLoading } from "@/components/ui/control-plane-content-loading";
 
 export default function AdminLoading() {
-  return <ControlPlaneLoading label="Loading admin dashboard" metricCount={8} />;
+  return <ControlPlaneContentLoading label="Loading admin page" />;
 }

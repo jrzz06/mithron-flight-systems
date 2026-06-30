@@ -60,6 +60,13 @@ export type DashboardOperationalCounts = {
   openEnquiries: CountMetric;
 };
 
+export type PendingSupplierSubmission = {
+  slug: string;
+  name: string;
+  supplierLabel: string;
+  updatedAt: string;
+};
+
 function combineCountMetrics(label: string, left: CountMetric, right: CountMetric): CountMetric {
   if (left.status === "UNAVAILABLE" && right.status === "UNAVAILABLE") {
     return { table: label, count: 0, status: "UNAVAILABLE" };
@@ -89,6 +96,10 @@ const ADMIN_FETCH_TIMEOUT_MS = 30_000;
 const MEDIA_LIBRARY_LIMIT = 96;
 const PRODUCT_MANAGER_LIMIT = 120;
 const PRODUCT_RELATION_LIMIT = 160;
+const PRODUCT_LIST_SELECT =
+  "slug,name,category,price,compare_at,badge,image,hero,workflow_status,published_at,archived_at,is_visible,sort_order,updated_at,source_availability,tagline";
+const PRODUCT_EDITOR_SELECT =
+  "slug,name,category,price,compare_at,badge,description,on_sale,discount_type,discount_value,cost_of_goods,show_price_per_unit,charge_tax,tax_group,tax_rate,tax_included,image,hero,variants,workflow_status,published_at,archived_at,is_visible,seo_title,seo_description,og_title,og_description,og_image,source_availability,sort_order,updated_at,tagline";
 const MOVEMENT_AUDIT_LIMIT = 80;
 
 const warehouseSnapshotScopes: Record<WarehouseSnapshotScope, Set<WarehouseSnapshotTable>> = {
@@ -516,7 +527,8 @@ export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.e
     ordersNeedingReview: [] as AdminRow[],
     recentNotifications: [] as AdminRow[],
     recentActivity: [] as AdminRow[],
-    lowStockAlerts: [] as AdminRow[]
+    lowStockAlerts: [] as AdminRow[],
+    pendingSupplierSubmissionRows: [] as PendingSupplierSubmission[]
   };
   if (!config.configured) return blockedSnapshot(config.message, emptyData);
 
@@ -527,7 +539,8 @@ export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.e
     ordersNeedingReview,
     recentNotifications,
     recentActivity,
-    lowStockAlerts
+    lowStockAlerts,
+    pendingSupplierSubmissionRows
   ] = await Promise.all([
     Promise.all([
       countTable(config, "orders"),
@@ -564,7 +577,8 @@ export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.e
     fetchAdminRows(config, "orders", dashboardQueries.ordersNeedingReview),
     fetchAdminRows(config, "notifications", dashboardQueries.notifications),
     fetchAdminRows(config, "activity_logs", dashboardQueries.activityLogs),
-    fetchAdminRows(config, "inventory", dashboardQueries.lowStockInventory)
+    fetchAdminRows(config, "inventory", dashboardQueries.lowStockInventory),
+    listPendingSupplierSubmissions(env)
   ]);
   const rowTables = [recentOrders, ordersNeedingReview, recentNotifications, recentActivity, lowStockAlerts];
   const operationalMetricList = Object.values(operationalCounts);
@@ -585,7 +599,8 @@ export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.e
       ordersNeedingReview: ordersNeedingReview.rows,
       recentNotifications: recentNotifications.rows,
       recentActivity: recentActivity.rows,
-      lowStockAlerts: lowStockAlerts.rows
+      lowStockAlerts: lowStockAlerts.rows,
+      pendingSupplierSubmissionRows
     }
   };
 });
@@ -1097,7 +1112,7 @@ export const getProductManagerSnapshot = cache(async (env: EnvSource = process.e
       countTable(config, "media_assets"),
       countTable(config, "product_media_assets")
     ]),
-    fetchAdminRows(config, "mithron_products", `select=slug,name,category,price,compare_at,badge,description,on_sale,discount_type,discount_value,cost_of_goods,show_price_per_unit,charge_tax,tax_group,tax_rate,tax_included,image,hero,variants,workflow_status,published_at,archived_at,is_visible,seo_title,seo_description,og_title,og_description,og_image,source_availability,sort_order,updated_at&order=sort_order.asc&limit=${PRODUCT_MANAGER_LIMIT}`),
+    fetchAdminRows(config, "mithron_products", `select=${PRODUCT_LIST_SELECT}&order=sort_order.asc&limit=${PRODUCT_MANAGER_LIMIT}`),
     fetchAdminRows(config, "product_media_assets", `select=product_slug,media_asset_id,usage,variant_id,is_primary,sort_order,alt_text,caption,metadata,updated_at&order=updated_at.desc&limit=${PRODUCT_RELATION_LIMIT}`),
     fetchAdminRows(config, "inventory", `select=product_slug,sku,stock_status,quantity,reserved_quantity,reorder_threshold,updated_at&order=updated_at.desc&limit=${PRODUCT_RELATION_LIMIT}`),
     fetchAdminRows(config, "warehouse_stock", `select=warehouse_code,product_slug,sku,available_quantity,committed_quantity,last_counted_at,updated_at&order=updated_at.desc&limit=${PRODUCT_RELATION_LIMIT}`),
@@ -1120,6 +1135,17 @@ export const getProductManagerSnapshot = cache(async (env: EnvSource = process.e
     data: { products: products.rows, mediaLinks: mediaLinks.rows, inventory: inventory.rows, stock: stock.rows, movements: movements.rows, categories: categories.rows, productCounts, mediaCounts, stockCoverage }
   };
 });
+
+export async function fetchProductEditorDetail(productSlug: string, env: EnvSource = process.env) {
+  const config = getSupabaseAdminConfig(env);
+  if (!config.configured || !productSlug.trim()) return null;
+  const rows = await fetchAdminRows(
+    config,
+    "mithron_products",
+    `select=${PRODUCT_EDITOR_SELECT}&slug=eq.${encodeURIComponent(productSlug)}&limit=1`
+  );
+  return rows.rows[0] ?? null;
+}
 
 const WAREHOUSE_SNAPSHOT_ROW_LIMIT = 80;
 
@@ -1249,13 +1275,6 @@ export async function getOperationsSnapshot(env: EnvSource = process.env) {
     }
   };
 }
-
-export type PendingSupplierSubmission = {
-  slug: string;
-  name: string;
-  supplierLabel: string;
-  updatedAt: string;
-};
 
 export async function listPendingSupplierSubmissions(env: EnvSource = process.env): Promise<PendingSupplierSubmission[]> {
   const config = getSupabaseAdminConfig(env);

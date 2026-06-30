@@ -11,6 +11,11 @@ import {
   sectionFromPath,
   shouldConfineRoleToControlPanel
 } from "@/lib/auth/access-control";
+import {
+  SESSION_HANDOFF_ROLE_HEADER,
+  SESSION_HANDOFF_USER_HEADER,
+  SESSION_HANDOFF_VERIFIED_HEADER
+} from "@/lib/auth/session-handoff";
 import { buildContentSecurityPolicyForPath, generateCspNonce } from "@/lib/csp";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { resolveSupabaseCookieOptions, resolveSupabasePublishableKey } from "@/lib/supabase/cookie-config";
@@ -127,6 +132,14 @@ async function validateActiveProfile(
   }
 
   return { blocked: false as const };
+}
+
+function applySessionHandoff(response: NextResponse, userId: string | null, role: ReturnType<typeof normalizeCmsRole>) {
+  if (!userId || !role) return response;
+  response.headers.set(SESSION_HANDOFF_USER_HEADER, userId);
+  response.headers.set(SESSION_HANDOFF_ROLE_HEADER, role);
+  response.headers.set(SESSION_HANDOFF_VERIFIED_HEADER, "1");
+  return response;
 }
 
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
@@ -385,7 +398,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   response.headers.set("x-correlation-id", correlationId);
-  return response;
+  return applySessionHandoff(response, userId, role);
 }
 
 export const config = {

@@ -75,7 +75,9 @@
     "seed:demo-users": "vitest run tests/demo-auth-seed.test.ts",
     "seed:reset-demo-users": "node tools/reset-demo-users.mjs",
     "test:load": "node tools/run-load-test.mjs",
-    "test:load:report": "node tools/generate-load-test-report.mjs"
+    "test:load:report": "node tools/generate-load-test-report.mjs",
+    "test:e2e:control-panel-perf": "playwright test tests/e2e/control-panel-perf.spec.ts --project=desktop",
+    "analyze": "cross-env ANALYZE=true next build --webpack"
   },
   "keywords": [],
   "author": "",
@@ -126,6 +128,7 @@
     "postcss": "^8.5.15"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.9",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
@@ -135,6 +138,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.1",
+    "cross-env": "^7.0.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.6",
     "jsdom": "^29.1.1",

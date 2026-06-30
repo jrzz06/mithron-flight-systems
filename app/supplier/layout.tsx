@@ -1,17 +1,28 @@
-import { Suspense } from "react";
-import { SupplierFrame } from "@/components/supplier/supplier-frame";
-import { ControlPlaneLoading } from "@/components/ui/control-plane-loading";
+import { SupplierFeedbackDialog } from "@/components/supplier/supplier-feedback-dialog";
+import { ControlPlaneParallelLayout } from "@/components/platform/control-plane-parallel-layout";
 import { assertRouteAccessOrRedirect } from "@/services/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function SupplierLayout({ children }: { children: React.ReactNode }) {
-  const context = await assertRouteAccessOrRedirect("/supplier");
+export default async function SupplierLayout({
+  children,
+  shell
+}: {
+  children: React.ReactNode;
+  shell: React.ReactNode;
+}) {
+  await assertRouteAccessOrRedirect("/supplier");
+
   return (
-    <Suspense fallback={<ControlPlaneLoading />}>
-      <SupplierFrame recipientId={context.userId ?? undefined} role={context.role}>
+    <>
+      <SupplierFeedbackDialog />
+      <ControlPlaneParallelLayout
+        scope="supplier"
+        shell={shell}
+        shellDataAttributes={{ "data-supplier-frame": true }}
+      >
         {children}
-      </SupplierFrame>
-    </Suspense>
+      </ControlPlaneParallelLayout>
+    </>
   );
 }

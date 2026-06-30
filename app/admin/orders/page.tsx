@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AdminOrdersWorkspace } from "@/components/admin/admin-orders-workspace";
+import { AdminOrdersWorkspace } from "@/components/admin/admin-orders-workspace-loader";
 import { OrdersLiveSync } from "@/components/admin/orders-live-sync";
 import { ModulePanel } from "@/components/admin/module-panel";
 import { matchesAdminOrderQueue, type AdminOrderQueue } from "@/lib/orders/lifecycle";

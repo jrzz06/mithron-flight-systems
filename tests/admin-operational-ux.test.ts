@@ -77,7 +77,7 @@ describe("admin operational UX", () => {
     expect(page).toContain("Action queue");
     expect(page).toContain("Inventory alerts");
     expect(page).toContain("listAdminEnquiries");
-    expect(page).toContain("listPendingSupplierSubmissions");
+    expect(page).toContain("pendingSupplierSubmissionRows");
     expect(page).not.toContain("data-admin-quick-actions");
     expect(page).not.toContain("Recent orders");
     expect(page).not.toContain("Recent activity");

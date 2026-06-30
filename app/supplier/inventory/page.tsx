@@ -30,7 +30,7 @@ export default async function SupplierInventoryPage({ searchParams }: { searchPa
   );
 
   return (
-    <div className="grid gap-5">
+    <div data-supplier-inventory-route className="grid gap-5">
       <p className="text-sm leading-relaxed text-[var(--platform-text-secondary)]">
         View current warehouse stock for your products. Stock levels are read-only here — use the request form to ask
         our team to update quantities.

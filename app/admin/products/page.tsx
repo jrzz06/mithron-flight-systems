@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DataList, ModulePanel, OperationalFeedback, StatusBadge } from "@/components/admin/module-panel";
 import { FormField, Input, Select } from "@/components/platform";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
-import { getProductManagerSnapshot } from "@/services/admin";
+import { getProductManagerSnapshot, fetchProductEditorDetail } from "@/services/admin";
 import { getProductCatalogMetrics } from "@/services/inventory-metrics";
 import { deleteProductCategoryFormAction, saveProductCategoryFormAction, saveProductDraftFormAction, saveProductInventoryWorkflowFormAction, saveProductMediaLinkFormAction, saveProductPublishStateFormAction, saveProductSeoFormAction, saveProductVariantsFormAction } from "./actions";
 import { resolveNextImageSrc } from "@/lib/media/next-image-src";
@@ -114,22 +114,28 @@ function readProductTool(value: string): ProductToolKey | "" {
 }
 
 export default async function AdminProductsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
-  const [snapshot, warehouses, checkoutWarehouseCode, catalogMetrics] = await Promise.all([
+  const params = searchParams ? await searchParams : {};
+  const selectedProductSlug = searchValue(params, "product_slug");
+  const [snapshot, warehouses, checkoutWarehouseCode, catalogMetrics, editorProduct] = await Promise.all([
     getProductManagerSnapshot(),
     listActiveWarehouses(),
     getCheckoutWarehouseCode(),
-    getProductCatalogMetrics()
+    getProductCatalogMetrics(),
+    selectedProductSlug ? fetchProductEditorDetail(selectedProductSlug) : Promise.resolve(null)
   ]);
-  const params = searchParams ? await searchParams : {};
   const query = searchValue(params, "q").toLowerCase();
   const statusFilter = searchValue(params, "workflow_status");
-  const selectedProductSlug = searchValue(params, "product_slug");
   const activeTool = readProductTool(searchValue(params, "tool").toLowerCase());
   const productStatus = searchValue(params, "product_status");
   const productMessage = decodeMessage(searchValue(params, "product_message"));
   const categoryOptions = uniqueCategoryOptions(snapshot.data.products, snapshot.data.categories);
   const nextCategorySortOrder = (categoryOptions.length + 1) * 10;
-  const filteredProducts = snapshot.data.products.filter((product) => {
+  const filteredProducts = snapshot.data.products.map((product) => {
+    if (editorProduct && String(product.slug ?? "") === String(editorProduct.slug ?? "")) {
+      return { ...product, ...editorProduct };
+    }
+    return product;
+  }).filter((product) => {
     const workflow = String(product.workflow_status ?? "published");
     const isArchived = workflow === "archived" || Boolean(product.archived_at);
     const haystack = `${String(product.name ?? "")} ${String(product.slug ?? "")} ${String(product.category ?? "")}`.toLowerCase();

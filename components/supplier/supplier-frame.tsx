@@ -1,5 +1,3 @@
-"use client";
-
 import { PlatformShell } from "@/components/platform/platform-shell";
 import { supplierNavGroups, supplierRouteTitles } from "@/components/platform/nav-config";
 import { SupplierFeedbackDialog } from "@/components/supplier/supplier-feedback-dialog";

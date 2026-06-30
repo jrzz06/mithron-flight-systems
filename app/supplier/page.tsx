@@ -88,7 +88,7 @@ export default async function SupplierDashboardPage() {
     getAdminSettingsPolicy()
   ]);
   const products = context.userId ? await listSupplierProducts(context.userId) : [];
-  const inventory = context.userId ? await listSupplierInventory(context.userId) : [];
+  const inventory = context.userId ? await listSupplierInventory(context.userId, process.env, products) : [];
 
   if (!products.length) {
     return (

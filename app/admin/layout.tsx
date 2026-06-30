@@ -1,18 +1,23 @@
-import { AdminFrame } from "@/components/admin/admin-frame";
-import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminNavMetricsProvider } from "@/components/admin/admin-nav-metrics-provider";
+import { ControlPlaneParallelLayout } from "@/components/platform/control-plane-parallel-layout";
 import { assertRouteAccessOrRedirect } from "@/services/auth";
-import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const context = await assertRouteAccessOrRedirect("/admin");
+export default async function AdminLayout({
+  children,
+  shell
+}: {
+  children: React.ReactNode;
+  shell: React.ReactNode;
+}) {
+  await assertRouteAccessOrRedirect("/admin");
 
   return (
-    <Suspense fallback={<AdminFrame role={context.role} userId={context.userId} pendingSupplierApprovals={0}>{children}</AdminFrame>}>
-      <AdminShell role={context.role!} userId={context.userId}>
+    <AdminNavMetricsProvider>
+      <ControlPlaneParallelLayout scope="admin" shell={shell} shellDataAttributes={{ "data-admin-shell": true }}>
         {children}
-      </AdminShell>
-    </Suspense>
+      </ControlPlaneParallelLayout>
+    </AdminNavMetricsProvider>
   );
 }

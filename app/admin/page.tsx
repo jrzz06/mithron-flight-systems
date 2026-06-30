@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { AdminDashboardLiveSync } from "@/components/admin/admin-dashboard-live-sync";
 import { StatusPill } from "@/components/platform";
 import { connectivityMessage, relativeTimeLabel } from "@/lib/platform/copy";
-import { formatDashboardCount, getAdminDashboardSnapshot, listPendingSupplierSubmissions, orderNeedsAdminReview } from "@/services/admin";
+import { formatDashboardCount, getAdminDashboardSnapshot, orderNeedsAdminReview } from "@/services/admin";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { listAdminEnquiries } from "@/services/enquiries";
 
@@ -22,13 +22,13 @@ function openEnquiries(enquiries: Awaited<ReturnType<typeof listAdminEnquiries>>
 }
 
 export default async function AdminPage() {
-  const [snapshot, policy, enquiries, pendingSubmissions] = await Promise.all([
+  const [snapshot, policy, enquiries] = await Promise.all([
     getAdminDashboardSnapshot(),
     getAdminSettingsPolicy(),
-    listAdminEnquiries(),
-    listPendingSupplierSubmissions()
+    listAdminEnquiries()
   ]);
   const { operationalCounts } = snapshot.data;
+  const pendingSubmissions = snapshot.data.pendingSupplierSubmissionRows;
 
   const reviewOrders = (snapshot.data.ordersNeedingReview.length
     ? snapshot.data.ordersNeedingReview

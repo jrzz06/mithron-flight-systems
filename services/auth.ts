@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { authorizeRoute, defaultPathForRole, isStrictAdminRole } from "@/lib/auth/access-control";
+import { readSessionHandoff } from "@/lib/auth/session-handoff";
 import { assertRolePermission, PermissionDeniedError, normalizeCmsRole, type EnterprisePermission } from "@/lib/auth/permissions";
 import { ProfileDisabledError } from "@/lib/auth/profile-disabled";
 import { createClient } from "@/lib/server";
@@ -52,6 +53,7 @@ export const getCurrentCmsRole = cache(async () => {
 });
 
 export const getCurrentAuthContext = cache(async (): Promise<AuthContext> => {
+  const handoff = await readSessionHandoff();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims) {
@@ -79,6 +81,14 @@ export const getCurrentAuthContext = cache(async (): Promise<AuthContext> => {
         return { userId: null, role: null, claimsRole, disabled: true };
       }
     }
+  }
+
+  if (handoff && userId && handoff.userId === userId) {
+    return {
+      userId,
+      role: handoff.role,
+      claimsRole
+    };
   }
 
   let role = await resolveCurrentEnterpriseRole(supabase);

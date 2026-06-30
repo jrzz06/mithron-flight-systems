@@ -140,7 +140,7 @@ export default async function WarehouseOrdersPage({ searchParams }: { searchPara
         { label: "Dispatch", href: "/warehouse/dispatch" }
       ]}
     >
-      <div className="grid gap-6">
+      <div data-warehouse-orders-route className="grid gap-6">
         <OperationalFeedback
           status={operationStatus}
           message={operationMessage}

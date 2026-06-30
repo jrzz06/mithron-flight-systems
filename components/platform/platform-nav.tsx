@@ -21,7 +21,8 @@ import {
   Users,
   type LucideIcon
 } from "lucide-react";
-import type { PlatformNavGroup, PlatformNavIconKey } from "@/components/platform/types";
+import { useAdminNavMetrics } from "@/components/admin/admin-nav-metrics-provider";
+import type { PlatformNavGroup, PlatformNavIconKey, PlatformScope } from "@/components/platform/types";
 
 const iconByKey: Record<PlatformNavIconKey, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -57,13 +58,22 @@ type PlatformNavProps = {
   groups: PlatformNavGroup[];
   accentClass?: string;
   dataAttribute?: string;
+  scope?: PlatformScope;
 };
 
-export function PlatformNav({ groups, dataAttribute = "data-platform-nav" }: PlatformNavProps) {
+export function PlatformNav({ groups, dataAttribute = "data-platform-nav", scope }: PlatformNavProps) {
   const pathname = usePathname();
+  const adminMetrics = useAdminNavMetrics();
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(groups.filter((group) => group.defaultCollapsed).map((group) => [group.label, true]))
   );
+
+  function badgeCountForItem(href: string, fallback = 0) {
+    if (scope === "admin" && href.startsWith("/admin/suppliers/products")) {
+      return adminMetrics.pendingSupplierApprovals;
+    }
+    return fallback;
+  }
 
   return (
     <div className="grid gap-5">
@@ -98,6 +108,7 @@ export function PlatformNav({ groups, dataAttribute = "data-platform-nav" }: Pla
             {group.defaultCollapsed && isCollapsed && !hasActiveItem ? null : group.items.map((item) => {
               const active = isActivePath(pathname, item.href);
               const Icon = item.icon ? iconByKey[item.icon] : null;
+              const badgeCount = badgeCountForItem(item.href, item.badgeCount ?? 0);
               return (
                 <Link
                   key={`${group.label}-${item.href}`}
@@ -122,9 +133,9 @@ export function PlatformNav({ groups, dataAttribute = "data-platform-nav" }: Pla
                     />
                   ) : null}
                   <span className="flex-1">{item.label}</span>
-                  {item.badgeCount && item.badgeCount > 0 ? (
+                  {badgeCount > 0 ? (
                     <span className="rounded-md bg-[var(--platform-warning-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--platform-warning)]">
-                      {item.badgeCount}
+                      {badgeCount}
                     </span>
                   ) : null}
                 </Link>

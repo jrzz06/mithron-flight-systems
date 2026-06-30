@@ -11,6 +11,7 @@ describe("admin and warehouse dark enterprise palette", () => {
     const globals = source("app/globals.css");
     const platformStyles = source("app/platform.css");
     const platformShell = source("components/platform/platform-shell.tsx");
+    const parallelLayout = source("components/platform/control-plane-parallel-layout.tsx");
     const controlShell = source("components/admin/control-shell.tsx");
     const warehouseLoading = source("app/warehouse/loading.tsx");
 
@@ -24,8 +25,9 @@ describe("admin and warehouse dark enterprise palette", () => {
 
     expect(platformShell).toContain('data-control-plane-theme="dark"');
     expect(platformShell).toContain('@/app/platform.css');
+    expect(parallelLayout).toContain('data-control-plane-theme="dark"');
     expect(controlShell).toContain("data-control-shell-header");
-    expect(warehouseLoading).toContain('data-control-plane-theme="dark"');
+    expect(warehouseLoading).toContain("ControlPlaneContentLoading");
 
     expect(globals).not.toContain('body[data-control-plane-theme="dark"]');
     expect(source("components/layout/store-shell.tsx")).not.toContain("data-control-plane-theme");

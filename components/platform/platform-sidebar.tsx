@@ -41,7 +41,7 @@ export function PlatformSidebar({
         ) : null}
       </div>
       <div className="mt-6 min-h-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">
-        <PlatformNav groups={groups} accentClass={accentClass} />
+        <PlatformNav groups={groups} accentClass={accentClass} scope={scope} />
       </div>
     </aside>
   );

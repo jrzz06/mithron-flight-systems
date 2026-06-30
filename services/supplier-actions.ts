@@ -186,6 +186,15 @@ export async function countPendingSupplierProducts(env: EnvSource = process.env)
   return match ? Number(match[1]) : 0;
 }
 
+export async function getCachedPendingSupplierProductCount(env: EnvSource = process.env) {
+  const { cacheControlPlaneRead } = await import("@/lib/control-plane/query-cache");
+  return cacheControlPlaneRead(
+    ["control-plane", "pending-supplier-products"],
+    () => countPendingSupplierProducts(env),
+    { revalidate: 30, tags: ["admin-nav-metrics", "supplier-submissions"] }
+  );
+}
+
 export async function deleteSupplierOwnedProduct(
   supplierId: string,
   slug: string,
@@ -242,8 +251,12 @@ export async function listAdminUserIds(env: EnvSource = process.env) {
   return rows.map((row) => String(row.user_id ?? "")).filter(Boolean);
 }
 
-export async function listSupplierInventory(supplierId: string, env: EnvSource = process.env): Promise<SupplierInventoryRow[]> {
-  const products = await listSupplierProducts(supplierId, env);
+export async function listSupplierInventory(
+  supplierId: string,
+  env: EnvSource = process.env,
+  existingProducts?: JsonRecord[]
+): Promise<SupplierInventoryRow[]> {
+  const products = existingProducts ?? await listSupplierProducts(supplierId, env);
   const nameBySlug = new Map(
     products.map((product) => [String(product.slug ?? ""), String(product.name ?? product.slug ?? "")])
   );

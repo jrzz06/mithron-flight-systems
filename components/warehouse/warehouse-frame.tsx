@@ -1,5 +1,3 @@
-"use client";
-
 import { PlatformShell } from "@/components/platform/platform-shell";
 import { warehouseNavGroups, warehouseRouteTitles } from "@/components/platform/nav-config";
 

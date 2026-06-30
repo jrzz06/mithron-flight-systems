@@ -58,6 +58,29 @@ describe("warehouse inventory movement ledger", () => {
     });
   });
 
+  it("maps product_slug to product_id before inserting inventory movement rows", async () => {
+    const { toInventoryMovementInsertPayload } = await import("@/services/admin-actions");
+    expect(toInventoryMovementInsertPayload({
+      product_slug: "source-agri-kisan-drone-small-8-liter",
+      sku: "AG-8L-BASE",
+      movement_type: "stock_in",
+      quantity_delta: 1,
+      quantity_before: 0,
+      quantity_after: 1,
+      reason_code: "cycle_count",
+      warehouse_code: "IN-WEST-01"
+    })).toEqual({
+      product_id: "source-agri-kisan-drone-small-8-liter",
+      sku: "AG-8L-BASE",
+      movement_type: "stock_in",
+      quantity_delta: 1,
+      quantity_before: 0,
+      quantity_after: 1,
+      reason_code: "cycle_count",
+      warehouse_code: "IN-WEST-01"
+    });
+  });
+
   it("rejects movement records that would create impossible negative stock", () => {
     expect(() => buildInventoryMovementRecord({
       productId: "source-agri-kisan-drone-small-8-liter",

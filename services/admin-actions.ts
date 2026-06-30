@@ -1062,8 +1062,25 @@ export function upsertWarehouseStockRecord(
   return upsertAdminRecord("warehouse_stock", "warehouse_code,product_slug,sku", payload, actorId, env, options);
 }
 
+export function toInventoryMovementInsertPayload(payload: JsonRecord): JsonRecord {
+  const insertPayload = { ...payload };
+  const productId = typeof insertPayload.product_id === "string" && insertPayload.product_id.trim()
+    ? insertPayload.product_id.trim()
+    : typeof insertPayload.product_slug === "string" && insertPayload.product_slug.trim()
+      ? insertPayload.product_slug.trim()
+      : null;
+
+  if (!productId) {
+    throw new Error("Inventory movement product_id is required.");
+  }
+
+  insertPayload.product_id = productId;
+  delete insertPayload.product_slug;
+  return insertPayload;
+}
+
 export function createInventoryMovementRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
-  return createAdminRecord("inventory_movements", payload, actorId, env, { skipAuditLog: true });
+  return createAdminRecord("inventory_movements", toInventoryMovementInsertPayload(payload), actorId, env, { skipAuditLog: true });
 }
 
 export function createOrderRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {

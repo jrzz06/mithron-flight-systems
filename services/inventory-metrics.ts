@@ -71,9 +71,39 @@ export async function getProductCatalogMetrics(env: EnvSource = process.env): Pr
 }
 
 export async function getInventoryStockMetrics(env: EnvSource = process.env): Promise<InventoryStockMetrics> {
+  const { cacheControlPlaneRead } = await import("@/lib/control-plane/query-cache");
+  return cacheControlPlaneRead(
+    ["control-plane", "inventory-stock-metrics"],
+    () => resolveInventoryStockMetrics(env),
+    { revalidate: 30, tags: ["inventory-metrics"] }
+  );
+}
+
+async function resolveInventoryStockMetrics(env: EnvSource = process.env): Promise<InventoryStockMetrics> {
   const config = getSupabaseAdminConfig(env);
   if (!config.configured) {
     return { totalInventoryItems: 0, inStock: 0, lowStock: 0, outOfStock: 0 };
+  }
+
+  const rpcResponse = await fetch(`${config.url}/rest/v1/rpc/get_inventory_stock_metrics`, {
+    method: "POST",
+    headers: {
+      apikey: config.serviceRoleKey,
+      Authorization: `Bearer ${config.serviceRoleKey}`,
+      "Content-Type": "application/json"
+    },
+    body: "{}",
+    cache: "no-store"
+  });
+
+  if (rpcResponse.ok) {
+    const payload = (await rpcResponse.json()) as Partial<InventoryStockMetrics>;
+    return {
+      totalInventoryItems: Number(payload.totalInventoryItems ?? 0),
+      inStock: Number(payload.inStock ?? 0),
+      lowStock: Number(payload.lowStock ?? 0),
+      outOfStock: Number(payload.outOfStock ?? 0)
+    };
   }
 
   const [totalInventoryItems, inStock, lowStockStatus, outOfStockStatus, outOfStockQty] = await Promise.all([

@@ -64,9 +64,9 @@ describe("warehouse panel implementation", () => {
     expect(defaultPathForRole("warehouse")).toBe("/warehouse/dashboard");
 
     const layout = source("app/warehouse/layout.tsx");
-    expect(layout).toContain("getCurrentAuthContext");
+    expect(layout).toContain("readSessionHandoff");
     expect(layout).toContain("canAccessProtectedPath");
-    expect(layout).toContain("WarehouseFrame");
+    expect(layout).toContain("ControlPlaneParallelLayout");
   });
 
   it("extends the real order lifecycle without bypassing validation", () => {
