@@ -81,11 +81,12 @@ export function AccountNav({
   mode = "desktop"
 }: AccountNavProps) {
   const pathname = usePathname() ?? "";
-  const [open, setOpen] = useState(false);
+  const [openForPath, setOpenForPath] = useState<string | null>(null);
+  const open = openForPath === pathname;
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
+  const setOpen = (value: boolean) => {
+    setOpenForPath(value ? pathname : null);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -104,7 +105,7 @@ export function AccountNav({
           aria-expanded={open}
           aria-controls="account-mobile-nav"
           aria-label={open ? "Close account menu" : "Open account menu"}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => setOpen(!open)}
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--account-border)] bg-[var(--account-surface)] text-[var(--account-ink)] shadow-sm transition-all active:scale-95"
         >
           {open ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}

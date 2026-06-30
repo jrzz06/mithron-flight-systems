@@ -159,28 +159,23 @@ export function ManualOrderCreatePanel({
   defaultWarehouseCode,
   createAction
 }: ManualOrderCreatePanelProps) {
-  const [draft, setDraft] = useState<ManualOrderDraft>(defaultDraft);
-  const [hydrated, setHydrated] = useState(false);
+  const [draft, setDraft] = useState<ManualOrderDraft>(() => readDraftFromStorage());
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<CustomerLookupResult[]>([]);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<SearchResult[]>([]);
   const [productLoading, setProductLoading] = useState(false);
+  const effectiveLookupResults = lookupQuery.trim().length < 2 ? [] : lookupResults;
+  const effectiveProductResults = productQuery.trim() ? productResults : [];
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const productSearchRef = useRef<HTMLInputElement>(null);
   const lookupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setDraft(readDraftFromStorage());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
-  }, [draft, hydrated]);
+  }, [draft]);
 
   const updateDraft = useCallback((patch: Partial<ManualOrderDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
@@ -189,7 +184,6 @@ export function ManualOrderCreatePanel({
   useEffect(() => {
     if (lookupTimer.current) clearTimeout(lookupTimer.current);
     if (lookupQuery.trim().length < 2) {
-      setLookupResults([]);
       return;
     }
     lookupTimer.current = setTimeout(async () => {
@@ -216,7 +210,6 @@ export function ManualOrderCreatePanel({
   useEffect(() => {
     if (productTimer.current) clearTimeout(productTimer.current);
     if (!productQuery.trim()) {
-      setProductResults([]);
       return;
     }
     productTimer.current = setTimeout(async () => {
@@ -270,7 +263,7 @@ export function ManualOrderCreatePanel({
     const localMatch = products.find(
       (product) => product.slug.toLowerCase().includes(trimmed) || product.name.toLowerCase().includes(trimmed)
     );
-    const remoteMatch = productResults[0];
+    const remoteMatch = effectiveProductResults[0];
     const target = remoteMatch ?? (localMatch ? { slug: localMatch.slug, name: localMatch.name, price: localMatch.price } : null);
     if (target) addProduct(target);
   }
@@ -327,14 +320,6 @@ export function ManualOrderCreatePanel({
     }))
   );
 
-  if (!hydrated) {
-    return (
-      <AdminFormSection title="Create order" description="Loading saved draft…">
-        <p className="text-sm text-[var(--platform-text-muted)]">Preparing manual order form…</p>
-      </AdminFormSection>
-    );
-  }
-
   return (
     <AdminFormSection
       title="Create order"
@@ -361,9 +346,9 @@ export function ManualOrderCreatePanel({
               />
             </label>
             {lookupLoading ? <p className="text-xs text-[var(--platform-text-muted)]">Searching customers…</p> : null}
-            {lookupResults.length ? (
+            {effectiveLookupResults.length ? (
               <ul className="divide-y divide-[var(--platform-border)] rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)]">
-                {lookupResults.map((customer) => (
+                {effectiveLookupResults.map((customer) => (
                   <li key={customer.id}>
                     <button
                       type="button"
@@ -514,9 +499,9 @@ export function ManualOrderCreatePanel({
             />
           </label>
           {productLoading ? <p className="text-xs text-[var(--platform-text-muted)]">Searching catalog…</p> : null}
-          {productResults.length ? (
+          {effectiveProductResults.length ? (
             <ul className="divide-y divide-[var(--platform-border)] rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)]">
-              {productResults.map((result) => (
+              {effectiveProductResults.map((result) => (
                 <li key={result.slug}>
                   <button
                     type="button"

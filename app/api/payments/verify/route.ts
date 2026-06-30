@@ -3,11 +3,12 @@ import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { requireClientAuditToken } from "@/lib/api/require-client-audit-token";
 import { createClient } from "@/lib/server";
 import { fetchAdminRecordsByColumn } from "@/services/admin-actions";
-import { logPaymentError, logPaymentEvent } from "@/services/payments/logger";
 import { applyPaymentEvent } from "@/services/payments/confirm-payment";
-import { isPaymentProviderId, verifyClientPayment } from "@/services/payments/gateway";
+import { fulfillOrderOnPaymentVerified, getPaidOrderFulfillment } from "@/services/invoice/payment-fulfillment";
+import { isPaymentProviderId } from "@/services/payments/gateway";
+import { logPaymentError, logPaymentEvent } from "@/services/payments/logger";
+import { verifyCashfreePaymentOnServer } from "@/services/payments/verify-cashfree-server";
 import { verifyRazorpayPaymentOnServer } from "@/services/payments/verify-razorpay-server";
-import { ensureOrderInvoiceAndEmail } from "@/services/email/ensure-order-invoice-email";
 import type { PaymentProviderId } from "@/services/payments/types";
 
 type VerifyBody = {
@@ -19,6 +20,8 @@ type VerifyBody = {
   razorpaySignature?: string;
   cashfreeOrderId?: string;
 };
+
+type JsonRecord = Record<string, unknown>;
 
 async function assertOrderAccess(input: {
   orderId: string;
@@ -52,6 +55,39 @@ async function assertOrderAccess(input: {
   return { ok: true as const, order };
 }
 
+function selectPaymentForVerify(payments: JsonRecord[], provider: string) {
+  const providerPayments = payments.filter((row) => String(row.provider ?? "") === provider);
+  return (
+    providerPayments.find((row) => String(row.status ?? "") === "succeeded")
+    ?? providerPayments.find((row) => !["failed", "refunded"].includes(String(row.status ?? "")))
+    ?? providerPayments.find((row) => String(row.status ?? "") === "failed")
+    ?? providerPayments[0]
+  );
+}
+
+function buildVerifySuccessResponse(input: {
+  orderId: string;
+  order: JsonRecord;
+  fulfillment: Awaited<ReturnType<typeof getPaidOrderFulfillment>>;
+  skipped?: boolean;
+}) {
+  return NextResponse.json({
+    ok: true,
+    paid: true,
+    paymentStatus: "succeeded",
+    orderPaymentStatus: "succeeded",
+    orderId: input.orderId,
+    orderNumber: String(input.order.order_number ?? input.orderId),
+    total: Number(input.order.total ?? 0),
+    amount: Number(input.order.total ?? 0),
+    invoiceNumber: input.fulfillment?.invoiceNumber ?? null,
+    invoiceUrl: input.fulfillment?.invoiceUrl ?? null,
+    emailSent: input.fulfillment?.emailSent ?? false,
+    customerEmail: input.fulfillment?.customerEmail ?? String(input.order.customer_email ?? ""),
+    skipped: input.skipped ?? false
+  });
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as VerifyBody | null;
   const orderId = body?.orderId?.trim() ?? "";
@@ -82,26 +118,16 @@ export async function POST(request: Request) {
   }
 
   const payments = await fetchAdminRecordsByColumn("payments", "order_id", orderId);
-  const payment = payments.find((row) => String(row.provider ?? "") === provider && String(row.status ?? "") !== "failed");
+  const payment = selectPaymentForVerify(payments, provider);
   if (!payment?.provider_intent_id) {
     return NextResponse.json({ error: "No active payment session found for this order." }, { status: 404 });
   }
 
   if (String(payment.status ?? "") === "succeeded" || String(access.order.payment_status ?? "") === "succeeded") {
     logPaymentEvent("payment_verify_already_paid", { orderId, provider });
-    const fulfillment = await ensureOrderInvoiceAndEmail(orderId);
-    return NextResponse.json({
-      ok: true,
-      paid: true,
-      paymentStatus: "succeeded",
-      orderNumber: String(access.order.order_number ?? orderId),
-      total: Number(access.order.total ?? 0),
-      amount: Number(access.order.total ?? 0),
-      invoiceNumber: fulfillment?.invoiceNumber ?? null,
-      invoiceUrl: fulfillment?.invoiceUrl ?? null,
-      emailSent: fulfillment?.emailSent ?? false,
-      customerEmail: fulfillment?.customerEmail ?? String(access.order.customer_email ?? "")
-    });
+    await fulfillOrderOnPaymentVerified(orderId);
+    const fulfillment = await getPaidOrderFulfillment(orderId);
+    return buildVerifySuccessResponse({ orderId, order: access.order, fulfillment });
   }
 
   try {
@@ -124,7 +150,12 @@ export async function POST(request: Request) {
       });
     } else {
       const intentId = body?.cashfreeOrderId?.trim() || String(payment.provider_intent_id);
-      event = await verifyClientPayment("cashfree", { intentId, orderId });
+      event = await verifyCashfreePaymentOnServer({
+        internalOrderId: orderId,
+        cashfreeOrderId: intentId,
+        expectedAmountInr: Number(payment.amount ?? access.order.total ?? 0),
+        expectedCurrency: String(payment.currency ?? access.order.currency ?? "INR")
+      });
     }
 
     if (event.status !== "succeeded") {
@@ -136,6 +167,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         ok: true,
         paid: false,
+        retryable: event.status === "requires_payment" || event.status === "processing",
         paymentStatus: event.status,
         orderPaymentStatus: String(access.order.payment_status ?? ""),
         error: event.status === "failed"
@@ -157,20 +189,12 @@ export async function POST(request: Request) {
     }
 
     logPaymentEvent("payment_verified_via_api", { orderId, provider, source: "verify" });
-    const fulfillment = await ensureOrderInvoiceAndEmail(orderId);
-    return NextResponse.json({
-      ok: true,
-      paid: result.status === "succeeded",
-      paymentStatus: result.status,
-      orderPaymentStatus: result.status === "succeeded" ? "succeeded" : String(access.order.payment_status ?? ""),
-      orderNumber: String(access.order.order_number ?? orderId),
-      total: Number(access.order.total ?? 0),
-      amount: Number(access.order.total ?? 0),
-      invoiceNumber: fulfillment?.invoiceNumber ?? null,
-      invoiceUrl: fulfillment?.invoiceUrl ?? null,
-      emailSent: fulfillment?.emailSent ?? false,
-      customerEmail: fulfillment?.customerEmail ?? String(access.order.customer_email ?? ""),
-      skipped: result.skipped ?? false
+    const fulfillment = await getPaidOrderFulfillment(orderId);
+    return buildVerifySuccessResponse({
+      orderId,
+      order: access.order,
+      fulfillment,
+      skipped: result.skipped
     });
   } catch (error) {
     logPaymentError("payment_verify_failed", error, { orderId, provider });

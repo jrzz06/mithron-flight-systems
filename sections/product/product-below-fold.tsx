@@ -32,15 +32,25 @@ export function ProductReviewsLazySection({
 }
 
 export function ProductRelatedLazySection({
-  relatedProducts
+  relatedProducts,
+  similarProducts,
+  accessoryProducts
 }: {
-  relatedProducts: ProductShellItem[];
+  relatedProducts?: ProductShellItem[];
+  similarProducts?: ProductShellItem[];
+  accessoryProducts?: ProductShellItem[];
 }) {
-  if (!relatedProducts.length) return null;
+  const similar = similarProducts ?? relatedProducts ?? [];
+  const accessories = accessoryProducts ?? [];
+  if (!similar.length && !accessories.length) return null;
 
   return (
     <LazyHydrate fallback={<ProductRelatedFallback />} minHeight={360}>
-      <ProductRelatedSection relatedProducts={relatedProducts} />
+      <ProductRelatedSection
+        relatedProducts={relatedProducts}
+        similarProducts={similarProducts}
+        accessoryProducts={accessoryProducts}
+      />
     </LazyHydrate>
   );
 }

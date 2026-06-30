@@ -56,5 +56,6 @@ describe("payment webhook hardening", () => {
     const confirm = source("services/payments/confirm-payment.ts");
     expect(confirm).toContain("duplicate_event");
     expect(confirm).toContain("payment_webhook_events");
+    expect(confirm).toContain("payment_downgrade_blocked");
   });
 });

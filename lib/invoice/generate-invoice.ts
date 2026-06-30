@@ -115,7 +115,7 @@ export async function generateAndStoreInvoice(orderId: string): Promise<{ invoic
   const paidAt = new Date(String(order.updated_at ?? order.created_at ?? Date.now()));
   const serialNumber = await allocateInvoiceSerial();
   const invoiceData = await buildInvoiceData(orderId, serialNumber);
-  const invoiceHtml = renderInvoiceHtmlDocument(invoiceData);
+  const invoiceHtml = renderInvoiceHtmlDocument(invoiceData, { serialNumber });
   const financialYear = financialYearFromDate(paidAt);
 
   const stored = await insertInvoiceRecord({

@@ -49,10 +49,6 @@ const statusOptions: Array<{ value: SimpleInventoryStatus; label: string }> = [
   { value: "archived", label: "Archived" }
 ];
 
-function statusLabel(status: SimpleInventoryStatus) {
-  return statusOptions.find((option) => option.value === status)?.label ?? "In stock";
-}
-
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
 }
@@ -397,12 +393,9 @@ export function InventoryManager({
   const [adjustmentMode, setAdjustmentMode] = useState<"increase" | "decrease" | "replace">("increase");
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, Partial<SimpleInventoryRow>>>({});
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(() => new Set());
   const mergedRows = useMemo(
-    () => rows
-      .filter((row) => !deletedIds.has(row.id))
-      .map((row) => ({ ...row, ...(overrides[row.id] ?? {}) })),
-    [deletedIds, overrides, rows]
+    () => rows.map((row) => ({ ...row, ...(overrides[row.id] ?? {}) })),
+    [overrides, rows]
   );
   const filteredRows = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();

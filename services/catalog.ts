@@ -27,7 +27,7 @@ import { resolveStorefrontSrc } from "@/lib/media/resolve-storefront-src";
 import { buildProductResponsiveAsset } from "@/lib/media/product-responsive";
 import { resolveStorefrontBadgeText, resolveStorefrontProductBadge } from "@/lib/product-badge";
 
-export type CatalogDataErrorCode = "missing_source_image";
+export type CatalogDataErrorCode = "missing_source_image" | "catalog_unavailable";
 
 export type CatalogDataError = {
   code: CatalogDataErrorCode;
@@ -641,6 +641,21 @@ function createMissingSourceImageError(slug: string): CatalogDataError {
   };
 }
 
+function createCatalogUnavailableError(slug: string, cause?: unknown): CatalogDataError {
+  const detail = cause instanceof Error ? cause.message : undefined;
+  return {
+    code: "catalog_unavailable",
+    slug,
+    message: detail
+      ? `Catalog data is temporarily unavailable for ${slug}: ${detail}`
+      : `Catalog data is temporarily unavailable for ${slug}.`
+  };
+}
+
+export function createNavigationCatalogUnavailableError(cause?: unknown): CatalogDataError {
+  return createCatalogUnavailableError("navigation", cause);
+}
+
 function isMissingSourceImageError(error: unknown): error is Error {
   return error instanceof Error && error.message.startsWith("Missing source image for Mithron product");
 }
@@ -702,10 +717,7 @@ function mapProductRow(row: MithronProductRow, linkedPrimaryImage?: MediaAsset):
     price: toNumber(row.price),
     compareAt: row.compare_at ? toNumber(row.compare_at) : undefined,
     ...mapStorefrontBadgeFields(row),
-    description: (() => {
-      const rawDescription = row.description ? cleanText(row.description) : undefined;
-      return rawDescription && !isSpecLikeBlob(rawDescription) ? rawDescription : undefined;
-    })(),
+    description: row.description ? cleanText(row.description) : undefined,
     sourceDescription: row.source_description ? cleanText(row.source_description) : undefined,
     onSale: row.on_sale ?? undefined,
     discountType: row.discount_type ?? undefined,
@@ -1008,7 +1020,24 @@ function getCatalogConfig(useServiceRole = false) {
   return { url, key, hasServiceRoleKey: Boolean(serviceRoleKey) };
 }
 
-const catalogFetchAttempts = 3;
+const catalogFetchAttempts = 5;
+const catalogFetchTimeoutMs = 25_000;
+
+function isRetryableFetchError(error: unknown) {
+  if (!(error instanceof Error)) return true;
+  const message = error.message.toLowerCase();
+  const cause = (error as Error & { cause?: { code?: string } }).cause;
+  const causeCode = cause?.code ?? "";
+  return (
+    message.includes("fetch failed")
+    || message.includes("timed out")
+    || message.includes("abort")
+    || causeCode === "UND_ERR_CONNECT_TIMEOUT"
+    || causeCode === "UND_ERR_SOCKET"
+    || causeCode === "ECONNRESET"
+    || causeCode === "ETIMEDOUT"
+  );
+}
 
 function isRetryableCatalogStatus(status: number) {
   return status === 408 || status === 429 || status >= 500;
@@ -1023,12 +1052,16 @@ async function fetchSupabaseRows<T>(table: string, query: string, useServiceRole
 
   let lastError: unknown;
   for (let attempt = 1; attempt <= catalogFetchAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), catalogFetchTimeoutMs);
+
     try {
       const response = await fetch(`${url}/rest/v1/${table}?${query}`, {
         headers: {
           apikey: key,
           Authorization: `Bearer ${key}`
         },
+        signal: controller.signal,
         next: { revalidate: 60, tags: ["catalog", "catalog-products"] }
       });
 
@@ -1036,7 +1069,7 @@ async function fetchSupabaseRows<T>(table: string, query: string, useServiceRole
         const error = new Error(`Failed to load ${table} from Supabase: ${response.status} ${response.statusText}`);
         if (attempt < catalogFetchAttempts && isRetryableCatalogStatus(response.status)) {
           lastError = error;
-          await wait(250 * attempt * attempt);
+          await wait(400 * attempt * attempt);
           continue;
         }
         throw error;
@@ -1044,9 +1077,14 @@ async function fetchSupabaseRows<T>(table: string, query: string, useServiceRole
 
       return parseCatalogRows<T>(await response.text());
     } catch (error) {
-      lastError = error;
-      if (attempt >= catalogFetchAttempts) break;
-      await wait(250 * attempt * attempt);
+      lastError = error instanceof Error && error.name === "AbortError"
+        ? new Error(`Timed out loading ${table} from Supabase after ${catalogFetchTimeoutMs}ms`)
+        : error;
+
+      if (attempt >= catalogFetchAttempts || !isRetryableFetchError(lastError)) break;
+      await wait(400 * attempt * attempt);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -1389,23 +1427,32 @@ async function fetchEnterpriseMenuCategoryRows(
 }
 
 export const getEnterpriseMenuProducts = cache(async (): Promise<EnterpriseMenuLoadResult> => {
-  const rowGroups = await Promise.all(
-    catalogCategoryDefinitions.map((definition) => fetchEnterpriseMenuCategoryRows(definition))
-  );
+  try {
+    const rowGroups = await Promise.all(
+      catalogCategoryDefinitions.map((definition) => fetchEnterpriseMenuCategoryRows(definition))
+    );
 
-  const seen = new Set<string>();
-  const rows = rowGroups.flat().filter((row) => {
-    if (!row.slug || seen.has(row.slug)) return false;
-    seen.add(row.slug);
-    return true;
-  });
+    const seen = new Set<string>();
+    const rows = rowGroups.flat().filter((row) => {
+      if (!row.slug || seen.has(row.slug)) return false;
+      seen.add(row.slug);
+      return true;
+    });
 
-  const errors: CatalogDataError[] = [];
-  const products = await mapRowsWithCatalogMedia(rows, (row, media) => mapEnterpriseMenuProduct(row, media, errors));
-  return {
-    products: products.filter((product): product is Product => product !== null),
-    errors
-  };
+    const errors: CatalogDataError[] = [];
+    const products = await mapRowsWithCatalogMedia(rows, (row, media) => mapEnterpriseMenuProduct(row, media, errors));
+    return {
+      products: products.filter((product): product is Product => product !== null),
+      errors
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] getEnterpriseMenuProducts failed: ${message}`);
+    return {
+      products: [],
+      errors: [createNavigationCatalogUnavailableError(error)]
+    };
+  }
 });
 
 export const getProductAffinityRowBySlug = cache(async (slug: string): Promise<ProductAffinityRow | null> => {
@@ -1443,61 +1490,79 @@ export const getProductRowBySlug = cache(async (slug: string) => {
 });
 
 export async function getProductBySlug(slug: string) {
-  const row = await getProductRowBySlug(slug);
-  if (!row) return undefined;
-  const primaryMedia = await getPrimaryProductMediaLookup();
-  let catalogCutouts = new Map<string, MediaAsset>();
-
   try {
-    catalogCutouts = await getCatalogCutoutMediaLookup();
+    const row = await getProductRowBySlug(slug);
+    if (!row) return undefined;
+    const primaryMedia = await getPrimaryProductMediaLookup();
+    let catalogCutouts = new Map<string, MediaAsset>();
+
+    try {
+      catalogCutouts = await getCatalogCutoutMediaLookup();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
+    }
+
+    try {
+      return mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug));
+    } catch (error) {
+      if (isMissingSourceImageError(error)) {
+        console.warn(`[catalog] ${error.message}`);
+        return undefined;
+      }
+      throw error;
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
-  }
-
-  try {
-    return mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug));
-  } catch (error) {
-    if (isMissingSourceImageError(error)) {
-      console.warn(`[catalog] ${error.message}`);
-      return undefined;
-    }
-    throw error;
+    console.warn(`[catalog] getProductBySlug failed for ${slug}: ${message}`);
+    return undefined;
   }
 }
 
 export async function loadProductForPage(slug: string): Promise<ProductPageLoadResult> {
-  const row = await getProductRowBySlug(slug);
-  if (!row) return { status: "not_found" };
-
-  const primaryMedia = await getPrimaryProductMediaLookup();
-  let catalogCutouts = new Map<string, MediaAsset>();
-
   try {
-    catalogCutouts = await getCatalogCutoutMediaLookup();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
-  }
+    const row = await getProductRowBySlug(slug);
+    if (!row) return { status: "not_found" };
 
-  try {
-    return {
-      status: "ready",
-      product: mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug))
-    };
-  } catch (error) {
-    if (isMissingSourceImageError(error)) {
-      const catalogError = createMissingSourceImageError(slug);
-      console.warn(`[catalog] ${catalogError.message}`);
-      return { status: "error", error: catalogError };
+    const primaryMedia = await getPrimaryProductMediaLookup();
+    let catalogCutouts = new Map<string, MediaAsset>();
+
+    try {
+      catalogCutouts = await getCatalogCutoutMediaLookup();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
     }
-    throw error;
+
+    try {
+      return {
+        status: "ready",
+        product: mapProductRow(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug))
+      };
+    } catch (error) {
+      if (isMissingSourceImageError(error)) {
+        const catalogError = createMissingSourceImageError(slug);
+        console.warn(`[catalog] ${catalogError.message}`);
+        return { status: "error", error: catalogError };
+      }
+      throw error;
+    }
+  } catch (error) {
+    const catalogError = createCatalogUnavailableError(slug, error);
+    console.warn(`[catalog] ${catalogError.message}`);
+    return { status: "error", error: catalogError };
   }
 }
 
 export async function getProductStaticSlugs() {
-  const rows = await fetchAllCatalogRows<{ slug: string }>("slug");
-  return rows.map((product) => product.slug).filter(Boolean);
+  try {
+    const rows = await fetchAllCatalogRows<{ slug: string }>("slug");
+    return rows.map((product) => product.slug).filter(Boolean);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] getProductStaticSlugs failed; product pages will render on demand: ${message}`);
+    return [];
+  }
 }
 
 export type ProductSitemapEntry = {

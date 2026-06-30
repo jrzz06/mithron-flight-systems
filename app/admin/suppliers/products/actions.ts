@@ -10,10 +10,9 @@ import {
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
-import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
 import {
   parseApprovalInventoryFromFormData,
-  syncProductInventoryWorkflow,
+  saveProductInventory,
   type SupplierInventoryInit
 } from "@/services/product-inventory-workflow";
 import { assertProductCanPublish } from "@/services/product-publish";
@@ -64,11 +63,9 @@ export async function approveProductSubmissionFormAction(formData: FormData) {
     const inventoryInput = parseApprovalInventoryFromFormData(formData, slug, inventoryInit);
 
     if (inventoryInput && inventoryInput.quantity > 0 && inventoryInput.warehouseCode) {
-      await syncProductInventoryWorkflow(inventoryInput, actorId, {
+      await saveProductInventory(inventoryInput, actorId, {
         auditAction: "supplier.approval_inventory_init"
       });
-    } else {
-      await ensureProductCatalogInventoryRecord(slug, actorId);
     }
 
     await updateAdminRecord(

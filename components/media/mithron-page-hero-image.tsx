@@ -3,7 +3,7 @@ import type { CSSProperties, ImgHTMLAttributes } from "react";
 import { MithronResponsiveImage } from "@/components/media/mithron-responsive-image";
 import type { ResponsiveMediaAsset } from "@/config/types";
 
-type MithronPageHeroImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "alt" | "loading"> & {
+type MithronPageHeroImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "alt"> & {
   src: string;
   alt: string;
   sizes?: string;
@@ -13,6 +13,7 @@ type MithronPageHeroImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, "src"
   className?: string;
   wrapperClassName?: string;
   style?: CSSProperties;
+  loading?: "eager" | "lazy";
 };
 
 export function MithronPageHeroImage({
@@ -24,7 +25,11 @@ export function MithronPageHeroImage({
   responsive,
   className,
   wrapperClassName,
-  style
+  style,
+  loading,
+  onLoad,
+  onError,
+  ...props
 }: MithronPageHeroImageProps) {
   return (
     <MithronResponsiveImage
@@ -35,10 +40,13 @@ export function MithronPageHeroImage({
       imageRole="hero"
       priority={priority}
       responsive={responsive}
-      loading={priority ? "eager" : "lazy"}
+      loading={loading ?? (priority ? "eager" : "lazy")}
       className={className}
       wrapperClassName={wrapperClassName}
       style={style}
+      onLoad={onLoad}
+      onError={onError}
+      {...props}
     />
   );
 }

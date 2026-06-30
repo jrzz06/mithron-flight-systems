@@ -15,7 +15,7 @@ import {
 import { getWarehouseSnapshot } from "@/services/admin";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
 import { getCurrentAuthContext } from "@/services/auth";
-import { filterOrdersForWarehouseScope, filterInventoryForWarehouseScope, resolveWarehouseScope } from "@/services/warehouse-scope";
+import { filterOrdersForWarehouseScope, resolveWarehouseScope } from "@/services/warehouse-scope";
 import {
   advanceWarehouseOrderStepFormAction,
   dispatchWarehouseOrderFormAction

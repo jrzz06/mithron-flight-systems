@@ -1,17 +1,14 @@
 import {
   createActivityLogRecord,
   fetchAdminRecordsByColumn,
-  recordEntityRevisionSnapshot,
-  updateAdminRecord,
-  upsertInventoryRecord,
-  upsertWarehouseStockRecord
+  recordEntityRevisionSnapshot
 } from "@/services/admin-actions";
 import {
   buildInventoryLinkageRecords,
   type ProductInventoryWorkflowInput
 } from "@/services/enterprise-admin-forms";
 import { revalidateCatalogSurfaces } from "@/lib/catalog-cache";
-import { deriveProductSku } from "@/services/product-inventory-sync";
+import { deriveProductSku, upsertProductInventoryRecord } from "@/services/product-inventory";
 import { fetchWarehouseStockBySku, recordInventoryMovementForStockChange } from "@/services/warehouse-movements";
 import { assertValidWarehouseCode } from "@/services/warehouses";
 import type { SupplierInventoryInitInput } from "@/lib/supplier/product-form";
@@ -151,7 +148,7 @@ export function parseApprovalInventoryFromFormData(
   };
 }
 
-export async function syncProductInventoryWorkflow(
+export async function saveProductInventory(
   input: ProductInventoryWorkflowInput,
   actorId: string,
   options: {
@@ -179,22 +176,20 @@ export async function syncProductInventoryWorkflow(
   const quantityBefore = Number(previousStock?.available_quantity ?? 0);
   const records = buildInventoryLinkageRecords(normalizedInput, { actorId, at: now });
 
-  const inventoryRecord = await upsertInventoryRecord(records.inventoryRecord, actorId, env);
-  const stockRecord = await upsertWarehouseStockRecord(records.warehouseStockRecord, actorId, env);
-  const warehouseStockId = String((stockRecord as Record<string, unknown>).id ?? previousStock?.id ?? "") || null;
+  const saved = await upsertProductInventoryRecord(normalizedInput, actorId, env);
 
-  if (normalizedInput.availableQuantity !== quantityBefore) {
+  if (saved.availableQuantity !== quantityBefore) {
     await recordInventoryMovementForStockChange(
       {
         productId: normalizedInput.productSlug,
         sku: normalizedInput.sku,
         variantId: normalizedInput.variantId,
         warehouseCode: normalizedInput.warehouseCode,
-        warehouseStockId,
-        movementType: quantityBefore === 0 && normalizedInput.availableQuantity > 0 ? "stock_in" : "adjustment",
+        warehouseStockId: String(previousStock?.id ?? "") || null,
+        movementType: quantityBefore === 0 && saved.availableQuantity > 0 ? "stock_in" : "adjustment",
         quantityBefore,
-        quantityAfter: normalizedInput.availableQuantity,
-        reasonCode: options.auditAction ?? "admin_inventory_init",
+        quantityAfter: saved.availableQuantity,
+        reasonCode: options.auditAction ?? "inventory.update",
         notes: normalizedInput.changeSummary,
         actorUserId: actorId,
         relatedOrderId: null,
@@ -210,9 +205,10 @@ export async function syncProductInventoryWorkflow(
     "inventory",
     `${normalizedInput.productSlug}:${normalizedInput.sku}`,
     {
-      inventory: inventoryRecord,
-      warehouse_stock: stockRecord,
-      variant_id: normalizedInput.variantId
+      inventory: records.inventoryRecord,
+      warehouse_stock: records.warehouseStockRecord,
+      variant_id: normalizedInput.variantId,
+      saved
     },
     actorId,
     normalizedInput.changeSummary,
@@ -222,7 +218,7 @@ export async function syncProductInventoryWorkflow(
   await createActivityLogRecord(
     {
       actor_id: actorId,
-      action: options.auditAction ?? "inventory.sync",
+      action: options.auditAction ?? "inventory.update",
       entity_table: "inventory",
       entity_id: `${normalizedInput.productSlug}:${normalizedInput.sku}`,
       severity: records.lowStock ? "warning" : "info",
@@ -231,39 +227,22 @@ export async function syncProductInventoryWorkflow(
         sku: normalizedInput.sku,
         variant_id: normalizedInput.variantId,
         warehouse_code: normalizedInput.warehouseCode,
-        stock_status: records.inventoryRecord.stock_status,
+        stock_status: saved.stockStatus,
         quantity: normalizedInput.quantity,
         reserved_quantity: normalizedInput.reservedQuantity,
         reorder_threshold: normalizedInput.reorderThreshold,
-        available_quantity: normalizedInput.availableQuantity,
-        committed_quantity: normalizedInput.committedQuantity
+        available_quantity: saved.availableQuantity,
+        committed_quantity: saved.committedQuantity
       }
     },
     actorId,
     env
   );
 
-  const stockStatus = String(records.inventoryRecord.stock_status ?? "");
-  if (["out_of_stock", "low_stock", "available"].includes(stockStatus)) {
-    const availabilityLabel = stockStatus === "out_of_stock"
-      ? "Out of stock"
-      : stockStatus === "low_stock"
-        ? "Low stock"
-        : "In stock";
-    await updateAdminRecord(
-      "mithron_products",
-      "slug",
-      normalizedInput.productSlug,
-      {
-        source_availability: availabilityLabel,
-        updated_at: now
-      },
-      actorId,
-      env
-    );
-  }
-
   revalidateCatalogSurfaces(normalizedInput.productSlug);
 
-  return { inventoryRecord, stockRecord };
+  return { inventoryRecord: records.inventoryRecord, stockRecord: records.warehouseStockRecord, saved };
 }
+
+/** @deprecated Use saveProductInventory */
+export const syncProductInventoryWorkflow = saveProductInventory;

@@ -25,8 +25,9 @@ describe("glass interactive ui system", () => {
     const configurator = source("sections/product/product-configurator.tsx");
 
     expect(button).toContain('accentCart: cn(glassButtonClassName({ cart: true })');
-    expect(configurator).toContain('variant="accentCart"');
-    expect(configurator).toContain("glassPillClassName");
+    expect(configurator).toContain('variant="accent"');
+    expect(configurator).toContain("Buy Now");
+    expect(configurator).toContain('variant="outline"');
   });
 
   it("does not modify the Mithron logo markup or styling", () => {

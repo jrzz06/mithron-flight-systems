@@ -141,8 +141,8 @@ describe("storefront motion audit regressions", () => {
       "components/overlays/search-overlay.tsx",
       "sections/catalog/catalog-page.tsx",
       "sections/product/product-configurator.tsx",
-      "sections/product/product-media-viewer.tsx",
-      "sections/product/product-story.tsx"
+      "sections/product/showcase/product-immersive-gallery.tsx",
+      "sections/product/showcase/product-narrative-chapters.tsx"
     ];
 
     for (const file of publicChromeFiles) {

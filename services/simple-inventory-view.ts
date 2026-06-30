@@ -1,4 +1,4 @@
-import { deriveProductSku } from "@/services/product-inventory-sync";
+import { deriveProductSku } from "@/lib/product-sku";
 
 export type SimpleInventoryStatus = "available" | "low_stock" | "out_of_stock" | "archived" | "discontinued" | "reserved";
 
@@ -12,8 +12,7 @@ export type SimpleInventoryRow = {
   warehouseCode: string;
   stockStatus: SimpleInventoryStatus;
   quantity: number;
-  catalogQuantity: number;
-  isDesynced: boolean;
+  onHandQuantity: number;
   category: string;
   price: number;
   inventoryValue: number;
@@ -100,10 +99,6 @@ export function pickWarehouseStockRow(stock: AdminRow[], productSlug: string, pr
   return rows.find((row) => asText(row.warehouse_code, "") === preferredWarehouseCode) ?? rows[0];
 }
 
-export function isInventoryWarehouseDesynced(catalogQuantity: number, warehouseAvailable: number) {
-  return catalogQuantity !== warehouseAvailable;
-}
-
 /** Builds exactly one warehouse inventory row per product in the loaded set. */
 export function buildSimpleInventoryRows(
   products: AdminRow[],
@@ -127,10 +122,9 @@ export function buildSimpleInventoryRows(
     const stockRow = pickWarehouseStockRow(stock, productSlug, preferredWarehouseCode);
     const sku = asText(inv?.sku, deriveProductSku(productSlug));
     const warehouseCode = asText(stockRow?.warehouse_code, preferredWarehouseCode);
-    const catalogQuantity = asNumber(inv?.quantity);
-    const availableQuantity = asNumber(stockRow?.available_quantity);
+    const onHandQuantity = asNumber(inv?.quantity);
+    const availableQuantity = asNumber(stockRow?.available_quantity, onHandQuantity);
     const quantity = availableQuantity;
-    const isDesynced = Boolean(inv) && isInventoryWarehouseDesynced(catalogQuantity, availableQuantity);
     const price = asNumber(product.price);
 
     return {
@@ -143,8 +137,7 @@ export function buildSimpleInventoryRows(
       warehouseCode,
       stockStatus: asStockStatus(inv?.stock_status, quantity, product),
       quantity,
-      catalogQuantity,
-      isDesynced,
+      onHandQuantity,
       category: asText(product.category, "Uncategorized"),
       price,
       inventoryValue: price * quantity,

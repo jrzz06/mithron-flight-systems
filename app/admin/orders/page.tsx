@@ -259,13 +259,11 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams?:
     <ModulePanel
       eyebrow="Order operations"
       title="Orders"
-      description="Review orders that need action, update fulfillment, and manage shipments."
+      description="Review, verify, fulfill, and manage orders at speed."
       status={snapshot.status}
       metrics={[
         { label: "Needs action", value: String(needsActionCount), status: needsActionCount ? "warning" : "clear" },
-        { label: "Total orders", value: String(snapshot.data.orders.length) },
-        { label: "Line items", value: String(snapshot.data.orderItems.length) },
-        { label: "Stock rows", value: String(snapshot.data.stock.length) }
+        { label: "In view", value: String(queueOrders.length) }
       ]}
     >
       <OrdersLiveSync enabled={policy.realtimeUpdatesEnabled} />

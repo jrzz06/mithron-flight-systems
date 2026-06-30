@@ -28,7 +28,14 @@ describe("admin real workflow UX", () => {
     const productsPage = source("app/admin/products/page.tsx");
     const ordersPage = source("app/admin/orders/page.tsx");
     const ordersWorkspace = source("components/admin/admin-orders-workspace.tsx");
-    const ordersUi = `${ordersPage}\n${ordersWorkspace}`;
+    const ordersCreateDrawer = source("components/admin/orders/admin-order-create-drawer.tsx");
+    const ordersActionsRail = source("components/admin/orders/admin-order-actions-rail.tsx");
+    const ordersProducts = source("components/admin/orders/admin-order-products-section.tsx");
+    const ordersDetail = source("components/admin/orders/admin-order-detail.tsx");
+    const ordersPrimitives = source("components/admin/orders/order-detail-primitives.tsx");
+    const ordersThumbnail = source("components/admin/orders/order-product-thumbnail.tsx");
+    const ordersStatusBadge = source("components/admin/orders/order-status-badge.tsx");
+    const ordersUi = `${ordersPage}\n${ordersWorkspace}\n${ordersCreateDrawer}\n${ordersActionsRail}\n${ordersProducts}\n${ordersDetail}\n${ordersPrimitives}\n${ordersThumbnail}\n${ordersStatusBadge}`;
     const productForms = source("services/product-admin-forms.ts");
     const orderForms = source("services/enterprise-admin-forms.ts");
 
@@ -49,9 +56,11 @@ describe("admin real workflow UX", () => {
     expect(ordersUi).not.toContain("Order items JSON");
     expect(ordersUi).not.toContain("Metadata JSON");
     expect(ordersUi).not.toContain("Shipment tracking JSON");
+    expect(ordersUi).not.toContain('id="create-order"');
     expect(ordersUi).toContain("data-order-detail-panel");
     expect(ordersUi).toContain("data-shipment-actions");
     expect(ordersUi).toContain("data-inventory-allocation");
+    expect(ordersUi).not.toContain("No image");
     expect(orderForms).toContain("order_item_product_slug");
     expect(orderForms).toContain("tracking_number");
   });

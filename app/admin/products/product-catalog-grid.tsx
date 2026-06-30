@@ -37,7 +37,6 @@ export type ProductCatalogGridRow = {
   taxIncluded?: boolean;
   stockQuantity: string;
   stockStatus: string;
-  stockDesynced?: boolean;
   checkoutWarehouseCode?: string;
   sourceAvailability: string;
   isVisible: boolean;
@@ -169,11 +168,6 @@ const ProductCard = memo(function ProductCard({
           <p>
             <span className="text-[var(--platform-text-muted)]">Stock </span>
             <span className="font-medium text-[var(--platform-text-primary)]">{product.stockQuantity} {product.stockStatus}</span>
-            {product.stockDesynced ? (
-              <span className="ml-2 rounded-full border border-amber-500/30 bg-amber-950/30 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-200">
-                Desynced
-              </span>
-            ) : null}
           </p>
         </div>
       </div>

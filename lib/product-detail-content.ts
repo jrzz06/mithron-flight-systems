@@ -1,8 +1,9 @@
 import type { Product } from "@/config/types";
+import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
+import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
 import { sanitizeProductHtml } from "@/lib/sanitize-html";
-import { sanitizeProductPreviewText } from "@/lib/product-preview-text";
+import { plainTextToDescriptionHtml } from "@/lib/product-reconcile/score-canonical";
 import { isSpecLikeBlob, sortSpecEntries, expandSpecEntries, isHighlightSpecValue } from "@/lib/product-spec-text";
-
 const HIDDEN_SPEC_KEYS = new Set(["Product ID", "Source", "Currency", "Category", "Availability"]);
 
 const HIGHLIGHT_SPEC_KEYS = [
@@ -56,30 +57,71 @@ export function getHighlightSpecs(product: Product, limit = 6) {
   return ranked.slice(0, limit);
 }
 
+function plainDescriptionText(value: string) {
+  return sanitizeProductPreviewText(value).trim();
+}
+
+function hasHtmlTags(value: string) {
+  return /<[^>]+>/.test(value);
+}
+
+function normalizeStoredDescriptionHtml(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (hasHtmlTags(trimmed)) {
+    return sanitizeEditorHtml(trimmed);
+  }
+  return plainTextToDescriptionHtml(trimmed);
+}
+
+export function getProductDescriptionHtml(product: Product): string | null {
+  const description = product.description?.trim();
+  if (description) {
+    return normalizeStoredDescriptionHtml(description);
+  }
+
+  const sourceDescription = product.sourceDescription?.trim();
+  if (sourceDescription) {
+    return normalizeStoredDescriptionHtml(sourceDescription);
+  }
+
+  return null;
+}
+
+export function getProductBuyBoxSummary(product: Product) {
+  const tagline = cleanCopy(product.tagline);
+  if (!tagline) return "";
+  return clipProductPreviewText(tagline, 140);
+}
+
 export function getProductOverviewHtml(product: Product) {
   const description = product.description?.trim();
   if (!description) return null;
   if (!/<[^>]+>/.test(description)) return null;
-  const sanitized = sanitizeProductHtml(description);
-  const plain = sanitized.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  if (isSpecLikeBlob(plain)) return null;
-  return sanitized;
+  return sanitizeProductHtml(description);
 }
 
 export function getProductOverviewText(product: Product) {
-  const htmlOverview = getProductOverviewHtml(product);
-  if (htmlOverview) {
-    return cleanCopy(htmlOverview);
+  const description = product.description?.trim();
+  if (description && !/<[^>]+>/.test(description)) {
+    return plainDescriptionText(description);
   }
 
-  const plainDescription = product.description?.trim();
+  const htmlOverview = getProductOverviewHtml(product);
+  if (htmlOverview) {
+    return plainDescriptionText(htmlOverview.replace(/<[^>]+>/g, " "));
+  }
+
+  const sourceDescription = product.sourceDescription?.trim();
+  if (sourceDescription) {
+    return plainDescriptionText(sourceDescription);
+  }
+
   const candidates = [
-    plainDescription && !/<[^>]+>/.test(plainDescription) ? plainDescription : "",
     product.seoDescription,
     product.ogDescription,
     ...product.story.map((chapter) => chapter.body),
-    ...product.bundles.map((bundle) => bundle.description),
-    product.tagline
+    ...product.bundles.map((bundle) => bundle.description)
   ]
     .map((value) => cleanCopy(value))
     .filter(Boolean);

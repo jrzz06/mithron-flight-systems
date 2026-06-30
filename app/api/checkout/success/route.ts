@@ -3,7 +3,7 @@ import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { requireClientAuditToken } from "@/lib/api/require-client-audit-token";
 import { createClient } from "@/lib/server";
 import { fetchAdminRecordsByColumn } from "@/services/admin-actions";
-import { ensureOrderInvoiceAndEmail } from "@/services/email/ensure-order-invoice-email";
+import { getPaidOrderFulfillment } from "@/services/invoice/payment-fulfillment";
 
 async function assertPaidOrderAccess(input: {
   orderId: string;
@@ -78,9 +78,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, paid: false, error: "Payment is not confirmed yet." }, { status: 409 });
   }
 
-  const fulfillment = await ensureOrderInvoiceAndEmail(orderId);
+  const fulfillment = await getPaidOrderFulfillment(orderId);
   if (!fulfillment) {
-    return NextResponse.json({ error: "Unable to prepare invoice for this order." }, { status: 500 });
+    return NextResponse.json({ error: "Unable to load invoice for this order." }, { status: 500 });
+  }
+
+  if (!fulfillment.invoiceReady) {
+    return NextResponse.json({
+      ok: true,
+      paid: true,
+      invoicePending: true,
+      orderId,
+      orderNumber: fulfillment.orderNumber,
+      total: fulfillment.total,
+      customerEmail: fulfillment.customerEmail,
+      emailSent: fulfillment.emailSent,
+      emailSkipped: fulfillment.emailSkipped
+    });
   }
 
   const invoiceHref = guestEmail

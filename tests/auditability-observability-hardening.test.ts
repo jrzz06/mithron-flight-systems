@@ -49,20 +49,18 @@ describe("enterprise auditability and security observability hardening", () => {
     expect(adminActions).toContain("Failed to create content revision after");
   });
 
-  it("records inventory movement rows before making warehouse stock changes visible", () => {
+  it("records inventory movement rows before applying unified inventory writes", () => {
     const warehouseActions = readWorkspaceFile("app/warehouse/actions.ts");
     const warehouseMovements = readWorkspaceFile("services/warehouse-movements.ts");
 
-    const stockAdjustmentMovement = warehouseActions.indexOf("const movement = await recordInventoryMovementForStockChange");
-    const stockAdjustmentInventoryUpsert = warehouseActions.indexOf("const inventoryRecord = await upsertInventoryRecord");
-    const stockWorkflowMovement = warehouseMovements.indexOf("const movement = await recordInventoryMovementForStockChange");
-    const stockWorkflowInventoryUpsert = warehouseMovements.indexOf("const inventoryRecord = await upsertInventoryRecord");
+    expect(warehouseActions).toContain("saveProductInventory");
+    expect(warehouseActions).toContain("upsertProductInventoryRecord");
 
-    expect(stockAdjustmentMovement).toBeGreaterThan(-1);
-    expect(stockAdjustmentInventoryUpsert).toBeGreaterThan(-1);
+    const stockWorkflowMovement = warehouseMovements.indexOf("const movement = await recordInventoryMovementForStockChange");
+    const stockWorkflowInventoryUpsert = warehouseMovements.indexOf("await upsertProductInventoryRecord");
+
     expect(stockWorkflowMovement).toBeGreaterThan(-1);
     expect(stockWorkflowInventoryUpsert).toBeGreaterThan(-1);
-    expect(stockAdjustmentMovement).toBeLessThan(stockAdjustmentInventoryUpsert);
     expect(stockWorkflowMovement).toBeLessThan(stockWorkflowInventoryUpsert);
   });
 

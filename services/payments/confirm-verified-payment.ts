@@ -2,7 +2,7 @@ import { assertSupabaseAdminConfig } from "@/lib/env";
 import { mergePaymentLifecycleMetadata } from "@/lib/orders/payment-lifecycle";
 import { fetchAdminRecordsByColumn, updateAdminRecord } from "@/services/admin-actions";
 import { getCheckoutWarehouseCode } from "@/services/warehouse-config";
-import { ensureOrderInvoiceAndEmail } from "@/services/email/ensure-order-invoice-email";
+import { fulfillOrderOnPaymentVerified } from "@/services/invoice/payment-fulfillment";
 import { notifyAdminsAboutPaidOrder } from "@/services/enquiries";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
 import type { PaymentEvent, PaymentProviderId } from "./types";
@@ -110,16 +110,18 @@ export async function confirmVerifiedPayment(
         "id",
         input.orderId,
         {
-          metadata: mergePaymentLifecycleMetadata(baseMetadata, {
-            state: "PAYMENT_VERIFIED",
-            provider: input.provider,
-            providerIntentId: input.event.intentId,
-            providerPaymentId: input.event.paymentId,
-            source: input.source,
-            note: "Payment verified by server.",
+          metadata: {
+            ...mergePaymentLifecycleMetadata(baseMetadata, {
+              state: "PAYMENT_VERIFIED",
+              provider: input.provider,
+              providerIntentId: input.event.intentId,
+              providerPaymentId: input.event.paymentId,
+              source: input.source,
+              note: "Payment verified by server."
+            }),
             payment_provider: input.provider,
-            payment_method: paymentMethod
-          }),
+            ...(paymentMethod ? { payment_method: paymentMethod } : {})
+          },
           updated_at: new Date().toISOString()
         },
         null,
@@ -138,16 +140,14 @@ export async function confirmVerifiedPayment(
       provider: input.provider,
       source: input.source
     });
-
-    await ensureOrderInvoiceAndEmail(input.orderId, env);
   } else {
     logPaymentEvent("confirm_verified_payment_skipped", {
       orderId: input.orderId,
       reason: reason ?? "unknown"
     });
-
-    await ensureOrderInvoiceAndEmail(input.orderId, env);
   }
+
+  await fulfillOrderOnPaymentVerified(input.orderId, env);
 
   return {
     ok: true,

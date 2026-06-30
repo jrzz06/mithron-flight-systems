@@ -7,22 +7,31 @@ function source(path: string) {
 }
 
 describe("post-payment invoice and email fulfillment", () => {
-  it("ensures invoice generation and confirmation email after payment", () => {
-    const ensure = source("services/email/ensure-order-invoice-email.ts");
-    expect(ensure).toContain("generateAndStoreInvoice");
-    expect(ensure).toContain("sendOrderConfirmationEmail");
-    expect(ensure).toContain("confirmation_email_sent_at");
+  it("generates invoice and sends email from payment-verified event handler", () => {
+    const fulfillment = source("services/invoice/payment-fulfillment.ts");
+    expect(fulfillment).toContain("generateAndStoreInvoice");
+    expect(fulfillment).toContain("sendOrderConfirmationEmail");
+    expect(fulfillment).toContain("fulfillOrderOnPaymentVerified");
+    expect(fulfillment).toContain("confirmation_email_sent_at");
   });
 
-  it("exposes checkout success API for invoice display", () => {
+  it("triggers fulfillment from payment confirmation flow", () => {
+    const confirm = source("services/payments/confirm-verified-payment.ts");
+    expect(confirm).toContain("fulfillOrderOnPaymentVerified");
+    const apply = source("services/payments/confirm-payment.ts");
+    expect(apply).toContain("fulfillOrderOnPaymentVerified");
+  });
+
+  it("reads invoice on checkout success without generating", () => {
     const route = source("app/api/checkout/success/route.ts");
-    expect(route).toContain("ensureOrderInvoiceAndEmail");
-    expect(route).toContain("invoiceUrl");
+    expect(route).toContain("getPaidOrderFulfillment");
+    expect(route).not.toContain("fulfillOrderOnPaymentVerified");
+    expect(route).toContain("invoicePending");
   });
 
-  it("returns invoice details from payment verify API", () => {
+  it("returns invoice details from payment verify API after event processing", () => {
     const route = source("app/api/payments/verify/route.ts");
-    expect(route).toContain("ensureOrderInvoiceAndEmail");
+    expect(route).toContain("getPaidOrderFulfillment");
     expect(route).toContain("invoiceNumber");
     expect(route).toContain("emailSent");
   });
@@ -31,6 +40,16 @@ describe("post-payment invoice and email fulfillment", () => {
     const page = source("app/(storefront)/checkout/success/checkout-success-client.tsx");
     expect(page).toContain("/api/checkout/success");
     expect(page).toContain("invoiceFrame");
+    expect(page).toContain("invoicePending");
     expect(page).toContain("emailSent");
+  });
+
+  it("uses mithron invoice template in generation pipeline", () => {
+    const renderer = source("lib/invoice/render-invoice-html.ts");
+    expect(renderer).toContain("renderMithronInvoiceHtml");
+    expect(renderer).not.toContain("invoice-shell");
+    const template = source("lib/invoice/mithron-invoice-template.ts");
+    expect(template).toContain("INV-");
+    expect(template).toContain("mi-wrap");
   });
 });

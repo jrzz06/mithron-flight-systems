@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useSyncExternalStore } from "react";
 import { resolveLoginHeroTier, type LoginHeroTier } from "@/lib/login-hero-tier";
 import styles from "./login.module.css";
 
@@ -13,41 +14,51 @@ const LOGIN_BG_SRC =
 
 const SUBJECT_FOCUS = "36% 46%";
 
+function subscribeToLoginHeroTier() {
+  return () => undefined;
+}
+
+function getLoginHeroTierSnapshot(): LoginHeroTier {
+  return resolveLoginHeroTier();
+}
+
+function getLoginHeroTierServerSnapshot(): LoginHeroTier {
+  return "lite";
+}
+
 type LoginHeroBackgroundProps = {
   priority?: boolean;
 };
 
 export function LoginHeroBackground({ priority = true }: LoginHeroBackgroundProps) {
-  const [tier, setTier] = useState<LoginHeroTier>("lite");
-
-  useEffect(() => {
-    setTier(resolveLoginHeroTier());
-  }, []);
+  const tier = useSyncExternalStore(subscribeToLoginHeroTier, getLoginHeroTierSnapshot, getLoginHeroTierServerSnapshot);
 
   const showSkyMotion = tier !== "lite";
   const showNearLayer = tier === "premium";
 
   return (
     <div className={styles.heroLayer} data-hero-tier={tier} aria-hidden="true">
-      <img
+      <Image
         src={LOGIN_BG_SRC}
         width={3840}
         height={2160}
         alt=""
+        unoptimized
         className={styles.heroImage}
         decoding="async"
-        fetchPriority={priority ? "high" : "auto"}
+        priority={priority}
         style={{ objectPosition: SUBJECT_FOCUS }}
       />
 
       {showSkyMotion ? (
         <div className={styles.heroSkyBlur} aria-hidden="true">
           <div className={`${styles.heroSkyDrift} ${styles.heroSkyDriftFar}`}>
-            <img
+            <Image
               src={LOGIN_BG_SRC}
               width={3840}
               height={2160}
               alt=""
+              unoptimized
               className={styles.heroImageSky}
               decoding="async"
               loading="lazy"
@@ -56,11 +67,12 @@ export function LoginHeroBackground({ priority = true }: LoginHeroBackgroundProp
           </div>
           {showNearLayer ? (
             <div className={`${styles.heroSkyDrift} ${styles.heroSkyDriftNear}`}>
-              <img
+              <Image
                 src={LOGIN_BG_SRC}
                 width={3840}
                 height={2160}
                 alt=""
+                unoptimized
                 className={`${styles.heroImageSky} ${styles.heroImageSkyNear}`}
                 decoding="async"
                 loading="lazy"

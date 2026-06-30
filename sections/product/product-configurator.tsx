@@ -1,15 +1,13 @@
 "use client";
 
-import { Check, Headset, Package, ShieldCheck, ShoppingCart } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Bundle, MediaAsset, ProductVariant } from "@/config/types";
-import type { ProductReviewSummary } from "@/lib/product-reviews/types";
-import { productBadgeCssClass } from "@/lib/product-badge";
-import { isSpecLikeBlob } from "@/lib/product-spec-text";
-import { glassPillClassName } from "@/lib/glass-ui";
 import { cn, formatINR } from "@/lib/utils";
+import { formatAvailability } from "@/lib/product-spec-text";
 import { deriveProductSku } from "@/lib/product-sku";
 import { useCartStore } from "@/store/cart";
 import styles from "./product-detail.module.css";
@@ -30,34 +28,55 @@ export type ProductConfiguratorModel = {
   image: MediaAsset;
   variants: ProductVariant[];
   bundles: Bundle[];
-  reviewSummary?: ProductReviewSummary;
 };
-
-const trustSignals = [
-  { icon: ShieldCheck, label: "Verified platform listing" },
-  { icon: Headset, label: "Deployment support available" },
-  { icon: Package, label: "Configured for field delivery" }
-] as const;
 
 function isAvailabilityVariant(variants: ProductVariant[]) {
   return variants.length === 1 && variants[0]?.id === "availability";
 }
 
-function BuyBoxStarRow({ rating }: { rating: number }) {
-  const roundedRating = Math.round(rating);
-
+function QuantityStepper({
+  value,
+  onChange,
+  min = 1,
+  max = 99
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+}) {
   return (
-    <div className={styles.buyBoxStarRow} aria-hidden="true">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span key={index} className={index < roundedRating ? styles.reviewStarFilled : styles.reviewStarEmpty} />
-      ))}
+    <div className={styles.quantityStepper} role="group" aria-label="Quantity">
+      <button
+        type="button"
+        className={styles.quantityButton}
+        aria-label="Decrease quantity"
+        disabled={value <= min}
+        onClick={() => onChange(Math.max(min, value - 1))}
+      >
+        <Minus className="size-4" aria-hidden="true" />
+      </button>
+      <span className={styles.quantityValue} aria-live="polite" aria-atomic="true">
+        {value}
+      </span>
+      <button
+        type="button"
+        className={styles.quantityButton}
+        aria-label="Increase quantity"
+        disabled={value >= max}
+        onClick={() => onChange(Math.min(max, value + 1))}
+      >
+        <Plus className="size-4" aria-hidden="true" />
+      </button>
     </div>
   );
 }
 
 export function ProductConfigurator({ product }: { product: ProductConfiguratorModel }) {
+  const router = useRouter();
   const [variantId, setVariantId] = useState(product.variants[0]?.id ?? "");
   const [bundleId, setBundleId] = useState(product.bundles[0]?.id ?? "");
+  const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const selectedBundle = useMemo(
     () => product.bundles.find((bundle) => bundle.id === bundleId) ?? product.bundles[0],
@@ -65,18 +84,22 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
   );
   const selectedVariant = product.variants.find((variant) => variant.id === variantId) ?? product.variants[0];
   const addItem = useCartStore((state) => state.addItem);
+  const setCartQuantity = useCartStore((state) => state.setQuantity);
   const setCartOpen = useCartStore((state) => state.setCartOpen);
   const showVariantPicker = product.variants.length > 1 && !isAvailabilityVariant(product.variants);
   const showBundlePicker = product.bundles.length > 1;
   const displayPrice = selectedBundle?.price ?? product.price;
-  const bundleIncludes = selectedBundle?.includes.filter(Boolean) ?? [];
-  const showTagline = Boolean(product.tagline?.trim()) && !isSpecLikeBlob(product.tagline);
-  const showBundleDescription = Boolean(selectedBundle?.description?.trim())
-    && !isSpecLikeBlob(selectedBundle.description)
-    && selectedBundle.description !== product.tagline;
+  const showGstNote = Boolean(product.chargeTax) && !product.taxIncluded;
+  const showCompareAt = Boolean(product.compareAt && product.compareAt > displayPrice);
+  const stockLabel = isAvailabilityVariant(product.variants)
+    ? formatAvailability(selectedVariant?.name ?? "In stock")
+    : "In stock";
+  const buyBoxTagline = product.tagline?.trim() ?? "";
 
-  const addToCart = async (bundle: Bundle | undefined) => {
+  const commitPurchase = async (mode: "cart" | "checkout") => {
+    const bundle = selectedBundle;
     if (!bundle || isAdding) return;
+
     setIsAdding(true);
     addItem({
       productSlug: product.slug,
@@ -93,65 +116,44 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
       sku: deriveProductSku(product.slug),
       availabilityLabel: isAvailabilityVariant(product.variants) ? selectedVariant?.name : undefined
     });
-    setCartOpen(true);
-    toast.success(`${product.name} added to cart`, { description: bundle.name });
+    setCartQuantity(product.slug, bundle.id, quantity);
+
+    if (mode === "checkout") {
+      router.push("/checkout");
+    } else {
+      setCartOpen(true);
+      toast.success(`${product.name} added to cart`, { description: bundle.name });
+    }
+
     window.setTimeout(() => setIsAdding(false), 400);
   };
 
   return (
-    <aside className={cn("product-configurator", styles.buyBox)}>
+    <aside className={cn("product-configurator", styles.buyBox, styles.buyBoxPremium)}>
       <div className={styles.buyBoxInner}>
-        <div className={styles.badgeRow}>
-          <span className={styles.categoryBadge}>{product.category}</span>
-          {product.badge ? (
-            <span className={cn(styles.featureBadge, productBadgeCssClass(product.badgeStyle ?? "default", "pill"))}>
-              {product.badge}
-            </span>
+        <h1 className={styles.productTitlePremium}>{product.name}</h1>
+
+        {buyBoxTagline ? <p className={styles.productSubtitle}>{buyBoxTagline}</p> : null}
+
+        <div className={styles.priceBlock}>
+          <p className={styles.priceHero}>{formatINR(displayPrice)}</p>
+          {showGstNote ? <p className={styles.priceGstNote}>+ GST</p> : null}
+          {showCompareAt ? (
+            <p className={styles.priceComparePremium}>{formatINR(product.compareAt!)}</p>
           ) : null}
         </div>
 
-        <h1 className={cn("type-section", styles.productTitle)}>{product.name}</h1>
-        {product.reviewSummary ? (
-          <a href="#reviews" className={styles.buyBoxRating}>
-            <BuyBoxStarRow rating={product.reviewSummary.averageRating} />
-            <span className={styles.buyBoxRatingMeta}>
-              {product.reviewSummary.averageRating.toFixed(1)} · {product.reviewSummary.totalReviews} reviews
-            </span>
-          </a>
-        ) : null}
-        {showTagline ? (
-          <p className={cn("type-body", styles.productTagline)}>{product.tagline}</p>
-        ) : null}
-
-        <div className={styles.priceRow}>
-          <p className={cn("type-price", styles.priceCurrent)}>{formatINR(displayPrice)}</p>
-          {product.compareAt && product.compareAt > displayPrice ? (
-            <p className={cn("type-body", styles.priceCompare)}>{formatINR(product.compareAt)}</p>
-          ) : null}
-        </div>
-
-        {isAvailabilityVariant(product.variants) && selectedVariant ? (
-          <div className={cn(glassPillClassName("mt-4 inline-flex w-fit items-center gap-2 px-3 py-1.5 text-sm"))}>
-            <span className="size-2 rounded-full bg-[var(--brand-accent)]" aria-hidden="true" />
-            {selectedVariant.name}
-          </div>
-        ) : null}
-
-        <ul className={styles.trustRow}>
-          {trustSignals.map(({ icon: Icon, label }) => (
-            <li key={label} className={styles.trustItem}>
-              <Icon className={styles.trustIcon} aria-hidden="true" />
-              <span>{label}</span>
-            </li>
-          ))}
-        </ul>
+        <p className={styles.stockStatus}>
+          <span className={styles.stockDot} aria-hidden="true" />
+          {stockLabel}
+        </p>
 
         {showVariantPicker ? (
-          <section className={styles.optionSection} aria-labelledby="variant-heading">
-            <h2 id="variant-heading" className={styles.optionHeading}>
+          <section className={styles.compactOptions} aria-labelledby="variant-heading">
+            <h2 id="variant-heading" className={styles.compactOptionsLabel}>
               Finish
             </h2>
-            <div className={styles.optionGrid}>
+            <div className={styles.compactOptionRow}>
               {product.variants.map((variant) => {
                 const isSelected = variantId === variant.id;
                 return (
@@ -160,15 +162,10 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
                     type="button"
                     onClick={() => setVariantId(variant.id)}
                     aria-pressed={isSelected}
-                    className={cn(
-                      "type-button",
-                      styles.optionCard,
-                      styles.variantCard,
-                      isSelected && styles.variantCardSelected
-                    )}
+                    className={cn(styles.compactOptionChip, isSelected && styles.compactOptionChipSelected)}
                   >
                     <span className={styles.variantSwatch} style={{ background: variant.tone }} />
-                    <span className="line-clamp-2">{variant.name}</span>
+                    <span>{variant.name}</span>
                   </button>
                 );
               })}
@@ -177,11 +174,11 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
         ) : null}
 
         {showBundlePicker ? (
-          <section className={styles.optionSection} aria-labelledby="bundle-heading">
-            <h2 id="bundle-heading" className={styles.optionHeading}>
+          <section className={styles.compactOptions} aria-labelledby="bundle-heading">
+            <h2 id="bundle-heading" className={styles.compactOptionsLabel}>
               Configuration
             </h2>
-            <div className={styles.optionStack}>
+            <div className={styles.compactOptionStack}>
               {product.bundles.map((bundle) => {
                 const isSelected = bundleId === bundle.id;
                 return (
@@ -190,81 +187,41 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
                     type="button"
                     onClick={() => setBundleId(bundle.id)}
                     aria-pressed={isSelected}
-                    className={cn(
-                      styles.optionCard,
-                      styles.bundleCard,
-                      isSelected && styles.optionCardSelected
-                    )}
+                    className={cn(styles.compactBundleRow, isSelected && styles.compactBundleRowSelected)}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="type-card-title text-sm">{bundle.name}</h3>
-                        {bundle.description ? (
-                          <p className="type-body mt-1 line-clamp-2 text-xs text-slate-500">{bundle.description}</p>
-                        ) : null}
-                      </div>
-                      <p className="type-price shrink-0 text-sm font-medium tabular-nums">{formatINR(bundle.price)}</p>
-                    </div>
+                    <span className={styles.compactBundleName}>{bundle.name}</span>
+                    <span className={styles.compactBundlePrice}>{formatINR(bundle.price)}</span>
                   </button>
                 );
               })}
             </div>
           </section>
-        ) : showBundleDescription ? (
-          <p className="type-body mt-6 text-sm leading-relaxed text-slate-600">{selectedBundle.description}</p>
         ) : null}
 
-        {bundleIncludes.length > 0 ? (
-          <section className={styles.includesBox} aria-labelledby="includes-heading">
-            <h2 id="includes-heading" className={styles.includesHeading}>
-              What&apos;s included
-            </h2>
-            <ul className={styles.includesList}>
-              {bundleIncludes.slice(0, 6).map((item) => (
-                <li key={item} className={styles.includesItem}>
-                  <Check className={styles.includesCheck} aria-hidden="true" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <div className={cn("hidden md:block", styles.desktopCta)}>
-          <Button
-            variant="accentCart"
-            size="lg"
-            className="w-full"
-            disabled={isAdding}
-            onClick={() => addToCart(selectedBundle)}
-          >
-            <ShoppingCart data-icon="inline-start" />
-            Add to cart
-          </Button>
+        <div className={styles.quantityRow}>
+          <span className={styles.quantityLabel}>Quantity</span>
+          <QuantityStepper value={quantity} onChange={setQuantity} />
         </div>
-      </div>
 
-      <div className={styles.fixedBar}>
-        <div className={styles.fixedBarInner}>
-          <div className={styles.fixedBarMeta}>
-            <p className={styles.fixedBarName}>{product.name}</p>
-            <p className={cn("type-price text-lg font-semibold tabular-nums md:hidden")}>{formatINR(displayPrice)}</p>
-          </div>
-          <div className={styles.fixedBarActions}>
-            <span className="type-price hidden text-xl font-semibold tabular-nums md:inline">
-              {formatINR(displayPrice)}
-            </span>
-            <Button
-              variant="accentCart"
-              size="lg"
-              className="min-h-11 min-w-[132px] md:min-w-[160px]"
-              disabled={isAdding}
-              onClick={() => addToCart(selectedBundle)}
-            >
-              <Check data-icon="inline-start" />
-              Add to cart
-            </Button>
-          </div>
+        <div className={styles.purchaseActions}>
+          <Button
+            variant="accent"
+            size="lg"
+            className={styles.purchaseButton}
+            disabled={isAdding}
+            onClick={() => commitPurchase("checkout")}
+          >
+            Buy Now
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className={styles.purchaseButton}
+            disabled={isAdding}
+            onClick={() => commitPurchase("cart")}
+          >
+            Add to Cart
+          </Button>
         </div>
       </div>
     </aside>

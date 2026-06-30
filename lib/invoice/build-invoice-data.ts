@@ -5,7 +5,7 @@ import { resolveOrderAddresses } from "@/lib/addresses/resolve-server";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import { fetchAdminRecordsByColumn } from "@/services/admin-actions";
 import { MITHRON_COMPANY } from "./constants";
-import { buildInvoiceNumber, financialYearFromDate, formatInvoiceDate } from "./financial-year";
+import { buildTemplateInvoiceNumber, financialYearFromDate, formatInvoiceDate } from "./financial-year";
 import type { InvoiceData, InvoiceGstSummaryRow, InvoiceLineItem } from "./types";
 
 type JsonRecord = Record<string, unknown>;
@@ -72,7 +72,7 @@ export async function buildInvoiceData(orderId: string, serialNumber: number): P
 
   const paidAt = payment?.verified_at ? new Date(String(payment.verified_at)) : new Date(String(order.created_at ?? Date.now()));
   const financialYear = financialYearFromDate(paidAt);
-  const invoiceNumber = buildInvoiceNumber(MITHRON_COMPANY.invoicePrefix, financialYear, serialNumber);
+  const invoiceNumber = buildTemplateInvoiceNumber(financialYear, serialNumber);
   const dueDate = new Date(paidAt);
   dueDate.setUTCDate(dueDate.getUTCDate() + 30);
 

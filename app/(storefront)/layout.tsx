@@ -1,8 +1,14 @@
 import { Suspense } from "react";
+import { footerContent } from "@/config/storefront-content";
 import { StoreShell } from "@/components/layout/store-shell";
-import { getEnterpriseMenuProducts } from "@/services/catalog";
+import { createNavigationCatalogUnavailableError, getEnterpriseMenuProducts } from "@/services/catalog";
 import { buildEnterpriseMenuConfigs } from "@/services/catalog-navigation";
 import { getStorefrontShellCms } from "@/services/cms";
+
+const emptyShellCms = {
+  navigation: [],
+  footer: footerContent
+};
 
 function StorefrontShellFallback({ children }: { children: React.ReactNode }) {
   return (
@@ -14,10 +20,28 @@ function StorefrontShellFallback({ children }: { children: React.ReactNode }) {
 }
 
 async function StorefrontShellContent({ children }: { children: React.ReactNode }) {
-  const [enterpriseMenu, cms] = await Promise.all([
+  const [enterpriseResult, cmsResult] = await Promise.allSettled([
     getEnterpriseMenuProducts(),
     getStorefrontShellCms()
   ]);
+
+  if (enterpriseResult.status === "rejected") {
+    const message = enterpriseResult.reason instanceof Error ? enterpriseResult.reason.message : String(enterpriseResult.reason);
+    console.warn(`[storefront-shell] enterprise menu load failed: ${message}`);
+  }
+  if (cmsResult.status === "rejected") {
+    const message = cmsResult.reason instanceof Error ? cmsResult.reason.message : String(cmsResult.reason);
+    console.warn(`[storefront-shell] CMS shell load failed: ${message}`);
+  }
+
+  const enterpriseMenu = enterpriseResult.status === "fulfilled"
+    ? enterpriseResult.value
+    : {
+        products: [],
+        errors: [createNavigationCatalogUnavailableError(enterpriseResult.reason)]
+      };
+
+  const cms = cmsResult.status === "fulfilled" ? cmsResult.value : emptyShellCms;
   const enterpriseMenuConfigs = buildEnterpriseMenuConfigs(enterpriseMenu.products);
 
   return (

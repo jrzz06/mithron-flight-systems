@@ -30,10 +30,9 @@ import {
   setProductMediaPrimaryViaRpc
 } from "@/services/admin-actions";
 import { getCurrentAuthContext, requirePermission } from "@/services/auth";
-import { ensureProductCatalogInventoryRecord } from "@/services/product-inventory-sync";
 import {
   parseProductCreateInventoryFromFormData,
-  syncProductInventoryWorkflow
+  saveProductInventory
 } from "@/services/product-inventory-workflow";
 import { buildProductInventoryWorkflowFromFormData } from "@/services/enterprise-admin-forms";
 import {
@@ -360,11 +359,10 @@ export async function saveProductDraftFormAction(formData: FormData) {
       },
       actorId
     );
-    await ensureProductCatalogInventoryRecord(draftInput.identity.slug, actorId);
     const inventoryInput = parseProductCreateInventoryFromFormData(formData, draftInput.identity.slug);
     if (inventoryInput) {
       if (!actorId) throw new Error("Authentication required.");
-      await syncProductInventoryWorkflow(inventoryInput, actorId, {
+      await saveProductInventory(inventoryInput, actorId, {
         actorRole,
         auditAction: "products.inventory_init"
       });
@@ -442,7 +440,6 @@ export async function saveProductDuplicateFormAction(formData: FormData) {
       },
       actorId
     );
-    await ensureProductCatalogInventoryRecord(copySlug, actorId);
 
     await recordProductAuditTrail(
       {
@@ -804,7 +801,7 @@ export async function saveProductInventoryWorkflowFormAction(formData: FormData)
     const draftInput = buildProductInventoryWorkflowFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     if (!actorId) throw new Error("Authentication required.");
-    await syncProductInventoryWorkflow(draftInput, actorId, {
+    await saveProductInventory(draftInput, actorId, {
       actorRole,
       auditAction: "products.inventory_link"
     });

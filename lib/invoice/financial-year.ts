@@ -15,6 +15,10 @@ export function buildInvoiceNumber(prefix: string, financialYear: string, serial
   return `${prefix}/${financialYear}/${formatInvoiceSerial(serial)}`;
 }
 
+export function buildTemplateInvoiceNumber(financialYear: string, serial: number): string {
+  return `INV-${formatInvoiceSerial(serial)}/${financialYear}`;
+}
+
 export function formatInvoiceDate(date: Date): string {
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");

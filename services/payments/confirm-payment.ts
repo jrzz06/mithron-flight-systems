@@ -6,7 +6,13 @@ import { appendOrderTimeline, buildOrderTimelineEntry, transitionOrderStatus } f
 import { inrAmountsMatch, inrToPaise } from "./amount";
 import { cashfreeCheckoutMode } from "./config";
 import { confirmVerifiedPayment } from "./confirm-verified-payment";
+import { fulfillOrderOnPaymentVerified } from "@/services/invoice/payment-fulfillment";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
+import {
+  hasSuccessfulGatewayPayment,
+  isPendingGatewayPayment,
+  reconcilePaymentWithGateway
+} from "./reconcile-gateway-payment";
 import { resolvePaymentRecordForEvent } from "./resolve-payment-record";
 import type { CheckoutPaymentResponse, PaymentEvent, PaymentProviderId } from "./types";
 
@@ -21,6 +27,7 @@ export function buildCheckoutPaymentResponse(input: {
     clientSecret?: string;
     checkoutUrl?: string;
     paymentSessionId?: string;
+    amountPaise?: number;
   };
   amount: number;
   currency: string;
@@ -151,6 +158,106 @@ export type ApplyPaymentEventResult =
   | { ok: true; status: PaymentEvent["status"]; skipped?: boolean; reason?: string }
   | { ok: false; status?: number; error: string };
 
+function isTerminalPaidState(payment: JsonRecord, order?: JsonRecord | null) {
+  return (
+    String(payment.status ?? "") === "succeeded"
+    || String(order?.payment_status ?? "") === "succeeded"
+  );
+}
+
+async function processSucceededPaymentEvent(input: {
+  provider: PaymentProviderId;
+  event: PaymentEvent;
+  source: "webhook" | "verify";
+  eventId: string;
+  payment: JsonRecord;
+  orderId: string;
+}): Promise<ApplyPaymentEventResult> {
+  const { provider, source, eventId, payment, orderId } = input;
+  let event = input.event;
+  const paymentAmount = Number(payment.amount ?? 0);
+  const paymentCurrency = String(payment.currency ?? "INR").trim().toUpperCase();
+  const eventCurrency = String(event.currency ?? paymentCurrency).trim().toUpperCase();
+
+  if (eventCurrency !== paymentCurrency) {
+    const reconciled = await reconcilePaymentWithGateway({
+      provider,
+      intentId: event.intentId,
+      expectedAmountInr: paymentAmount,
+      expectedCurrency: paymentCurrency,
+      maxAttempts: 3,
+      delayMs: 1000
+    });
+    if (!hasSuccessfulGatewayPayment(reconciled)) {
+      logPaymentWarning("payment_currency_mismatch", {
+        provider,
+        intentId: event.intentId,
+        expected: paymentCurrency,
+        received: eventCurrency
+      });
+      return { ok: false, status: 400, error: "Payment currency mismatch." };
+    }
+    event = reconciled!;
+  }
+
+  if (!inrAmountsMatch(paymentAmount, event.amount)) {
+    const paymentPaise = inrToPaise(paymentAmount);
+    const eventPaise = inrToPaise(event.amount);
+    const paiseMatch = paymentPaise === eventPaise;
+    if (!paiseMatch && Math.abs(paymentPaise - eventPaise) > 1) {
+      const reconciled = await reconcilePaymentWithGateway({
+        provider,
+        intentId: event.intentId,
+        expectedAmountInr: paymentAmount,
+        expectedCurrency: paymentCurrency,
+        maxAttempts: 3,
+        delayMs: 1000
+      });
+      if (!hasSuccessfulGatewayPayment(reconciled)) {
+        logPaymentWarning("payment_amount_mismatch", {
+          provider,
+          intentId: event.intentId,
+          expected: paymentAmount,
+          received: event.amount
+        });
+        return { ok: false, status: 400, error: "Payment amount mismatch." };
+      }
+      event = reconciled!;
+    }
+  }
+
+  const confirmed = await confirmVerifiedPayment({
+    paymentId: String(payment.id),
+    orderId,
+    provider,
+    event,
+    source,
+    eventId
+  });
+
+  if (!confirmed.ok) {
+    return { ok: false, status: confirmed.status ?? 400, error: confirmed.error };
+  }
+
+  if (!confirmed.skipped) {
+    const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
+    const order = orders[0];
+    await createCustomerPaymentNotification({
+      recipientId: typeof order?.created_by_user_id === "string" ? order.created_by_user_id : null,
+      customerEmail: typeof order?.customer_email === "string" ? order.customer_email : null,
+      orderId,
+      orderNumber: String(order?.order_number ?? orderId)
+    });
+  }
+
+  return {
+    ok: true,
+    status: "succeeded",
+    skipped: confirmed.skipped,
+    reason: confirmed.reason
+  };
+}
+
 export async function applyPaymentEvent(input: {
   provider: PaymentProviderId;
   event: PaymentEvent;
@@ -173,68 +280,90 @@ export async function applyPaymentEvent(input: {
     return { ok: false, status: 404, error: "Order not found for payment." };
   }
 
-  if (String(payment.status ?? "") === "succeeded" && event.status === "succeeded") {
-    return { ok: true, status: "succeeded", skipped: true, reason: "already_paid" };
+  const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
+  const order = orders[0];
+
+  if (isTerminalPaidState(payment, order)) {
+    if (event.status === "succeeded") {
+      await fulfillOrderOnPaymentVerified(orderId);
+      return { ok: true, status: "succeeded", skipped: true, reason: "already_paid" };
+    }
+
+    logPaymentEvent("payment_downgrade_blocked", {
+      orderId,
+      provider,
+      source,
+      eventStatus: event.status,
+      paymentStatus: String(payment.status ?? ""),
+      orderPaymentStatus: String(order?.payment_status ?? "")
+    });
+    return { ok: true, status: event.status, skipped: true, reason: "already_paid" };
+  }
+
+  if (event.status === "failed") {
+    const reconciled = await reconcilePaymentWithGateway({
+      provider,
+      intentId: event.intentId || String(payment.provider_intent_id ?? ""),
+      expectedAmountInr: Number(payment.amount ?? 0),
+      expectedCurrency: String(payment.currency ?? "INR"),
+      maxAttempts: provider === "cashfree" ? 5 : 3,
+      delayMs: 1500
+    });
+
+    if (hasSuccessfulGatewayPayment(reconciled)) {
+      logPaymentEvent("payment_failure_reconciled_to_success", {
+        orderId,
+        provider,
+        source,
+        intentId: event.intentId,
+        paymentId: reconciled?.paymentId ?? event.paymentId ?? null
+      });
+      const successEvent: PaymentEvent = {
+        ...event,
+        ...reconciled!,
+        status: "succeeded"
+      };
+      const successEventId = eventId.includes("failed")
+        ? eventId.replace("failed", "reconciled_success")
+        : `${eventId}:reconciled_success`;
+      return processSucceededPaymentEvent({
+        provider,
+        event: successEvent,
+        source,
+        eventId: successEventId,
+        payment,
+        orderId
+      });
+    }
+
+    if (isPendingGatewayPayment(reconciled)) {
+      logPaymentEvent("payment_failure_deferred_pending", {
+        orderId,
+        provider,
+        source,
+        intentId: event.intentId
+      });
+      return { ok: true, status: "processing", skipped: true, reason: "gateway_pending" };
+    }
+
+    logPaymentEvent("payment_failure_confirmed", {
+      orderId,
+      provider,
+      source,
+      intentId: event.intentId,
+      paymentId: event.paymentId ?? null
+    });
   }
 
   if (event.status === "succeeded") {
-    const paymentAmount = Number(payment.amount ?? 0);
-    const paymentCurrency = String(payment.currency ?? "INR").trim().toUpperCase();
-    const eventCurrency = String(event.currency ?? paymentCurrency).trim().toUpperCase();
-    if (eventCurrency !== paymentCurrency) {
-      logPaymentWarning("payment_currency_mismatch", {
-        provider,
-        intentId: event.intentId,
-        expected: paymentCurrency,
-        received: eventCurrency
-      });
-      return { ok: false, status: 400, error: "Payment currency mismatch." };
-    }
-    if (!inrAmountsMatch(paymentAmount, event.amount)) {
-      const paymentPaise = inrToPaise(paymentAmount);
-      const eventPaise = inrToPaise(event.amount);
-      const paiseMatch = paymentPaise === eventPaise;
-      if (!paiseMatch && Math.abs(paymentPaise - eventPaise) > 1) {
-        logPaymentWarning("payment_amount_mismatch", {
-          provider,
-          intentId: event.intentId,
-          expected: paymentAmount,
-          received: event.amount
-        });
-        return { ok: false, status: 400, error: "Payment amount mismatch." };
-      }
-    }
-
-    const confirmed = await confirmVerifiedPayment({
-      paymentId: String(payment.id),
-      orderId,
+    return processSucceededPaymentEvent({
       provider,
       event,
       source,
-      eventId
+      eventId,
+      payment,
+      orderId
     });
-
-    if (!confirmed.ok) {
-      return { ok: false, status: confirmed.status ?? 400, error: confirmed.error };
-    }
-
-    if (!confirmed.skipped) {
-      const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
-      const order = orders[0];
-      await createCustomerPaymentNotification({
-        recipientId: typeof order?.created_by_user_id === "string" ? order.created_by_user_id : null,
-        customerEmail: typeof order?.customer_email === "string" ? order.customer_email : null,
-        orderId,
-        orderNumber: String(order?.order_number ?? orderId)
-      });
-    }
-
-    return {
-      ok: true,
-      status: "succeeded",
-      skipped: confirmed.skipped,
-      reason: confirmed.reason
-    };
   }
 
   if (source === "webhook") {
@@ -249,7 +378,7 @@ export async function applyPaymentEvent(input: {
     "id",
     String(payment.id),
     {
-      status: event.status,
+      status: String(payment.status ?? "") === "succeeded" ? "succeeded" : event.status,
       provider_intent_id: event.intentId || String(payment.provider_intent_id ?? ""),
       provider_payment_id: event.paymentId ?? null,
       webhook_payload: event.raw as JsonRecord,
@@ -261,8 +390,6 @@ export async function applyPaymentEvent(input: {
     { allowSystemActor: true }
   );
 
-  const orders = await fetchAdminRecordsByColumn("orders", "id", orderId);
-  const order = orders[0];
   if (!order) {
     return { ok: true, status: event.status };
   }

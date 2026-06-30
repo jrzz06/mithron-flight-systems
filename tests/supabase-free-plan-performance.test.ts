@@ -241,24 +241,23 @@ describe("Supabase free-plan performance contract", () => {
   it("keeps product detail client islands on lightweight product props", () => {
     const catalog = source("services/catalog.ts");
     const page = source("app/(storefront)/product/[slug]/page.tsx");
-    const mediaViewer = source("sections/product/product-media-viewer.tsx");
+    const gallery = source("sections/product/showcase/product-immersive-gallery.tsx");
     const configurator = source("sections/product/product-configurator.tsx");
-    const support = source("sections/product/specs-faq-reviews.tsx");
+    const related = source("sections/product/product-related-section.tsx");
 
     expect(catalog).toContain("getRelatedProductShellItems");
-    expect(page).toContain("buildProductMediaViewerModel");
+    expect(page).toContain("buildProductMediaPlan");
+    expect(page).toContain("getProductOverviewHtml");
     expect(page).toContain("buildProductConfiguratorModel");
-    expect(page).toContain("gallery: product.gallery");
-    expect(page).toContain("getRelatedProductShellItems");
-    expect(page).not.toContain("getRelatedProducts");
-    expect(mediaViewer).toContain("ProductMediaViewerModel");
-    expect(mediaViewer).not.toContain("import type { Product }");
-    expect(mediaViewer).not.toContain("{ product }: { product: Product }");
+    expect(page).not.toContain("buildProductDetailExperience");
+    expect(page).not.toContain("getRelatedProductShellItems");
+    expect(page).not.toContain("ProductDetailSectionNav");
+    expect(gallery).toContain("ProductMediaPlanItem");
     expect(configurator).toContain("ProductConfiguratorModel");
     expect(configurator).not.toContain("import type { Bundle, Product }");
     expect(configurator).not.toContain("{ product }: { product: Product }");
-    expect(support).toContain("ProductShellItem");
-    expect(support).not.toContain("relatedProducts: Product[]");
+    expect(related).toContain("ProductShellItem");
+    expect(related).not.toContain("relatedProducts: Product[]");
   });
 });
 

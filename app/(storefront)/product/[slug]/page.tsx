@@ -2,36 +2,23 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Product } from "@/config/types";
-import { getProductBySlug, getProductStaticSlugs, getRelatedProductShellItems, loadProductForPage } from "@/services/catalog";
+import { getProductDescriptionHtml } from "@/lib/product-detail-content";
+import { buildProductMediaPlan } from "@/lib/product-detail-experience";
+import { getProductBySlug, getProductStaticSlugs, loadProductForPage } from "@/services/catalog";
 import { CatalogDataErrorPanel } from "@/components/layout/catalog-integrity-notice";
 import { ProductConfigurator, type ProductConfiguratorModel } from "@/sections/product/product-configurator";
 import { ProductDetailHeader } from "@/sections/product/product-detail-header";
-import { ProductDetailSectionNav } from "@/sections/product/product-detail-section-nav";
-import { ProductMediaViewer, type ProductMediaViewerModel } from "@/sections/product/product-media-viewer";
-import { ProductOverview } from "@/sections/product/product-overview";
-import {
-  ProductApplicationsSection,
-  ProductDisclaimersSection,
-  ProductDownloadsSection,
-  ProductFeaturesSection,
-  ProductIncludedSection,
-  ProductMediaGallerySection,
-  ProductSpecificationHighlightsSection,
-  ProductTechnicalSection,
-  ProductWarrantySection
-} from "@/sections/product/product-detail-sections";
-import { ProductRelatedLazySection, ProductReviewsLazySection } from "@/sections/product/product-below-fold";
-import { ProductStory } from "@/sections/product/product-story";
-import { SpecsFaqReviews } from "@/sections/product/specs-faq-reviews";
+import { ProductReviewsLazySection } from "@/sections/product/product-below-fold";
+import { ProductImmersiveGallery } from "@/sections/product/showcase/product-immersive-gallery";
+import { ProductRichDescriptionSection } from "@/sections/product/showcase/product-rich-description";
+import { ProductShowcaseHero } from "@/sections/product/showcase/product-showcase-hero";
+import { ProductStickyPurchase } from "@/sections/product/showcase/product-sticky-purchase";
 import { JsonLd } from "@/components/seo/json-ld";
-import { getProductOverviewText } from "@/lib/product-detail-content";
-import { getVisibleProductDetailSections } from "@/lib/product-detail-sections";
 import { buildProductStructuredData } from "@/lib/structured-data";
-import { getPublicCmsSnapshot } from "@/services/cms";
-import type { ProductReviewSummary } from "@/lib/product-reviews/types";
+import { getPublicCmsSnapshot, emptySupabaseOnlySnapshot } from "@/services/cms";
 import { getProductPageReviews } from "@/services/product-reviews";
 import { buildProductMetadata } from "@/services/product-metadata";
-import styles from "@/sections/product/product-detail.module.css";
+import showcaseStyles from "@/sections/product/showcase/product-showcase.module.css";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -39,19 +26,7 @@ type ProductPageProps = {
 
 export const dynamicParams = true;
 
-function buildProductMediaViewerModel(product: Product): ProductMediaViewerModel {
-  return {
-    image: product.image,
-    hero: product.hero,
-    gallery: product.gallery,
-    hotspots: product.hotspots
-  };
-}
-
-function buildProductConfiguratorModel(
-  product: Product,
-  reviewSummary?: ProductReviewSummary
-): ProductConfiguratorModel {
+function buildProductConfiguratorModel(product: Product): ProductConfiguratorModel {
   return {
     slug: product.slug,
     name: product.name,
@@ -67,8 +42,7 @@ function buildProductConfiguratorModel(
     taxIncluded: product.taxIncluded,
     image: product.image,
     variants: product.variants,
-    bundles: product.bundles,
-    reviewSummary: reviewSummary && reviewSummary.totalReviews > 0 ? reviewSummary : undefined
+    bundles: product.bundles
   };
 }
 
@@ -92,52 +66,42 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const product = pageLoad.product;
-  const [relatedProducts, cms] = await Promise.all([getRelatedProductShellItems(slug), getPublicCmsSnapshot()]);
-  const overviewText = getProductOverviewText(product);
-  const showOverview = overviewText.length > 80;
+  const cmsResult = await Promise.allSettled([getPublicCmsSnapshot()]);
+  if (cmsResult[0].status === "rejected") {
+    const message = cmsResult[0].reason instanceof Error ? cmsResult[0].reason.message : String(cmsResult[0].reason);
+    console.warn(`[product-page] CMS snapshot load failed for ${slug}: ${message}`);
+  }
+
+  const cms = cmsResult[0].status === "fulfilled" ? cmsResult[0].value : emptySupabaseOnlySnapshot;
   const structuredData = buildProductStructuredData(product);
+  const mediaPlan = buildProductMediaPlan(product);
+  const descriptionHtml = getProductDescriptionHtml(product);
   const reviewPayload = getProductPageReviews({
     slug: product.slug,
     productName: product.name,
     sourceCatalogId: product.sourceCatalogId,
     cmsReviews: cms.productSupport.reviews
   });
-  const visibleSections = getVisibleProductDetailSections(product, {
-    hasReviews: reviewPayload.reviews.length > 0,
-    hasRelated: relatedProducts.length > 0
-  });
-  const visibleSectionIds = visibleSections.map((section) => section.id);
-  const showStoryFallback = !showOverview;
 
   return (
-    <article className={`product-detail-page ${styles.page}`}>
+    <article className={`product-detail-page ${showcaseStyles.page}`}>
       <JsonLd data={structuredData} />
       <ProductDetailHeader product={product} />
-      <section className={styles.heroSection}>
-        <div className={styles.heroGrid}>
-          <div className={styles.heroMediaCol}>
-            <ProductMediaViewer product={buildProductMediaViewerModel(product)} />
-          </div>
-          <div className={styles.heroBuyCol}>
-            <ProductConfigurator product={buildProductConfiguratorModel(product, reviewPayload.summary)} />
-          </div>
-        </div>
-      </section>
-      <ProductDetailSectionNav visibleSectionIds={visibleSectionIds} />
-      <div id="overview" className={styles.contentFlow}>
-        {showOverview ? <ProductOverview product={product} /> : null}
-        <ProductFeaturesSection product={product} />
-        <ProductSpecificationHighlightsSection product={product} />
-        <ProductTechnicalSection product={product} />
-        <ProductApplicationsSection product={product} />
-        <ProductIncludedSection product={product} />
-        <ProductWarrantySection product={product} />
-        <ProductDisclaimersSection product={product} />
-        <ProductDownloadsSection product={product} />
-        <ProductMediaGallerySection product={product} />
-        <ProductStory product={product} includeFallback={showStoryFallback} />
-      </div>
-      <SpecsFaqReviews product={product} relatedProducts={[]} support={cms.productSupport} showSpecs={false} />
+      <ProductShowcaseHero
+        gallery={<ProductImmersiveGallery mediaPlan={mediaPlan} />}
+        purchase={(
+          <ProductStickyPurchase
+            summary={{
+              name: product.name,
+              price: product.price,
+              compareAt: product.compareAt
+            }}
+          >
+            <ProductConfigurator product={buildProductConfiguratorModel(product)} />
+          </ProductStickyPurchase>
+        )}
+      />
+      <ProductRichDescriptionSection html={descriptionHtml} />
       {reviewPayload.reviews.length > 0 ? (
         <Suspense fallback={<div className="min-h-[320px] animate-pulse bg-[var(--ds-skeleton)]" aria-hidden="true" />}>
           <ProductReviewsLazySection
@@ -147,9 +111,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
           />
         </Suspense>
       ) : null}
-      <Suspense fallback={<div className="min-h-[360px] animate-pulse bg-[var(--ds-skeleton)]" aria-hidden="true" />}>
-        <ProductRelatedLazySection relatedProducts={relatedProducts} />
-      </Suspense>
     </article>
   );
 }

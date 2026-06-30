@@ -161,16 +161,17 @@ describe("product inventory enterprise workflow", () => {
     const adminPage = readFileSync(join(process.cwd(), "app/admin/products/page.tsx"), "utf8");
     const warehousePage = readFileSync(join(process.cwd(), "app/warehouse/inventory/page.tsx"), "utf8");
 
-    expect(productActions).toContain("syncProductInventoryWorkflow");
+    expect(productActions).toContain("saveProductInventory");
     expect(productActions).toContain("buildProductInventoryWorkflowFromFormData");
-    expect(warehouseActions).toContain("buildInventoryLinkageRecords");
+    expect(warehouseActions).toContain("saveProductInventory");
+    expect(warehouseActions).toContain("upsertProductInventoryRecord");
     expect(warehouseActions).toContain("saveSimpleInventoryFormAction");
     expect(warehouseActions).toContain("saveInventoryQuickEditFormAction");
     expect(adminPage).toContain("data-product-inventory-table=\"inventory\"");
     expect(adminPage).toContain("defaultValue={activeProductSlug}");
     expect(adminPage).toContain("defaultValue={checkoutWarehouseCode}");
-    expect(warehousePage).toContain("InventoryManager");
-    expect(warehousePage).toContain("saveWarehouseInventoryWithFeedback");
+    expect(warehousePage).toContain("WarehouseInventoryManager");
+    expect(warehousePage).toContain("getCsvInventoryRows");
   });
 
   it("adds additive schema support for variant-linked, SKU-required inventory rows", () => {

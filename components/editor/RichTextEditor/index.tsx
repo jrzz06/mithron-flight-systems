@@ -63,6 +63,13 @@ export function RichTextEditor({
     extensions: [...createEditorExtensions({ placeholder }), SlashCommands],
     content: initialContent,
     immediatelyRender: false,
+    onCreate: ({ editor: createdEditor }) => {
+      const draft = readEditorDraft(documentType, documentId);
+      if (draft?.json && !value && !defaultJson) {
+        createdEditor.commands.setContent(draft.json as JSONContent, { emitUpdate: false });
+        setDraftRecovered(true);
+      }
+    },
     onUpdate: ({ editor: nextEditor }) => {
       const json = nextEditor.getJSON();
       onChange?.(json);
@@ -97,15 +104,6 @@ export function RichTextEditor({
     json: JSON.stringify(initialContent),
     html: editorJsonToHtml(initialContent)
   }));
-
-  useEffect(() => {
-    if (!editor) return;
-    const draft = readEditorDraft(documentType, documentId);
-    if (draft?.json && !value && !defaultJson) {
-      editor.commands.setContent(draft.json as JSONContent, { emitUpdate: false });
-      setDraftRecovered(true);
-    }
-  }, [documentId, documentType, defaultJson, editor, value]);
 
   useEffect(() => {
     if (!editor || value === undefined) return;

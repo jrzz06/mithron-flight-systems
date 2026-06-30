@@ -4,11 +4,10 @@ import { fulfillReservedStock } from "@/services/checkout-stock";
 import {
   createActivityLogRecord,
   createInventoryMovementRecord,
-  recordEntityRevisionSnapshot,
-  upsertInventoryRecord,
-  upsertWarehouseStockRecord
+  recordEntityRevisionSnapshot
 } from "@/services/admin-actions";
-import { buildInventoryLinkageRecords, type ProductInventoryWorkflowInput } from "@/services/enterprise-admin-forms";
+import type { ProductInventoryWorkflowInput } from "@/services/enterprise-admin-forms";
+import { upsertProductInventoryRecord } from "@/services/product-inventory";
 
 type EnvSource = Record<string, string | undefined>;
 type JsonRecord = Record<string, unknown>;
@@ -472,22 +471,19 @@ export async function applyWarehouseStockMovement(
   const reorderThreshold = numberField(existingInventory, "reorder_threshold");
   const variantId = input.variantId ?? normalizeOptional(String(existingStock?.variant_id ?? existingInventory?.variant_id ?? ""));
   const stockStatus = stockStatusFor(inventoryQuantity, reservedQuantity, reorderThreshold);
-  const records = buildInventoryLinkageRecords(
-    {
-      productSlug: input.productSlug,
-      sku: input.sku,
-      variantId,
-      stockStatus,
-      quantity: inventoryQuantity,
-      reservedQuantity,
-      reorderThreshold,
-      warehouseCode: input.warehouseCode,
-      availableQuantity: quantityAfter,
-      committedQuantity,
-      changeSummary: input.changeSummary
-    },
-    { actorId: options.actorId, at: options.at }
-  );
+  const workflowInput: ProductInventoryWorkflowInput = {
+    productSlug: input.productSlug,
+    sku: input.sku,
+    variantId,
+    stockStatus,
+    quantity: inventoryQuantity,
+    reservedQuantity,
+    reorderThreshold,
+    warehouseCode: input.warehouseCode,
+    availableQuantity: quantityAfter,
+    committedQuantity,
+    changeSummary: input.changeSummary
+  };
   const warehouseStockId = normalizeOptional(String(existingStock?.id ?? ""));
   const movement = await recordInventoryMovementForStockChange(
     {
@@ -510,8 +506,10 @@ export async function applyWarehouseStockMovement(
     env
   );
 
-  const inventoryRecord = await upsertInventoryRecord(records.inventoryRecord, options.actorId, env);
-  const stockRecord = await upsertWarehouseStockRecord(records.warehouseStockRecord, options.actorId, env);
+  await upsertProductInventoryRecord(workflowInput, options.actorId, env);
+
+  const inventoryRecord = await fetchInventoryBySku(input.productSlug, input.sku, env);
+  const stockRecord = await fetchWarehouseStockBySku(input.productSlug, input.sku, input.warehouseCode, env);
 
   await recordEntityRevisionSnapshot(
     "inventory",

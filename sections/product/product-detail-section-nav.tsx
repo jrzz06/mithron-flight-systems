@@ -1,30 +1,32 @@
-import type { ProductDetailSectionId } from "@/lib/product-detail-sections";
+import type { ShowcaseSection, ShowcaseSectionId } from "@/lib/product-detail-experience";
 import { cn } from "@/lib/utils";
 import styles from "./product-detail.module.css";
 
-const sections: Array<{ id: ProductDetailSectionId; label: string }> = [
-  { id: "overview", label: "Overview" },
+const FALLBACK_SECTIONS: ShowcaseSection[] = [
+  { id: "description", label: "Description" },
   { id: "features", label: "Features" },
+  { id: "narrative", label: "Story" },
+  { id: "use-cases", label: "Use Cases" },
   { id: "specs", label: "Specifications" },
-  { id: "technical", label: "Technical Data" },
+  { id: "comparison", label: "Compare" },
+  { id: "included", label: "In the Box" },
+  { id: "trust", label: "Trust" },
   { id: "downloads", label: "Downloads" },
-  { id: "media", label: "Media Gallery" },
-  { id: "applications", label: "Applications" },
-  { id: "included", label: "What's Included" },
-  { id: "warranty", label: "Warranty" },
-  { id: "disclaimers", label: "Disclaimers" },
-  { id: "faq", label: "FAQs" },
   { id: "reviews", label: "Reviews" },
-  { id: "related", label: "Related Products" }
+  { id: "faq", label: "FAQ" },
+  { id: "related", label: "Related" }
 ];
 
 export function ProductDetailSectionNav({
-  visibleSectionIds
+  sections
 }: {
-  visibleSectionIds?: ProductDetailSectionId[];
+  sections?: ShowcaseSection[];
+  visibleSectionIds?: ShowcaseSectionId[];
 }) {
-  const visible = new Set(visibleSectionIds ?? sections.map((section) => section.id));
-  const items = sections.filter((section) => visible.has(section.id));
+  const items = sections?.length
+    ? sections
+    : FALLBACK_SECTIONS;
+
   if (!items.length) return null;
 
   return (

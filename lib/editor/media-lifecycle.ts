@@ -97,9 +97,7 @@ export async function syncEditorMediaReferences(input: {
     { headers: adminHeaders(config), cache: "no-store" }
   );
   if (!activeIdsResponse.ok) return;
-  const activeIds = new Set(
-    ((await activeIdsResponse.json()) as Array<{ media_asset_id: string }>).map((row) => row.media_asset_id)
-  );
+  await activeIdsResponse.json().catch(() => undefined);
 
   const previousResponse = await fetch(
     `${config.url}/rest/v1/editor_document_media?document_type=eq.${encodeURIComponent(input.documentType)}&document_id=neq.${encodeURIComponent(input.documentId)}&select=media_asset_id`,

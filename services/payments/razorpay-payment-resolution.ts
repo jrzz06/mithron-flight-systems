@@ -1,0 +1,242 @@
+import { inrAmountsMatch } from "./amount";
+import type { PaymentEvent } from "./types";
+
+export type RazorpayPaymentEntity = {
+  id?: string;
+  order_id?: string;
+  amount?: number;
+  currency?: string;
+  status?: string;
+  method?: string;
+  captured?: boolean;
+};
+
+export function razorpayEnvCredentials(env: Record<string, string | undefined>) {
+  const keyId = env.RAZORPAY_KEY_ID?.trim() ?? "";
+  const keySecret = env.RAZORPAY_KEY_SECRET?.trim() ?? "";
+  if (!keyId || !keySecret) {
+    throw new Error("Razorpay API credentials are not configured.");
+  }
+  return { keyId, keySecret };
+}
+
+export function mapRazorpayPaymentEntityStatus(
+  eventName: string,
+  paymentStatus?: string
+): PaymentEvent["status"] {
+  if (eventName === "payment.failed" || paymentStatus === "failed") return "failed";
+  if (eventName === "payment.refunded" || eventName === "refund.processed" || paymentStatus === "refunded") {
+    return "refunded";
+  }
+  if (
+    eventName === "payment.captured"
+    || eventName === "payment.authorized"
+    || eventName === "order.paid"
+    || paymentStatus === "captured"
+    || paymentStatus === "paid"
+    || paymentStatus === "authorized"
+  ) {
+    return "succeeded";
+  }
+  return "requires_payment";
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function fetchRazorpayPaymentEntity(
+  paymentId: string,
+  env: Record<string, string | undefined>
+): Promise<RazorpayPaymentEntity> {
+  const { keyId, keySecret } = razorpayEnvCredentials(env);
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+    method: "GET",
+    headers: { Authorization: `Basic ${auth}` },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Razorpay payment lookup failed (${response.status}).`);
+  }
+
+  return (await response.json()) as RazorpayPaymentEntity;
+}
+
+export async function fetchRazorpayOrderPayments(
+  razorpayOrderId: string,
+  env: Record<string, string | undefined>
+) {
+  const { keyId, keySecret } = razorpayEnvCredentials(env);
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(
+    `https://api.razorpay.com/v1/orders/${encodeURIComponent(razorpayOrderId)}/payments`,
+    {
+      method: "GET",
+      headers: { Authorization: `Basic ${auth}` },
+      cache: "no-store"
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Razorpay order lookup failed (${response.status}).`);
+  }
+
+  const body = (await response.json()) as { items?: RazorpayPaymentEntity[] };
+  return body.items ?? [];
+}
+
+export async function captureRazorpayPaymentIfAuthorized(
+  payment: RazorpayPaymentEntity,
+  env: Record<string, string | undefined>
+) {
+  if (payment.status !== "authorized") return payment;
+
+  const paymentId = String(payment.id ?? "");
+  const amountPaise = Number(payment.amount ?? 0);
+  if (!paymentId || !amountPaise) return payment;
+
+  const { keyId, keySecret } = razorpayEnvCredentials(env);
+  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/capture`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ amount: amountPaise, currency: String(payment.currency ?? "INR") })
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    if (!/already captured|captured/i.test(body)) {
+      return payment;
+    }
+  }
+
+  return fetchRazorpayPaymentEntity(paymentId, env);
+}
+
+function isTerminalRazorpayStatus(status: string) {
+  return ["captured", "paid", "authorized", "failed", "refunded"].includes(status);
+}
+
+function pickBestRazorpayPayment(items: RazorpayPaymentEntity[]) {
+  const successStatuses = new Set(["captured", "paid", "authorized"]);
+  const succeeded = items.filter((item) => successStatuses.has(String(item.status ?? "")));
+  if (succeeded.length) {
+    const captured = succeeded.find((item) => String(item.status ?? "") === "captured");
+    return captured ?? succeeded[0];
+  }
+  return items[0] ?? null;
+}
+
+export async function resolveVerifiedRazorpayPayment(
+  paymentId: string,
+  razorpayOrderId: string,
+  env: Record<string, string | undefined>,
+  options?: { maxAttempts?: number; delayMs?: number }
+) {
+  const maxAttempts = options?.maxAttempts ?? 15;
+  const delayMs = options?.delayMs ?? 1000;
+
+  let payment = await fetchRazorpayPaymentEntity(paymentId, env);
+  if (String(payment.order_id ?? "") !== razorpayOrderId) {
+    throw new Error("Razorpay payment does not match the checkout order.");
+  }
+
+  payment = await captureRazorpayPaymentIfAuthorized(payment, env);
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const status = String(payment.status ?? "").toLowerCase();
+    if (isTerminalRazorpayStatus(status)) {
+      break;
+    }
+    await sleep(delayMs);
+    payment = await fetchRazorpayPaymentEntity(paymentId, env);
+    if (String(payment.order_id ?? "") !== razorpayOrderId) {
+      throw new Error("Razorpay payment does not match the checkout order.");
+    }
+    payment = await captureRazorpayPaymentIfAuthorized(payment, env);
+  }
+
+  return payment;
+}
+
+export async function reconcileRazorpayOrderPayment(
+  razorpayOrderId: string,
+  env: Record<string, string | undefined>,
+  options?: { expectedAmountInr?: number; expectedCurrency?: string; maxAttempts?: number; delayMs?: number }
+): Promise<PaymentEvent | null> {
+  const maxAttempts = options?.maxAttempts ?? 10;
+  const delayMs = options?.delayMs ?? 2000;
+  const expectedCurrency = (options?.expectedCurrency ?? "INR").trim().toUpperCase();
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const items = await fetchRazorpayOrderPayments(razorpayOrderId, env);
+    const candidate = pickBestRazorpayPayment(items);
+    if (candidate?.id) {
+      const payment = await resolveVerifiedRazorpayPayment(
+        String(candidate.id),
+        razorpayOrderId,
+        env,
+        { maxAttempts: 3, delayMs: 1000 }
+      );
+      const status = mapRazorpayPaymentEntityStatus("", payment.status);
+      const amount = Number(payment.amount ?? 0) / 100;
+      const currency = String(payment.currency ?? "INR").trim().toUpperCase();
+
+      if (currency !== expectedCurrency) {
+        return null;
+      }
+      if (
+        options?.expectedAmountInr !== undefined
+        && !inrAmountsMatch(options.expectedAmountInr, amount)
+      ) {
+        if (status !== "succeeded") {
+          await sleep(delayMs);
+          continue;
+        }
+      }
+
+      if (status === "succeeded" || status === "failed" || status === "refunded") {
+        return {
+          provider: "razorpay",
+          intentId: razorpayOrderId,
+          paymentId: String(payment.id ?? candidate.id),
+          status,
+          amount,
+          currency,
+          raw: payment
+        };
+      }
+    }
+
+    await sleep(delayMs);
+  }
+
+  const items = await fetchRazorpayOrderPayments(razorpayOrderId, env);
+  const candidate = pickBestRazorpayPayment(items);
+  if (!candidate) {
+    return {
+      provider: "razorpay",
+      intentId: razorpayOrderId,
+      status: "requires_payment",
+      amount: 0,
+      currency: expectedCurrency,
+      raw: { items }
+    };
+  }
+
+  const status = mapRazorpayPaymentEntityStatus("", candidate.status);
+  return {
+    provider: "razorpay",
+    intentId: razorpayOrderId,
+    paymentId: candidate.id ? String(candidate.id) : undefined,
+    status: status === "succeeded" ? status : "requires_payment",
+    amount: Number(candidate.amount ?? 0) / 100,
+    currency: String(candidate.currency ?? expectedCurrency).trim().toUpperCase(),
+    raw: candidate
+  };
+}

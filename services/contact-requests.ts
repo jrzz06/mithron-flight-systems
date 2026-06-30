@@ -76,7 +76,7 @@ function readNotes(payload: JsonRecord): ContactRequestNoteEntry[] {
     : [];
 }
 
-function contactMutationOptions(_actorId: string | null) {
+function contactMutationOptions() {
   // Public contact submissions are persisted via the service role after API auth/rate limits.
   return { allowSystemActor: true };
 }
@@ -251,7 +251,7 @@ export async function submitContactRequest(
     },
     actorId,
     env,
-    contactMutationOptions(actorId)
+    contactMutationOptions()
   );
 
   const contactRequestId = text(record.id);
@@ -268,7 +268,7 @@ export async function submitContactRequest(
       { subject: `${reference} · ${input.subject.trim()}` },
       actorId,
       env,
-      contactMutationOptions(actorId)
+      contactMutationOptions()
     ).catch(() => undefined);
     record.subject = `${reference} · ${input.subject.trim()}`;
   }

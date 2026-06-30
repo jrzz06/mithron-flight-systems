@@ -95,6 +95,7 @@ describe("dual-provider payment integration", () => {
 
   it("routes payment verification through a dedicated API", () => {
     expect(source("app/api/payments/verify/route.ts")).toContain("verifyRazorpayPaymentOnServer");
+    expect(source("app/api/payments/verify/route.ts")).toContain("verifyCashfreePaymentOnServer");
     expect(source("app/api/payments/verify/route.ts")).toContain("applyPaymentEvent");
   });
 

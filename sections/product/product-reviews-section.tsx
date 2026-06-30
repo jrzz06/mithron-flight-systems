@@ -75,7 +75,16 @@ export function ProductReviewsSection({
   summary: ProductReviewSummary;
 }) {
   const [sort, setSort] = useState<ReviewSort>("highest");
+  const [query, setQuery] = useState("");
   const sortedReviews = useMemo(() => sortReviews(reviews, sort), [reviews, sort]);
+  const filteredReviews = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return sortedReviews;
+    return sortedReviews.filter((review) => {
+      const haystack = `${review.title} ${review.body} ${review.authorName}`.toLowerCase();
+      return haystack.includes(normalized);
+    });
+  }, [query, sortedReviews]);
 
   if (!reviews.length) return null;
 
@@ -100,23 +109,35 @@ export function ProductReviewsSection({
 
         <div className={styles.reviewsToolbar}>
           <p className={styles.reviewsCount}>
-            {summary.totalReviews} review{summary.totalReviews === 1 ? "" : "s"}
+            {filteredReviews.length} of {summary.totalReviews} review{summary.totalReviews === 1 ? "" : "s"}
           </p>
-          <label className={styles.reviewsSortLabel}>
-            <span className="sr-only">Sort reviews</span>
-            <select
-              className={styles.reviewsSortSelect}
-              value={sort}
-              onChange={(event) => setSort(event.target.value as ReviewSort)}
-            >
-              <option value="highest">Highest rating</option>
-              <option value="newest">Newest</option>
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className={styles.reviewsSortLabel}>
+              <span className="sr-only">Search reviews</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search reviews"
+                className={styles.reviewsSortSelect}
+              />
+            </label>
+            <label className={styles.reviewsSortLabel}>
+              <span className="sr-only">Sort reviews</span>
+              <select
+                className={styles.reviewsSortSelect}
+                value={sort}
+                onChange={(event) => setSort(event.target.value as ReviewSort)}
+              >
+                <option value="highest">Highest rating</option>
+                <option value="newest">Newest</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <div className={styles.reviewList}>
-          {sortedReviews.map((review) => {
+          {filteredReviews.map((review) => {
             const reviewDate = formatReviewDate(review.createdAt);
             return (
               <article key={review.id} className={styles.reviewListItem}>

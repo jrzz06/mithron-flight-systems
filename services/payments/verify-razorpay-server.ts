@@ -1,93 +1,14 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { inrAmountsMatch, inrToPaise } from "./amount";
 import { logPaymentEvent, logPaymentWarning } from "./logger";
+import {
+  mapRazorpayPaymentEntityStatus,
+  razorpayEnvCredentials,
+  resolveVerifiedRazorpayPayment
+} from "./razorpay-payment-resolution";
 import type { PaymentEvent } from "./types";
 
 type JsonRecord = Record<string, unknown>;
-
-type RazorpayPaymentEntity = {
-  id?: string;
-  order_id?: string;
-  amount?: number;
-  currency?: string;
-  status?: string;
-  method?: string;
-  captured?: boolean;
-};
-
-function envCredentials(env: Record<string, string | undefined>) {
-  const keyId = env.RAZORPAY_KEY_ID?.trim() ?? "";
-  const keySecret = env.RAZORPAY_KEY_SECRET?.trim() ?? "";
-  if (!keyId || !keySecret) {
-    throw new Error("Razorpay API credentials are not configured.");
-  }
-  return { keyId, keySecret };
-}
-
-function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string, keySecret: string) {
-  const expected = createHmac("sha256", keySecret).update(`${orderId}|${paymentId}`).digest("hex");
-  const expectedBuf = Buffer.from(expected, "utf8");
-  const providedBuf = Buffer.from(signature.trim(), "utf8");
-  if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
-    throw new Error("Invalid Razorpay payment signature.");
-  }
-}
-
-function mapGatewayPaymentStatus(status?: string): PaymentEvent["status"] {
-  const normalized = String(status ?? "").toLowerCase();
-  if (normalized === "failed") return "failed";
-  if (normalized === "refunded") return "refunded";
-  if (normalized === "captured" || normalized === "paid" || normalized === "authorized") return "succeeded";
-  return "requires_payment";
-}
-
-async function fetchRazorpayPayment(
-  paymentId: string,
-  env: Record<string, string | undefined>
-): Promise<RazorpayPaymentEntity> {
-  const { keyId, keySecret } = envCredentials(env);
-  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
-    method: "GET",
-    headers: { Authorization: `Basic ${auth}` },
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error(`Razorpay payment lookup failed (${response.status}).`);
-  }
-
-  return (await response.json()) as RazorpayPaymentEntity;
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function resolveGatewayPayment(
-  paymentId: string,
-  razorpayOrderId: string,
-  env: Record<string, string | undefined>
-) {
-  let payment = await fetchRazorpayPayment(paymentId, env);
-  if (String(payment.order_id ?? "") !== razorpayOrderId) {
-    throw new Error("Razorpay payment does not match the checkout order.");
-  }
-
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const status = String(payment.status ?? "").toLowerCase();
-    if (status === "captured" || status === "paid" || status === "authorized" || status === "failed") {
-      break;
-    }
-    await sleep(500);
-    payment = await fetchRazorpayPayment(paymentId, env);
-    if (String(payment.order_id ?? "") !== razorpayOrderId) {
-      throw new Error("Razorpay payment does not match the checkout order.");
-    }
-  }
-
-  return payment;
-}
 
 export type VerifyRazorpayServerInput = {
   internalOrderId: string;
@@ -99,11 +20,20 @@ export type VerifyRazorpayServerInput = {
   expectedCurrency: string;
 };
 
+function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string, keySecret: string) {
+  const expected = createHmac("sha256", keySecret).update(`${orderId}|${paymentId}`).digest("hex");
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const providedBuf = Buffer.from(signature.trim(), "utf8");
+  if (expectedBuf.length !== providedBuf.length || !timingSafeEqual(expectedBuf, providedBuf)) {
+    throw new Error("Invalid Razorpay payment signature.");
+  }
+}
+
 export async function verifyRazorpayPaymentOnServer(
   input: VerifyRazorpayServerInput,
   env: Record<string, string | undefined> = process.env
 ): Promise<PaymentEvent> {
-  const { keySecret } = envCredentials(env);
+  const { keySecret } = razorpayEnvCredentials(env);
   const razorpayOrderId = input.storedRazorpayOrderId.trim();
   const paymentId = input.razorpayPaymentId.trim();
   const signature = input.razorpaySignature.trim();
@@ -128,7 +58,10 @@ export async function verifyRazorpayPaymentOnServer(
     providerPaymentId: paymentId
   });
 
-  const payment = await resolveGatewayPayment(paymentId, razorpayOrderId, env);
+  const payment = await resolveVerifiedRazorpayPayment(paymentId, razorpayOrderId, env, {
+    maxAttempts: 15,
+    delayMs: 1000
+  });
   const gatewayAmountInr = Number(payment.amount ?? 0) / 100;
   const gatewayCurrency = String(payment.currency ?? "INR").trim().toUpperCase();
   const expectedCurrency = input.expectedCurrency.trim().toUpperCase();
@@ -148,7 +81,7 @@ export async function verifyRazorpayPaymentOnServer(
     throw new Error("Payment amount mismatch.");
   }
 
-  const status = mapGatewayPaymentStatus(payment.status);
+  const status = mapRazorpayPaymentEntityStatus("", payment.status);
   logPaymentEvent("razorpay_gateway_status_resolved", {
     orderId: input.internalOrderId,
     providerPaymentId: paymentId,

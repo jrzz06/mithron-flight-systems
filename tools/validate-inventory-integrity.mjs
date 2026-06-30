@@ -40,7 +40,7 @@ async function main() {
     if (!slug) return map;
     map.set(slug, (map.get(slug) ?? 0) + 1);
     return map;
-  }, new Map<string, number>());
+  }, new Map());
 
   const inventorySlugs = new Set(inventorySlugCounts.keys());
   const missingProducts = [...productSlugs].filter((slug) => !inventorySlugs.has(slug));

@@ -37,12 +37,21 @@ async function fetchCheckoutSuccess(input: {
   const query = new URLSearchParams({ orderId: input.orderId });
   if (!input.signedIn && input.email) query.set("email", input.email);
 
-  const response = await fetch(`/api/checkout/success?${query.toString()}`, {
-    headers: input.signedIn ? undefined : (guestHeaders!.headers as Record<string, string>),
-    cache: "no-store"
-  });
-  if (!response.ok) return null;
-  return response.json().catch(() => null);
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const response = await fetch(`/api/checkout/success?${query.toString()}`, {
+      headers: input.signedIn ? undefined : (guestHeaders!.headers as Record<string, string>),
+      cache: "no-store"
+    });
+    if (!response.ok) return null;
+
+    const payload = await response.json().catch(() => null);
+    if (!payload) return null;
+    if (!payload.invoicePending) return payload;
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+
+  return null;
 }
 
 export function CheckoutSuccessClient() {
@@ -53,14 +62,12 @@ export function CheckoutSuccessClient() {
   const orderId = searchParams.get("orderId")?.trim() ?? "";
   const email = searchParams.get("email")?.trim() ?? "";
 
-  const [state, setState] = useState<"loading" | "success" | "pending" | "error">("loading");
+  const [state, setState] = useState<"loading" | "success" | "pending" | "error">(() => (orderId ? "loading" : "error"));
   const [success, setSuccess] = useState<SuccessState | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => (orderId ? "" : "Order reference is missing."));
 
   useEffect(() => {
     if (!orderId) {
-      setState("error");
-      setError("Order reference is missing.");
       return;
     }
 
@@ -103,7 +110,7 @@ export function CheckoutSuccessClient() {
             orderId,
             orderNumber: String(verifyPayload.orderNumber ?? pending.orderNumber ?? orderId),
             total: Number(fulfillment?.total ?? verifyPayload.total ?? verifyPayload.amount ?? 0),
-            email: String(fulfillment?.customerEmail ?? pending.email || email),
+            email: String(fulfillment?.customerEmail ?? (pending.email || email)),
             isSignedIn: pending.signedIn,
             invoiceNumber: String(fulfillment?.invoiceNumber ?? verifyPayload.invoiceNumber ?? ""),
             invoiceUrl: String(fulfillment?.invoiceUrl ?? verifyPayload.invoiceUrl ?? `/api/invoices/${orderId}`),

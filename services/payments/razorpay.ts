@@ -1,5 +1,13 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { assertMinimumCheckoutAmount, inrToPaise } from "./amount";
+import {
+  captureRazorpayPaymentIfAuthorized,
+  fetchRazorpayOrderPayments,
+  fetchRazorpayPaymentEntity,
+  mapRazorpayPaymentEntityStatus,
+  razorpayEnvCredentials,
+  resolveVerifiedRazorpayPayment
+} from "./razorpay-payment-resolution";
 import type {
   ClientPaymentVerificationInput,
   CreateIntentInput,
@@ -40,126 +48,12 @@ type RazorpayWebhookPayload = {
   };
 };
 
-function envCredentials(env: Record<string, string | undefined>) {
-  const keyId = env.RAZORPAY_KEY_ID?.trim() ?? "";
-  const keySecret = env.RAZORPAY_KEY_SECRET?.trim() ?? "";
-  if (!keyId || !keySecret) {
-    throw new Error("Razorpay API credentials are not configured.");
-  }
-  return { keyId, keySecret };
-}
-
 function envWebhookSecret(env: Record<string, string | undefined>) {
   const webhookSecret = env.RAZORPAY_WEBHOOK_SECRET?.trim() ?? "";
   if (!webhookSecret) {
     throw new Error("Razorpay webhook secret is not configured.");
   }
   return webhookSecret;
-}
-
-function mapRazorpayStatus(event: string, paymentStatus?: string): PaymentEvent["status"] {
-  if (event === "payment.failed" || paymentStatus === "failed") return "failed";
-  if (event === "payment.refunded" || event === "refund.processed" || paymentStatus === "refunded") return "refunded";
-  if (
-    event === "payment.captured"
-    || event === "payment.authorized"
-    || event === "order.paid"
-    || paymentStatus === "captured"
-    || paymentStatus === "paid"
-    || paymentStatus === "authorized"
-  ) {
-    return "succeeded";
-  }
-  return "requires_payment";
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-type RazorpayPaymentEntity = {
-  id?: string;
-  order_id?: string;
-  amount?: number;
-  currency?: string;
-  status?: string;
-};
-
-async function fetchRazorpayPaymentEntity(
-  paymentId: string,
-  env: Record<string, string | undefined>
-): Promise<RazorpayPaymentEntity> {
-  const { keyId, keySecret } = envCredentials(env);
-  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`, {
-    method: "GET",
-    headers: { Authorization: `Basic ${auth}` },
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    throw new Error(`Razorpay payment lookup failed (${response.status}).`);
-  }
-
-  return (await response.json()) as RazorpayPaymentEntity;
-}
-
-async function captureRazorpayPaymentIfAuthorized(
-  payment: RazorpayPaymentEntity,
-  env: Record<string, string | undefined>
-) {
-  if (payment.status !== "authorized") return payment;
-
-  const paymentId = String(payment.id ?? "");
-  const amountPaise = Number(payment.amount ?? 0);
-  if (!paymentId || !amountPaise) return payment;
-
-  const { keyId, keySecret } = envCredentials(env);
-  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-  const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}/capture`, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ amount: amountPaise, currency: String(payment.currency ?? "INR") })
-  });
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    if (!/already captured|captured/i.test(body)) {
-      return payment;
-    }
-  }
-
-  return fetchRazorpayPaymentEntity(paymentId, env);
-}
-
-async function resolveVerifiedRazorpayPayment(
-  paymentId: string,
-  orderId: string,
-  env: Record<string, string | undefined>
-) {
-  let payment = await fetchRazorpayPaymentEntity(paymentId, env);
-  if (String(payment.order_id ?? "") !== orderId) {
-    throw new Error("Razorpay payment does not match the checkout order.");
-  }
-
-  payment = await captureRazorpayPaymentIfAuthorized(payment, env);
-
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const status = String(payment.status ?? "");
-    if (status === "captured" || status === "paid" || status === "authorized") {
-      break;
-    }
-    if (status === "failed" || status === "refunded") {
-      break;
-    }
-    await sleep(500);
-    payment = await fetchRazorpayPaymentEntity(paymentId, env);
-  }
-
-  return payment;
 }
 
 export class RazorpayGateway implements PaymentGateway {
@@ -171,7 +65,7 @@ export class RazorpayGateway implements PaymentGateway {
   }
 
   async createIntent(input: CreateIntentInput): Promise<PaymentIntentResult> {
-    const { keyId, keySecret } = envCredentials(this.env);
+    const { keyId, keySecret } = razorpayEnvCredentials(this.env);
     const normalizedAmount = assertMinimumCheckoutAmount(input.amount, "Razorpay");
     const amountPaise = inrToPaise(normalizedAmount);
     const receipt = (input.metadata?.receipt ?? input.orderId).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
@@ -212,7 +106,7 @@ export class RazorpayGateway implements PaymentGateway {
   }
 
   async verifyClientPayment(input: ClientPaymentVerificationInput): Promise<PaymentEvent> {
-    const { keySecret } = envCredentials(this.env);
+    const { keySecret } = razorpayEnvCredentials(this.env);
     const orderId = input.intentId.trim();
     const paymentId = input.paymentId?.trim() ?? "";
     const signature = input.signature?.trim() ?? "";
@@ -233,7 +127,7 @@ export class RazorpayGateway implements PaymentGateway {
       provider: "razorpay",
       intentId: orderId,
       paymentId: String(payment.id ?? paymentId),
-      status: mapRazorpayStatus("", payment.status),
+      status: mapRazorpayPaymentEntityStatus("", payment.status),
       amount: Number(payment.amount ?? 0) / 100,
       currency: String(payment.currency ?? "INR"),
       raw: payment
@@ -241,20 +135,8 @@ export class RazorpayGateway implements PaymentGateway {
   }
 
   async fetchPaymentStatus(intentId: string): Promise<PaymentEvent> {
-    const { keyId, keySecret } = envCredentials(this.env);
-    const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-    const response = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(intentId)}/payments`, {
-      method: "GET",
-      headers: { Authorization: `Basic ${auth}` },
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error(`Razorpay order lookup failed (${response.status}).`);
-    }
-
-    const body = (await response.json()) as { items?: Array<{ id?: string; amount?: number; currency?: string; status?: string }> };
-    const payment = body.items?.[0];
+    const items = await fetchRazorpayOrderPayments(intentId, this.env);
+    const payment = items[0];
     if (!payment) {
       return {
         provider: "razorpay",
@@ -262,7 +144,7 @@ export class RazorpayGateway implements PaymentGateway {
         status: "requires_payment",
         amount: 0,
         currency: "INR",
-        raw: body
+        raw: { items }
       };
     }
 
@@ -270,7 +152,7 @@ export class RazorpayGateway implements PaymentGateway {
       provider: "razorpay",
       intentId,
       paymentId: payment.id ? String(payment.id) : undefined,
-      status: mapRazorpayStatus("", payment.status),
+      status: mapRazorpayPaymentEntityStatus("", payment.status),
       amount: Number(payment.amount ?? 0) / 100,
       currency: String(payment.currency ?? "INR"),
       raw: payment
@@ -303,7 +185,7 @@ export class RazorpayGateway implements PaymentGateway {
       provider: "razorpay",
       intentId,
       paymentId,
-      status: mapRazorpayStatus(eventName, paymentStatus),
+      status: mapRazorpayPaymentEntityStatus(eventName, paymentStatus),
       amount,
       currency,
       raw: bodyJson
@@ -311,7 +193,7 @@ export class RazorpayGateway implements PaymentGateway {
   }
 
   async refund(intentId: string, amount?: number): Promise<RefundResult> {
-    const { keyId, keySecret } = envCredentials(this.env);
+    const { keyId, keySecret } = razorpayEnvCredentials(this.env);
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
 
     const response = await fetch(`https://api.razorpay.com/v1/payments/${encodeURIComponent(intentId)}/refund`, {
@@ -338,3 +220,11 @@ export class RazorpayGateway implements PaymentGateway {
 export function createRazorpayGateway(env: Record<string, string | undefined> = process.env) {
   return new RazorpayGateway(env);
 }
+
+// Re-export for tests and reconciliation callers.
+export {
+  captureRazorpayPaymentIfAuthorized,
+  fetchRazorpayPaymentEntity,
+  mapRazorpayPaymentEntityStatus,
+  resolveVerifiedRazorpayPayment
+};

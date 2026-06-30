@@ -250,6 +250,101 @@ export function CheckoutPageClient() {
     return checkoutIdempotencyKeyRef.current;
   }, []);
 
+  const waitForCheckoutPaymentConfirmation = useCallback(async (input: {
+    orderId: string;
+    email: string;
+    signedIn: boolean;
+  }) => {
+    const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
+    if (!input.signedIn && !guestHeaders?.token) return false;
+
+    const query = new URLSearchParams({
+      orderId: input.orderId,
+      ...(input.signedIn ? {} : { email: input.email })
+    });
+
+    for (let attempt = 0; attempt < 15; attempt += 1) {
+      const response = await fetch(`/api/checkout/status?${query.toString()}`, {
+        headers: input.signedIn ? undefined : (guestHeaders!.headers as Record<string, string>),
+        cache: "no-store"
+      });
+      if (response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        if (payload.paid) return true;
+        if (payload.paymentStatus === "failed" || payload.orderPaymentStatus === "failed") return false;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    return false;
+  }, []);
+
+  const verifyPaymentOnServer = useCallback(async (input: {
+    orderId: string;
+    provider: string;
+    email: string;
+    signedIn: boolean;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+    razorpaySignature?: string;
+    cashfreeOrderId?: string;
+  }): Promise<{ paid: boolean; orderNumber?: string; error?: string }> => {
+    const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
+    if (!input.signedIn && !guestHeaders?.token) {
+      return { paid: false, error: "Unable to verify this browser session. Refresh the page and try again." };
+    }
+
+    const response = await fetch("/api/payments/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(input.signedIn ? {} : (guestHeaders!.headers as Record<string, string>))
+      },
+      body: JSON.stringify({
+        orderId: input.orderId,
+        provider: input.provider,
+        email: input.email,
+        razorpayOrderId: input.razorpayOrderId,
+        razorpayPaymentId: input.razorpayPaymentId,
+        razorpaySignature: input.razorpaySignature,
+        cashfreeOrderId: input.cashfreeOrderId
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        paid: false,
+        error: typeof payload.error === "string" ? payload.error : "Payment verification failed."
+      };
+    }
+    if (payload.paid) {
+      clearPendingPaymentVerification();
+      return {
+        paid: true,
+        orderNumber: typeof payload.orderNumber === "string" ? payload.orderNumber : undefined
+      };
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim()) {
+      return { paid: false, error: payload.error.trim() };
+    }
+
+    const confirmed = await waitForCheckoutPaymentConfirmation({
+      orderId: input.orderId,
+      email: input.email,
+      signedIn: input.signedIn
+    });
+    if (confirmed) {
+      clearPendingPaymentVerification();
+      return { paid: true };
+    }
+
+    return {
+      paid: false,
+      error: "Payment is still being confirmed on our server. Keep this page open or check your email shortly."
+    };
+  }, [waitForCheckoutPaymentConfirmation]);
+
   const stubOrderId = searchParams.get("order");
   const stubFlag = searchParams.get("stub");
 
@@ -444,12 +539,6 @@ export function CheckoutPageClient() {
   }, [billingSameAsShipping, checkout.shippingAddressId, setBillingAddressId]);
 
   useEffect(() => {
-    if (billingSameAsShipping) {
-      setShowManualBillingForm(false);
-    }
-  }, [billingSameAsShipping]);
-
-  useEffect(() => {
     if (
       !billingSameAsShipping
       && isSignedIn
@@ -540,7 +629,7 @@ export function CheckoutPageClient() {
     return () => {
       active = false;
     };
-  }, [cashfreeReturnOrderId, cashfreeReturnFlag, completed, checkout.email, checkout.paymentIntentId, isSignedIn, markComplete, router]);
+  }, [cashfreeReturnOrderId, cashfreeReturnFlag, completed, checkout.email, checkout.paymentIntentId, isSignedIn, markComplete, router, verifyPaymentOnServer]);
 
   useEffect(() => {
     const pending = readPendingPaymentVerification();
@@ -632,101 +721,6 @@ export function CheckoutPageClient() {
       }
     }
     return true;
-  }
-
-  async function waitForCheckoutPaymentConfirmation(input: {
-    orderId: string;
-    email: string;
-    signedIn: boolean;
-  }) {
-    const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
-    if (!input.signedIn && !guestHeaders?.token) return false;
-
-    const query = new URLSearchParams({
-      orderId: input.orderId,
-      ...(input.signedIn ? {} : { email: input.email })
-    });
-
-    for (let attempt = 0; attempt < 15; attempt += 1) {
-      const response = await fetch(`/api/checkout/status?${query.toString()}`, {
-        headers: input.signedIn ? undefined : (guestHeaders!.headers as Record<string, string>),
-        cache: "no-store"
-      });
-      if (response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        if (payload.paid) return true;
-        if (payload.paymentStatus === "failed" || payload.orderPaymentStatus === "failed") return false;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-    }
-
-    return false;
-  }
-
-  async function verifyPaymentOnServer(input: {
-    orderId: string;
-    provider: string;
-    email: string;
-    signedIn: boolean;
-    razorpayOrderId?: string;
-    razorpayPaymentId?: string;
-    razorpaySignature?: string;
-    cashfreeOrderId?: string;
-  }): Promise<{ paid: boolean; orderNumber?: string; error?: string }> {
-    const guestHeaders = input.signedIn ? null : await buildGuestRequestHeaders();
-    if (!input.signedIn && !guestHeaders?.token) {
-      return { paid: false, error: "Unable to verify this browser session. Refresh the page and try again." };
-    }
-
-    const response = await fetch("/api/payments/verify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(input.signedIn ? {} : (guestHeaders!.headers as Record<string, string>))
-      },
-      body: JSON.stringify({
-        orderId: input.orderId,
-        provider: input.provider,
-        email: input.email,
-        razorpayOrderId: input.razorpayOrderId,
-        razorpayPaymentId: input.razorpayPaymentId,
-        razorpaySignature: input.razorpaySignature,
-        cashfreeOrderId: input.cashfreeOrderId
-      })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return {
-        paid: false,
-        error: typeof payload.error === "string" ? payload.error : "Payment verification failed."
-      };
-    }
-    if (payload.paid) {
-      clearPendingPaymentVerification();
-      return {
-        paid: true,
-        orderNumber: typeof payload.orderNumber === "string" ? payload.orderNumber : undefined
-      };
-    }
-
-    if (typeof payload.error === "string" && payload.error.trim()) {
-      return { paid: false, error: payload.error.trim() };
-    }
-
-    const confirmed = await waitForCheckoutPaymentConfirmation({
-      orderId: input.orderId,
-      email: input.email,
-      signedIn: input.signedIn
-    });
-    if (confirmed) {
-      clearPendingPaymentVerification();
-      return { paid: true };
-    }
-
-    return {
-      paid: false,
-      error: "Payment is still being confirmed on our server. Keep this page open or check your email shortly."
-    };
   }
 
   async function openRazorpayCheckout(input: {
@@ -1238,7 +1232,13 @@ export function CheckoutPageClient() {
                     <input
                       type="checkbox"
                       checked={billingSameAsShipping}
-                      onChange={(event) => setBillingSameAsShipping(event.target.checked)}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setBillingSameAsShipping(checked);
+                        if (checked) {
+                          setShowManualBillingForm(false);
+                        }
+                      }}
                       className={styles.checkbox}
                     />
                     <span>Billing address is the same as shipping address</span>

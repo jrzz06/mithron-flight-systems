@@ -319,7 +319,7 @@ export function buildProductInventoryWorkflowFromFormData(formData: FormData): P
   const availableQuantity = sellableQuantity;
   const committedQuantity = reservedQuantity;
   const variantId = readOptionalString(formData, "variant_id") ?? null;
-  const changeSummary = readOptionalString(formData, "change_summary") ?? `Sync inventory for ${productSlug}:${sku}`;
+  const changeSummary = readOptionalString(formData, "change_summary") ?? `Update inventory for ${productSlug}:${sku}`;
 
   return {
     productSlug,

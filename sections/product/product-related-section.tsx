@@ -8,6 +8,7 @@ import { clipProductPreviewText } from "@/lib/product-preview-text";
 import { formatINR } from "@/lib/utils";
 import type { ProductShellItem } from "@/services/catalog";
 import styles from "./product-detail.module.css";
+import showcaseStyles from "./showcase/product-showcase.module.css";
 
 function isRemoteImageSrc(src: string) {
   return src.startsWith("http://") || src.startsWith("https://");
@@ -69,8 +70,35 @@ function ProductRelatedCard({ item }: { item: ProductShellItem }) {
   );
 }
 
-export function ProductRelatedSection({ relatedProducts }: { relatedProducts: ProductShellItem[] }) {
-  if (!relatedProducts.length) return null;
+function RelatedRail({ title, items }: { title: string; items: ProductShellItem[] }) {
+  if (!items.length) return null;
+
+  return (
+    <div className={showcaseStyles.relatedRail}>
+      <h3 className={showcaseStyles.relatedRailTitle}>{title}</h3>
+      <div className={styles.relatedProductGrid}>
+        {items.map((item) => (
+          <ProductRelatedCard key={item.slug} item={item} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function ProductRelatedSection({
+  relatedProducts,
+  similarProducts,
+  accessoryProducts
+}: {
+  relatedProducts?: ProductShellItem[];
+  similarProducts?: ProductShellItem[];
+  accessoryProducts?: ProductShellItem[];
+}) {
+  const similar = similarProducts ?? relatedProducts ?? [];
+  const accessories = accessoryProducts ?? [];
+  const hasRails = similar.length > 0 || accessories.length > 0;
+
+  if (!hasRails) return null;
 
   return (
     <section id="related" className={styles.relatedSection} aria-labelledby="product-related-title">
@@ -78,19 +106,16 @@ export function ProductRelatedSection({ relatedProducts }: { relatedProducts: Pr
         <div className={styles.relatedSectionHeader}>
           <div>
             <h2 id="product-related-title" className={styles.relatedSectionTitle}>
-              You might also like
+              Recommended next
             </h2>
-            <p className={styles.relatedSectionSubtitle}>Compatible systems and accessories selected for similar missions.</p>
+            <p className={styles.relatedSectionSubtitle}>Similar systems and compatible accessories selected for your mission profile.</p>
           </div>
           <Link href="/products" className={styles.relatedSectionLink}>
             View all
           </Link>
         </div>
-        <div className={styles.relatedProductGrid}>
-          {relatedProducts.map((item) => (
-            <ProductRelatedCard key={item.slug} item={item} />
-          ))}
-        </div>
+        <RelatedRail title="Similar systems" items={similar} />
+        <RelatedRail title="Accessories and add-ons" items={accessories} />
       </div>
     </section>
   );

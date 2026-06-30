@@ -194,36 +194,39 @@ describe("admin operational UX", () => {
     const inventoryManager = source("components/admin/inventory-manager.tsx");
     const ordersPage = source("app/admin/orders/page.tsx");
     const ordersWorkspace = source("components/admin/admin-orders-workspace.tsx");
-    const ordersUi = `${ordersPage}\n${ordersWorkspace}`;
-
-    expect(inventoryPage).toContain("OperationalFeedback");
-    expect(inventoryPage).toContain("WarehouseInventoryManager");
-    expect(inventoryPage).toContain("getCsvInventoryRows");
-    expect(inventoryPage).toContain("backfillMissingInventoryRows");
-    expect(inventoryPage).not.toContain("getWarehouseSnapshot");
-    expect(inventoryPage).toContain("saveWarehouseInventoryWithFeedback");
-    expect(adminInventoryPage).toContain("InventoryManager");
-    expect(adminInventoryPage).toContain("getCsvInventoryRows");
-    expect(adminInventoryPage).toContain("repairMissingProductInventory");
-    expect(adminInventoryPage).toContain("totalProductCount");
-    expect(adminInventoryPage).not.toContain("getWarehouseSnapshot");
-    expect(inventoryManager).toContain("data-inventory-system");
-    expect(inventoryManager).toContain("products total");
-    expect(inventoryManager).toContain("data-inventory-row");
-    expect(inventoryManager).toContain("data-inventory-source-report");
-    expect(inventoryManager).toContain("data-inventory-quick-edit-form");
-    expect(inventoryManager).toContain("data-advanced-warehouse-details");
-    expect(inventoryManager).toContain("Adjust stock");
-    expect(inventoryManager).toContain("In stock");
-    expect(inventoryManager).toContain("Low stock");
-    expect(inventoryManager).toContain("Out of stock");
-    expect(inventoryManager).toContain("Supabase inventory records are the source of truth.");
-    expect(inventoryManager).toContain("OperationalSubmitButton");
+    const ordersShell = source("components/admin/orders/admin-orders-shell.tsx");
+    const ordersToolbar = source("components/admin/orders/admin-orders-toolbar.tsx");
+    const ordersCreateDrawer = source("components/admin/orders/admin-order-create-drawer.tsx");
+    const ordersActionsRail = source("components/admin/orders/admin-order-actions-rail.tsx");
+    const ordersTimeline = source("components/admin/orders/admin-order-timeline.tsx");
+    const ordersDetailPanel = source("components/admin/orders/admin-order-detail-panel.tsx");
+    const ordersPrimitives = source("components/admin/orders/order-detail-primitives.tsx");
+    const ordersUi = `${ordersPage}\n${ordersWorkspace}\n${ordersShell}\n${ordersToolbar}\n${ordersCreateDrawer}\n${ordersActionsRail}\n${ordersTimeline}\n${ordersDetailPanel}\n${ordersPrimitives}`;
 
     expect(ordersUi).toContain("data-order-status-board");
     expect(ordersUi).toContain("data-order-timeline");
     expect(ordersUi).toContain("data-order-transition-feedback");
+    expect(ordersUi).toContain("data-admin-orders-shell");
+    expect(ordersUi).toContain("data-admin-order-create-drawer");
+    expect(ordersUi).toContain("data-admin-orders-kpi-strip");
+    expect(ordersUi).toContain("data-admin-order-detail-panel");
+    expect(ordersUi).toContain("data-order-detail-panel");
     expect(ordersUi).toContain("OperationalSubmitButton");
+
+    expect(inventoryPage).toContain("WarehouseInventoryManager");
+    expect(inventoryPage).toContain("getCsvInventoryRows");
+    expect(inventoryPage).not.toContain("getWarehouseSnapshot");
+    expect(adminInventoryPage).toContain("InventoryManager");
+    expect(adminInventoryPage).toContain("getCsvInventoryRows");
+    expect(adminInventoryPage).not.toContain("repairMissingProductInventory");
+    expect(adminInventoryPage).not.toContain("syncMissingInventoryAction");
+    expect(adminInventoryPage).toContain("totalProductCount");
+    expect(adminInventoryPage).not.toContain("getWarehouseSnapshot");
+    expect(inventoryManager).toContain("data-inventory-system");
+    expect(inventoryManager).toContain("data-inventory-row");
+    expect(inventoryManager).toContain("data-advanced-warehouse-details");
+    expect(inventoryManager).toContain("Adjust stock");
+    expect(inventoryManager).toContain("OperationalSubmitButton");
   });
 
   it("keeps product media and CMS operations visible and retry-safe", () => {

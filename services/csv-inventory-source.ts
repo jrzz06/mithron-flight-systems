@@ -2,10 +2,6 @@ import { getSupabaseAdminConfig } from "@/lib/env";
 import { getInventoryStockMetrics, type InventoryStockMetrics } from "@/services/inventory-metrics";
 import { buildSimpleInventoryRows, type SimpleInventoryRow } from "@/services/simple-inventory-view";
 import { getCheckoutWarehouseCode } from "@/services/warehouse-config";
-import { countProductsMissingInventoryRecords as countMissingInventoryRecords } from "@/services/product-inventory-sync";
-
-export { countMissingInventoryRecords as countProductsMissingInventoryRecords };
-
 type EnvSource = Record<string, string | undefined>;
 type AdminRow = Record<string, unknown>;
 
