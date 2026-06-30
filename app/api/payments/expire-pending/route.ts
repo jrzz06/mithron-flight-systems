@@ -94,7 +94,7 @@ export async function POST(request: Request) {
         }
       }
 
-      await updateAdminRecord(
+      for (const paymentRow of payments) {
         if (["succeeded", "failed", "refunded"].includes(String(paymentRow.status ?? ""))) continue;
         await updateAdminRecord(
           "payments",
