@@ -1,12 +1,12 @@
 import { generateHTML, generateJSON } from "@tiptap/html";
 import type { JSONContent } from "@tiptap/core";
 import { createEditorExtensions } from "@/lib/editor/extensions";
-import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
+import { prepareEditorHtmlForSave } from "@/lib/editor/prepare-html";
 
 export function editorJsonToHtml(json: JSONContent | null | undefined) {
   if (!json) return "";
   const html = generateHTML(json, createEditorExtensions());
-  return sanitizeEditorHtml(html);
+  return prepareEditorHtmlForSave(html);
 }
 
 export function parseEditorJson(value: string | JSONContent | null | undefined): JSONContent | null {
@@ -42,7 +42,7 @@ function plainTextToEditorDocument(text: string): JSONContent {
 }
 
 export function htmlToEditorDocument(html: string): JSONContent {
-  const trimmed = sanitizeEditorHtml(html.trim());
+  const trimmed = prepareEditorHtmlForSave(html.trim());
   if (!trimmed) return emptyEditorDocument();
   if (!/<[^>]+>/.test(trimmed)) {
     return plainTextToEditorDocument(trimmed);

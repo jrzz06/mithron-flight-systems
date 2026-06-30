@@ -1,6 +1,7 @@
 "use client";
 
 import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import type { ProductNarrativeChapter } from "@/lib/product-detail-experience";
 import { ProductRevealSection } from "@/sections/product/showcase/product-reveal-section";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ export function ProductNarrativeChapters({ chapters }: { chapters: ProductNarrat
             <div>
               <p className={styles.kicker}>{chapter.kicker}</p>
               <h2 className={styles.featureCopyTitle}>{chapter.title}</h2>
-              <p className={styles.featureCopyBody}>{chapter.body}</p>
+              <EditorRenderedContent html={chapter.body} className={styles.featureCopyBody} />
             </div>
             {chapter.media ? (
               <div className={styles.featureMedia}>

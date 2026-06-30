@@ -10,6 +10,7 @@ import { assertOptionalCmsMediaSrc, assertValidCmsMediaSrc } from "@/lib/cms/med
 import type { HomepageCmsContent, HomepageCmsSectionId, HomepageMissionCms, HomepageShelfCms } from "@/config/homepage-cms";
 import { footerContent } from "@/config/storefront-content";
 import { mergeHomepageCmsContent } from "@/services/homepage-cms";
+import { readRichTextHtmlField } from "@/lib/editor/read-form-content";
 import { upsertMediaAssetRecord } from "@/services/admin-actions";
 import {
   buildCategoryMetadataDraftFromFormData,
@@ -297,7 +298,7 @@ export async function saveHomepageShelfFormAction(formData: FormData) {
     guideHref: readText(formData, "guide_href"),
     heroEyebrow: readText(formData, "hero_eyebrow"),
     heroSubtitle: readText(formData, "hero_subtitle"),
-    heroBody: readText(formData, "hero_body"),
+    heroBody: readRichTextHtmlField(formData, "hero_body"),
     featureCta: readText(formData, "feature_cta"),
     heroCtaHref: readText(formData, "hero_cta_href"),
     heroImageSrc: assertOptionalCmsMediaSrc(readText(formData, "hero_image_src"), "Shelf hero image"),
@@ -322,7 +323,7 @@ export async function saveHomepageMissionFormAction(formData: FormData) {
   const tileCount = Number(readText(formData, "tile_count", "5"));
   const tiles = Array.from({ length: tileCount }, (_, index) => ({
     label: readText(formData, `tile_${index}_label`),
-    body: readText(formData, `tile_${index}_body`),
+    body: readRichTextHtmlField(formData, `tile_${index}_body`),
     operator: readText(formData, `tile_${index}_operator`),
     model: readText(formData, `tile_${index}_model`),
     location: readText(formData, `tile_${index}_location`),
@@ -333,7 +334,7 @@ export async function saveHomepageMissionFormAction(formData: FormData) {
   const patch: Partial<HomepageMissionCms> = {
     eyebrow: readText(formData, "eyebrow"),
     title: readText(formData, "title"),
-    body: readText(formData, "body"),
+    body: readRichTextHtmlField(formData, "body"),
     href: readText(formData, "href"),
     cta: readText(formData, "cta"),
     mediaNote: readText(formData, "media_note"),
@@ -381,7 +382,7 @@ export async function saveHomepageAboutFormAction(formData: FormData) {
   const patch = {
     eyebrow: readText(formData, "eyebrow"),
     title: readText(formData, "title"),
-    body: readText(formData, "body"),
+    body: readRichTextHtmlField(formData, "body"),
     primaryLabel: readText(formData, "primary_label"),
     primaryHref: readText(formData, "primary_href"),
     secondaryLabel: readText(formData, "secondary_label"),
@@ -403,7 +404,7 @@ export async function saveHomepageFooterLeadFormAction(formData: FormData) {
     const current = await loadAdminSettingsPayload();
     const footer = {
       leadTitle: readText(formData, "footer_lead_title", footerContent.leadTitle),
-      leadBody: readText(formData, "footer_lead_body"),
+      leadBody: readRichTextHtmlField(formData, "footer_lead_body"),
       contactEmail: readText(formData, "footer_contact_email", footerContent.contactEmail ?? ""),
       contactPhone: readText(formData, "footer_contact_phone", footerContent.contactPhone ?? ""),
       legalText: readText(formData, "footer_legal_text")

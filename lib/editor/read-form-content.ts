@@ -1,5 +1,5 @@
 import { processEditorSubmission } from "@/lib/editor/serialize";
-import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
+import { prepareEditorHtmlForSave } from "@/lib/editor/prepare-html";
 
 function readOptionalString(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -24,10 +24,34 @@ export function readEditorDocumentFields(formData: FormData, jsonField: string, 
   if (html !== undefined) {
     return {
       json: null,
-      html: html ? sanitizeEditorHtml(html) : "",
+      html: html ? prepareEditorHtmlForSave(html) : "",
       mediaAssetIds: [] as string[]
     };
   }
 
   return null;
+}
+
+export function readRichTextHtmlField(
+  formData: FormData,
+  htmlKey: string,
+  options?: { required?: boolean; label?: string }
+) {
+  const fromEditor = readEditorDocumentFields(formData, `${htmlKey}_json`, htmlKey);
+  if (fromEditor) {
+    if (options?.required && !fromEditor.html) {
+      throw new Error(`${options.label ?? htmlKey} is required.`);
+    }
+    return fromEditor.html;
+  }
+
+  const value = formData.get(htmlKey);
+  if (typeof value !== "string" || !value.trim()) {
+    if (options?.required) {
+      throw new Error(`${options.label ?? htmlKey} is required.`);
+    }
+    return "";
+  }
+
+  return prepareEditorHtmlForSave(value.trim());
 }

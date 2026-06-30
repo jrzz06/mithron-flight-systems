@@ -1,5 +1,5 @@
 import { assertSupabaseAdminConfig } from "@/lib/env";
-import { sanitizeProductHtml } from "@/lib/sanitize-html";
+import { prepareEditorHtmlForDisplay } from "@/lib/editor/prepare-html";
 import { readProductImageSrc } from "@/lib/supplier/product-image";
 import { deriveProductSku } from "@/services/product-inventory-sync";
 import { listPendingStockRequests } from "@/services/supplier-stock-requests";
@@ -218,7 +218,7 @@ export async function listPendingStockRequestsForReview(env: EnvSource = process
         compareAt: product.compare_at == null ? null : Number(product.compare_at),
         discountSummary: formatDiscountSummary(product),
         brandLabel: typeof product.badge === "string" && product.badge.trim() ? product.badge.trim() : "—",
-        descriptionHtml: descriptionRaw ? sanitizeProductHtml(descriptionRaw) : "",
+        descriptionHtml: descriptionRaw ? prepareEditorHtmlForDisplay(descriptionRaw) : "",
         primaryImageSrc,
         gallerySrcs
       },

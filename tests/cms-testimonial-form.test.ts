@@ -30,7 +30,7 @@ describe("product review CMS draft form", () => {
       fields: {
         reviewer_name: "Atlas Survey Systems",
         product_slug: "source-agri-kisan-drone-small-8-liter",
-        body: "The workflow stays calm under load and the handoff to operations is predictable.",
+        body: "<p>The workflow stays calm under load and the handoff to operations is predictable.</p>",
         rating: 4.8
       },
       entityId: "review-atlas",

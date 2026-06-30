@@ -9,6 +9,7 @@ import { useAdaptiveNavbarTone } from "@/hooks/use-adaptive-navbar-tone";
 import { normalizeStorefrontPath, resolveInitialNavbarTone } from "@/lib/navbar-ink-sampling";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import { MithronBrandMark } from "@/components/brand/mithron-brand-mark";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import type { NavigationNode } from "@/config/types";
 import type { EnterpriseMenuConfig, EnterpriseMenuOption, FeaturedMenuCard, MegaMenuConfig } from "@/lib/nav-menu-types";
 import { catalogCategoryDefinitions } from "@/lib/catalog-categories";
@@ -565,7 +566,7 @@ function EnterpriseMenuPanel({
           <div className="enterprise-franchise-menu__copy">
             <p className="enterprise-mega-menu__eyebrow">{menu.eyebrow}</p>
             <h2>{menu.headline}</h2>
-            <p>{menu.body}</p>
+            <EditorRenderedContent html={menu.body} className="enterprise-franchise-menu__body" />
             <div className="enterprise-franchise-menu__links">
               {menu.items.map((item) => (
                 <EnterpriseMenuLink
@@ -697,7 +698,7 @@ function EnterpriseFeaturedCard({
       <div className="enterprise-feature-card__body">
         <p className="enterprise-mega-menu__eyebrow">{card.eyebrow}</p>
         <h3>{card.name}</h3>
-        <p>{card.body}</p>
+        <EditorRenderedContent html={card.body} className="enterprise-feature-card__description" />
         <dl className="enterprise-feature-card__specs">
           {card.specs.map((spec) => (
             <div key={`${card.key}-${spec.label}`}>

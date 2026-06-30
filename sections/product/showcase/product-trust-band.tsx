@@ -1,6 +1,7 @@
 "use client";
 
 import { FileCheck, Headset, ShieldCheck } from "lucide-react";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import type { TrustCardContent } from "@/services/cms";
 import { ProductRevealSection } from "@/sections/product/showcase/product-reveal-section";
 import styles from "./product-showcase.module.css";
@@ -35,7 +36,7 @@ export function ProductTrustBand({
             <article key={card.title} className={styles.trustCard}>
               <ShieldCheck className="mb-3 size-5" aria-hidden="true" />
               <h3 className="text-lg font-semibold">{card.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-300">{card.body}</p>
+              <EditorRenderedContent html={card.body} className="mt-2 text-sm leading-relaxed text-slate-300" />
             </article>
           ))}
           <article className={styles.trustCard}>

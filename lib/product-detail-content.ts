@@ -1,7 +1,6 @@
 import type { Product } from "@/config/types";
 import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
-import { sanitizeEditorHtml } from "@/lib/editor/sanitize";
-import { sanitizeProductHtml } from "@/lib/sanitize-html";
+import { prepareEditorHtmlForDisplay } from "@/lib/editor/prepare-html";
 import { normalizeProductDescriptionHtml, decodeDescriptionEntities, isUnstructuredDescription, descriptionNormalizePlainText } from "@/lib/product-description-normalize";
 import { isSpecLikeBlob, sortSpecEntries, expandSpecEntries, isHighlightSpecValue } from "@/lib/product-spec-text";
 const HIDDEN_SPEC_KEYS = new Set(["Product ID", "Source", "Currency", "Category", "Availability"]);
@@ -79,12 +78,12 @@ function normalizeStoredDescriptionHtml(raw: string): string | null {
     || (!hasHtmlTags(trimmed) && plain.includes(":"));
 
   if (!needsStructuralNormalize && hasHtmlTags(trimmed)) {
-    return sanitizeEditorHtml(decoded);
+    return prepareEditorHtmlForDisplay(decoded);
   }
 
   const normalized = normalizeProductDescriptionHtml(trimmed);
   if (!normalized) return null;
-  return sanitizeEditorHtml(normalized);
+  return prepareEditorHtmlForDisplay(normalized);
 }
 
 export function getProductDescriptionHtml(product: Product): string | null {
@@ -111,7 +110,7 @@ export function getProductOverviewHtml(product: Product) {
   const description = product.description?.trim();
   if (!description) return null;
   if (!/<[^>]+>/.test(description)) return null;
-  return sanitizeProductHtml(description);
+  return prepareEditorHtmlForDisplay(description);
 }
 
 export function getProductOverviewText(product: Product) {

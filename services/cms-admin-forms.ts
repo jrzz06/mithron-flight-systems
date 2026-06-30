@@ -1,5 +1,6 @@
 import type { CmsWorkflowDraftInput, HeroBannerDraftInput, HeroBannerStateInput } from "@/services/cms-admin-workflows";
 import { assertValidCmsHref } from "@/lib/cms/safe-href";
+import { readEditorDocumentFields, readRichTextHtmlField } from "@/lib/editor/read-form-content";
 import { CMS_CONTENT_TABLES, CmsValidationError } from "@/services/cms-crud";
 import type { CmsContentTable } from "@/services/cms-crud";
 
@@ -38,6 +39,14 @@ function readRequiredString(formData: FormData, key: string, label: string) {
     throw new CmsValidationError(`${label} ${key} is required.`);
   }
   return value.trim();
+}
+
+function readRichTextHtml(formData: FormData, htmlKey: string, label: string, required = false) {
+  try {
+    return readRichTextHtmlField(formData, htmlKey, { required, label });
+  } catch (error) {
+    throw new CmsValidationError(error instanceof Error ? error.message : `${label} ${htmlKey} is required.`);
+  }
 }
 
 function readOptionalString(formData: FormData, key: string) {
@@ -428,7 +437,7 @@ export function buildFaqDraftFromFormData(formData: FormData): FaqDraftFormInput
   const scope = readOptionalEnum(formData, "scope", ["global", "product"], "global", "FAQ scope");
   const productSlug = readOptionalString(formData, "product_slug") ?? null;
   const question = readRequiredString(formData, "question", "FAQ");
-  const answer = readRequiredString(formData, "answer", "FAQ");
+  const answer = readRichTextHtml(formData, "answer", "FAQ", true);
   const changeSummary = readOptionalString(formData, "change_summary");
 
   return {
@@ -452,7 +461,7 @@ export function buildFaqDraftFromFormData(formData: FormData): FaqDraftFormInput
 export function buildProductReviewDraftFromFormData(formData: FormData): ProductReviewDraftFormInput {
   const id = readRequiredString(formData, "id", "Product review");
   const reviewerName = readRequiredString(formData, "reviewer_name", "Product review");
-  const body = readRequiredString(formData, "body", "Product review");
+  const body = readRichTextHtml(formData, "body", "Product review", true);
   const changeSummary = readOptionalString(formData, "change_summary");
 
   return {
@@ -487,7 +496,7 @@ export function buildPromotionalCampaignDraftFromFormData(formData: FormData): P
     fields: {
       label,
       headline,
-      body: readOptionalString(formData, "body") ?? null,
+      body: readRichTextHtml(formData, "body", "Promotional campaign") || null,
       cta_label: readOptionalString(formData, "cta_label") ?? null,
       href: (() => {
         const rawHref = readOptionalString(formData, "href");

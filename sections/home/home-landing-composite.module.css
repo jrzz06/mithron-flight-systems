@@ -2953,7 +2953,8 @@
   letter-spacing: -0.02em;
 }
 
-.agriCardCopy strong + span {
+.agriCardCopy strong + span,
+.agriCardCopy strong + .missionTileBody {
   position: relative;
   z-index: 1;
   color: rgba(255, 255, 255, 0.68);
@@ -2983,7 +2984,8 @@
   letter-spacing: -0.015em;
 }
 
-.missionWorldSupportGrid > .agriCard .agriCardCopy strong + span {
+.missionWorldSupportGrid > .agriCard .agriCardCopy strong + span,
+.agriCardCopy strong + .missionTileBody {
   display: none;
 }
 
@@ -3362,7 +3364,8 @@
     line-height: 1.12;
   }
 
-  .agriCardCopy strong + span {
+  .agriCardCopy strong + span,
+.agriCardCopy strong + .missionTileBody {
     font-size: clamp(0.86rem, 3.2vw, 0.98rem);
     line-height: 1.4;
     display: block;
@@ -3372,7 +3375,8 @@
     -webkit-box-orient: unset;
   }
 
-  .missionWorldSupportGrid > .agriCard .agriCardCopy strong + span {
+  .missionWorldSupportGrid > .agriCard .agriCardCopy strong + span,
+.agriCardCopy strong + .missionTileBody {
     display: none;
   }
 

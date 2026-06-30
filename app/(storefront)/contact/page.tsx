@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EnquiryForm } from "@/components/contact/enquiry-form";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { footerOfficialLinks } from "@/config/footer-links";
 import { createClient } from "@/lib/server";
 import { getPublicCmsSnapshot } from "@/services/cms";
@@ -40,7 +41,7 @@ export default async function ContactPage() {
         <div className="mt-4 grid gap-8 md:grid-cols-[0.95fr_1.05fr]">
           <div>
             <h1 className="type-page max-w-2xl">Talk to Mithron.</h1>
-            <p className="type-subtitle mt-6 max-w-2xl text-slate-600">{intro}</p>
+            <EditorRenderedContent html={intro} className="type-subtitle mt-6 max-w-2xl text-slate-600" />
             <Button asChild className="mt-8">
               <Link href="/products">Browse systems</Link>
             </Button>

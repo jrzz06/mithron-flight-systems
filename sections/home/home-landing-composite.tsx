@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
+import { editorHtmlToPlainText } from "@/lib/editor/prepare-html";
 import { type CSSProperties, type ReactNode } from "react";
 import { ArrowRight, Star } from "lucide-react";
 import type { Product, MediaAsset } from "@/config/types";
@@ -592,7 +594,9 @@ function ProductShelfSection({
                 <span className={styles.shelfHeroEyebrow}>{config.heroEyebrow || config.eyebrow}</span>
               ) : null}
               <span className={styles.shelfHeroHeading}>{config.title}</span>
-              {config.heroBody ? <span className={styles.shelfHeroBody}>{config.heroBody}</span> : null}
+              {config.heroBody ? (
+                <EditorRenderedContent html={config.heroBody} className={styles.shelfHeroBody} />
+              ) : null}
               {config.featureCta ? (
                 <span className={styles.shelfHeroCta}>{config.featureCta}</span>
               ) : null}
@@ -792,7 +796,9 @@ function TestimonialReviewCard({ item }: { item: HomeProductReview }) {
           <Star key={`${item.id}-star-${index}`} className="size-4" fill="currentColor" aria-hidden="true" />
         ))}
       </div>
-      <blockquote className={styles.testimonialQuote}>&ldquo;{item.body}&rdquo;</blockquote>
+      <blockquote className={styles.testimonialQuote}>
+        <EditorRenderedContent html={item.body} />
+      </blockquote>
       <footer className={styles.testimonialProfile}>
         <span className={styles.testimonialAvatar} aria-hidden="true">
           {testimonialInitials(item.reviewerName)}
@@ -883,7 +889,7 @@ function HomeAboutUsBand({ about }: { about: HomepageCmsContent["about"] }) {
         <div className={styles.aboutBandCopy}>
           <p className={styles.aboutEyebrow}>{about.eyebrow}</p>
           <h2 className={styles.aboutTitle}>{about.title}</h2>
-          <p className={styles.aboutBody}>{about.body}</p>
+          <EditorRenderedContent html={about.body} className={styles.aboutBody} />
         </div>
         <div className={styles.aboutActions}>
           <Link href={about.primaryHref} className={styles.aboutPrimaryAction}>
@@ -1461,7 +1467,7 @@ function MissionWorldCardContent({
           <span className={styles.agriCardCopy}>
             <span className={textProtectionClass} aria-hidden="true" />
             <strong>{tile.label}</strong>
-            <span>{tile.body}</span>
+            <EditorRenderedContent html={tile.body} className={styles.missionTileBody} />
           </span>
           <span className={styles.agriCardArrow} aria-hidden="true">
             <ArrowRight size={16} />
@@ -1498,7 +1504,7 @@ function renderMissionWorldTile(
       href={href}
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
-      aria-label={`${tile.label}. ${tile.body}`}
+      aria-label={`${tile.label}. ${editorHtmlToPlainText(tile.body)}`}
       key={tileKey}
       {...tileProps}
     >
@@ -1602,7 +1608,7 @@ function MissionWorldBentoSection({
                 </div>
                 <h2 className={styles.agriHeadline}>{headline}</h2>
                 <div className={styles.agriIntroBody}>
-                  <p className={styles.agriIntroPlainText}>{config.body}</p>
+                  <EditorRenderedContent html={config.body} className={styles.agriIntroPlainText} />
                   {introFooter}
                 </div>
               </div>

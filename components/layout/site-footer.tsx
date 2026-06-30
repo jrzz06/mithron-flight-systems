@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { isCmsStrictMode } from "@/lib/cms/strict-mode";
 import { footerContent, type FooterContent } from "@/config/storefront-content";
 import { footerOfficialLinks } from "@/config/footer-links";
@@ -56,7 +57,7 @@ export function SiteFooter({ content = emptyFooterContent }: { content?: FooterC
         <div className="site-footer__lead xl:col-span-1">
           <p className="type-meta text-white/45">Mithron India Smart Services</p>
           <h2 className="type-section mt-3 text-3xl text-balance md:text-4xl">{resolved.leadTitle}</h2>
-          <p className="type-body mt-4 max-w-xl text-white/68">{resolved.leadBody}</p>
+          <EditorRenderedContent html={resolved.leadBody} className="type-body mt-4 max-w-xl text-white/68" />
           <div className="site-footer__contact mt-6 flex flex-col gap-2 text-sm text-white/72">
             <a href={`mailto:${contactEmail}`} className="site-footer__link inline-flex min-h-11 w-fit items-center py-2 transition-colors hover:text-white">
               {contactEmail}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import type { PromotionalCampaignContent, TrustCardContent } from "@/services/cms";
 
@@ -26,7 +27,12 @@ export function CmsStorefrontSurface({ promotionalCampaigns, trustCards }: CmsSt
               <h2 className="mt-3 font-[var(--type-display)] text-2xl font-semibold tracking-[-0.03em] text-white">
                 {campaign.headline}
               </h2>
-              {campaign.body ? <p className="mt-3 text-sm leading-7 text-white/62">{campaign.body}</p> : null}
+              {campaign.body ? (
+                <EditorRenderedContent
+                  html={campaign.body}
+                  className="mt-3 text-sm leading-7 text-white/62"
+                />
+              ) : null}
               {campaign.href && campaign.ctaLabel ? (
                 <Link
                   href={campaign.href}
@@ -58,7 +64,7 @@ export function CmsStorefrontSurface({ promotionalCampaigns, trustCards }: CmsSt
                 sizes="(max-width: 768px) 100vw, 640px"
               />
               <h3 className="mt-4 text-lg font-semibold text-white">{card.title}</h3>
-              <p className="mt-2 text-sm leading-7 text-white/60">{card.body}</p>
+              <EditorRenderedContent html={card.body} className="mt-2 text-sm leading-7 text-white/60" />
             </article>
           ))}
         </div>

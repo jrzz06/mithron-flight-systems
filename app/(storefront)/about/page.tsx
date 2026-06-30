@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { getPublicCmsSnapshot } from "@/services/cms";
 
 export default async function AboutPage() {
@@ -18,13 +19,15 @@ export default async function AboutPage() {
           <h1 className="type-page mt-4 max-w-2xl">{title}</h1>
         </div>
         <div className="grid content-between gap-8">
-          <p className="type-subtitle text-slate-600">{body}</p>
+          <EditorRenderedContent html={body} className="type-subtitle text-slate-600" />
           {trustCards.length ? (
             <div className="grid gap-3">
               {trustCards.map((card) => (
                 <article key={card.id} className="rounded-2xl border border-[var(--surface-border)] bg-white/60 p-4">
                   <p className="text-sm font-semibold text-slate-900">{card.title}</p>
-                  {card.body ? <p className="mt-2 text-sm leading-6 text-slate-600">{card.body}</p> : null}
+                  {card.body ? (
+                    <EditorRenderedContent html={card.body} className="mt-2 text-sm leading-6 text-slate-600" />
+                  ) : null}
                 </article>
               ))}
             </div>

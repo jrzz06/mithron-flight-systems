@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createEditorExtensions } from "@/lib/editor/extensions";
 import { clearEditorDraft, readEditorDraft, writeEditorDraft } from "@/lib/editor/draft-storage";
+import { prepareEditorHtmlForSave } from "@/lib/editor/prepare-html";
 import { editorJsonToHtml, emptyEditorDocument, htmlToEditorDocument, parseEditorJson } from "@/lib/editor/serialize";
 import type { RichTextEditorFeatures } from "@/lib/editor/types";
 import { EditorBubbleMenu } from "@/components/editor/RichTextEditor/BubbleMenu/editor-bubble-menu";
@@ -90,12 +91,16 @@ export function RichTextEditor({
         return true;
       },
       handlePaste: (view, event) => {
-        if (!features.media) return false;
         const files = event.clipboardData?.files;
-        if (!files?.length || !editor) return false;
-        event.preventDefault();
-        void handleEditorImageFiles(editor, files, documentType, documentId);
-        return true;
+        if (features.media && files?.length && editor) {
+          event.preventDefault();
+          void handleEditorImageFiles(editor, files, documentType, documentId);
+          return true;
+        }
+        return false;
+      },
+      transformPastedHTML(html) {
+        return prepareEditorHtmlForSave(html);
       }
     }
   });

@@ -2,6 +2,7 @@ import { readEditorDocumentFields } from "@/lib/editor/read-form-content";
 import { readProductBadgeFieldsFromFormData } from "@/lib/product-badge";
 import { maybeNormalizeProductDescription } from "@/lib/product-description-normalize";
 import { normalizeProductDescriptionForSave } from "@/lib/product-description-ai-normalize";
+import { prepareEditorHtmlForSave } from "@/lib/editor/prepare-html";
 import { resolveProductPricing, type ProductDiscountType } from "@/lib/product-pricing";
 import { getProductTaxGroup, isProductTaxGroupId } from "@/lib/product-tax-groups";
 
@@ -469,7 +470,9 @@ function readProductCommerceFields(formData: FormData): ProductCommerceFields {
   const fields: ProductCommerceFields = {};
   const editorContent = readEditorDocumentFields(formData, "description_json", "description");
   if (editorContent) {
-    fields.description = maybeNormalizeProductDescription(editorContent.html) || null;
+    fields.description = prepareEditorHtmlForSave(editorContent.html)
+      || maybeNormalizeProductDescription(editorContent.html)
+      || null;
     fields.description_json = editorContent.json as Record<string, unknown> | null;
   } else {
     const description = readOptionalString(formData, "description");

@@ -34,7 +34,7 @@ describe("campaign and category CMS draft forms", () => {
       fields: {
         label: "Q2 Launch",
         headline: "Launch support for survey fleets",
-        body: "Bundle mission-ready accessories for the deployment window.",
+        body: "<p>Bundle mission-ready accessories for the deployment window.</p>",
         cta_label: "Explore fleets",
         href: "/products",
         media_asset_id: "media-campaign-q2",

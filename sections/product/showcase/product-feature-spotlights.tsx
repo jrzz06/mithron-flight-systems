@@ -1,6 +1,7 @@
 "use client";
 
 import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import type { ProductFeatureSpotlight } from "@/lib/product-detail-experience";
 import { ProductRevealSection } from "@/sections/product/showcase/product-reveal-section";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ export function ProductFeatureSpotlights({ features }: { features: ProductFeatur
               <div className={styles.featureCopy}>
                 <p className={styles.kicker}>{feature.kicker}</p>
                 <h3 className={styles.featureCopyTitle}>{feature.title}</h3>
-                <p className={styles.featureCopyBody}>{feature.body}</p>
+                <EditorRenderedContent html={feature.body} className={styles.featureCopyBody} />
               </div>
               {feature.media ? (
                 <div className={styles.featureMedia}>

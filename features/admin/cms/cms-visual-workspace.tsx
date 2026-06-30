@@ -7,6 +7,7 @@ import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { RichTextEditorField } from "@/components/editor/RichTextEditor/rich-text-editor-field";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { StatusBadge } from "@/components/admin/module-panel";
 import {
   archiveCmsWorkspaceRecordFormAction,
@@ -447,7 +448,11 @@ function SectionPreview({
           <div className="relative z-10 flex flex-col justify-end">
             <StatusBadge status={section.status} />
             <h3 className="mt-4 text-2xl font-semibold leading-tight text-slate-100 md:text-3xl" style={section.fields.titleColor ? { color: section.fields.titleColor } : undefined}>{headline}</h3>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400" style={section.fields.subtitleColor ? { color: section.fields.subtitleColor } : undefined}>{body}</p>
+            <EditorRenderedContent
+              html={body}
+              className="mt-3 max-w-xl text-sm leading-6 text-slate-400"
+              style={section.fields.subtitleColor ? { color: section.fields.subtitleColor } : undefined}
+            />
             {section.fields.ctaLabel ? (
               <span className="mt-5 inline-flex w-fit rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-950">
                 {section.fields.ctaLabel}

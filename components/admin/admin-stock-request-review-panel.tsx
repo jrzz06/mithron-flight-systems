@@ -1,4 +1,4 @@
-import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { StatusPill } from "@/components/platform";
 import { relativeTimeLabel } from "@/lib/platform/copy";
 import { formatINR } from "@/lib/utils";
@@ -108,9 +108,9 @@ function StockRequestReviewCard({ item }: { item: StockRequestReviewItem }) {
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">Product description</p>
             {item.product.descriptionHtml ? (
-              <div
-                className="editor-rendered-content mt-2 max-h-56 overflow-y-auto rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3 text-sm text-[var(--platform-text-secondary)]"
-                dangerouslySetInnerHTML={{ __html: item.product.descriptionHtml }}
+              <EditorRenderedContent
+                html={item.product.descriptionHtml}
+                className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] px-4 py-3 text-sm text-[var(--platform-text-secondary)]"
               />
             ) : (
               <p className="mt-2 text-sm text-[var(--platform-text-muted)]">No product description provided.</p>

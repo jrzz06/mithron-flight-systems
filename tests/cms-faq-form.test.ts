@@ -30,7 +30,7 @@ describe("FAQ CMS draft form", () => {
         scope: "global",
         product_slug: null,
         question: "How do deployments start?",
-        answer: "Through a scoped operations review."
+        answer: "<p>Through a scoped operations review.</p>"
       },
       entityId: "faq-support",
       sortOrder: 30,

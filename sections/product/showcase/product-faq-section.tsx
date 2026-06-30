@@ -1,5 +1,6 @@
 "use client";
 
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { ProductRevealSection } from "@/sections/product/showcase/product-reveal-section";
 import styles from "./product-showcase.module.css";
 
@@ -15,7 +16,7 @@ export function ProductFaqSection({ faqs }: { faqs: Array<[string, string]> }) {
           {faqs.map(([question, answer]) => (
             <details key={question} className={styles.faqItem}>
               <summary className={styles.faqQuestion}>{question}</summary>
-              <p className={styles.faqAnswer}>{answer}</p>
+              <EditorRenderedContent html={answer} className={styles.faqAnswer} />
             </details>
           ))}
         </div>

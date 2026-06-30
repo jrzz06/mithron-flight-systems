@@ -1,6 +1,7 @@
 "use client";
 
 import type { Product } from "@/config/types";
+import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import { ProductRevealSection } from "@/sections/product/showcase/product-reveal-section";
 import styles from "./product-showcase.module.css";
 
@@ -25,7 +26,7 @@ export function ProductValueProposition({
           {product.tagline?.trim() || `Built for ${product.category.toLowerCase()} missions`}
         </h2>
         {overviewHtml ? (
-          <div className={`${styles.lead} editor-rendered-content`} dangerouslySetInnerHTML={{ __html: overviewHtml }} />
+          <EditorRenderedContent html={overviewHtml} className={styles.lead} />
         ) : overviewText ? (
           <p className={styles.lead}>{overviewText}</p>
         ) : null}
