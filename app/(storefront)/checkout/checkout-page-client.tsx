@@ -13,7 +13,7 @@ import {
 } from "@/lib/checkout/pending-payment";
 import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
 import {
-  buildRazorpayCheckoutDisplayConfig,
+  buildRazorpayCheckoutClientConfig,
   isRazorpayQrEligibleViewport,
   loadRazorpayCheckoutScript,
   logRazorpayClientEvent,
@@ -234,6 +234,7 @@ export function CheckoutPageClient() {
   const checkoutIdempotencyKeyRef = useRef<string | null>(null);
   const verifyingPaymentRef = useRef(false);
   const checkoutOpeningRef = useRef(false);
+  const checkoutPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [gatewayModalOpen, setGatewayModalOpen] = useState(false);
 
   const buildPaymentSuccessUrl = useCallback((orderId: string, signedIn: boolean) => {
@@ -247,6 +248,17 @@ export function CheckoutPageClient() {
       checkoutIdempotencyKeyRef.current = crypto.randomUUID();
     }
     return checkoutIdempotencyKeyRef.current;
+  }, []);
+
+  const rotateCheckoutIdempotencyKey = useCallback(() => {
+    checkoutIdempotencyKeyRef.current = crypto.randomUUID();
+  }, []);
+
+  const stopCheckoutStatusPolling = useCallback(() => {
+    if (checkoutPollRef.current) {
+      clearInterval(checkoutPollRef.current);
+      checkoutPollRef.current = null;
+    }
   }, []);
 
   const waitForCheckoutPaymentConfirmation = useCallback(async (input: {
@@ -583,6 +595,10 @@ export function CheckoutPageClient() {
     });
   }, [paymentProvider]);
 
+  useEffect(() => () => {
+    stopCheckoutStatusPolling();
+  }, [stopCheckoutStatusPolling]);
+
   useEffect(() => {
     if (!stubOrderId || stubFlag !== "1" || completed) return;
 
@@ -739,6 +755,7 @@ export function CheckoutPageClient() {
     email: string;
     signedIn: boolean;
     keyMode?: string | null;
+    useDashboardConfig?: boolean;
   }) {
     if (checkoutOpeningRef.current) {
       logRazorpayClientEvent("checkout_open_blocked", { reason: "already_open" }, "warn");
@@ -766,48 +783,57 @@ export function CheckoutPageClient() {
       amountPaise: input.amountPaise,
       keyMode: input.keyMode ?? "unknown",
       viewportWidth: typeof window !== "undefined" ? window.innerWidth : null,
-      qrEligible: isRazorpayQrEligibleViewport()
+      qrEligible: isRazorpayQrEligibleViewport(),
+      useDashboardConfig: Boolean(input.useDashboardConfig)
     });
 
     const contact = normalizeRazorpayContact(phone.trim());
+    const displayConfig = buildRazorpayCheckoutClientConfig(Boolean(input.useDashboardConfig));
 
     return new Promise<boolean>((resolve) => {
       const finishCheckout = (paid: boolean) => {
+        stopCheckoutStatusPolling();
         checkoutOpeningRef.current = false;
         setGatewayModalOpen(false);
+        if (!paid) {
+          rotateCheckoutIdempotencyKey();
+        }
         resolve(paid);
       };
 
-      const rzp = new window.Razorpay!({
-        key: input.key,
-        name: "Mithron",
-        description: `Order ${input.orderNumber}`,
-        order_id: input.razorpayOrderId,
-        prefill: { email: input.email, contact },
-        theme: { color: "#174d33", backdrop_color: "#f7faf8" },
-        retry: { enabled: true, max_count: 3 },
-        config: buildRazorpayCheckoutDisplayConfig(),
-        handler: async (response: {
-          razorpay_order_id?: string;
-          razorpay_payment_id?: string;
-          razorpay_signature?: string;
-        }) => {
-          if (verifyingPaymentRef.current) return;
-          verifyingPaymentRef.current = true;
+      const handleRazorpaySuccess = async (response: {
+        razorpay_order_id?: string;
+        razorpay_payment_id?: string;
+        razorpay_signature?: string;
+      }) => {
+        if (verifyingPaymentRef.current) return;
+        verifyingPaymentRef.current = true;
 
-          const razorpayOrderId = response.razorpay_order_id ?? input.razorpayOrderId;
-          const razorpayPaymentId = response.razorpay_payment_id ?? "";
-          const razorpaySignature = response.razorpay_signature ?? "";
+        const razorpayOrderId = response.razorpay_order_id ?? input.razorpayOrderId;
+        const razorpayPaymentId = response.razorpay_payment_id ?? "";
+        const razorpaySignature = response.razorpay_signature ?? "";
 
-          logRazorpayClientEvent("payment_handler", {
+        logRazorpayClientEvent("payment_handler", {
+          orderId: input.orderId,
+          razorpayOrderId,
+          razorpayPaymentId: razorpayPaymentId || null
+        });
+
+        savePendingPaymentVerification({
+          orderId: input.orderId,
+          orderNumber: input.orderNumber,
+          provider: "razorpay",
+          email: input.email,
+          signedIn: input.signedIn,
+          razorpayOrderId,
+          razorpayPaymentId,
+          razorpaySignature
+        });
+
+        setLoading("payment");
+        try {
+          const verification = await verifyPaymentOnServer({
             orderId: input.orderId,
-            razorpayOrderId,
-            razorpayPaymentId: razorpayPaymentId || null
-          });
-
-          savePendingPaymentVerification({
-            orderId: input.orderId,
-            orderNumber: input.orderNumber,
             provider: "razorpay",
             email: input.email,
             signedIn: input.signedIn,
@@ -815,33 +841,32 @@ export function CheckoutPageClient() {
             razorpayPaymentId,
             razorpaySignature
           });
-
-          setLoading("payment");
-          try {
-            const verification = await verifyPaymentOnServer({
-              orderId: input.orderId,
-              provider: "razorpay",
-              email: input.email,
-              signedIn: input.signedIn,
-              razorpayOrderId,
-              razorpayPaymentId,
-              razorpaySignature
-            });
-            setLoading(null);
-            if (verification.paid) {
-              router.push(buildPaymentSuccessUrl(input.orderId, input.signedIn));
-              finishCheckout(true);
-              return;
-            }
-            setError(
-              verification.error
-              ?? "We could not confirm payment on our server yet. Keep this page open while we retry."
-            );
-            finishCheckout(false);
-          } finally {
-            verifyingPaymentRef.current = false;
+          setLoading(null);
+          if (verification.paid) {
+            router.push(buildPaymentSuccessUrl(input.orderId, input.signedIn));
+            finishCheckout(true);
+            return;
           }
-        },
+          setError(
+            verification.error
+            ?? "We could not confirm payment on our server yet. Keep this page open while we retry."
+          );
+          finishCheckout(false);
+        } finally {
+          verifyingPaymentRef.current = false;
+        }
+      };
+
+      const rzpOptions: Record<string, unknown> = {
+        key: input.key,
+        name: "Mithron",
+        description: `Order ${input.orderNumber}`,
+        order_id: input.razorpayOrderId,
+        currency: "INR",
+        prefill: { email: input.email, contact },
+        theme: { color: "#174d33", backdrop_color: "#f7faf8" },
+        retry: { enabled: true, max_count: 3 },
+        handler: handleRazorpaySuccess,
         modal: {
           confirm_close: true,
           ondismiss: () => {
@@ -850,6 +875,21 @@ export function CheckoutPageClient() {
             finishCheckout(false);
           }
         }
+      };
+
+      if (displayConfig) {
+        rzpOptions.config = displayConfig;
+      }
+
+      const rzp = new window.Razorpay!(rzpOptions);
+
+      rzp.on("payment.success", (response) => {
+        logRazorpayClientEvent("payment_success_event", { orderId: input.orderId });
+        void handleRazorpaySuccess(response as {
+          razorpay_order_id?: string;
+          razorpay_payment_id?: string;
+          razorpay_signature?: string;
+        });
       });
 
       rzp.on("payment.failed", (response) => {
@@ -887,6 +927,20 @@ export function CheckoutPageClient() {
       setLoading(null);
       rzp.open();
       logRazorpayClientEvent("checkout_opened", { orderId: input.orderId });
+
+      stopCheckoutStatusPolling();
+      checkoutPollRef.current = setInterval(() => {
+        void waitForCheckoutPaymentConfirmation({
+          orderId: input.orderId,
+          email: input.email,
+          signedIn: input.signedIn
+        }).then((confirmed) => {
+          if (!confirmed || verifyingPaymentRef.current) return;
+          logRazorpayClientEvent("payment_confirmed_via_poll", { orderId: input.orderId });
+          router.push(buildPaymentSuccessUrl(input.orderId, input.signedIn));
+          finishCheckout(true);
+        });
+      }, 2000);
     });
   }
 
@@ -1004,7 +1058,8 @@ export function CheckoutPageClient() {
         amountPaise: Number(payload.amountPaise ?? inrToPaise(Number(payload.amount ?? 0))),
         email: checkout.email,
         signedIn: isSignedIn,
-        keyMode: payload.razorpayKeyMode ?? null
+        keyMode: payload.razorpayKeyMode ?? null,
+        useDashboardConfig: Boolean(payload.razorpayUsesDashboardConfig)
       });
       setLoading(null);
       if (paid) return;

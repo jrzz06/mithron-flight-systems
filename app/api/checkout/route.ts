@@ -27,6 +27,8 @@ import {
 } from "@/services/payments/gateway";
 import { logPaymentError } from "@/services/payments/logger";
 import { getCheckoutPricingBySlugs } from "@/services/catalog";
+import { isStaleCheckoutPayment } from "@/lib/checkout/stale-payment-intent";
+import { refreshCheckoutPaymentIntent } from "@/services/payments/refresh-checkout-intent";
 import type { CheckoutPaymentResponse, PaymentProviderId } from "@/services/payments/types";
 
 const UUID_V4 =
@@ -34,7 +36,8 @@ const UUID_V4 =
 
 async function findCheckoutByIdempotencyKey(
   idempotencyKey: string,
-  scope: { userId: string } | { guestEmail: string; guestPhone: string }
+  scope: { userId: string } | { guestEmail: string; guestPhone: string },
+  options?: { refreshIfStale?: boolean }
 ): Promise<CheckoutPaymentResponse | null> {
   const config = assertSupabaseAdminConfig(process.env);
   const filter =
@@ -43,7 +46,7 @@ async function findCheckoutByIdempotencyKey(
       : `created_by_user_id=is.null&customer_email=eq.${encodeURIComponent(scope.guestEmail.trim())}&metadata->>customer_phone=eq.${encodeURIComponent(scope.guestPhone.trim())}`;
 
   const response = await fetch(
-    `${config.url}/rest/v1/orders?select=id,order_number,total,currency,status,payment_status,metadata&${filter}&metadata->>idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`,
+    `${config.url}/rest/v1/orders?select=id,order_number,total,currency,status,payment_status,metadata,customer_email,created_at&${filter}&metadata->>idempotency_key=eq.${encodeURIComponent(idempotencyKey)}&limit=1`,
     {
       headers: {
         apikey: config.serviceRoleKey,
@@ -68,6 +71,32 @@ async function findCheckoutByIdempotencyKey(
 
   const provider = String(payment.provider ?? process.env.PAYMENT_PROVIDER ?? "razorpay");
   if (!isPaymentProviderId(provider)) return null;
+
+  const paymentCreatedAt = String(payment.created_at ?? payment.updated_at ?? order.created_at ?? "");
+  if (
+    options?.refreshIfStale !== false
+    && isStaleCheckoutPayment(paymentCreatedAt)
+    && String(payment.status ?? "") === "requires_payment"
+  ) {
+    const metadata = order.metadata && typeof order.metadata === "object" && !Array.isArray(order.metadata)
+      ? (order.metadata as Record<string, unknown>)
+      : {};
+    const customerPhone =
+      "guestPhone" in scope
+        ? scope.guestPhone
+        : typeof metadata.customer_phone === "string"
+          ? metadata.customer_phone
+          : undefined;
+
+    return refreshCheckoutPaymentIntent({
+      order,
+      payment,
+      provider,
+      customerEmail: String(order.customer_email ?? ""),
+      customerPhone,
+      actorId: "userId" in scope ? scope.userId : null
+    });
+  }
 
   const webhookPayload =
     payment.webhook_payload && typeof payment.webhook_payload === "object" && !Array.isArray(payment.webhook_payload)

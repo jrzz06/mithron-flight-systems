@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  buildRazorpayCheckoutClientConfig,
   buildRazorpayCheckoutDisplayConfig,
   loadRazorpayCheckoutScript,
   logRazorpayClientEvent,
@@ -29,10 +30,16 @@ describe("razorpay checkout helpers", () => {
     expect(config.display.preferences.show_default_blocks).toBe(true);
   });
 
-  it("normalizes Indian phone numbers to 10 digits", () => {
-    expect(normalizeRazorpayContact("+91 98765 43210")).toBe("9876543210");
-    expect(normalizeRazorpayContact("09876543210")).toBe("9876543210");
-    expect(normalizeRazorpayContact("87654321")).toBe("87654321");
+  it("skips runtime display config when dashboard config is enabled", () => {
+    expect(buildRazorpayCheckoutClientConfig(true)).toBeUndefined();
+    expect(buildRazorpayCheckoutClientConfig(false)).toEqual(buildRazorpayCheckoutDisplayConfig());
+  });
+
+  it("normalizes Indian phone numbers to +91 E.164", () => {
+    expect(normalizeRazorpayContact("+91 98765 43210")).toBe("+919876543210");
+    expect(normalizeRazorpayContact("09876543210")).toBe("+919876543210");
+    expect(normalizeRazorpayContact("919876543210")).toBe("+919876543210");
+    expect(normalizeRazorpayContact("87654321")).toBe("+87654321");
   });
 
   it("logs client events without secrets", () => {

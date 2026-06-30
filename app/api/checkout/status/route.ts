@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { requireClientAuditToken } from "@/lib/api/require-client-audit-token";
 import { createClient } from "@/lib/server";
+import { fetchAdminRecordsByColumn } from "@/services/admin-actions";
 import { fetchCheckoutOrderStatus } from "@/services/customer-orders";
+import { applyPaymentEvent } from "@/services/payments/confirm-payment";
+import { isPaymentProviderId } from "@/services/payments/gateway";
+import { logPaymentEvent } from "@/services/payments/logger";
+import {
+  hasSuccessfulGatewayPayment,
+  reconcilePaymentWithGateway
+} from "@/services/payments/reconcile-gateway-payment";
+import type { PaymentProviderId } from "@/services/payments/types";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -33,7 +42,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const status = userId
+  let status = userId
     ? await fetchCheckoutOrderStatus(orderId, { userId })
     : await fetchCheckoutOrderStatus(orderId, { guestEmail });
 
@@ -41,19 +50,73 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
-  const paid =
+  let paid =
     status.paymentStatus === "succeeded" ||
     status.orderPaymentStatus === "succeeded" ||
     status.status === "paid";
 
+  if (
+    !paid
+    && (status.paymentStatus === "requires_payment" || status.orderPaymentStatus === "requires_payment")
+  ) {
+    const payments = await fetchAdminRecordsByColumn("payments", "order_id", orderId);
+    const payment = payments.find((row) => !["failed", "cancelled", "refunded"].includes(String(row.status ?? "")))
+      ?? payments[0];
+    const provider = String(payment?.provider ?? "").trim().toLowerCase();
+    const intentId = String(payment?.provider_intent_id ?? "").trim();
+
+    if (payment && intentId && isPaymentProviderId(provider) && provider !== "stub") {
+      try {
+        const reconciled = await reconcilePaymentWithGateway({
+          provider: provider as PaymentProviderId,
+          intentId,
+          expectedAmountInr: Number(payment.amount ?? status.total ?? 0),
+          expectedCurrency: String(payment.currency ?? "INR"),
+          maxAttempts: 2,
+          delayMs: 500
+        });
+
+        if (hasSuccessfulGatewayPayment(reconciled)) {
+          const result = await applyPaymentEvent({
+            provider: provider as PaymentProviderId,
+            event: reconciled!,
+            source: "verify",
+            eventId: `status-poll:${provider}:${reconciled!.paymentId ?? intentId}`
+          });
+
+          if (result.ok) {
+            logPaymentEvent("payment_confirmed_via_status_poll", { orderId, provider });
+            status = userId
+              ? await fetchCheckoutOrderStatus(orderId, { userId })
+              : await fetchCheckoutOrderStatus(orderId, { guestEmail });
+            if (status) {
+              paid =
+                status.paymentStatus === "succeeded" ||
+                status.orderPaymentStatus === "succeeded" ||
+                status.status === "paid";
+            } else {
+              paid = true;
+            }
+          }
+        }
+      } catch (error) {
+        logPaymentEvent("checkout_status_reconcile_skipped", {
+          orderId,
+          provider,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
-    orderId: status.orderId,
-    orderNumber: status.orderNumber,
-    total: status.total,
-    status: status.status,
-    paymentStatus: status.paymentStatus,
-    orderPaymentStatus: status.orderPaymentStatus,
+    orderId: status?.orderId ?? orderId,
+    orderNumber: status?.orderNumber ?? orderId,
+    total: status?.total ?? 0,
+    status: status?.status ?? "",
+    paymentStatus: status?.paymentStatus ?? "",
+    orderPaymentStatus: status?.orderPaymentStatus ?? "",
     paid
   });
 }

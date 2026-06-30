@@ -34,13 +34,21 @@ export function logRazorpayClientEvent(
   console.info("[razorpay-checkout]", payload);
 }
 
-/** Normalize phone for Razorpay UPI prefill — Indian numbers as 10 digits. */
+/** Normalize phone for Razorpay prefill — Indian numbers as +91XXXXXXXXXX. */
 export function normalizeRazorpayContact(phone: string) {
   const digits = phone.replace(/[\s\-().+]/g, "");
-  if (digits.length >= 10) {
-    return digits.slice(-10);
+  if (!digits) return "";
+
+  if (digits.length >= 12 && digits.startsWith("91")) {
+    return `+91${digits.slice(-10)}`;
   }
-  return digits;
+
+  const local = digits.length >= 10 ? digits.slice(-10) : digits;
+  if (local.length === 10) {
+    return `+91${local}`;
+  }
+
+  return local.startsWith("+") ? local : `+${local}`;
 }
 
 export function buildRazorpayCheckoutDisplayConfig() {
@@ -56,6 +64,12 @@ export function buildRazorpayCheckoutDisplayConfig() {
       preferences: { show_default_blocks: true }
     }
   };
+}
+
+/** Skip runtime display config when a dashboard checkout_config_id is set on the order. */
+export function buildRazorpayCheckoutClientConfig(useDashboardConfig: boolean) {
+  if (useDashboardConfig) return undefined;
+  return buildRazorpayCheckoutDisplayConfig();
 }
 
 export function isRazorpayQrEligibleViewport() {

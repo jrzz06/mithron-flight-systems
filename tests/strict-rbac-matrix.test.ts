@@ -46,6 +46,7 @@ describe("strict enterprise RBAC matrix", () => {
     expect(resolveApiRoutePolicy("/api/health")?.kind).toBe("public");
     expect(resolveApiRoutePolicy("/api/cart/pricing")?.kind).toBe("public");
     expect(resolveApiRoutePolicy("/api/checkout/enquiry")?.kind).toBe("session_or_guest");
+    expect(resolveApiRoutePolicy("/api/checkout/status")?.kind).toBe("session_or_guest");
     expect(resolveApiRoutePolicy("/api/account/addresses")?.kind).toBe("session");
     expect(resolveApiRoutePolicy("/api/admin/archive-movements")?.kind).toBe("bearer");
     expect(resolveApiRoutePolicy("/api/security/denials")?.kind).toBe("staff");

@@ -50,6 +50,8 @@ export function buildCheckoutPaymentResponse(input: {
       input.provider === "razorpay" && env.RAZORPAY_KEY_ID?.trim()
         ? razorpayKeyMode(env.RAZORPAY_KEY_ID)
         : null,
+    razorpayUsesDashboardConfig:
+      input.provider === "razorpay" && Boolean(env.RAZORPAY_CHECKOUT_CONFIG_ID?.trim()),
     cashfreeMode: input.provider === "cashfree" ? cashfreeCheckoutMode(env) : null,
     amountPaise: input.intent.amountPaise ?? inrToPaise(input.amount)
   };

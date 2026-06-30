@@ -243,7 +243,6 @@ export function resolveApiRoutePolicy(pathname: string): ApiRoutePolicy | null {
     || normalized === "/api/payments/intent"
     || matchesApiPrefix(normalized, "/api/auth/audit")
     || normalized === "/api/auth/provision"
-    || normalized === "/api/checkout/status"
   ) {
     return { kind: "session" };
   }
