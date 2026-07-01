@@ -1727,7 +1727,7 @@
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
   }
 
   .productShelfSection[data-shelf-tone="world"] .productShelfGrid,
@@ -1735,7 +1735,7 @@
   .productShelfSection[data-shelf-tone="global"] .productShelfGrid {
     overflow-x: auto;
     overflow-y: hidden;
-    touch-action: pan-x;
+    touch-action: pan-x pan-y;
   }
 
   .productShelfGrid::-webkit-scrollbar {
@@ -1745,7 +1745,6 @@
   .productCard,
   .guideCard {
     scroll-snap-align: start;
-    touch-action: pan-x;
   }
 }
 

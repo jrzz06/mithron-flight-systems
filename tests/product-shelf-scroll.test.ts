@@ -9,9 +9,10 @@ function source(path: string) {
 }
 
 describe("product shelf mobile scroll", () => {
-  it("enables horizontal touch scrolling on mobile shelf grids", () => {
+  it("enables horizontal touch scrolling on mobile shelf grids without blocking vertical page scroll", () => {
     const css = source("sections/home/home-landing-composite.module.css");
-    expect(css).toContain("touch-action: pan-x");
+    expect(css).toContain("touch-action: pan-x pan-y");
+    expect(css).not.toMatch(/\.productCard[\s\S]*touch-action:\s*pan-x;/);
     expect(css).toMatch(/productShelfSection\[data-shelf-tone="global"\] \.productShelfGrid[\s\S]*overflow-x: auto/);
   });
 
