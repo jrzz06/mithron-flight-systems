@@ -2,6 +2,7 @@ import type { Product } from "@/config/types";
 import {
   catalogCategoryDefinitions,
   filterProductsForCategorySlug,
+  resolveDroneCareStorefrontHref,
   type CatalogCategoryDefinition,
   type CatalogCategorySlug
 } from "@/lib/catalog-categories";
@@ -99,7 +100,7 @@ function buildMegaMenu(definition: CatalogCategoryDefinition, products: Product[
       name: definition.label,
       eyebrow: "Mithron catalog",
       body: `Browse published ${definition.label.toLowerCase()} from the live Mithron catalog.`,
-      href: definition.href,
+      href: resolveDroneCareStorefrontHref(definition.href),
       image: products[0]?.image.src ?? "/media/mithron/interests/components.webp",
       imageAlt: `${definition.label} catalog`,
       specs: [{ label: "Systems", value: "0 published" }],
@@ -111,7 +112,7 @@ function buildMegaMenu(definition: CatalogCategoryDefinition, products: Product[
     type: "mega",
     key: definition.menuKey,
     label: definition.label,
-    href: definition.href,
+    href: resolveDroneCareStorefrontHref(definition.href),
     eyebrow: `Drone World / ${definition.label}`,
     columnOneTitle: "Published systems",
     columnOne,
@@ -132,7 +133,7 @@ function buildCompactMenu(definition: CatalogCategoryDefinition, products: Produ
     type: "compact",
     key: definition.menuKey,
     label: definition.label,
-    href: definition.href,
+    href: resolveDroneCareStorefrontHref(definition.href),
     eyebrow: "Drone Care / Hardware",
     items
   };
@@ -146,7 +147,7 @@ function buildFranchiseMenu(definition: CatalogCategoryDefinition, products: Pro
     type: "franchise",
     key: definition.menuKey,
     label: definition.label,
-    href: definition.href,
+    href: resolveDroneCareStorefrontHref(definition.href),
     eyebrow: "Partner ecosystem",
     headline: "Build a local Mithron service and deployment footprint.",
     body: "Partner pathways connect product discovery, Drone Care support, training, exports, and field operations without turning the nav into a sales form.",
@@ -162,7 +163,7 @@ function buildFranchiseMenu(definition: CatalogCategoryDefinition, products: Pro
           name: definition.label,
           eyebrow: "Global catalog",
           body: "Published global products from the live Mithron catalog.",
-          href: definition.href,
+          href: resolveDroneCareStorefrontHref(definition.href),
           image: "/media/mithron/interests/components.webp",
           imageAlt: "Mithron global products catalog",
           specs: [{ label: "Systems", value: "0 published" }],

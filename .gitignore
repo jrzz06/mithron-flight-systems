@@ -34,8 +34,17 @@ reports/*.md
 
 # test outputs
 test-results/
+test-output/
 playwright-report/
 playwright-report-production/
+tools/e2e-workflow-artifacts/
+tools/_tmp-*
+
+# migration/tool generated reports (regenerate via npm scripts)
+data/*-report.json
+data/full-inventory-scan.json
+data/product-parity-report.json
+data/wix-vs-storefront-gap.json
 
 # misc
 .DS_Store

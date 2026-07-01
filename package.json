@@ -88,7 +88,6 @@
   "license": "UNLICENSED",
   "description": "",
   "dependencies": {
-    "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",

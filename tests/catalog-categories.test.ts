@@ -6,8 +6,12 @@ import {
   getHomepageShelfCatalogHref,
   getProductsCatalogHref,
   interestSlugToCategorySlug,
+  isDroneCareLegacyCatalogHref,
+  isDroneCareStorefrontAlias,
   parseProductsCategoryParam,
-  resolveCategoryHrefForInterest
+  resolveCategoryHrefForInterest,
+  resolveDroneCareStorefrontHref,
+  ACCESSORIES_CATALOG_HREF
 } from "@/lib/catalog-categories";
 import type { Product } from "@/config/types";
 import { getProducts, getProductsForCategorySlug } from "@/services/catalog";
@@ -68,12 +72,23 @@ describe("catalog categories", () => {
   it("builds homepage shelf catalog routes through the products catalog query", () => {
     expect(getHomepageShelfCatalogHref("drone-world")).toBe("/products");
     expect(getHomepageShelfCatalogHref("drone-care")).toBe("/products?category=accessories");
-    expect(getHomepageShelfCatalogHref("global-products")).toBe("/products?category=global-products");
+    expect(getHomepageShelfCatalogHref("global-products")).toBe("/category/global-products");
+    expect(getProductsCatalogHref("global-products")).toBe("/category/global-products");
     expect(getProductsCatalogHref("accessories")).toBe("/products?category=accessories");
     expect(parseProductsCategoryParam("accessories")).toBe("accessories");
     expect(parseProductsCategoryParam("global-product")).toBe("global-products");
     expect(parseProductsCategoryParam("global-products")).toBe("global-products");
     expect(parseProductsCategoryParam("unknown")).toBeNull();
+  });
+
+  it("maps Drone Care storefront aliases to the accessories category page", () => {
+    expect(resolveDroneCareStorefrontHref("/dronecare")).toBe(ACCESSORIES_CATALOG_HREF);
+    expect(resolveDroneCareStorefrontHref("/drone-care")).toBe(ACCESSORIES_CATALOG_HREF);
+    expect(resolveDroneCareStorefrontHref("/drone_care")).toBe(ACCESSORIES_CATALOG_HREF);
+    expect(resolveDroneCareStorefrontHref("/product/mithron-care-plus")).toBe(ACCESSORIES_CATALOG_HREF);
+    expect(resolveDroneCareStorefrontHref("/category/agri-drones")).toBe("/category/agri-drones");
+    expect(isDroneCareStorefrontAlias("/DroneCare/")).toBe(true);
+    expect(isDroneCareLegacyCatalogHref("/product/mithron-care-plus")).toBe(true);
   });
 
   it("lists every accessory by category without family dedupe", () => {

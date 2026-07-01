@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CatalogPage } from "@/sections/catalog/catalog-page";
 import {
@@ -30,6 +31,10 @@ function CatalogPageFallback() {
 
 async function ProductsPageContent({ categoryParam }: { categoryParam?: string }) {
   const categorySlug = parseProductsCategoryParam(categoryParam);
+
+  if (categorySlug === "global-products") {
+    redirect(getCatalogCategoryDefinition("global-products").href);
+  }
 
   if (categorySlug) {
     const definition = getCatalogCategoryDefinition(categorySlug);

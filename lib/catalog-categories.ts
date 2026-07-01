@@ -80,9 +80,50 @@ export function parseProductsCategoryParam(value: string | undefined): CatalogCa
 
 export function getProductsCatalogHref(categorySlug?: CatalogCategorySlug | null) {
   if (!categorySlug) return "/products";
+  if (categorySlug === "global-products") {
+    return getCatalogCategoryDefinition("global-products").href;
+  }
   return `/products?category=${categorySlug}`;
 }
 
 export function getHomepageShelfCatalogHref(shelf: HomepageShelfCatalogKey) {
   return getProductsCatalogHref(homepageShelfCategorySlug[shelf]);
+}
+
+export const ACCESSORIES_CATALOG_HREF = "/category/accessories";
+
+const DRONE_CARE_STOREFRONT_PATH_ALIASES = new Set([
+  "/dronecare",
+  "/drone-care",
+  "/drone_care"
+]);
+
+/** Legacy service landing paths that should open the accessories catalog instead. */
+const DRONE_CARE_LEGACY_CATALOG_HREFS = new Set([
+  "/product/mithron-care-plus"
+]);
+
+function normalizeStorefrontPath(href: string) {
+  const trimmed = href.trim();
+  if (!trimmed) return "";
+  const withoutQuery = trimmed.split("?")[0]?.split("#")[0] ?? trimmed;
+  return withoutQuery.replace(/\/+$/, "").toLowerCase();
+}
+
+export function isDroneCareStorefrontAlias(href: string) {
+  return DRONE_CARE_STOREFRONT_PATH_ALIASES.has(normalizeStorefrontPath(href));
+}
+
+export function isDroneCareLegacyCatalogHref(href: string) {
+  return DRONE_CARE_LEGACY_CATALOG_HREFS.has(normalizeStorefrontPath(href));
+}
+
+/** Map Drone Care storefront aliases to the accessories category page. */
+export function resolveDroneCareStorefrontHref(href: string, fallback = ACCESSORIES_CATALOG_HREF) {
+  const trimmed = href.trim();
+  if (!trimmed) return fallback;
+  if (isDroneCareStorefrontAlias(trimmed) || isDroneCareLegacyCatalogHref(trimmed)) {
+    return ACCESSORIES_CATALOG_HREF;
+  }
+  return trimmed;
 }

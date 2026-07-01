@@ -8,6 +8,7 @@ import {
   type HomepageShelfCms
 } from "@/config/homepage-cms";
 import { sanitizePublicCmsHref } from "@/lib/cms/safe-href";
+import { resolveDroneCareStorefrontHref, isDroneCareLegacyCatalogHref, isDroneCareStorefrontAlias } from "@/lib/catalog-categories";
 import { getSupabaseAdminConfig } from "@/lib/env";
 import { isCmsStrictMode } from "@/lib/cms/strict-mode";
 
@@ -36,7 +37,7 @@ function sanitizeCmsHref(value: unknown, fallback: string): string {
 
 function mergeHrefField(stored: string | undefined, fallback: string) {
   const merged = mergeField(stored, fallback);
-  return sanitizeCmsHref(merged, fallback);
+  return resolveDroneCareStorefrontHref(sanitizeCmsHref(merged, fallback), fallback);
 }
 
 function sanitizeTestimonialsTitle(title: string, fallback: string) {
@@ -70,7 +71,11 @@ function sanitizeLegacyShelfBanner(shelf: HomepageShelfCms, fallback: HomepageSh
     heroBody: legacyBodies.some((snippet) => shelf.heroBody.includes(snippet)) ? fallback.heroBody : shelf.heroBody,
     featureCta: shelf.featureCta === "Visit Mithron Smart" ? fallback.featureCta : shelf.featureCta,
     heroCtaHref:
-      shelf.heroCtaHref === "https://www.mithronsmart.com" ? fallback.heroCtaHref : shelf.heroCtaHref
+      shelf.heroCtaHref === "https://www.mithronsmart.com"
+      || isDroneCareLegacyCatalogHref(shelf.heroCtaHref)
+      || isDroneCareStorefrontAlias(shelf.heroCtaHref)
+        ? fallback.heroCtaHref
+        : shelf.heroCtaHref
   };
 }
 

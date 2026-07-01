@@ -6,7 +6,6 @@ import type { WixProductSnapshot } from "../wix/catalog-client.ts";
 import { normalizeCatalogName, normalizeIdentity, slugify } from "../wix/catalog-normalize.ts";
 import {
   accessorySlugOverrides,
-  GLOBAL_PRODUCTS_CATEGORY,
   inferMissionCategory,
   isDroneAircraft,
   isGlobalProductsCategory,

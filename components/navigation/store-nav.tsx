@@ -12,7 +12,7 @@ import { MithronBrandMark } from "@/components/brand/mithron-brand-mark";
 import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
 import type { NavigationNode } from "@/config/types";
 import type { EnterpriseMenuConfig, EnterpriseMenuOption, FeaturedMenuCard, MegaMenuConfig } from "@/lib/nav-menu-types";
-import { catalogCategoryDefinitions } from "@/lib/catalog-categories";
+import { catalogCategoryDefinitions, ACCESSORIES_CATALOG_HREF } from "@/lib/catalog-categories";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { useUiStore } from "@/store/ui";
 
@@ -265,8 +265,8 @@ export function StoreNav({
             </nav>
             <p className="mithron-topbar__announcement">
               Drone Care, spares, and training paths are available now.
-              <Link href="/product/mithron-care-plus" className="mithron-topbar__announcement-link">
-                Explore Mithron Care
+              <Link href={ACCESSORIES_CATALOG_HREF} className="mithron-topbar__announcement-link">
+                Explore Drone Care
               </Link>
             </p>
             <div className="mithron-topbar__locale" aria-label="Store region and currency">

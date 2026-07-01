@@ -11,6 +11,7 @@ import {
   type ProductSupportContent
 } from "@/config/storefront-content";
 import { getSupabaseAdminConfig } from "@/lib/env";
+import { resolveDroneCareStorefrontHref } from "@/lib/catalog-categories";
 import type { HeroSlide, Interest, NavigationNode } from "@/config/types";
 import { hydrateStorefrontMediaAssets } from "@/config/generated-assets";
 import {
@@ -330,7 +331,9 @@ function mediaFromColumns(row: CmsRow, key: "image" | "poster" | "video", fallba
 }
 
 function normalizePublicHref(value: unknown) {
-  return optionalString(value) ?? "#";
+  const href = optionalString(value) ?? "#";
+  if (href === "#") return href;
+  return resolveDroneCareStorefrontHref(href, href);
 }
 
 function optionalNumber(value: unknown) {

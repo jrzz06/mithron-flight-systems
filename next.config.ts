@@ -101,7 +101,22 @@ const nextConfig: NextConfig = {
       { source: "/mapping", destination: "/category/survey-drones", permanent: true },
       { source: "/surveillance", destination: "/category/surveillance-drones", permanent: true },
       { source: "/accessories", destination: "/category/accessories", permanent: true },
+      { source: "/dronecare", destination: "/category/accessories", permanent: true },
+      { source: "/drone-care", destination: "/category/accessories", permanent: true },
+      { source: "/drone_care", destination: "/category/accessories", permanent: true },
       { source: "/industrial", destination: "/category/global-products", permanent: true },
+      {
+        source: "/products",
+        has: [{ type: "query", key: "category", value: "global-products" }],
+        destination: "/category/global-products",
+        permanent: true
+      },
+      {
+        source: "/products",
+        has: [{ type: "query", key: "category", value: "global-product" }],
+        destination: "/category/global-products",
+        permanent: true
+      },
       { source: "/supplier/orders", destination: "/supplier", permanent: true }
     ];
   },

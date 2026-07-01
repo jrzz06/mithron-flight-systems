@@ -1,4 +1,5 @@
 import { CmsValidationError } from "@/services/cms-crud";
+import { resolveDroneCareStorefrontHref } from "@/lib/catalog-categories";
 
 const BLOCKED_SCHEME_PATTERN = /^\s*(javascript:|data:|vbscript:|file:)/i;
 const RELATIVE_HREF_PATTERN = /^\/(?!\/)/;
@@ -43,7 +44,7 @@ export function sanitizePublicCmsHref(value: unknown, fallback: string): string 
   if (typeof value !== "string" || !value.trim()) return fallback;
 
   try {
-    return assertValidCmsHref(value, "Link");
+    return resolveDroneCareStorefrontHref(assertValidCmsHref(value, "Link"), fallback);
   } catch {
     return fallback;
   }
