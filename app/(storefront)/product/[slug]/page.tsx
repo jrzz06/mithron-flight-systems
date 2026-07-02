@@ -6,13 +6,13 @@ import { getProductDescriptionHtml } from "@/lib/product-detail-content";
 import { buildProductMediaPlan } from "@/lib/product-detail-experience";
 import { getProductBySlug, getProductStaticSlugs, loadProductForPage } from "@/services/catalog";
 import { CatalogDataErrorPanel } from "@/components/layout/catalog-integrity-notice";
-import { ProductConfigurator, type ProductConfiguratorModel } from "@/sections/product/product-configurator";
+import { ProductPurchaseExperience } from "@/sections/product/product-purchase-experience";
+import type { ProductConfiguratorModel } from "@/sections/product/product-configurator";
 import { ProductDetailHeader } from "@/sections/product/product-detail-header";
 import { ProductReviewsLazySection } from "@/sections/product/product-below-fold";
 import { ProductImmersiveGallery } from "@/sections/product/showcase/product-immersive-gallery";
 import { ProductRichDescriptionSection } from "@/sections/product/showcase/product-rich-description";
 import { ProductShowcaseHero } from "@/sections/product/showcase/product-showcase-hero";
-import { ProductStickyPurchase } from "@/sections/product/showcase/product-sticky-purchase";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildProductStructuredData } from "@/lib/structured-data";
 import { getPublicCmsSnapshot, emptySupabaseOnlySnapshot } from "@/services/cms";
@@ -90,15 +90,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <ProductShowcaseHero
         gallery={<ProductImmersiveGallery mediaPlan={mediaPlan} />}
         purchase={(
-          <ProductStickyPurchase
+          <ProductPurchaseExperience
+            product={buildProductConfiguratorModel(product)}
             summary={{
               name: product.name,
               price: product.price,
               compareAt: product.compareAt
             }}
-          >
-            <ProductConfigurator product={buildProductConfiguratorModel(product)} />
-          </ProductStickyPurchase>
+          />
         )}
       />
       <ProductRichDescriptionSection html={descriptionHtml} />

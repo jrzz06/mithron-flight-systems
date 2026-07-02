@@ -2,13 +2,14 @@
 
 import { Minus, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Bundle, MediaAsset, ProductVariant } from "@/config/types";
 import { cn, formatINR } from "@/lib/utils";
 import { formatAvailability } from "@/lib/product-spec-text";
 import { deriveProductSku } from "@/lib/product-sku";
+import { useRegisterProductPurchase } from "@/sections/product/product-purchase-context";
 import { useCartStore } from "@/store/cart";
 import styles from "./product-detail.module.css";
 
@@ -95,7 +96,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
     : "In stock";
   const buyBoxTagline = product.tagline?.trim() ?? "";
 
-  const commitPurchase = async (mode: "cart" | "checkout") => {
+  const commitPurchase = useCallback(async (mode: "cart" | "checkout") => {
     const bundle = selectedBundle;
     if (!bundle || isAdding) return;
 
@@ -124,7 +125,40 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
     }
 
     window.setTimeout(() => setIsAdding(false), 400);
-  };
+  }, [
+    addItemWithQuantity,
+    isAdding,
+    product.bundles,
+    product.category,
+    product.chargeTax,
+    product.image.src,
+    product.name,
+    product.slug,
+    product.taxGroup,
+    product.taxRate,
+    product.taxIncluded,
+    product.variants,
+    quantity,
+    router,
+    selectedBundle,
+    selectedVariant?.name,
+    setCartOpen
+  ]);
+
+  useRegisterProductPurchase(
+    useMemo(
+      () => ({
+        addToCart: () => {
+          void commitPurchase("cart");
+        },
+        buyNow: () => {
+          void commitPurchase("checkout");
+        },
+        isAdding
+      }),
+      [commitPurchase, isAdding]
+    )
+  );
 
   return (
     <aside className={cn("product-configurator", styles.buyBox, styles.buyBoxPremium)}>
@@ -201,7 +235,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
           <QuantityStepper value={quantity} onChange={setQuantity} />
         </div>
 
-        <div className={styles.purchaseActions}>
+        <div className={styles.purchaseActions} data-product-purchase-actions>
           <Button
             variant="accent"
             size="lg"
