@@ -14,7 +14,7 @@ import { createClient } from "@/lib/server";
 import { CUSTOMER_EMPTY_MESSAGES, customerEnquiryStatus, customerFulfillmentStatus, customerOrderStatus } from "@/lib/customer/copy";
 import { formatItemCount, formatOrderDate, formatOrderReference, orderItemCount } from "@/lib/customer/display";
 import { formatEnquiryReference, listOwnEnquiries } from "@/services/enquiries";
-import { listCustomerAddresses } from "@/services/customer-addresses";
+import { listCustomerAddresses } from "@/services/customer-address-actions";
 import { listCustomerOrders } from "@/services/customer-orders";
 import { formatINR } from "@/lib/utils";
 
@@ -59,7 +59,7 @@ export default async function AccountPage() {
     ? await Promise.all([
         listCustomerOrders(userId),
         listOwnEnquiries(userId),
-        listCustomerAddresses(userId),
+        listCustomerAddresses(supabase),
         listRecentNotifications(supabase, userId)
       ])
     : [[], [], [], []];

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkDistributedRateLimit } from "@/lib/rate-limit-redis";
 import { createClient } from "@/lib/server";
-import { listCustomerAddresses } from "@/services/customer-addresses";
+import { listCustomerAddresses } from "@/services/customer-address-actions";
 
 export async function GET() {
   const supabase = await createClient();
@@ -14,6 +14,6 @@ export async function GET() {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
-  const addresses = await listCustomerAddresses(userId);
+  const addresses = await listCustomerAddresses(supabase);
   return NextResponse.json({ addresses });
 }

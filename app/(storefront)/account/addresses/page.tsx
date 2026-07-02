@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AddressManager } from "@/components/account/address-manager";
 import { AccountPage as AccountPageShell } from "@/components/account";
 import { createClient } from "@/lib/server";
-import { listCustomerAddresses } from "@/services/customer-addresses";
+import { listCustomerAddresses } from "@/services/customer-address-actions";
 
 export default async function AccountAddressesPage() {
   const supabase = await createClient();
@@ -10,7 +10,7 @@ export default async function AccountAddressesPage() {
   const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
   if (!userId) redirect("/login?next=/account/addresses");
 
-  const addresses = await listCustomerAddresses(userId);
+  const addresses = await listCustomerAddresses(supabase);
 
   return (
     <AccountPageShell>

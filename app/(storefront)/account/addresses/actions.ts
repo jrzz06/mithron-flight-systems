@@ -2,18 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/server";
-import { createCustomerAddress, deleteCustomerAddress, updateCustomerAddress } from "@/services/customer-addresses";
-
-async function currentUserId() {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
-  if (!userId) throw new Error("Authentication required.");
-  return userId;
-}
+import {
+  createCustomerAddress,
+  deleteCustomerAddress,
+  updateCustomerAddress
+} from "@/services/customer-address-actions";
 
 export async function createAddressFormAction(formData: FormData) {
-  const userId = await currentUserId();
+  const supabase = await createClient();
   const billingSameAsShipping = formData.get("billing_same_as_shipping") !== "false";
   const isDefault = formData.get("is_default") === "on";
 
@@ -35,7 +31,7 @@ export async function createAddressFormAction(formData: FormData) {
     throw new Error("Enter a complete shipping address.");
   }
 
-  await createCustomerAddress(userId, shippingInput, userId);
+  await createCustomerAddress(shippingInput, supabase);
 
   if (!billingSameAsShipping) {
     const billingInput = {
@@ -61,31 +57,30 @@ export async function createAddressFormAction(formData: FormData) {
       throw new Error("Enter a complete billing address.");
     }
 
-    await createCustomerAddress(userId, billingInput, userId);
+    await createCustomerAddress(billingInput, supabase);
   }
 
   revalidatePath("/account/addresses");
 }
 
 export async function deleteAddressFormAction(formData: FormData) {
-  const userId = await currentUserId();
+  const supabase = await createClient();
   const addressId = String(formData.get("address_id") ?? "");
-  await deleteCustomerAddress(userId, addressId, userId);
+  await deleteCustomerAddress(addressId, supabase);
   revalidatePath("/account/addresses");
 }
 
 export async function setDefaultAddressFormAction(formData: FormData) {
-  const userId = await currentUserId();
+  const supabase = await createClient();
   const addressId = String(formData.get("address_id") ?? "");
-  await updateCustomerAddress(userId, addressId, { isDefault: true }, userId);
+  await updateCustomerAddress(addressId, { isDefault: true }, supabase);
   revalidatePath("/account/addresses");
 }
 
 export async function updateAddressFormAction(formData: FormData) {
-  const userId = await currentUserId();
+  const supabase = await createClient();
   const addressId = String(formData.get("address_id") ?? "");
   await updateCustomerAddress(
-    userId,
     addressId,
     {
       label: String(formData.get("label") ?? ""),
@@ -96,7 +91,7 @@ export async function updateAddressFormAction(formData: FormData) {
       isBilling: formData.get("is_billing") === "on",
       isShipping: formData.get("is_shipping") === "on"
     },
-    userId
+    supabase
   );
   revalidatePath("/account/addresses");
 }
