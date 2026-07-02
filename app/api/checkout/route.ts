@@ -14,7 +14,7 @@ import {
   updateAdminRecord
 } from "@/services/admin-actions";
 import { buildCustomerCheckoutDraft } from "@/services/orders";
-import { verifyCheckoutStockAvailability, CheckoutStockVerificationError, CheckoutWarehouseConfigurationError, prepareCheckoutStock } from "@/services/checkout-stock";
+import { CheckoutStockVerificationError, CheckoutWarehouseConfigurationError, prepareCheckoutStock } from "@/services/checkout-stock";
 import {
   buildCheckoutPaymentResponse,
   markCheckoutPaymentInitiated
@@ -224,9 +224,17 @@ export async function POST(request: Request) {
   }
 
   let stockItems;
+  let catalog;
   try {
-    stockItems = await prepareCheckoutStock(body.items);
+    [stockItems, catalog] = await Promise.all([
+      prepareCheckoutStock(body.items),
+      getCheckoutPricingBySlugs(body.items.map((item) => item.productSlug))
+    ]);
   } catch (error) {
+    if (error instanceof CheckoutWarehouseConfigurationError) {
+      logPaymentError("checkout_stock_verification_failed", error);
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     const internal = error instanceof Error ? error.message : "Unable to resolve product inventory.";
     const stockContext = error instanceof CheckoutStockVerificationError
       ? {
@@ -241,22 +249,18 @@ export async function POST(request: Request) {
           )
         }
       : {};
-    logPaymentError("checkout_stock_verification_failed", error, stockContext);
-    if (error instanceof CheckoutWarehouseConfigurationError) {
-      return NextResponse.json({ error: error.message }, { status: 503 });
-    }
-    const isStockError = error instanceof CheckoutStockVerificationError || /insufficient stock|out of stock/i.test(internal);
-    return NextResponse.json(
-      { error: isStockError ? "One or more items are out of stock or unavailable." : "Unable to process your order at this time." },
-      { status: 409 }
+    logPaymentError(
+      error instanceof CheckoutStockVerificationError ? "checkout_stock_verification_failed" : "checkout_catalog_load_failed",
+      error,
+      stockContext
     );
-  }
-
-  let catalog;
-  try {
-    catalog = await getCheckoutPricingBySlugs(body.items.map((item) => item.productSlug));
-  } catch (error) {
-    logPaymentError("checkout_catalog_load_failed", error);
+    const isStockError = error instanceof CheckoutStockVerificationError || /insufficient stock|out of stock/i.test(internal);
+    if (isStockError) {
+      return NextResponse.json(
+        { error: "One or more items are out of stock or unavailable." },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: "Unable to load product pricing. Please try again shortly." }, { status: 503 });
   }
 

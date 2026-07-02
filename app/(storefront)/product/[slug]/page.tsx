@@ -4,19 +4,17 @@ import { Suspense } from "react";
 import type { Product } from "@/config/types";
 import { getProductDescriptionHtml } from "@/lib/product-detail-content";
 import { buildProductMediaPlan } from "@/lib/product-detail-experience";
-import { getProductBySlug, getProductStaticSlugs, loadProductForPage } from "@/services/catalog";
+import { getProductStaticSlugs, loadProductForPage } from "@/services/catalog";
 import { CatalogDataErrorPanel } from "@/components/layout/catalog-integrity-notice";
 import { ProductPurchaseExperience } from "@/sections/product/product-purchase-experience";
 import type { ProductConfiguratorModel } from "@/sections/product/product-configurator";
 import { ProductDetailHeader } from "@/sections/product/product-detail-header";
-import { ProductReviewsLazySection } from "@/sections/product/product-below-fold";
+import { ProductReviewsAsyncSection } from "@/sections/product/product-reviews-async-section";
 import { ProductImmersiveGallery } from "@/sections/product/showcase/product-immersive-gallery";
 import { ProductRichDescriptionSection } from "@/sections/product/showcase/product-rich-description";
 import { ProductShowcaseHero } from "@/sections/product/showcase/product-showcase-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildProductStructuredData } from "@/lib/structured-data";
-import { getProductReviewsCmsSlice, emptySupabaseOnlySnapshot } from "@/services/cms";
-import { getProductPageReviews } from "@/services/product-reviews";
 import { buildProductMetadata } from "@/services/product-metadata";
 import showcaseStyles from "@/sections/product/showcase/product-showcase.module.css";
 
@@ -53,8 +51,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
-  return buildProductMetadata(product ?? null);
+  const pageLoad = await loadProductForPage(slug);
+  return buildProductMetadata(pageLoad.status === "ready" ? pageLoad.product : null);
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
@@ -66,22 +64,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const product = pageLoad.product;
-  const cmsResult = await Promise.allSettled([getProductReviewsCmsSlice()]);
-  if (cmsResult[0].status === "rejected") {
-    const message = cmsResult[0].reason instanceof Error ? cmsResult[0].reason.message : String(cmsResult[0].reason);
-    console.warn(`[product-page] CMS reviews load failed for ${slug}: ${message}`);
-  }
-
-  const cmsReviews = cmsResult[0].status === "fulfilled" ? cmsResult[0].value : emptySupabaseOnlySnapshot.productSupport.reviews;
   const structuredData = buildProductStructuredData(product);
   const mediaPlan = buildProductMediaPlan(product);
   const descriptionHtml = getProductDescriptionHtml(product);
-  const reviewPayload = getProductPageReviews({
-    slug: product.slug,
-    productName: product.name,
-    sourceCatalogId: product.sourceCatalogId,
-    cmsReviews
-  });
 
   return (
     <article className={`product-detail-page ${showcaseStyles.page}`}>
@@ -101,15 +86,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
         )}
       />
       <ProductRichDescriptionSection html={descriptionHtml} />
-      {reviewPayload.reviews.length > 0 ? (
-        <Suspense fallback={<div className="min-h-[320px] animate-pulse bg-[var(--ds-skeleton)]" aria-hidden="true" />}>
-          <ProductReviewsLazySection
-            productName={product.name}
-            reviews={reviewPayload.reviews}
-            summary={reviewPayload.summary}
-          />
-        </Suspense>
-      ) : null}
+      <Suspense fallback={<div className="min-h-[320px] animate-pulse bg-[var(--ds-skeleton)]" aria-hidden="true" />}>
+        <ProductReviewsAsyncSection
+          slug={product.slug}
+          productName={product.name}
+          sourceCatalogId={product.sourceCatalogId}
+        />
+      </Suspense>
     </article>
   );
 }

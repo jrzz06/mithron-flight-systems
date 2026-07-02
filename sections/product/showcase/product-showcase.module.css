@@ -524,6 +524,7 @@
 
 .featureMedia {
   position: relative;
+  aspect-ratio: 16 / 10;
   min-height: 280px;
   border-radius: 24px;
   overflow: hidden;

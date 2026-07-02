@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { ProductHoverCard } from "@/components/cards/product-hover-card";
-import { CatalogVirtualizedGrid } from "@/sections/catalog/catalog-virtualized-grid";
+import { CatalogContinuedGrid } from "@/sections/catalog/catalog-continued-grid";
 import { StorefrontRevealImage } from "@/components/media/storefront-reveal-image";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
@@ -220,9 +220,9 @@ export function CatalogPage({
               <p className={isShowroom ? styles.separatorLabel : "type-meta"}>More products</p>
               <span className={isShowroom ? styles.separatorRule : "catalog-section-separator__rule"} aria-hidden />
             </div>
-            <CatalogVirtualizedGrid
+            <CatalogContinuedGrid
               products={safeRemainingProducts}
-              className={isShowroom ? cn(styles.productGrid, styles.productGridContinued) : "catalog-product-grid catalog-product-grid--continued min-w-0"}
+              className={isShowroom ? styles.productGridContinued : "catalog-product-grid--continued min-w-0"}
               presentation={cardPresentation}
             />
           </>

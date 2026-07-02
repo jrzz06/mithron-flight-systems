@@ -3,7 +3,7 @@
 import { useCartHasHydrated } from "@/store/cart";
 import { useDesktopPurchaseLayout } from "@/hooks/use-desktop-purchase-layout";
 import { formatINR, cn } from "@/lib/utils";
-import { useProductPurchaseActions } from "@/sections/product/product-purchase-context";
+import { useProductPurchaseHandlers, useProductPurchaseIsAdding } from "@/sections/product/product-purchase-context";
 import styles from "./product-showcase.module.css";
 
 type PurchaseSummary = {
@@ -20,10 +20,11 @@ export function ProductStickyPurchase({
   summary: PurchaseSummary;
 }) {
   const isDesktop = useDesktopPurchaseLayout();
-  const purchaseActions = useProductPurchaseActions();
+  const purchaseHandlers = useProductPurchaseHandlers();
+  const isAdding = useProductPurchaseIsAdding();
   const cartHasHydrated = useCartHasHydrated();
-  const actionsReady = Boolean(purchaseActions);
-  const actionsBusy = purchaseActions?.isAdding ?? false;
+  const actionsReady = Boolean(purchaseHandlers);
+  const actionsBusy = isAdding;
   const purchaseDisabled = !actionsReady || actionsBusy || !cartHasHydrated;
 
   return (
@@ -48,7 +49,7 @@ export function ProductStickyPurchase({
               type="button"
               className={styles.mobilePurchaseSecondaryCta}
               disabled={purchaseDisabled}
-              onClick={() => purchaseActions?.addToCart()}
+              onClick={() => purchaseHandlers?.addToCart()}
             >
               Add to Cart
             </button>
@@ -56,7 +57,7 @@ export function ProductStickyPurchase({
               type="button"
               className={styles.mobilePurchaseCta}
               disabled={purchaseDisabled}
-              onClick={() => purchaseActions?.buyNow()}
+              onClick={() => purchaseHandlers?.buyNow()}
             >
               Buy Now
             </button>

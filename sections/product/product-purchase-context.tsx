@@ -2,41 +2,60 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useLayoutEffect,
-  useMemo,
   useState,
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction
+  type ReactNode
 } from "react";
 
-export type ProductPurchaseActions = {
+export type ProductPurchaseActionHandlers = {
   addToCart: () => void;
   buyNow: () => void;
+};
+
+export type ProductPurchaseActions = ProductPurchaseActionHandlers & {
   isAdding: boolean;
 };
 
-const ProductPurchaseActionsContext = createContext<ProductPurchaseActions | null>(null);
-const ProductPurchaseRegistrationContext = createContext<Dispatch<SetStateAction<ProductPurchaseActions | null>> | null>(
-  null
-);
+const ProductPurchaseHandlersContext = createContext<ProductPurchaseActionHandlers | null>(null);
+const ProductPurchaseAddingContext = createContext(false);
+const ProductPurchaseRegistrationContext = createContext<
+  ((handlers: ProductPurchaseActionHandlers | null, isAdding: boolean) => void) | null
+>(null);
 
 export function ProductPurchaseProvider({ children }: { children: ReactNode }) {
-  const [actions, setActions] = useState<ProductPurchaseActions | null>(null);
-  const registration = useMemo(() => setActions, []);
+  const [handlers, setHandlers] = useState<ProductPurchaseActionHandlers | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const register = useCallback((nextHandlers: ProductPurchaseActionHandlers | null, nextIsAdding: boolean) => {
+    setHandlers(nextHandlers);
+    setIsAdding(nextIsAdding);
+  }, []);
 
   return (
-    <ProductPurchaseActionsContext.Provider value={actions}>
-      <ProductPurchaseRegistrationContext.Provider value={registration}>
-        {children}
-      </ProductPurchaseRegistrationContext.Provider>
-    </ProductPurchaseActionsContext.Provider>
+    <ProductPurchaseHandlersContext.Provider value={handlers}>
+      <ProductPurchaseAddingContext.Provider value={isAdding}>
+        <ProductPurchaseRegistrationContext.Provider value={register}>
+          {children}
+        </ProductPurchaseRegistrationContext.Provider>
+      </ProductPurchaseAddingContext.Provider>
+    </ProductPurchaseHandlersContext.Provider>
   );
 }
 
+export function useProductPurchaseHandlers() {
+  return useContext(ProductPurchaseHandlersContext);
+}
+
 export function useProductPurchaseActions() {
-  return useContext(ProductPurchaseActionsContext);
+  const handlers = useContext(ProductPurchaseHandlersContext);
+  const isAdding = useContext(ProductPurchaseAddingContext);
+  if (!handlers) return null;
+  return { ...handlers, isAdding };
+}
+
+export function useProductPurchaseIsAdding() {
+  return useContext(ProductPurchaseAddingContext);
 }
 
 export function useRegisterProductPurchase(actions: ProductPurchaseActions | null) {
@@ -44,7 +63,14 @@ export function useRegisterProductPurchase(actions: ProductPurchaseActions | nul
 
   useLayoutEffect(() => {
     if (!register) return;
-    register(actions);
-    return () => register(null);
+    if (!actions) {
+      register(null, false);
+      return () => register(null, false);
+    }
+    register(
+      { addToCart: actions.addToCart, buyNow: actions.buyNow },
+      actions.isAdding
+    );
+    return () => register(null, false);
   }, [actions, register]);
 }

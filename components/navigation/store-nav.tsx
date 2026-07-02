@@ -280,7 +280,7 @@ export function StoreNav({
         <div className="adaptive-navbar__inner relative z-10 mx-auto grid h-full w-full max-w-[1680px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 pl-2 pr-4 md:pl-3 md:pr-8 lg:pl-5 lg:pr-[clamp(2.5rem,6.4vw,7.5rem)]">
           <div className="flex min-w-0 items-center justify-self-start md:gap-2.5">
             <Link href="/" aria-label="Go to Mithron home" className="adaptive-navbar__brand nav-interactive inline-flex shrink-0 items-center text-current">
-              <MithronBrandMark />
+              <MithronBrandMark priority />
               <span className="sr-only">Mithron</span>
             </Link>
           </div>

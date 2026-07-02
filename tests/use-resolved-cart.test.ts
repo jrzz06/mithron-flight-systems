@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useResolvedCart } from "@/hooks/use-resolved-cart";
+import { useCartPricingStore } from "@/store/cart-pricing";
 
 const persistedItems = [
   {
@@ -20,6 +21,7 @@ vi.mock("@/store/cart", () => ({
 describe("useResolvedCart", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    useCartPricingStore.getState().reset();
   });
 
   it("keeps persisted display lines when pricing fails", async () => {

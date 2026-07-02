@@ -90,7 +90,7 @@ const nextConfig: NextConfig = {
     imageSizes: [64, 96, 160, 256, 384]
   },
   experimental: {
-    optimizePackageImports: ["lucide-react"]
+    optimizePackageImports: ["lucide-react", "sonner", "@tanstack/react-virtual"]
   },
   async redirects() {
     return [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
 import type { CartItem } from "@/config/types";
 import {
   buildOptimisticCartLines,
@@ -9,70 +9,36 @@ import {
 } from "@/lib/cart-display";
 import { summarizeCartTax } from "@/lib/product-tax";
 import { useCartStore } from "@/store/cart";
+import { useCartPricingStore } from "@/store/cart-pricing";
 
-type CartPricingResponse = {
-  lines: CartItem[];
-  subtotal: number;
-  taxTotal: number;
-  total: number;
+type UseResolvedCartOptions = {
+  enabled?: boolean;
 };
 
-export function useResolvedCart() {
+export function useResolvedCart(options: UseResolvedCartOptions = {}) {
+  const enabled = options.enabled ?? true;
   const persistedItems = useCartStore((state) => state.items);
-  const [resolvedItems, setResolvedItems] = useState<CartItem[]>([]);
-  const [isResolving, setIsResolving] = useState(false);
-  const [pricingChanged, setPricingChanged] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const previousTotalRef = useRef<number | null>(null);
-
-  const resolvePricing = useCallback(async () => {
-    if (!persistedItems.length) {
-      setResolvedItems([]);
-      setPricingChanged(false);
-      setError(null);
-      previousTotalRef.current = null;
-      return true;
-    }
-
-    setIsResolving(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/cart/pricing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: persistedItems }),
-        cache: "no-store"
-      });
-      const payload = (await response.json()) as CartPricingResponse & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Unable to load current cart pricing.");
-      }
-
-      const previousTotal = previousTotalRef.current;
-      if (previousTotal !== null && Math.abs(previousTotal - payload.total) > 0.009) {
-        setPricingChanged(true);
-      } else {
-        setPricingChanged(false);
-      }
-      previousTotalRef.current = payload.total;
-      setResolvedItems(payload.lines);
-      return true;
-    } catch (resolveError) {
-      setError(resolveError instanceof Error ? resolveError.message : "Unable to load current cart pricing.");
-      return false;
-    } finally {
-      setIsResolving(false);
-    }
-  }, [persistedItems]);
+  const snapshot = useCartPricingStore((state) => state.snapshot);
+  const fetchPricing = useCartPricingStore((state) => state.fetchPricing);
+  const clearPricingChanged = useCartPricingStore((state) => state.clearPricingChanged);
 
   useEffect(() => {
-    void resolvePricing();
-  }, [resolvePricing]);
+    if (!enabled) return;
+    void fetchPricing(persistedItems);
+  }, [enabled, fetchPricing, persistedItems]);
+
+  const resolvedItems = snapshot.lines;
+  const isResolving = enabled ? snapshot.isResolving : false;
+  const error = enabled ? snapshot.error : null;
+  const pricingChanged = enabled ? snapshot.pricingChanged : false;
 
   const hasResolvedPricing = useMemo(
-    () => resolvedItems.length > 0 && !error && cartLinesMatchPersisted(persistedItems, resolvedItems),
-    [persistedItems, resolvedItems, error]
+    () =>
+      enabled
+      && resolvedItems.length > 0
+      && !error
+      && cartLinesMatchPersisted(persistedItems, resolvedItems),
+    [enabled, persistedItems, resolvedItems, error]
   );
 
   const displayLines = useMemo(() => buildOptimisticCartLines(persistedItems), [persistedItems]);
@@ -83,13 +49,22 @@ export function useResolvedCart() {
     return mergeCartDisplayWithPricing(displayLines, resolvedItems);
   }, [displayLines, hasResolvedPricing, resolvedItems]);
 
-  const pricing = useMemo(() => summarizeCartTax(hasResolvedPricing ? resolvedItems : []), [hasResolvedPricing, resolvedItems]);
+  const pricing = useMemo(
+    () => summarizeCartTax(hasResolvedPricing ? resolvedItems : []),
+    [hasResolvedPricing, resolvedItems]
+  );
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
   const pricesPending = persistedItems.length > 0 && !hasResolvedPricing;
 
+  const refreshPricing = async () => {
+    if (!enabled) return true;
+    await fetchPricing(persistedItems);
+    return !useCartPricingStore.getState().snapshot.error;
+  };
+
   return {
     items,
-    resolvedItems,
+    resolvedItems: hasResolvedPricing ? resolvedItems : ([] as CartItem[]),
     persistedItems,
     subtotal: pricing.subtotal,
     taxTotal: pricing.taxTotal,
@@ -100,7 +75,7 @@ export function useResolvedCart() {
     hasResolvedPricing,
     pricingChanged,
     error,
-    refreshPricing: resolvePricing,
-    clearPricingChanged: () => setPricingChanged(false)
+    refreshPricing,
+    clearPricingChanged
   };
 }

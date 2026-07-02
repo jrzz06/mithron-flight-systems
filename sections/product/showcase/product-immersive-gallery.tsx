@@ -144,6 +144,11 @@ export function ProductImmersiveGallery({ mediaPlan }: { mediaPlan: ProductMedia
             {visibleSlides.map((slide, index) => {
               const isDisplayed = index === displayIndex;
               const isTarget = index === safeIndex;
+              const shouldRender =
+                index === safeIndex
+                || index === displayIndex
+                || Math.abs(index - displayIndex) <= 1;
+              if (!shouldRender) return null;
               return (
                 <div
                   key={slide.src}

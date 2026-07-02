@@ -516,7 +516,7 @@ function ProductShelfSection({
                           fill
                           priority={productIndex === 0}
                           responsive={product.image.responsive}
-                          sizes="(max-width: 640px) 72vw, (max-width: 1024px) 36vw, 270px"
+                          sizes="(max-width: 767px) 48vw, (max-width: 1024px) 36vw, 270px"
                           className={styles.productImage}
                         />
                       </div>

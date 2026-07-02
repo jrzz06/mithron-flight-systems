@@ -29,6 +29,7 @@ export function SearchOverlay() {
   const overlay = useUiStore((state) => state.overlay);
   const setOverlay = useUiStore((state) => state.setOverlay);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [catalogIndex, setCatalogIndex] = useState<CatalogSearchIndexEntry[]>([]);
   const [indexReady, setIndexReady] = useState(false);
   const [fallbackResults, setFallbackResults] = useState<CatalogSearchResult[]>([]);
@@ -37,6 +38,15 @@ export function SearchOverlay() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const activeQuery = query.trim();
   const hasActiveQuery = activeQuery.length > 0;
+
+  const effectiveDebouncedQuery = hasActiveQuery ? debouncedQuery : "";
+
+  useEffect(() => {
+    if (!hasActiveQuery) return;
+    const timer = window.setTimeout(() => setDebouncedQuery(activeQuery), 150);
+    return () => window.clearTimeout(timer);
+  }, [activeQuery, hasActiveQuery]);
+
   const featuredProducts = useMemo(
     () => getFeaturedFromCatalogIndex(catalogIndex, 4),
     [catalogIndex]
@@ -121,7 +131,7 @@ export function SearchOverlay() {
   }, [open]);
 
   useEffect(() => {
-    if (!open || !hasActiveQuery || catalogIndex.length || !indexReady) return;
+    if (!open || !effectiveDebouncedQuery || catalogIndex.length || !indexReady) return;
 
     let active = true;
     const controller = new AbortController();
@@ -130,7 +140,7 @@ export function SearchOverlay() {
       setSearchError(null);
     });
 
-    void fetch(`/api/catalog/search?q=${encodeURIComponent(activeQuery)}&limit=24`, {
+    void fetch(`/api/catalog/search?q=${encodeURIComponent(effectiveDebouncedQuery)}&limit=24`, {
       signal: controller.signal,
       cache: "no-store"
     })
@@ -155,7 +165,7 @@ export function SearchOverlay() {
       active = false;
       controller.abort();
     };
-  }, [activeQuery, catalogIndex.length, hasActiveQuery, indexReady, open]);
+  }, [catalogIndex.length, effectiveDebouncedQuery, indexReady, open]);
 
   return (
     <div
@@ -226,7 +236,7 @@ export function SearchOverlay() {
                 if (visibleProducts.length) {
                   return (
                     <ul className="grid list-none gap-3 p-0 text-sm md:grid-cols-2">
-                      {visibleProducts.map((product) => (
+                      {visibleProducts.map((product, productIndex) => (
                         <li key={product.slug}>
                           <Link
                             href={`/product/${product.slug}`}
@@ -241,8 +251,8 @@ export function SearchOverlay() {
                                 alt={product.image.alt || product.name}
                                 responsive={product.image.responsive}
                                 fill
-                                loading="eager"
-                                priority
+                                loading={productIndex < 4 ? "eager" : "lazy"}
+                                priority={productIndex < 4}
                                 className="object-contain p-2"
                                 sizes="80px"
                               />

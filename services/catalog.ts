@@ -1621,7 +1621,12 @@ export const getProductAffinityRowBySlug = cache(async (slug: string): Promise<P
 });
 
 export const getCatalogShowroomProducts = cache(async (): Promise<Product[]> => {
-  return getProducts();
+  const groups = await Promise.all(
+    catalogCategoryDefinitions
+      .filter((definition) => definition.categoryNames.length > 0)
+      .map((definition) => getProductsByCategorySlug(definition.slug))
+  );
+  return dedupeProductsBySlug(groups.flat());
 });
 
 export const getProductRowBySlug = cache(async (slug: string) => {
@@ -1633,57 +1638,29 @@ export const getProductRowBySlug = cache(async (slug: string) => {
   return rows[0] ?? null;
 });
 
-export async function getProductBySlug(slug: string) {
-  try {
-    const row = await getProductRowBySlug(slug);
-    if (!row) return undefined;
-    const [liveRow] = await overlayLiveInventoryAvailability([row]);
-    const primaryMedia = await getPrimaryProductMediaLookup();
-    let catalogCutouts = new Map<string, MediaAsset>();
-
-    try {
-      catalogCutouts = await getCatalogCutoutMediaLookup();
-    } catch (error) {
+async function mapLiveProductRow(row: MithronProductRow): Promise<Product> {
+  const [liveRow] = await overlayLiveInventoryAvailability([row]);
+  const [primaryMedia, catalogCutouts] = await Promise.all([
+    getPrimaryProductMediaLookup(),
+    getCatalogCutoutMediaLookup().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
-    }
+      return new Map<string, MediaAsset>();
+    })
+  ]);
 
-    try {
-      return mapProductRow(liveRow, catalogCutouts.get(liveRow.slug) ?? primaryMedia.get(liveRow.slug));
-    } catch (error) {
-      if (isMissingSourceImageError(error)) {
-        console.warn(`[catalog] ${error.message}`);
-        return undefined;
-      }
-      throw error;
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[catalog] getProductBySlug failed for ${slug}: ${message}`);
-    return undefined;
-  }
+  return mapProductRow(liveRow, catalogCutouts.get(liveRow.slug) ?? primaryMedia.get(liveRow.slug));
 }
 
-export async function loadProductForPage(slug: string): Promise<ProductPageLoadResult> {
+export const loadProductForPage = cache(async (slug: string): Promise<ProductPageLoadResult> => {
   try {
     const row = await getProductRowBySlug(slug);
     if (!row) return { status: "not_found" };
-    const [liveRow] = await overlayLiveInventoryAvailability([row]);
-
-    const primaryMedia = await getPrimaryProductMediaLookup();
-    let catalogCutouts = new Map<string, MediaAsset>();
-
-    try {
-      catalogCutouts = await getCatalogCutoutMediaLookup();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
-    }
 
     try {
       return {
         status: "ready",
-        product: mapProductRow(liveRow, catalogCutouts.get(liveRow.slug) ?? primaryMedia.get(liveRow.slug))
+        product: await mapLiveProductRow(row)
       };
     } catch (error) {
       if (isMissingSourceImageError(error)) {
@@ -1698,7 +1675,12 @@ export async function loadProductForPage(slug: string): Promise<ProductPageLoadR
     console.warn(`[catalog] ${catalogError.message}`);
     return { status: "error", error: catalogError };
   }
-}
+});
+
+export const getProductBySlug = cache(async (slug: string) => {
+  const result = await loadProductForPage(slug);
+  return result.status === "ready" ? result.product : undefined;
+});
 
 export async function getProductStaticSlugs() {
   try {
@@ -1768,9 +1750,18 @@ export async function getDroneCareProducts() {
 }
 
 export async function getProductsByInterest(interestSlug: string) {
-  const products = await getProducts();
-  const matched = products.filter((product) => product.interests.includes(interestSlug));
-  if (interestSlug === "components") {
+  const normalized = interestSlug.trim();
+  if (!normalized) return [];
+
+  const rows = await overlayLiveInventoryAvailability(
+    await fetchAllCatalogRows<MithronProductRow>(
+      catalogListSelect,
+      `interests=cs.{${encodeURIComponent(normalized)}}`
+    )
+  );
+  const products = await mapRowsWithCatalogMedia(rows, mapProductRow, { scopeToRows: true });
+  const matched = dedupeProductsBySlug(products);
+  if (normalized === "components") {
     return filterDroneCareProducts(matched);
   }
   return filterDroneWorldProducts(matched);

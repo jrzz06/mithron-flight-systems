@@ -107,7 +107,9 @@ export function CartDrawer() {
   const setCartOpen = useCartStore((state) => state.setCartOpen);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const isCartOpen = useCartStore((state) => state.isCartOpen);
-  const { items, subtotal, taxTotal, grandTotal, isResolving, pricesPending, error, refreshPricing } = useResolvedCart();
+  const { items, subtotal, taxTotal, grandTotal, isResolving, pricesPending, error, refreshPricing } = useResolvedCart({
+    enabled: isCartOpen
+  });
   const drawerTabIndex = isCartOpen ? 0 : -1;
   const showPendingPrices = isResolving || pricesPending;
 

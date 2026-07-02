@@ -118,6 +118,9 @@ export function StoreShellClient({
           console.error("Overlay preload failed", error);
         }
       });
+
+      void fetch("/api/catalog/search?intent=index", { cache: "force-cache" }).catch(() => undefined);
+      requestSearchPreload();
     };
 
     if ("requestIdleCallback" in globalThis) {
@@ -135,7 +138,7 @@ export function StoreShellClient({
         globalThis.clearTimeout(timerId);
       }
     };
-  }, [usesStorefrontChrome]);
+  }, [usesStorefrontChrome, requestSearchPreload]);
 
   if (skipsStorefrontChrome) {
     return (
