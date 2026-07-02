@@ -3,7 +3,7 @@
 import {
   createContext,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type Dispatch,
@@ -42,7 +42,7 @@ export function useProductPurchaseActions() {
 export function useRegisterProductPurchase(actions: ProductPurchaseActions | null) {
   const register = useContext(ProductPurchaseRegistrationContext);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!register) return;
     register(actions);
     return () => register(null);

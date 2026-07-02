@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { MithronPageHeroImage } from "@/components/media/mithron-page-hero-image";
 import { MithronThumbImage } from "@/components/media/mithron-thumb-image";
 import type { ProductMediaPlanItem } from "@/lib/product-detail-experience";
@@ -67,10 +67,24 @@ export function ProductImmersiveGallery({ mediaPlan }: { mediaPlan: ProductMedia
 
   useEffect(() => {
     const slide = visibleSlides[safeIndex];
-    if (slide && readySrcs.has(slide.src)) {
+    if (!slide) return;
+    if (readySrcs.has(slide.src) || safeIndex === displayIndex) {
       setDisplayIndex(safeIndex);
     }
-  }, [readySrcs, safeIndex, visibleSlides]);
+  }, [displayIndex, readySrcs, safeIndex, visibleSlides]);
+
+  useLayoutEffect(() => {
+    const slide = visibleSlides[safeIndex];
+    if (!slide?.src || readySrcs.has(slide.src)) return;
+    const image = new window.Image();
+    image.decoding = "async";
+    image.src = slide.src;
+    if (image.complete && image.naturalWidth > 0) {
+      markReady(slide.src);
+      return;
+    }
+    image.onload = () => markReady(slide.src);
+  }, [markReady, readySrcs, safeIndex, visibleSlides]);
 
   useEffect(() => {
     if (!hasMultiple) return;

@@ -134,6 +134,12 @@ describe("storefront motion audit regressions", () => {
     expect(globals).toMatch(/@media \(max-width: 640px\)[\s\S]*\.catalog-page-shell \.premium-product-card\s*\{[^}]*min-height:\s*0/s);
   });
 
+  it("keeps product gallery hero images visible without deferred reveal", () => {
+    const showcase = source("sections/product/showcase/product-showcase.module.css");
+
+    expect(showcase).toMatch(/\.stageImageFrame\s+:global\(\.mithron-responsive-image\)\s*{[^}]*opacity:\s*1/s);
+  });
+
   it("keeps public storefront chrome free of heavy live backdrop blur", () => {
     const publicChromeFiles = [
       "components/layout/site-footer.tsx",

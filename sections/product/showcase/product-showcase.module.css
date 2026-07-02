@@ -289,6 +289,17 @@
   z-index: 1;
 }
 
+/* Product hero images must stay visible without deferred reveal (matches catalog cards). */
+.stageImageFrame :global(.mithron-responsive-image-frame) {
+  background-color: transparent;
+  --mithron-image-placeholder: transparent;
+}
+
+.stageImageFrame :global(.mithron-responsive-image) {
+  opacity: 1;
+  transition: none;
+}
+
 .stageLayer {
   position: absolute;
   inset: 0;
@@ -311,7 +322,8 @@
 .stageSkeleton {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
+  pointer-events: none;
   background: linear-gradient(90deg, #eef1f4 0%, #f8fafc 50%, #eef1f4 100%);
   background-size: 200% 100%;
   animation: gallerySkeletonPulse 1.2s ease-in-out infinite;
