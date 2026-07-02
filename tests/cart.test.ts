@@ -20,6 +20,8 @@ describe("cart store core", () => {
 
     expect(cart.items).toHaveLength(1);
     expect(cart.items[0]?.quantity).toBe(2);
+    expect(cart.items[0]?.productName).toBe("Agri Kisan Drone Small - 8 Liter");
+    expect(cart.items[0]?.image).toBe("https://example.com/drone.webp");
     expect(cart.items[0]).not.toHaveProperty("unitPrice");
     expect(cart.itemCount()).toBe(2);
   });

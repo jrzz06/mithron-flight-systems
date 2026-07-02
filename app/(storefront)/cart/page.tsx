@@ -9,7 +9,8 @@ import { useCartStore } from "@/store/cart";
 export default function CartPage() {
   const setQuantity = useCartStore((state) => state.setQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
-  const { items, subtotal, isResolving, error, refreshPricing } = useResolvedCart();
+  const { items, subtotal, isResolving, pricesPending, error, refreshPricing } = useResolvedCart();
+  const showPendingPrices = isResolving || pricesPending;
 
   return (
     <main className="surface-page inner-page min-h-screen">
@@ -40,7 +41,7 @@ export default function CartPage() {
                     className="min-h-11 w-16 rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-white"
                   />
                   <p className="font-semibold text-white">
-                    {isResolving ? "…" : formatINR(item.unitPrice * item.quantity)}
+                    {showPendingPrices ? "…" : formatINR(item.unitPrice * item.quantity)}
                   </p>
                   <button type="button" onClick={() => removeItem(item.productSlug, item.bundleId)} className="min-h-11 px-3 py-2 text-sm text-red-400">Remove</button>
                 </div>
@@ -51,8 +52,8 @@ export default function CartPage() {
           )}
         </div>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-          <p className="text-xl font-semibold text-white">Subtotal: {isResolving ? "…" : formatINR(subtotal)}</p>
-          <Button asChild disabled={!items.length || isResolving}>
+          <p className="text-xl font-semibold text-white">Subtotal: {showPendingPrices ? "…" : formatINR(subtotal)}</p>
+          <Button asChild disabled={!items.length || showPendingPrices}>
             <Link href="/checkout">Proceed to checkout</Link>
           </Button>
         </div>

@@ -189,6 +189,9 @@ export type PersistedCartItem = {
   bundleId: string;
   quantity: number;
   variantId?: string;
+  productName?: string;
+  bundleName?: string;
+  image?: string;
 };
 
 export type CartItem = PersistedCartItem & {

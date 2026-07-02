@@ -18,7 +18,7 @@ export function CartNavButton() {
     () => true,
     () => false
   );
-  const count = useCartStore((state) => state.items.length);
+  const count = useCartStore((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
   const setCartOpen = useCartStore((state) => state.setCartOpen);
   const handlePointerEnter = useCallback(() => {
     preloadCartDrawer();

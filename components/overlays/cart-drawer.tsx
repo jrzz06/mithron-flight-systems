@@ -64,13 +64,17 @@ function CartOrderSummary({
   subtotal,
   taxTotal,
   grandTotal,
-  isResolving
+  isResolving,
+  pricesPending
 }: {
   subtotal: number;
   taxTotal: number;
   grandTotal: number;
   isResolving: boolean;
+  pricesPending: boolean;
 }) {
+  const showPendingPrices = isResolving || pricesPending;
+
   return (
     <section aria-labelledby="cart-order-summary-heading" className={styles.summaryBlock}>
       <h3 id="cart-order-summary-heading" className={styles.sectionLabel}>
@@ -78,17 +82,17 @@ function CartOrderSummary({
       </h3>
       <div className={styles.summaryRow}>
         <span>Subtotal</span>
-        <strong>{isResolving ? "…" : formatINR(subtotal)}</strong>
+        <strong>{showPendingPrices ? "…" : formatINR(subtotal)}</strong>
       </div>
-      {taxTotal > 0 ? (
+      {taxTotal > 0 || showPendingPrices ? (
         <div className={styles.summaryRow}>
           <span>GST</span>
-          <strong>{isResolving ? "…" : formatINR(taxTotal)}</strong>
+          <strong>{showPendingPrices ? "…" : formatINR(taxTotal)}</strong>
         </div>
       ) : null}
       <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
         <span>Total</span>
-        <strong>{isResolving ? "…" : formatINR(grandTotal)}</strong>
+        <strong>{showPendingPrices ? "…" : formatINR(grandTotal)}</strong>
       </div>
     </section>
   );
@@ -103,8 +107,9 @@ export function CartDrawer() {
   const setCartOpen = useCartStore((state) => state.setCartOpen);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const isCartOpen = useCartStore((state) => state.isCartOpen);
-  const { items, subtotal, taxTotal, grandTotal, isResolving } = useResolvedCart();
+  const { items, subtotal, taxTotal, grandTotal, isResolving, pricesPending, error, refreshPricing } = useResolvedCart();
   const drawerTabIndex = isCartOpen ? 0 : -1;
+  const showPendingPrices = isResolving || pricesPending;
 
   useEffect(() => {
     if (!isCartOpen || items.length) return;
@@ -197,6 +202,14 @@ export function CartDrawer() {
         {items.length ? (
           <div className={styles.drawerFilled}>
             <div className={styles.drawerBody}>
+              {error ? (
+                <p className={styles.pricingNotice} role="status">
+                  {error}{" "}
+                  <button type="button" className={styles.pricingRetry} onClick={() => void refreshPricing()}>
+                    Retry pricing
+                  </button>
+                </p>
+              ) : null}
               <section aria-label="Cart items">
                 {items.map((item, index) => (
                   <article key={`${item.productSlug}-${item.bundleId}`}>
@@ -237,7 +250,7 @@ export function CartDrawer() {
                             </button>
                           </div>
                           <span className={styles.linePrice}>
-                            {isResolving ? "…" : formatINR(item.unitPrice * item.quantity)}
+                            {showPendingPrices ? "…" : formatINR(item.unitPrice * item.quantity)}
                           </span>
                         </div>
                       </div>
@@ -261,6 +274,7 @@ export function CartDrawer() {
                 taxTotal={taxTotal}
                 grandTotal={grandTotal}
                 isResolving={isResolving}
+                pricesPending={pricesPending}
               />
             </div>
 

@@ -50,7 +50,21 @@ function toPersistedItem(item: NewCartItem): PersistedCartItem {
     productSlug: item.productSlug,
     bundleId: item.bundleId,
     quantity: item.quantity ?? 1,
-    ...(item.variantId ? { variantId: item.variantId } : {})
+    ...(item.variantId ? { variantId: item.variantId } : {}),
+    ...(item.productName?.trim() ? { productName: item.productName.trim() } : {}),
+    ...(item.bundleName?.trim() ? { bundleName: item.bundleName.trim() } : {}),
+    ...(item.image?.trim() ? { image: item.image.trim() } : {})
+  };
+}
+
+function mergePersistedDisplayFields(existing: PersistedCartItem, incoming: PersistedCartItem): PersistedCartItem {
+  return {
+    ...existing,
+    quantity: incoming.quantity,
+    ...(incoming.variantId ? { variantId: incoming.variantId } : {}),
+    ...(incoming.productName ? { productName: incoming.productName } : {}),
+    ...(incoming.bundleName ? { bundleName: incoming.bundleName } : {}),
+    ...(incoming.image ? { image: incoming.image } : {})
   };
 }
 
@@ -67,6 +81,7 @@ export function createCartSlice(): CartSlice {
       );
       if (existing) {
         existing.quantity += 1;
+        Object.assign(existing, mergePersistedDisplayFields(existing, { ...persisted, quantity: existing.quantity }));
       } else {
         slice.items.push(persisted);
       }
@@ -79,6 +94,7 @@ export function createCartSlice(): CartSlice {
       );
       if (existing) {
         existing.quantity = persisted.quantity;
+        Object.assign(existing, mergePersistedDisplayFields(existing, persisted));
       } else {
         slice.items.push(persisted);
       }
@@ -134,7 +150,7 @@ export function createCartSlice(): CartSlice {
 
 type CartStore = CartSlice;
 
-const CART_STORAGE_VERSION = 2;
+const CART_STORAGE_VERSION = 3;
 
 export const useCartStore = create<CartStore>()(
   persist(
@@ -153,7 +169,7 @@ export const useCartStore = create<CartStore>()(
             return {
               items: state.items.map((entry) =>
                 entry.productSlug === persisted.productSlug && entry.bundleId === persisted.bundleId
-                  ? { ...entry, quantity: entry.quantity + 1 }
+                  ? mergePersistedDisplayFields(entry, { ...persisted, quantity: entry.quantity + 1 })
                   : entry
               ),
               isCartOpen: true,
@@ -174,7 +190,7 @@ export const useCartStore = create<CartStore>()(
             return {
               items: state.items.map((entry) =>
                 entry.productSlug === persisted.productSlug && entry.bundleId === persisted.bundleId
-                  ? { ...entry, quantity: persisted.quantity }
+                  ? mergePersistedDisplayFields(entry, persisted)
                   : entry
               ),
               isCartOpen: true,
@@ -249,7 +265,10 @@ export const useCartStore = create<CartStore>()(
           productSlug: item.productSlug,
           bundleId: item.bundleId,
           quantity: item.quantity,
-          ...(item.variantId ? { variantId: item.variantId } : {})
+          ...(item.variantId ? { variantId: item.variantId } : {}),
+          ...(item.productName ? { productName: item.productName } : {}),
+          ...(item.bundleName ? { bundleName: item.bundleName } : {}),
+          ...(item.image ? { image: item.image } : {})
         })),
         checkout: state.checkout
       })

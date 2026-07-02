@@ -68,6 +68,36 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.pricingNotice {
+  margin: 0 0 var(--cart-space-3);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: var(--cart-radius);
+  background: rgba(251, 191, 36, 0.12);
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.pricingRetry {
+  margin-left: 0.25rem;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #fbbf24;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.pricingRetry:hover,
+.pricingRetry:focus-visible {
+  color: #fde68a;
+  outline: none;
+}
+
 .drawerFooter {
   position: relative;
   z-index: 2;

@@ -108,10 +108,19 @@ export function toPersistedCartItem(item: {
 }
 
 export function stripPersistedCartItems(items: Array<PersistedCartItem & Record<string, unknown>>): PersistedCartItem[] {
-  return items.map((item) => toPersistedCartItem({
-    productSlug: String(item.productSlug ?? ""),
-    bundleId: String(item.bundleId ?? "standard"),
-    quantity: Math.max(1, Number(item.quantity ?? 1)),
-    variantId: typeof item.variantId === "string" ? item.variantId : undefined
+  return items.map((item) => ({
+    ...toPersistedCartItem({
+      productSlug: String(item.productSlug ?? ""),
+      bundleId: String(item.bundleId ?? "standard"),
+      quantity: Math.max(1, Number(item.quantity ?? 1)),
+      variantId: typeof item.variantId === "string" ? item.variantId : undefined
+    }),
+    ...(typeof item.productName === "string" && item.productName.trim()
+      ? { productName: item.productName.trim() }
+      : {}),
+    ...(typeof item.bundleName === "string" && item.bundleName.trim()
+      ? { bundleName: item.bundleName.trim() }
+      : {}),
+    ...(typeof item.image === "string" && item.image.trim() ? { image: item.image.trim() } : {})
   }));
 }
