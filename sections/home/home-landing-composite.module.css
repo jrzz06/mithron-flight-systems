@@ -1750,13 +1750,111 @@
 
 @media (max-width: 767px) {
   .productShelfSection .shelfBoard {
-    margin-inline: calc(-1 * clamp(16px, 4vw, 64px));
-    width: calc(100% + (2 * clamp(16px, 4vw, 64px)));
+    margin-inline: 0;
+    width: 100%;
     max-width: 100%;
+    padding-inline: var(--mobile-page-inline, 12px);
+    box-sizing: border-box;
   }
 
   .productShelfGrid {
-    grid-auto-columns: minmax(224px, 72vw);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    grid-auto-columns: unset;
+    gap: var(--mobile-card-gap, 10px);
+    overflow-x: visible;
+    overflow-y: visible;
+    overscroll-behavior-x: auto;
+    padding-inline: 0;
+    padding-bottom: 0;
+    scroll-padding-inline: 0;
+    scroll-snap-type: none;
+    touch-action: auto;
+    align-items: stretch;
+  }
+
+  .productShelfSection[data-shelf-tone="world"] .productShelfGrid,
+  .productShelfSection[data-shelf-tone="care"] .productShelfGrid,
+  .productShelfSection[data-shelf-tone="global"] .productShelfGrid {
+    overflow-x: visible;
+    overflow-y: visible;
+    touch-action: auto;
+  }
+
+  .productCard,
+  .guideCard {
+    scroll-snap-align: none;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    grid-template-rows: unset;
+  }
+
+  .productImageWell {
+    position: relative;
+    flex: 0 0 auto;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .productImage {
+    object-fit: contain;
+    padding: 12px 10px 8px;
+  }
+
+  .productBody {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px 10px 12px;
+  }
+
+  .productKicker {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    text-overflow: unset;
+    min-height: 2.7em;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .productName {
+    min-height: 2.24em;
+    font-size: 0.9rem;
+  }
+
+  .productFooter {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+    padding-right: 0;
+    min-width: 0;
+  }
+
+  .productBuyNow {
+    min-height: var(--mobile-touch-min, 44px);
+    min-width: var(--mobile-touch-min, 44px);
+    padding: 0 12px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .guideCard {
+    min-height: 280px;
+    grid-template-rows: unset;
   }
 
   .missionWorldSection {
@@ -1765,6 +1863,10 @@
   }
 
   .missionWorldSection .container {
+    padding-inline: var(--mobile-page-inline, 12px);
+  }
+
+  .container {
     padding-inline: var(--mobile-page-inline, 12px);
   }
 }
@@ -2059,13 +2161,7 @@
 
 @media (max-width: 479px) {
   .container {
-    padding: 0 12px;
-  }
-
-  .productShelfGrid {
-    grid-auto-columns: minmax(200px, 82vw);
-    padding-inline: 12px;
-    scroll-padding-inline: 12px;
+    padding: 0 var(--mobile-page-inline, 12px);
   }
 }
 
@@ -3310,6 +3406,95 @@
   }
 }
 
+@media (max-width: 767px) {
+  .missionWorldSupportGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: var(--mobile-card-gap, 10px);
+    align-items: stretch;
+  }
+
+  .missionWorldSupportGrid > .agriCard {
+    display: flex;
+    flex-direction: column;
+    aspect-ratio: auto;
+    min-height: 0;
+    height: 100%;
+    min-width: 0;
+  }
+
+  .missionWorldSupportGrid > .agriCard .agriCardImageFrame {
+    flex: 0 0 auto;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .missionWorldSupportGrid > .agriCard .agriCardImage {
+    object-fit: contain;
+  }
+
+  .missionWorldSupportGrid > .agriCard .agriCardCopy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .missionWorldSupportGrid > .agriCard .agriCardCopy strong {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    min-height: 2.24em;
+    line-height: 1.12;
+  }
+
+  .missionWorldSupportGrid > .agriCard .missionCardCopyRow {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .missionWorldSupportGrid > .agriCard .agriCardArrow,
+  .agriSection .missionWorldSupportGrid > .agriCard .agriCardArrow,
+  .citySection .missionWorldSupportGrid > .agriCard .agriCardArrow {
+    width: var(--mobile-touch-min, 44px);
+    height: var(--mobile-touch-min, 44px);
+    flex: 0 0 auto;
+  }
+
+  .testimonialsSection {
+    padding: var(--mobile-section-gap, 1.5rem) 0;
+  }
+
+  .testimonialsInner {
+    padding-inline: var(--mobile-page-inline, 12px);
+  }
+
+  .testimonialsHeader {
+    margin-bottom: var(--mobile-section-gap, 1.5rem);
+  }
+
+  .testimonialsTitle {
+    font-size: clamp(1.5rem, 6vw, 1.9rem);
+    text-wrap: balance;
+  }
+
+  .testimonialsLead {
+    max-width: 100%;
+  }
+
+  .testimonialsLink {
+    white-space: normal;
+    min-height: var(--mobile-touch-min, 44px);
+    align-items: center;
+  }
+}
+
 @media (max-width: 480px) {
   .agriSection {
     --mission-bento-gap: 12px;
@@ -3390,6 +3575,32 @@
 
   .missionWorldSupportGrid > .agriCard {
     min-height: clamp(168px, 46vw, 240px);
+  }
+}
+
+/* Phone touch targets — must follow broader mobile blocks */
+@media (max-width: 767px) {
+  .missionWorldSupportGrid > .agriCard .agriCardArrow,
+  .agriSection .missionWorldSupportGrid > .agriCard .agriCardArrow,
+  .citySection .missionWorldSupportGrid > .agriCard .agriCardArrow {
+    width: var(--mobile-touch-min, 44px);
+    height: var(--mobile-touch-min, 44px);
+  }
+
+  .productFooter {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .productFooter {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .productBuyNow {
+    width: 100%;
+    justify-self: stretch;
   }
 }
 

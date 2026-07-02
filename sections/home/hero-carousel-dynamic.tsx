@@ -8,7 +8,7 @@ export function HeroCarouselSkeleton() {
       data-testid="home-hero"
       data-hero-skeleton
       data-navbar-ink="light"
-      className="hero-premium-field relative isolate h-[80svh] min-h-[580px] w-full overflow-hidden bg-[#050505]"
+      className="hero-premium-field relative isolate h-[min(72svh,520px)] min-h-[min(420px,72svh)] w-full overflow-hidden bg-[#050505]"
       aria-busy="true"
       aria-label="Loading hero carousel"
     />

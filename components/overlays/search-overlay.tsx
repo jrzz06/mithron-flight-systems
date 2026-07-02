@@ -233,7 +233,7 @@ export function SearchOverlay() {
                             title={`View ${product.name}`}
                             tabIndex={open ? 0 : -1}
                             onClick={() => setOverlay(null)}
-                            className="search-result-card ambient-surface ambient-muted group grid min-h-28 grid-cols-[82px_1fr] items-center gap-4 rounded-2xl border border-[var(--surface-border)] p-3 outline-none focus-visible:ring-2 focus-visible:ring-white max-[767px]:min-h-0"
+                            className="search-result-card ambient-surface ambient-muted group grid min-h-28 grid-cols-[82px_1fr] items-center gap-4 rounded-2xl border border-[var(--surface-border)] p-3 outline-none focus-visible:ring-2 focus-visible:ring-white max-[767px]:min-h-[44px]"
                           >
                             <span className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
                               <MithronThumbImage

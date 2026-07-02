@@ -9,11 +9,21 @@ function source(path: string) {
 }
 
 describe("product shelf mobile scroll", () => {
-  it("enables horizontal touch scrolling on mobile shelf grids without blocking vertical page scroll", () => {
+  it("enables horizontal touch scrolling on tablet shelf grids without blocking vertical page scroll", () => {
     const css = source("sections/home/home-landing-composite.module.css");
-    expect(css).toContain("touch-action: pan-x pan-y");
+    const tabletShelfBlock = css.match(/@media \(max-width: 980px\)[\s\S]*?\.productShelfGrid \{[\s\S]*?\}/);
+
+    expect(tabletShelfBlock?.[0]).toContain("touch-action: pan-x pan-y");
     expect(css).not.toMatch(/\.productCard[\s\S]*touch-action:\s*pan-x;/);
     expect(css).toMatch(/productShelfSection\[data-shelf-tone="global"\] \.productShelfGrid[\s\S]*overflow-x: auto/);
+  });
+
+  it("uses a 2-column in-flow grid on phone shelves", () => {
+    const css = source("sections/home/home-landing-composite.module.css");
+    const phoneShelfBlock = css.match(/@media \(max-width: 767px\)[\s\S]*?\.productShelfGrid \{[\s\S]*?\}/);
+
+    expect(phoneShelfBlock?.[0]).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(phoneShelfBlock?.[0]).toContain("overflow-x: visible");
   });
 
   it("uses a client scroll rail for shelf cards", () => {

@@ -15,7 +15,6 @@ type CatalogVirtualizedGridProps = {
 const ESTIMATED_ROW_HEIGHT = 420;
 
 function resolveColumnCount(width: number) {
-  if (width < 360) return 1;
   if (width < 1024) return 2;
   return 4;
 }

@@ -308,6 +308,39 @@
   transform: translateX(2px);
 }
 
+@media (max-width: 767px) {
+  .media {
+    aspect-ratio: 4 / 3;
+    height: auto;
+    max-height: 160px;
+  }
+
+  .title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    min-height: 2.6em;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+  }
+
+  .footer {
+    min-width: 0;
+  }
+
+  .price {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .cta {
+    min-height: var(--mobile-touch-min, 44px);
+    min-width: var(--mobile-touch-min, 44px);
+  }
+}
+
 @media (max-width: 767px) and (min-width: 641px) {
   .media {
     max-height: 200px;

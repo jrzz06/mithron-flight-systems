@@ -38,7 +38,7 @@ export function CartNavButton() {
     >
       <ShoppingBag className="size-[18px]" />
       {displayCount > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 grid min-w-[18px] place-items-center rounded-full bg-[#22d216] px-1 text-[10px] font-bold text-black">
+        <span className="absolute right-0.5 top-0.5 grid min-h-[18px] min-w-[18px] place-items-center rounded-full bg-[#22d216] px-1 text-[10px] font-bold leading-none text-black">
           {displayCount}
         </span>
       ) : null}

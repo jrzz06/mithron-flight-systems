@@ -38,12 +38,12 @@ export function CartPageClient() {
                     min={1}
                     value={item.quantity}
                     onChange={(event) => setQuantity(item.productSlug, item.bundleId, Number(event.target.value))}
-                    className="min-h-11 w-16 rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-white"
+                    className="min-h-11 min-w-11 w-16 rounded-lg border border-white/10 bg-black/20 px-2 py-2 text-white max-[767px]:min-h-[44px] max-[767px]:min-w-[44px]"
                   />
                   <p className="font-semibold text-white">
                     {showPendingPrices ? "…" : formatINR(item.unitPrice * item.quantity)}
                   </p>
-                  <button type="button" onClick={() => removeItem(item.productSlug, item.bundleId)} className="min-h-11 px-3 py-2 text-sm text-red-400">Remove</button>
+                  <button type="button" onClick={() => removeItem(item.productSlug, item.bundleId)} className="min-h-11 min-w-11 px-3 py-2 text-sm text-red-400 max-[767px]:min-h-[44px]">Remove</button>
                 </div>
               </div>
             </article>
