@@ -34,7 +34,7 @@ describe("image fallback chain", () => {
 
     expect(buildImageFallbackChain(model)).toEqual([
       model.primarySrc,
-      model.requestedSrc
+      model.resolvedSrc
     ]);
   });
 });

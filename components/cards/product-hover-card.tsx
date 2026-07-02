@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import type { Product } from "@/config/types";
+import { resolveCatalogCardImage } from "@/lib/media/catalog-card-image";
 import { productBadgeCssClass } from "@/lib/product-badge";
 import { clipProductPreviewText, sanitizeProductPreviewText } from "@/lib/product-preview-text";
 import { cn, formatINR } from "@/lib/utils";
@@ -45,6 +46,7 @@ export const ProductHoverCard = memo(function ProductHoverCard({
   className?: string;
 }) {
   const isShowroomCatalog = variant === "catalog" && presentation === "showroom";
+  const catalogImage = variant === "catalog" ? resolveCatalogCardImage(product.image) : null;
   const description = isShowroomCatalog
     ? getShowroomPreview(product)
     : variant === "catalog"
@@ -63,11 +65,11 @@ export const ProductHoverCard = memo(function ProductHoverCard({
             <div className={styles.mediaSurface} aria-hidden />
             <div className={styles.imageFrame}>
               <MithronCardImage
-                src={product.image.src}
-                alt={product.image.alt}
+                src={catalogImage!.src}
+                alt={catalogImage!.alt}
                 fill
                 priority={priority}
-                responsive={product.image.responsive}
+                useSourceImage
                 className={styles.image}
                 sizes={imageSizes.catalog}
               />
@@ -115,11 +117,11 @@ export const ProductHoverCard = memo(function ProductHoverCard({
             className="premium-product-card__image absolute inset-0"
           >
             <MithronCardImage
-              src={product.image.src}
-              alt={product.image.alt}
+              src={catalogImage!.src}
+              alt={catalogImage!.alt}
               fill
               priority={priority}
-              responsive={product.image.responsive}
+              useSourceImage
               className="premium-product-card__image-asset object-contain"
               sizes={imageSizes[variant]}
             />

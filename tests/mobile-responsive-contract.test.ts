@@ -40,12 +40,13 @@ describe("mobile responsive contract (phone <=767px)", () => {
     );
   });
 
-  it("keeps catalog continued grid at 2 columns below 768px and 3 below 1024px", () => {
+  it("keeps catalog continued grid on 2 or 4 columns", () => {
     const gridSource = source("sections/catalog/catalog-continued-grid.tsx");
     const globalsCss = source("app/globals.css");
 
-    expect(gridSource).toContain("if (width <= 767) return 2");
-    expect(gridSource).toContain("if (width < 1024) return 3");
+    expect(gridSource).not.toContain("return 3");
+    expect(gridSource).toContain("if (width < 1024) return 2");
+    expect(gridSource).toContain("return 4");
     expect(gridSource).toContain("Load more products");
     expect(gridSource).not.toContain("useWindowVirtualizer");
     expect(globalsCss).toContain(".catalog-continued-grid__rows");
@@ -59,13 +60,13 @@ describe("mobile responsive contract (phone <=767px)", () => {
     expect(globalsCss).toContain("--catalog-mobile-row-estimate: 280px");
   });
 
-  it("clips catalog overflow and uses footer grid on phone", () => {
+  it("clips catalog overflow and uses stacked catalog footers on phone", () => {
     const globalsCss = source("app/globals.css");
     const phoneBlock = globalsCss.match(/@media \(max-width: 767px\)[\s\S]*?(?=@media)/);
 
     expect(phoneBlock?.[0]).toContain("overflow-x: clip");
     expect(phoneBlock?.[0]).toContain(".catalog-page-shell .premium-product-card__footer");
-    expect(phoneBlock?.[0]).toContain("grid-template-columns: auto minmax(0, 1fr)");
+    expect(phoneBlock?.[0]).toContain("flex-direction: column");
     expect(phoneBlock?.[0]).toContain("padding-inline: var(--mobile-page-inline, 12px) !important");
   });
 
@@ -88,5 +89,76 @@ describe("mobile responsive contract (phone <=767px)", () => {
   it("uses narrower mobile shelf image sizes", () => {
     const component = source("sections/home/home-landing-composite.tsx");
     expect(component).toContain('sizes="(max-width: 767px) 48vw, (max-width: 1024px) 36vw, 270px"');
+  });
+
+  it("locks catalog grids to 2 columns below 1024px and 4 columns on desktop", () => {
+    const globalsCss = source("app/globals.css");
+    const showroomCss = source("sections/catalog/catalog-page.module.css");
+    const catalogGridBlock = globalsCss.match(
+      /\.catalog-product-grid \{[\s\S]*?\.catalog-product-grid--continued/
+    )?.[0];
+
+    expect(globalsCss).toMatch(
+      /\.catalog-product-grid[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(globalsCss).toMatch(
+      /@media \(min-width: 1024px\)[\s\S]*\.catalog-product-grid[\s\S]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(globalsCss).toMatch(
+      /\.catalog-continued-grid__rows[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(globalsCss).toMatch(
+      /@media \(min-width: 1024px\)[\s\S]*\.catalog-continued-grid__rows[\s\S]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(showroomCss).toMatch(
+      /\.productGrid[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(showroomCss).toMatch(
+      /@media \(min-width: 1024px\)[\s\S]*\.productGrid[\s\S]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(catalogGridBlock).not.toMatch(/repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+    expect(catalogGridBlock).not.toMatch(/auto-fill/);
+  });
+
+  it("keeps catalog prices on one horizontal line", () => {
+    const globalsCss = source("app/globals.css");
+    const cardCss = source("components/cards/product-hover-card.module.css");
+
+    expect(globalsCss).toMatch(
+      /\.catalog-page-shell \.premium-product-card__price \{[\s\S]*white-space:\s*nowrap/
+    );
+    expect(cardCss).toMatch(/\.price \{[\s\S]*white-space:\s*nowrap/);
+    expect(cardCss).toMatch(/\.price \{[\s\S]*flex-shrink:\s*0/);
+    expect(cardCss).toMatch(/\.cta \{[\s\S]*width:\s*100%/);
+  });
+
+  it("uses auto row sizing on desktop catalog grids", () => {
+    const globalsCss = source("app/globals.css");
+    const showroomCss = source("sections/catalog/catalog-page.module.css");
+    const cardCss = source("components/cards/product-hover-card.module.css");
+
+    expect(globalsCss).toMatch(/\.catalog-product-grid[\s\S]*?grid-auto-rows:\s*auto/);
+    expect(globalsCss).toMatch(/\.catalog-continued-grid__rows[\s\S]*?grid-auto-rows:\s*auto/);
+    expect(showroomCss).toMatch(/\.productGrid[\s\S]*?grid-auto-rows:\s*auto/);
+    expect(globalsCss).toMatch(
+      /\.catalog-page-shell \.premium-product-card__description \{[\s\S]*?flex:\s*0\s+1\s+auto/
+    );
+    expect(cardCss).toMatch(/\.description \{[\s\S]*?flex:\s*0\s+1\s+auto/);
+  });
+
+  it("disables catalog product image stage overlay", () => {
+    const globalsCss = source("app/globals.css");
+    const cardCss = source("components/cards/product-hover-card.module.css");
+    const showroomCss = source("sections/catalog/catalog-page.module.css");
+
+    expect(globalsCss).toMatch(
+      /\.catalog-page-shell \.premium-product-card__media::after[\s\S]*display:\s*none/
+    );
+    expect(cardCss).toMatch(
+      /:global\(\.catalog-page-shell\) \.media::after[\s\S]*display:\s*none/
+    );
+    expect(showroomCss).toMatch(
+      /\.shell \[data-card-variant="catalog"\] a > div::after[\s\S]*display:\s*none/
+    );
   });
 });

@@ -140,6 +140,7 @@ export function buildImageFallbackChain(model: ResponsiveImageModel): string[] {
 
   push(model.primarySrc);
   push(model.optimizedSrc);
+  push(model.resolvedSrc);
 
   const skipResolvedMapFallback =
     Boolean(model.variantFallbackSrc) &&

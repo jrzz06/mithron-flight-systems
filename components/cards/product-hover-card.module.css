@@ -65,8 +65,7 @@
   position: relative;
   z-index: 1;
   flex: 0 0 auto;
-  aspect-ratio: 1 / 1;
-  max-height: 260px;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   isolation: isolate;
   border-bottom: none;
@@ -74,8 +73,13 @@
   background: var(--ds-card);
 }
 
+.shell[data-card-variant="catalog"] .media {
+  aspect-ratio: 4 / 3;
+  max-height: none;
+}
+
 @container (max-width: 260px) {
-  .media {
+  .shell:not([data-card-variant="catalog"]) .media {
     max-height: 140px;
   }
 }
@@ -235,8 +239,10 @@
 
 .price {
   margin: 0;
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  width: fit-content;
+  align-self: flex-end;
   color: var(--ds-ink);
   font-size: 16px;
   font-weight: 600;
@@ -249,37 +255,21 @@
 
 .footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   min-width: 0;
   flex: 0 0 auto;
   margin-top: auto;
   padding-top: 12px;
 }
 
-.description {
-  display: -webkit-box;
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 0;
-  overflow: hidden;
-  color: var(--ds-ink-2);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5;
-  letter-spacing: var(--tracking-tight-sm);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  font-feature-settings: var(--font-features-ui);
-}
-
 .cta {
   composes: glass-button from global;
   display: inline-flex;
-  width: max-content;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
   min-height: 36px;
   align-items: center;
   justify-content: center;
@@ -291,6 +281,24 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: var(--tracking-tight-sm);
+  white-space: nowrap;
+  font-feature-settings: var(--font-features-ui);
+}
+
+.description {
+  display: -webkit-box;
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ds-ink-2);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: var(--tracking-tight-sm);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-feature-settings: var(--font-features-ui);
 }
 
@@ -309,6 +317,12 @@
 }
 
 @media (max-width: 767px) {
+  .shell[data-card-variant="catalog"] .media {
+    aspect-ratio: 4 / 3;
+    height: auto;
+    max-height: none;
+  }
+
   .media {
     aspect-ratio: 4 / 3;
     height: auto;
@@ -331,13 +345,16 @@
   }
 
   .price {
-    min-width: 0;
-    overflow-wrap: anywhere;
+    flex-shrink: 0;
+    width: fit-content;
+    white-space: nowrap;
   }
 
   .cta {
+    width: 100%;
+    max-width: 100%;
     min-height: var(--mobile-touch-min, 44px);
-    min-width: var(--mobile-touch-min, 44px);
+    min-width: 0;
   }
 }
 
@@ -348,6 +365,12 @@
 }
 
 @media (max-width: 640px) {
+  .shell[data-card-variant="catalog"] .media {
+    aspect-ratio: 4 / 3;
+    height: auto;
+    max-height: none;
+  }
+
   .shell {
     border-radius: var(--ds-r-sm);
   }
@@ -389,19 +412,24 @@
   }
 
   .footer {
+    flex-direction: column;
+    align-items: stretch;
     flex-wrap: nowrap;
-    gap: 0;
+    gap: 8px;
     padding-top: 4px;
     min-height: 0;
   }
 
   .cta {
     display: inline-flex;
+    width: 100%;
+    max-width: 100%;
     min-height: var(--mobile-touch-min, 44px);
-    min-width: var(--mobile-touch-min, 44px);
+    min-width: 0;
     padding: 0 10px;
-    font-size: 0;
-    gap: 0;
+    font-size: 12px;
+    gap: 8px;
+    justify-content: center;
   }
 
   .ctaIcon {
@@ -412,9 +440,12 @@
   .price {
     font-size: 12px;
     font-weight: 500;
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: left;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    width: fit-content;
+    align-self: flex-end;
+    white-space: nowrap;
+    text-align: right;
   }
 }
 
@@ -443,4 +474,13 @@
     filter: drop-shadow(0 16px 26px rgba(15, 23, 42, 0.07)) drop-shadow(0 5px 12px rgba(15, 23, 42, 0.045));
     opacity: 1;
   }
+}
+
+:global(.catalog-page-shell) .media::after {
+  display: none;
+}
+
+:global(.catalog-page-shell) .card:hover .media::after,
+:global(.catalog-page-shell) .card:focus-visible .media::after {
+  display: none;
 }

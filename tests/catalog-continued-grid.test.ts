@@ -47,11 +47,16 @@ describe("catalog continued grid", () => {
     expect(getVisibleProducts(items, 100)).toHaveLength(20);
   });
 
-  it("uses responsive column breakpoints", () => {
+  it("uses 2 or 4 column breakpoints only", () => {
+    expect(resolveColumnCount(320)).toBe(2);
     expect(resolveColumnCount(375)).toBe(2);
+    expect(resolveColumnCount(600)).toBe(2);
     expect(resolveColumnCount(767)).toBe(2);
-    expect(resolveColumnCount(900)).toBe(3);
+    expect(resolveColumnCount(800)).toBe(2);
+    expect(resolveColumnCount(1023)).toBe(2);
+    expect(resolveColumnCount(1024)).toBe(4);
     expect(resolveColumnCount(1280)).toBe(4);
+    expect(resolveColumnCount(1920)).toBe(4);
   });
 
   it("renders a load-more grid without window virtualization", () => {
@@ -66,5 +71,24 @@ describe("catalog continued grid", () => {
     expect(gridSource).not.toContain("useWindowVirtualizer");
     expect(pageSource).toContain("CatalogContinuedGrid");
     expect(pageSource).not.toContain("CatalogVirtualizedGrid");
+  });
+
+  it("matches lead grid column breakpoints in globals css", () => {
+    const globalsCss = source("app/globals.css");
+    const catalogGridBlock = globalsCss.match(
+      /\.catalog-product-grid \{[\s\S]*?\.catalog-product-grid--continued/
+    )?.[0];
+
+    expect(globalsCss).toMatch(
+      /\.catalog-product-grid[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(globalsCss).toMatch(
+      /@media \(min-width: 1024px\)[\s\S]*\.catalog-product-grid[\s\S]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(globalsCss).toMatch(
+      /@media \(min-width: 1024px\)[\s\S]*\.catalog-continued-grid__rows[\s\S]*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
+    );
+    expect(catalogGridBlock).not.toMatch(/repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+    expect(catalogGridBlock).not.toMatch(/auto-fill/);
   });
 });

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { catalogCinematicBannerFrame } from "@/config/catalog-routes";
 import { buildCatalogShelfLayout } from "@/lib/catalog-shelf-layout";
 import { resolveCatalogCutoutAsset } from "@/lib/media/catalog-cutout";
+import { resolveCatalogCardImage } from "@/lib/media/catalog-card-image";
 import styles from "./catalog-page.module.css";
 
 type CatalogShowcaseImage = {
@@ -59,7 +60,8 @@ export function CatalogPage({
   ]);
   const safeRemainingProducts = remainingProducts.filter((product) => !occupiedSlugs.has(product.slug));
   const catalogProductCount = leadProducts.length + safeRemainingProducts.length + (featuredProduct ? 1 : 0);
-  const featuredImage = featuredProduct ? resolveCatalogCutoutAsset(featuredProduct) : null;
+  const featuredImage = featuredProduct ? resolveCatalogCutoutAsset(featuredProduct) ?? featuredProduct.image : null;
+  const featuredEditorialImage = featuredImage ? resolveCatalogCardImage(featuredImage) : null;
   const catalogTitle = title ?? heroProduct?.category ?? "Mithron catalog";
   const catalogSubtitle = subtitle ?? (heroProduct ? `Browse ${heroProduct.category.toLowerCase()} selected for field-ready deployment and mission planning.` : "Browse drones, accessories, and field-ready products from the Mithron catalog.");
   const shouldRenderFallbackHero = !showcaseImage && title && subtitle && heroImage;
@@ -184,7 +186,7 @@ export function CatalogPage({
           ))}
         </div>
 
-        {featuredProduct && featuredImage && safeRemainingProducts.length > 0 ? (
+        {featuredProduct && featuredEditorialImage && safeRemainingProducts.length > 0 ? (
           <Link
             href={`/product/${featuredProduct.slug}`}
             className={isShowroom ? styles.editorialBand : "catalog-editorial-band"}
@@ -203,10 +205,10 @@ export function CatalogPage({
             </div>
             <div className={isShowroom ? styles.editorialMedia : "catalog-editorial-band__media"} aria-hidden>
               <MithronCardImage
-                src={featuredImage.src}
-                alt={featuredImage.alt}
+                src={featuredEditorialImage.src}
+                alt={featuredEditorialImage.alt}
                 fill
-                responsive={featuredImage.responsive}
+                useSourceImage
                 className={cn(isShowroom ? styles.editorialImage : "catalog-editorial-band__image", !isShowroom && "object-contain")}
                 sizes="(min-width: 1024px) 420px, 72vw"
               />

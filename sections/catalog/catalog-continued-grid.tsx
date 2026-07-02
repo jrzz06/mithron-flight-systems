@@ -16,8 +16,7 @@ type CatalogContinuedGridProps = {
 };
 
 export function resolveColumnCount(width: number) {
-  if (width <= 767) return 2;
-  if (width < 1024) return 3;
+  if (width < 1024) return 2;
   return 4;
 }
 

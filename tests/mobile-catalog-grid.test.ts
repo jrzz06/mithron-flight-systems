@@ -22,21 +22,24 @@ describe("mobile catalog grid layout", () => {
     expect(globalsCss).toContain(".catalog-continued-grid__load-more");
   });
 
-  it("keeps equal-height catalog grids on phone", () => {
+  it("keeps 2-column catalog grids and stacked footers on phone", () => {
     const globalsCss = source("app/globals.css");
     const showroomCss = source("sections/catalog/catalog-page.module.css");
 
     expect(globalsCss).toMatch(
-      /@media \(max-width: 767px\)[\s\S]*\.catalog-product-grid[\s\S]*align-items:\s*stretch/
+      /@media \(max-width: 767px\)[\s\S]*\.catalog-product-grid[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
     );
     expect(globalsCss).toMatch(
-      /@media \(max-width: 767px\)[\s\S]*\.catalog-page-shell \.premium-product-card-shell[\s\S]*height:\s*100%/
+      /@media \(max-width: 767px\)[\s\S]*\.catalog-page-shell \.premium-product-card__footer[\s\S]*flex-direction:\s*column/
     );
     expect(showroomCss).toMatch(
-      /@media \(max-width: 767px\)[\s\S]*\.productGrid[\s\S]*align-items:\s*stretch/
+      /@media \(max-width: 767px\)[\s\S]*\.productGrid[\s\S]*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
     );
     expect(showroomCss).toMatch(
-      /@media \(max-width: 767px\)[\s\S]*\.footer[\s\S]*grid-template-columns:\s*auto minmax\(0,\s*1fr\)/
+      /@media \(max-width: 767px\)[\s\S]*\.footer[\s\S]*flex-direction:\s*column/
+    );
+    expect(showroomCss).toMatch(
+      /@media \(max-width: 767px\)[\s\S]*\.price[\s\S]*white-space:\s*nowrap/
     );
   });
 
