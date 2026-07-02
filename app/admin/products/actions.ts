@@ -7,6 +7,8 @@ import {
   buildProductCategoryMetadataFromFormData,
   buildProductDraftFromFormData,
   buildProductDeleteFromFormData,
+  buildProductForceDeleteFromFormData,
+  buildProductRemoveFromFormData,
   buildProductMediaLinkFromFormData,
   buildProductPublishStateFromFormData,
   buildProductQuickEditFromFormData,
@@ -17,7 +19,8 @@ import {
 import {
   createActivityLogRecord,
   deleteAdminRecord,
-  deleteProductRecordSafely,
+  deleteOrArchiveProduct,
+  getProductDeletionBlockers,
   recordEntityRevisionSnapshot,
   upsertAdminRecord,
   AdminRecordConflictError,
@@ -27,7 +30,7 @@ import {
   upsertProductRecord,
   setProductMediaPrimaryViaRpc
 } from "@/services/admin-actions";
-import { getCurrentAuthContext, requirePermission } from "@/services/auth";
+import { getCurrentAuthContext, requireAdminPermission, requirePermission } from "@/services/auth";
 import {
   parseProductCreateInventoryFromFormData,
   saveProductInventory
@@ -112,16 +115,23 @@ function normalizeCategoryName(value: string) {
 }
 
 async function runProductAction(
-  successMessage: string,
-  action: () => Promise<void>,
-  redirectOptions: { tool?: string; anchor?: string } = {}
+  options: {
+    successMessage?: string;
+    tool?: string;
+    anchor?: string;
+    actionKind?: string;
+  },
+  action: () => Promise<string | void>
 ) {
   await requirePermission("products.write");
   let status: "success" | "error" = "success";
-  let message = successMessage;
+  let message = options.successMessage ?? "Saved.";
 
   try {
-    await action();
+    const dynamicMessage = await action();
+    if (typeof dynamicMessage === "string") {
+      message = dynamicMessage;
+    }
   } catch (error) {
     status = "error";
     message = productActionErrorMessage(error);
@@ -131,13 +141,14 @@ async function runProductAction(
     product_status: status,
     product_message: message.slice(0, 240)
   });
-  if (redirectOptions.tool) params.set("tool", redirectOptions.tool);
+  if (options.tool) params.set("tool", options.tool);
+  if (options.actionKind) params.set("product_action", options.actionKind);
 
-  redirect(`/admin/products?${params.toString()}${redirectOptions.anchor ? `#${redirectOptions.anchor}` : ""}`);
+  redirect(`/admin/products?${params.toString()}${options.anchor ? `#${options.anchor}` : ""}`);
 }
 
 export async function saveProductDraftFormAction(formData: FormData) {
-  await runProductAction("Product draft saved.", async () => {
+  await runProductAction({ successMessage: "Product draft saved." }, async () => {
     const { actorId, actorRole } = await currentActorContext();
     const uploadedImages = await uploadProductImagesForDraft(formData, actorId, "admin-product-create", {
       applyAutoCutout: true
@@ -205,7 +216,7 @@ export async function saveProductDraftFormAction(formData: FormData) {
 }
 
 export async function saveProductDuplicateFormAction(formData: FormData) {
-  await runProductAction("Product duplicated as a draft.", async () => {
+  await runProductAction({ successMessage: "Product duplicated as a draft." }, async () => {
     const sourceSlug = String(formData.get("product_slug") ?? "").trim();
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(sourceSlug)) {
       throw new Error("Product duplicate product_slug must use lowercase letters, numbers, and hyphens only.");
@@ -256,7 +267,7 @@ export async function saveProductDuplicateFormAction(formData: FormData) {
 }
 
 export async function saveProductCategoryFormAction(formData: FormData) {
-  await runProductAction("Category added.", async () => {
+  await runProductAction({ successMessage: "Category added.", tool: "category", anchor: "product-category" }, async () => {
     const categoryInput = buildProductCategoryMetadataFromFormData(formData);
     const snapshot = await getProductManagerSnapshot();
     const normalizedTitle = normalizeCategoryName(categoryInput.fields.title);
@@ -300,11 +311,11 @@ export async function saveProductCategoryFormAction(formData: FormData) {
     revalidatePath("/admin/products");
     revalidatePath("/admin/cms");
     revalidatePath("/products");
-  }, { tool: "category", anchor: "product-category" });
+  });
 }
 
 export async function deleteProductCategoryFormAction(formData: FormData) {
-  await runProductAction("Category deleted.", async () => {
+  await runProductAction({ successMessage: "Category deleted." }, async () => {
     const categoryTitle = readOptionalFormText(formData, "category");
     const requestedRouteKey = readOptionalFormText(formData, "category_route_key");
     if (!categoryTitle) {
@@ -361,7 +372,7 @@ export async function deleteProductCategoryFormAction(formData: FormData) {
 }
 
 export async function saveProductQuickEditFormAction(formData: FormData) {
-  await runProductAction("Product updated.", async () => {
+  await runProductAction({ successMessage: "Product updated." }, async () => {
     const quickInput = buildProductQuickEditFromFormData(formData);
     quickInput.fields = await applyProductDescriptionSaveNormalization(quickInput.fields);
     const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "").trim() || null;
@@ -407,7 +418,7 @@ export async function saveProductQuickEditFormAction(formData: FormData) {
 }
 
 export async function saveProductMediaLinkFormAction(formData: FormData) {
-  await runProductAction("Product media link saved.", async () => {
+  await runProductAction({ successMessage: "Product media link saved." }, async () => {
     const draftInput = buildProductMediaLinkFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     const record = draftInput.fields.is_primary
@@ -449,7 +460,7 @@ export async function saveProductMediaLinkFormAction(formData: FormData) {
 }
 
 export async function saveProductVariantsFormAction(formData: FormData) {
-  await runProductAction("Product variants saved.", async () => {
+  await runProductAction({ successMessage: "Product variants saved." }, async () => {
     const draftInput = buildProductVariantsWorkflowFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     const record = await updateAdminRecord(
@@ -483,7 +494,7 @@ export async function saveProductVariantsFormAction(formData: FormData) {
 }
 
 export async function saveProductSeoFormAction(formData: FormData) {
-  await runProductAction("Product SEO saved.", async () => {
+  await runProductAction({ successMessage: "Product SEO saved." }, async () => {
     const draftInput = buildProductSeoDraftFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     const record = await updateAdminRecord(
@@ -516,7 +527,7 @@ export async function saveProductSeoFormAction(formData: FormData) {
 }
 
 export async function saveProductPublishStateFormAction(formData: FormData) {
-  await runProductAction("Product publish state saved.", async () => {
+  await runProductAction({ successMessage: "Product publish state saved." }, async () => {
     const draftInput = buildProductPublishStateFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     const now = new Date().toISOString();
@@ -563,11 +574,69 @@ export async function saveProductPublishStateFormAction(formData: FormData) {
   });
 }
 
+export async function previewProductDeleteAction(slug: string) {
+  await requirePermission("products.write");
+  const normalizedSlug = String(slug ?? "").trim();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalizedSlug)) {
+    throw new Error("Product slug must use lowercase letters, numbers, and hyphens only.");
+  }
+  return getProductDeletionBlockers(normalizedSlug);
+}
+
+export async function saveProductRemoveFormAction(formData: FormData) {
+  await runProductAction({ actionKind: "remove" }, async () => {
+    const removeInput = buildProductRemoveFromFormData(formData);
+    const { actorId, actorRole } = await currentActorContext();
+    const result = await deleteOrArchiveProduct(removeInput.identity.slug, actorId, { mode: "auto" });
+    const isArchived = result.outcome === "archived";
+
+    await recordProductAuditTrail(
+      {
+        action: isArchived ? "products.archive" : "products.hard_delete",
+        entityTable: "mithron_products",
+        entityId: removeInput.identity.slug,
+        snapshot: isArchived
+          ? {
+              product_slug: removeInput.identity.slug,
+              blockers: result.blockers,
+              before_data: result.beforeData,
+              record: result.record
+            }
+          : {
+              product_slug: removeInput.identity.slug,
+              deleted_dependencies: result.deletedDependencies,
+              before_data: result.beforeData,
+              blockers: result.blockers
+            },
+        actorId,
+        actorRole,
+        changeSummary: removeInput.changeSummary,
+        severity: "warning",
+        metadata: {
+          product_slug: removeInput.identity.slug,
+          delete_mode: isArchived ? "auto_archive" : "auto_hard_delete",
+          blockers: result.blockers,
+          ...(isArchived ? {} : { deleted_dependencies: result.deletedDependencies })
+        }
+      }
+    );
+
+    revalidateCatalogSurfaces(removeInput.identity.slug);
+    revalidatePath("/admin/products");
+    revalidatePath("/admin");
+    revalidatePath("/");
+    revalidatePath("/admin/inventory");
+    revalidatePath("/warehouse/inventory");
+
+    return isArchived ? "Product archived." : "Product permanently deleted.";
+  });
+}
+
 export async function saveProductHardDeleteFormAction(formData: FormData) {
-  await runProductAction("Product hard deleted.", async () => {
+  await runProductAction({ actionKind: "permanent_delete" }, async () => {
     const deleteInput = buildProductDeleteFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
-    const result = await deleteProductRecordSafely(deleteInput.identity.slug, actorId);
+    const result = await deleteOrArchiveProduct(deleteInput.identity.slug, actorId, { mode: "hard" });
 
     await recordProductAuditTrail(
       {
@@ -577,7 +646,8 @@ export async function saveProductHardDeleteFormAction(formData: FormData) {
         snapshot: {
           product_slug: deleteInput.identity.slug,
           deleted_dependencies: result.deletedDependencies,
-          before_data: result.beforeData
+          before_data: result.beforeData,
+          blockers: result.blockers
         },
         actorId,
         actorRole,
@@ -585,20 +655,70 @@ export async function saveProductHardDeleteFormAction(formData: FormData) {
         severity: "warning",
         metadata: {
           product_slug: deleteInput.identity.slug,
-          delete_mode: "hard_delete",
-          deleted_dependencies: result.deletedDependencies
+          delete_mode: "permanent_delete",
+          deleted_dependencies: result.deletedDependencies,
+          blockers: result.blockers
         }
       }
     );
 
+    revalidateCatalogSurfaces(deleteInput.identity.slug);
     revalidatePath("/admin/products");
     revalidatePath("/admin");
     revalidatePath("/");
+    revalidatePath("/admin/inventory");
+    revalidatePath("/warehouse/inventory");
+
+    return "Product permanently deleted.";
+  });
+}
+
+export async function saveProductForceDeleteFormAction(formData: FormData) {
+  await runProductAction({ actionKind: "permanent_delete" }, async () => {
+    await requireAdminPermission("products.permanent_delete");
+    const deleteInput = buildProductForceDeleteFromFormData(formData);
+    const { actorId, actorRole } = await currentActorContext();
+    const result = await deleteOrArchiveProduct(deleteInput.identity.slug, actorId, { mode: "force_hard" });
+
+    await recordProductAuditTrail(
+      {
+        action: "products.hard_delete",
+        entityTable: "mithron_products",
+        entityId: deleteInput.identity.slug,
+        snapshot: {
+          product_slug: deleteInput.identity.slug,
+          deleted_dependencies: result.deletedDependencies,
+          before_data: result.beforeData,
+          blockers: result.blockers,
+          force_delete: true
+        },
+        actorId,
+        actorRole,
+        changeSummary: deleteInput.changeSummary,
+        severity: "warning",
+        metadata: {
+          product_slug: deleteInput.identity.slug,
+          delete_mode: "force_hard_delete",
+          deleted_dependencies: result.deletedDependencies,
+          blockers: result.blockers,
+          force_delete: true
+        }
+      }
+    );
+
+    revalidateCatalogSurfaces(deleteInput.identity.slug);
+    revalidatePath("/admin/products");
+    revalidatePath("/admin");
+    revalidatePath("/");
+    revalidatePath("/admin/inventory");
+    revalidatePath("/warehouse/inventory");
+
+    return "Product force deleted.";
   });
 }
 
 export async function saveProductInventoryWorkflowFormAction(formData: FormData) {
-  await runProductAction("Product inventory linkage saved.", async () => {
+  await runProductAction({ successMessage: "Product inventory linkage saved." }, async () => {
     const draftInput = buildProductInventoryWorkflowFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     if (!actorId) throw new Error("Authentication required.");

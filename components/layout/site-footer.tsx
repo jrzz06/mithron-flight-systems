@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
+import { EditorRenderedHtml } from "@/components/editor/editor-rendered-html";
 import { isCmsStrictMode } from "@/lib/cms/strict-mode";
 import { footerContent, type FooterContent } from "@/config/storefront-content";
 import { footerOfficialLinks } from "@/config/footer-links";
@@ -53,11 +53,11 @@ export function SiteFooter({ content = emptyFooterContent }: { content?: FooterC
 
   return (
     <footer className="site-footer ambient-section ambient-dark bg-[var(--ds-footer-bg)] pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white" data-testid="site-footer">
-      <div className="site-footer__inner mx-auto grid max-w-[1440px] gap-6 px-6 py-12 md:grid-cols-2 md:gap-10 md:px-16 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.15fr)_repeat(4,minmax(0,1fr))]">
+      <div className="site-footer__inner mx-auto grid max-w-[1440px] gap-6 px-6 py-12 max-[767px]:grid-cols-1 max-[767px]:gap-4 max-[767px]:px-4 max-[767px]:py-10 md:grid-cols-2 md:gap-10 md:px-16 lg:grid-cols-3 xl:grid-cols-[minmax(0,1.15fr)_repeat(4,minmax(0,1fr))]">
         <div className="site-footer__lead xl:col-span-1">
           <p className="type-meta text-white/45">Mithron India Smart Services</p>
-          <h2 className="type-section mt-3 text-3xl text-balance md:text-4xl">{resolved.leadTitle}</h2>
-          <EditorRenderedContent html={resolved.leadBody} className="type-body mt-4 max-w-xl text-white/68" />
+          <h2 className="type-section mt-3 text-3xl text-balance max-[767px]:text-2xl md:text-4xl">{resolved.leadTitle}</h2>
+          <EditorRenderedHtml html={resolved.leadBody} className="type-body mt-4 max-w-xl text-base leading-relaxed text-white/68 max-[767px]:text-base" />
           <div className="site-footer__contact mt-6 flex flex-col gap-2 text-sm text-white/72">
             <a href={`mailto:${contactEmail}`} className="site-footer__link inline-flex min-h-11 w-fit items-center py-2 transition-colors hover:text-white">
               {contactEmail}
@@ -81,7 +81,7 @@ export function SiteFooter({ content = emptyFooterContent }: { content?: FooterC
           </div>
         ))}
       </div>
-      <div className="type-technical mx-auto max-w-prose border-t border-white/10 px-6 py-5 text-center text-xs text-white/45">
+      <div className="type-technical mx-auto max-w-prose border-t border-white/10 px-6 py-5 text-center text-xs leading-relaxed text-white/45 max-[767px]:flex max-[767px]:flex-col max-[767px]:gap-2 max-[767px]:px-4">
         {resolved.legalText}
       </div>
     </footer>

@@ -44,6 +44,9 @@ export function MithronResponsiveImageImg({
   const fallbackIndex = fallbackByKey[chainKey] ?? 0;
   const imgRef = useRef<HTMLImageElement>(null);
   const imageSrc = fallbackChain[fallbackIndex] ?? model.primarySrc;
+  if (!imageSrc?.trim()) {
+    return null;
+  }
   const usesPlainDelivery = !isResponsiveVariantSrc(model, imageSrc);
   const useDirectDelivery = model.useSourceImage || model.useNativeRemoteImage || (usesPlainDelivery && isRemoteImageSrc(imageSrc));
   const resolvedLoading = priority ? "eager" : loading ?? "lazy";

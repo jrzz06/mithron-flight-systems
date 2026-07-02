@@ -26,6 +26,22 @@ describe("hydration stability", () => {
     expect(cartNavButton).not.toContain("typeof window");
   });
 
+  it("rehydrates cart state safely before purchase actions are enabled", () => {
+    const cartStore = source("store/cart.ts");
+    const storeShell = source("components/layout/store-shell-client.tsx");
+    const configurator = source("sections/product/product-configurator.tsx");
+    const stickyPurchase = source("sections/product/showcase/product-sticky-purchase.tsx");
+
+    expect(cartStore).toContain("skipHydration: true");
+    expect(cartStore).toContain("mergeRehydratedCartState");
+    expect(cartStore).toContain("useCartHasHydrated");
+    expect(storeShell).toContain("useCartStore.persist.rehydrate()");
+    expect(configurator).toContain("useCartHasHydrated");
+    expect(configurator).toContain("!cartHasHydrated");
+    expect(stickyPurchase).toContain("useCartHasHydrated");
+    expect(stickyPurchase).toContain("!cartHasHydrated");
+  });
+
   it("keeps public CMS storefront reads bounded", () => {
     const cms = source("services/cms.ts");
     const publicSnapshotLoader = cms.match(/async function loadPublicCmsSnapshot[\s\S]*?export const getPublicCmsSnapshot/)?.[0] ?? "";

@@ -23,7 +23,7 @@ const imageHeights: Record<ProductHoverCardVariant, string> = {
 const imageSizes: Record<ProductHoverCardVariant, string> = {
   rail: "320px",
   compact: "260px",
-  catalog: "(min-width:1280px) 25vw, (min-width:768px) 33vw, 100vw",
+  catalog: "(min-width:1280px) 25vw, (min-width:768px) 33vw, (min-width:360px) 50vw, 100vw",
   related: "240px"
 };
 

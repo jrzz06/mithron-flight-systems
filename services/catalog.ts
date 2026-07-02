@@ -12,8 +12,10 @@ import {
 import {
   catalogCategoryDefinitions,
   filterProductsForCategorySlug,
+  getCatalogCategoryDefinition,
   isCatalogCategorySlug,
-  type CatalogCategoryDefinition
+  type CatalogCategoryDefinition,
+  type CatalogCategorySlug
 } from "@/lib/catalog-categories";
 import { dedupeProductsBySlug } from "@/lib/catalog-shelf-layout";
 import {
@@ -1206,13 +1208,14 @@ async function fetchCatalogRows<T>(query: string): Promise<T[]> {
   return fetchSupabaseRows<T>("mithron_products", query);
 }
 
-async function fetchAllCatalogRows<T>(select: string): Promise<T[]> {
+async function fetchAllCatalogRows<T>(select: string, extraFilter = ""): Promise<T[]> {
   const rows: T[] = [];
   let offset = 0;
+  const filterSuffix = extraFilter ? `&${extraFilter}` : "";
 
   while (rows.length < CATALOG_MAX_ROWS) {
     const page = await fetchCatalogRows<T>(
-      `select=${select}&${publishedCatalogFilter}&order=sort_order.asc,slug.asc&limit=${CATALOG_PAGE_SIZE}&offset=${offset}`
+      `select=${select}&${publishedCatalogFilter}${filterSuffix}&order=sort_order.asc,slug.asc&limit=${CATALOG_PAGE_SIZE}&offset=${offset}`
     );
     rows.push(...page);
     if (page.length < CATALOG_PAGE_SIZE) break;
@@ -1220,6 +1223,13 @@ async function fetchAllCatalogRows<T>(select: string): Promise<T[]> {
   }
 
   return rows;
+}
+
+async function fetchCatalogRowsForCategoryName(categoryName: string): Promise<MithronProductRow[]> {
+  return fetchAllCatalogRows<MithronProductRow>(
+    catalogListSelect,
+    `category=eq.${encodeURIComponent(categoryName)}`
+  );
 }
 
 async function fetchCatalogSearchRowsFallback(query: string, limit: number): Promise<CatalogSearchRow[]> {
@@ -1436,6 +1446,37 @@ async function getPrimaryProductMediaForSlugs(slugs: string[]): Promise<Map<stri
   }
 }
 
+async function getCatalogCutoutMediaForSlugs(slugs: string[]): Promise<Map<string, MediaAsset>> {
+  const uniqueSlugs = [...new Set(slugs.map((slug) => slug.trim()).filter(Boolean))];
+  if (!uniqueSlugs.length) return new Map();
+
+  const { hasServiceRoleKey } = getCatalogConfig(true);
+  if (!hasServiceRoleKey) return new Map();
+
+  try {
+    const links = await fetchProductMediaLinks(
+      `select=product_slug,media_asset_id,usage,variant_id,is_primary,sort_order,alt_text,caption&usage=eq.cms&variant_id=eq.catalog-cutout-v1&product_slug=${postgrestIn(uniqueSlugs)}&limit=${uniqueSlugs.length}`
+    );
+    const mediaIds = [...new Set(links.map((link) => link.media_asset_id).filter((id): id is string => Boolean(id)))];
+    if (!mediaIds.length) return new Map();
+
+    const mediaById = await fetchMediaAssetsById(mediaIds);
+    const lookup = new Map<string, MediaAsset>();
+
+    for (const link of links.sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))) {
+      if (!link.product_slug || !link.media_asset_id || lookup.has(link.product_slug)) continue;
+      const media = mediaFromMediaAssetRow(mediaById.get(link.media_asset_id), link.alt_text ?? link.caption ?? link.product_slug);
+      if (media) lookup.set(link.product_slug, media);
+    }
+
+    return lookup;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[catalog] scoped catalog cutout media lookup failed; falling back to primary product images: ${message}`);
+    return new Map();
+  }
+}
+
 const getCatalogCutoutMediaLookup = cache(async (): Promise<Map<string, MediaAsset>> => {
   const { hasServiceRoleKey } = getCatalogConfig(true);
   if (!hasServiceRoleKey) return new Map();
@@ -1466,17 +1507,22 @@ const getCatalogCutoutMediaLookup = cache(async (): Promise<Map<string, MediaAss
 
 async function mapRowsWithCatalogMedia<T extends Pick<MithronProductRow, "slug">, R>(
   rows: T[],
-  mapper: (row: T, media?: MediaAsset) => R
+  mapper: (row: T, media?: MediaAsset) => R,
+  options?: { scopeToRows?: boolean }
 ) {
-  const primaryMedia = await getPrimaryProductMediaLookup();
-  let catalogCutouts = new Map<string, MediaAsset>();
+  const slugs = rows.map((row) => row.slug).filter(Boolean);
+  const useScopedMedia = options?.scopeToRows === true && slugs.length > 0;
 
-  try {
-    catalogCutouts = await getCatalogCutoutMediaLookup();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
-  }
+  const [primaryMedia, catalogCutouts] = await Promise.all([
+    useScopedMedia ? getPrimaryProductMediaForSlugs(slugs) : getPrimaryProductMediaLookup(),
+    useScopedMedia
+      ? getCatalogCutoutMediaForSlugs(slugs)
+      : getCatalogCutoutMediaLookup().catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(`[catalog] catalog cutout media lookup failed; falling back to primary product images: ${message}`);
+          return new Map<string, MediaAsset>();
+        })
+  ]);
 
   return rows.map((row) => mapper(row, catalogCutouts.get(row.slug) ?? primaryMedia.get(row.slug)));
 }
@@ -1550,7 +1596,7 @@ export const getEnterpriseMenuProducts = cache(async (): Promise<EnterpriseMenuL
     });
 
     const errors: CatalogDataError[] = [];
-    const products = await mapRowsWithCatalogMedia(rows, (row, media) => mapEnterpriseMenuProduct(row, media, errors));
+    const products = await mapRowsWithCatalogMedia(rows, (row, media) => mapEnterpriseMenuProduct(row, media, errors), { scopeToRows: true });
     return {
       products: products.filter((product): product is Product => product !== null),
       errors
@@ -1807,10 +1853,20 @@ export async function searchCatalogProducts(query: string, limit = 24): Promise<
   return searchCatalogProductsFallback(normalized, limit);
 }
 
+export const getProductsByCategorySlug = cache(async (slug: CatalogCategorySlug): Promise<Product[]> => {
+  const definition = getCatalogCategoryDefinition(slug);
+  if (!definition.categoryNames.length) return [];
+
+  const rows = await overlayLiveInventoryAvailability(
+    await fetchCatalogRowsForCategoryName(definition.categoryNames[0]!)
+  );
+  const products = await mapRowsWithCatalogMedia(rows, mapProductRow, { scopeToRows: true });
+  return dedupeProductsBySlug(filterProductsForCategorySlug(products, slug));
+});
+
 export async function getProductsForCategorySlug(slug: string) {
   if (!isCatalogCategorySlug(slug)) return [];
-  const products = await getProducts();
-  return dedupeProductsBySlug(filterProductsForCategorySlug(products, slug));
+  return getProductsByCategorySlug(slug);
 }
 
 export async function getGlobalProductsForCatalog() {

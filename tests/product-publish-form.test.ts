@@ -69,7 +69,7 @@ describe("product publish workflow", () => {
     }))).toThrow("Product delete confirmation must match the product slug exactly.");
   });
 
-  it("wires row-level product delete to the guarded database delete server action", () => {
+  it("wires row-level product remove and archived permanent delete to guarded server actions", () => {
     const pageSource = readFileSync(join(process.cwd(), "app/admin/products/page.tsx"), "utf8");
     const gridSource = readFileSync(join(process.cwd(), "app/admin/products/product-catalog-grid.tsx"), "utf8");
     const actionSource = readFileSync(join(process.cwd(), "app/admin/products/actions.ts"), "utf8");
@@ -77,14 +77,18 @@ describe("product publish workflow", () => {
     expect(pageSource).toContain("ProductCatalogGrid");
     expect(gridSource).toContain("ProductPublishToggle");
     expect(gridSource).toContain("data-product-row-action=\"publish\"");
+    expect(gridSource).toContain("saveProductRemoveFormAction");
     expect(gridSource).toContain("saveProductHardDeleteFormAction");
-    expect(gridSource).toContain("data-product-row-action=\"delete\"");
+    expect(gridSource).toContain("saveProductForceDeleteFormAction");
+    expect(gridSource).toContain('data-product-row-action={isArchivedView ? "permanent-delete" : "remove"}');
     expect(gridSource).toContain("name=\"confirm_slug\"");
     expect(pageSource).not.toContain("data-product-hard-delete-table=\"mithron_products\"");
     expect(pageSource).not.toContain("Hard delete product");
     expect(pageSource).not.toContain("data-product-row-action=\"hard-delete\"");
+    expect(actionSource).toContain("buildProductRemoveFromFormData");
     expect(actionSource).toContain("buildProductDeleteFromFormData");
-    expect(actionSource).toContain("deleteProductRecordSafely");
+    expect(actionSource).toContain("deleteOrArchiveProduct");
+    expect(actionSource).toContain("products.archive");
     expect(actionSource).toContain("products.hard_delete");
   });
 });

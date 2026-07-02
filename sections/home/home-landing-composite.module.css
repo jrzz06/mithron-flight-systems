@@ -1758,6 +1758,15 @@
   .productShelfGrid {
     grid-auto-columns: minmax(224px, 72vw);
   }
+
+  .missionWorldSection {
+    min-height: auto;
+    padding: var(--mobile-section-gap, 1.5rem) 0 calc(var(--mobile-section-gap, 1.5rem) + 1rem);
+  }
+
+  .missionWorldSection .container {
+    padding-inline: var(--mobile-page-inline, 12px);
+  }
 }
 
 @media (max-width: 768px) {
@@ -1811,8 +1820,8 @@
   }
 
   .miniCarouselNav {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     top: calc(50% - 8px);
   }
 

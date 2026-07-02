@@ -15,7 +15,7 @@ import { ProductRichDescriptionSection } from "@/sections/product/showcase/produ
 import { ProductShowcaseHero } from "@/sections/product/showcase/product-showcase-hero";
 import { JsonLd } from "@/components/seo/json-ld";
 import { buildProductStructuredData } from "@/lib/structured-data";
-import { getPublicCmsSnapshot, emptySupabaseOnlySnapshot } from "@/services/cms";
+import { getProductReviewsCmsSlice, emptySupabaseOnlySnapshot } from "@/services/cms";
 import { getProductPageReviews } from "@/services/product-reviews";
 import { buildProductMetadata } from "@/services/product-metadata";
 import showcaseStyles from "@/sections/product/showcase/product-showcase.module.css";
@@ -66,13 +66,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   const product = pageLoad.product;
-  const cmsResult = await Promise.allSettled([getPublicCmsSnapshot()]);
+  const cmsResult = await Promise.allSettled([getProductReviewsCmsSlice()]);
   if (cmsResult[0].status === "rejected") {
     const message = cmsResult[0].reason instanceof Error ? cmsResult[0].reason.message : String(cmsResult[0].reason);
-    console.warn(`[product-page] CMS snapshot load failed for ${slug}: ${message}`);
+    console.warn(`[product-page] CMS reviews load failed for ${slug}: ${message}`);
   }
 
-  const cms = cmsResult[0].status === "fulfilled" ? cmsResult[0].value : emptySupabaseOnlySnapshot;
+  const cmsReviews = cmsResult[0].status === "fulfilled" ? cmsResult[0].value : emptySupabaseOnlySnapshot.productSupport.reviews;
   const structuredData = buildProductStructuredData(product);
   const mediaPlan = buildProductMediaPlan(product);
   const descriptionHtml = getProductDescriptionHtml(product);
@@ -80,7 +80,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     slug: product.slug,
     productName: product.name,
     sourceCatalogId: product.sourceCatalogId,
-    cmsReviews: cms.productSupport.reviews
+    cmsReviews
   });
 
   return (

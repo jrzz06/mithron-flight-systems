@@ -1,11 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { AdminDashboardLiveSync } from "@/components/admin/admin-dashboard-live-sync";
+import { AdminDashboardEnquiryQueue } from "@/components/admin/admin-dashboard-enquiry-queue";
 import { StatusPill } from "@/components/platform";
 import { connectivityMessage, relativeTimeLabel } from "@/lib/platform/copy";
 import { formatDashboardCount, getAdminDashboardSnapshot, orderNeedsAdminReview } from "@/services/admin";
 import { getAdminSettingsPolicy } from "@/services/admin-settings-policy";
-import { listAdminEnquiries } from "@/services/enquiries";
 
 export const dynamic = "force-dynamic";
 
@@ -17,15 +18,10 @@ function orderLabel(order: Record<string, unknown>) {
   return text(order.order_number) || text(order.id).slice(0, 8) || "Order";
 }
 
-function openEnquiries(enquiries: Awaited<ReturnType<typeof listAdminEnquiries>>) {
-  return enquiries.filter((enquiry) => !["converted", "lost", "closed"].includes(text(enquiry.status, "new")));
-}
-
 export default async function AdminPage() {
-  const [snapshot, policy, enquiries] = await Promise.all([
+  const [snapshot, policy] = await Promise.all([
     getAdminDashboardSnapshot(),
-    getAdminSettingsPolicy(),
-    listAdminEnquiries()
+    getAdminSettingsPolicy()
   ]);
   const { operationalCounts } = snapshot.data;
   const pendingSubmissions = snapshot.data.pendingSupplierSubmissionRows;
@@ -36,7 +32,6 @@ export default async function AdminPage() {
   ).slice(0, 8);
 
   const inventoryAlerts = snapshot.data.lowStockAlerts.slice(0, 8);
-  const queueEnquiries = openEnquiries(enquiries).slice(0, 8);
 
   const kpiCards = [
     {
@@ -121,30 +116,16 @@ export default async function AdminPage() {
             ) : null}
           </QueuePanel>
 
-          <QueuePanel title="Customer enquiries" href="/admin/enquiries" emptyLabel="No open enquiries.">
-            {queueEnquiries.length ? (
-              <table className="min-w-full text-sm">
-                <thead className="border-b border-[var(--platform-border)] text-left text-[11px] uppercase tracking-[0.06em] text-[var(--platform-text-muted)]">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Customer</th>
-                    <th className="px-3 py-2 font-medium">Subject</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Waiting</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {queueEnquiries.map((enquiry) => (
-                    <tr key={String(enquiry.id)} className="border-b border-[var(--platform-border)] last:border-b-0">
-                      <td className="px-3 py-2 text-[var(--platform-text-primary)]">{text(enquiry.customer_email, "—")}</td>
-                      <td className="px-3 py-2 text-[var(--platform-text-secondary)]">{text(enquiry.subject, "Enquiry")}</td>
-                      <td className="px-3 py-2"><StatusPill status={text(enquiry.status, "new")} /></td>
-                      <td className="px-3 py-2 text-xs text-[var(--platform-text-muted)]">{relativeTimeLabel(text(enquiry.created_at))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : null}
-          </QueuePanel>
+          <Suspense
+            fallback={(
+              <div className="rounded-[8px] border border-[var(--platform-border)] bg-[var(--platform-surface-muted)] p-6">
+                <div className="h-5 w-40 animate-pulse rounded bg-[var(--platform-surface-raised)]" aria-hidden="true" />
+                <div className="mt-4 h-32 animate-pulse rounded bg-[var(--platform-surface-raised)]" aria-hidden="true" />
+              </div>
+            )}
+          >
+            <AdminDashboardEnquiryQueue />
+          </Suspense>
 
           <QueuePanel title="Inventory alerts" href="/admin/inventory" emptyLabel="Stock levels are healthy.">
             {inventoryAlerts.length ? (

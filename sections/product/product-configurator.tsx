@@ -10,7 +10,7 @@ import { cn, formatINR } from "@/lib/utils";
 import { formatAvailability } from "@/lib/product-spec-text";
 import { deriveProductSku } from "@/lib/product-sku";
 import { useRegisterProductPurchase } from "@/sections/product/product-purchase-context";
-import { useCartStore } from "@/store/cart";
+import { useCartHasHydrated, useCartStore } from "@/store/cart";
 import styles from "./product-detail.module.css";
 
 export type ProductConfiguratorModel = {
@@ -86,6 +86,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
   const selectedVariant = product.variants.find((variant) => variant.id === variantId) ?? product.variants[0];
   const addItemWithQuantity = useCartStore((state) => state.addItemWithQuantity);
   const setCartOpen = useCartStore((state) => state.setCartOpen);
+  const cartHasHydrated = useCartHasHydrated();
   const showVariantPicker = product.variants.length > 1 && !isAvailabilityVariant(product.variants);
   const showBundlePicker = product.bundles.length > 1;
   const displayPrice = product.price;
@@ -98,7 +99,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
 
   const commitPurchase = useCallback(async (mode: "cart" | "checkout") => {
     const bundle = selectedBundle;
-    if (!bundle || isAdding) return;
+    if (!bundle || isAdding || !cartHasHydrated) return;
 
     setIsAdding(true);
     addItemWithQuantity({
@@ -127,6 +128,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
     window.setTimeout(() => setIsAdding(false), 400);
   }, [
     addItemWithQuantity,
+    cartHasHydrated,
     isAdding,
     product.bundles,
     product.category,
@@ -240,7 +242,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
             variant="accent"
             size="lg"
             className={styles.purchaseButton}
-            disabled={isAdding}
+            disabled={isAdding || !cartHasHydrated}
             onClick={() => commitPurchase("checkout")}
           >
             Buy Now
@@ -249,7 +251,7 @@ export function ProductConfigurator({ product }: { product: ProductConfiguratorM
             variant="outline"
             size="lg"
             className={styles.purchaseButton}
-            disabled={isAdding}
+            disabled={isAdding || !cartHasHydrated}
             onClick={() => commitPurchase("cart")}
           >
             Add to Cart

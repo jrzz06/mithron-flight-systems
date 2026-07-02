@@ -53,8 +53,20 @@ export function MithronResponsiveImage({
   }, []);
 
   const profile = imageRole ? getMediaDeliveryProfile(imageRole) : undefined;
+  const normalizedSrc = src?.trim() ?? "";
+  if (!normalizedSrc) {
+    return (
+      <span
+        aria-hidden="true"
+        data-mithron-image-fallback="missing"
+        className={cn("mithron-responsive-image-frame", fill ? "absolute inset-0 block" : "block", wrapperClassName)}
+        style={style}
+      />
+    );
+  }
+
   const model = buildResponsiveImageModel({
-    src,
+    src: normalizedSrc,
     imageRole,
     preferredFormat: preferredFormatProp ?? profile?.preferredFormat,
     maxVariantWidth: maxVariantWidthProp ?? profile?.maxVariantWidth,

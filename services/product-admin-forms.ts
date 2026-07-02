@@ -152,6 +152,7 @@ type ProductDeleteFormInput = {
   };
   fields: {
     confirm_slug: string;
+    force_delete?: boolean;
   };
   entityId: string;
   changeSummary?: string;
@@ -821,7 +822,7 @@ export function buildProductPublishStateFromFormData(formData: FormData): Produc
   };
 }
 
-export function buildProductDeleteFromFormData(formData: FormData): ProductDeleteFormInput {
+function readProductDeleteConfirmation(formData: FormData) {
   const slug = assertSlugSafe(readRequiredString(formData, "product_slug", "Product delete"), "Product delete");
   const confirmSlug = readRequiredString(formData, "confirm_slug", "Product delete");
   const changeSummary = readOptionalString(formData, "change_summary");
@@ -829,6 +830,16 @@ export function buildProductDeleteFromFormData(formData: FormData): ProductDelet
   if (confirmSlug !== slug) {
     throw new Error("Product delete confirmation must match the product slug exactly.");
   }
+
+  return {
+    slug,
+    confirmSlug,
+    changeSummary
+  };
+}
+
+export function buildProductDeleteFromFormData(formData: FormData): ProductDeleteFormInput {
+  const { slug, confirmSlug, changeSummary } = readProductDeleteConfirmation(formData);
 
   return {
     table: "mithron_products",
@@ -840,5 +851,41 @@ export function buildProductDeleteFromFormData(formData: FormData): ProductDelet
     },
     entityId: slug,
     changeSummary: changeSummary ?? `Hard delete product ${slug}`
+  };
+}
+
+export function buildProductRemoveFromFormData(formData: FormData): ProductDeleteFormInput {
+  const { slug, confirmSlug, changeSummary } = readProductDeleteConfirmation(formData);
+
+  return {
+    table: "mithron_products",
+    identity: {
+      slug
+    },
+    fields: {
+      confirm_slug: confirmSlug
+    },
+    entityId: slug,
+    changeSummary: changeSummary ?? `Remove product ${slug}`
+  };
+}
+
+export function buildProductForceDeleteFromFormData(formData: FormData): ProductDeleteFormInput {
+  const { slug, confirmSlug, changeSummary } = readProductDeleteConfirmation(formData);
+  if (!readOptionalBoolean(formData, "force_delete")) {
+    throw new Error("Force delete must be explicitly confirmed.");
+  }
+
+  return {
+    table: "mithron_products",
+    identity: {
+      slug
+    },
+    fields: {
+      confirm_slug: confirmSlug,
+      force_delete: true
+    },
+    entityId: slug,
+    changeSummary: changeSummary ?? `Force delete product ${slug}`
   };
 }

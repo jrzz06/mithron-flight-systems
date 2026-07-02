@@ -7,14 +7,14 @@ import { createClient } from "@/lib/server";
 import { assertSupabaseAdminConfig } from "@/lib/env";
 import { assertCustomerAddressBelongsToUser } from "@/services/customer-addresses";
 import {
-  createCustomerCheckoutOrderItemRecord,
+  createCustomerCheckoutOrderItemRecords,
   createCustomerCheckoutOrderRecord,
   createCustomerCheckoutPaymentRecord,
   fetchAdminRecordsByColumn,
   updateAdminRecord
 } from "@/services/admin-actions";
 import { buildCustomerCheckoutDraft } from "@/services/orders";
-import { verifyCheckoutStockAvailability, CheckoutStockVerificationError, CheckoutWarehouseConfigurationError, resolveCheckoutStockSkus } from "@/services/checkout-stock";
+import { verifyCheckoutStockAvailability, CheckoutStockVerificationError, CheckoutWarehouseConfigurationError, prepareCheckoutStock } from "@/services/checkout-stock";
 import {
   buildCheckoutPaymentResponse,
   markCheckoutPaymentInitiated
@@ -225,8 +225,7 @@ export async function POST(request: Request) {
 
   let stockItems;
   try {
-    await verifyCheckoutStockAvailability(body.items);
-    stockItems = await resolveCheckoutStockSkus(body.items);
+    stockItems = await prepareCheckoutStock(body.items);
   } catch (error) {
     const internal = error instanceof Error ? error.message : "Unable to resolve product inventory.";
     const stockContext = error instanceof CheckoutStockVerificationError
@@ -357,9 +356,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    for (const item of draft.orderItems) {
-      await createCustomerCheckoutOrderItemRecord({ ...item, order_id: orderId }, userId);
-    }
+    await createCustomerCheckoutOrderItemRecords(
+      draft.orderItems.map((item) => ({ ...item, order_id: orderId })),
+      userId
+    );
   } catch (error) {
     await cancelCheckoutOrder(orderId, userId, "order_items_failed");
     logPaymentError("checkout_order_items_failed", error, { orderId });

@@ -156,13 +156,16 @@ describe("admin operational UX", () => {
     expect(grid).toContain("Pencil");
     expect(grid).toContain("aria-label={`Edit ${product.title}`}");
     expect(grid).toContain("title=\"Edit product\"");
-    expect(grid).toContain("data-product-row-action=\"delete\"");
+    expect(grid).toContain('data-product-row-action={isArchivedView ? "permanent-delete" : "remove"}');
     expect(grid).toContain("data-product-row-actions-menu");
     expect(grid).toContain("grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px]");
     expect(grid).toContain("grid grid-cols-2 gap-1.5");
     expect(grid).toContain("menuOpen ? \"z-40\" : \"z-0\"");
     expect(grid).toContain("top-[calc(100%+0.375rem)] z-[90]");
-    expect(grid).toContain("Delete product");
+    expect(grid).toContain("Remove");
+    expect(grid).toContain("Permanent delete");
+    expect(grid).toContain("saveProductRemoveFormAction");
+    expect(grid).toContain("previewProductDeleteAction");
     expect(grid).toContain("grid-cols-1 md:grid-cols-2 xl:grid-cols-4");
     expect(grid).toContain("data-product-card");
     expect(grid).toContain("data-product-delete-modal");
@@ -176,6 +179,8 @@ describe("admin operational UX", () => {
     expect(page).not.toContain("hard-delete-product");
     expect(page).toContain("OperationalSubmitButton");
     expect(page).toContain("OperationalFeedback");
+    expect(page).toContain("product_action");
+    expect(page).toContain("Product remove");
     const categoryField = source("app/admin/products/product-category-field.tsx");
     expect(categoryField).toContain("data-product-category-field");
     expect(categoryField).toContain("data-product-delete-category-action");

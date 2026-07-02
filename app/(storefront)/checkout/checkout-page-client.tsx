@@ -15,31 +15,19 @@ import { CUSTOMER_CONTACT_REQUIRED_MESSAGE } from "@/lib/api/customer-contact";
 import {
   buildRazorpayCheckoutClientConfig,
   isRazorpayQrEligibleViewport,
-  loadRazorpayCheckoutScript,
   logRazorpayClientEvent,
   normalizeRazorpayContact
 } from "@/lib/payments/razorpay-checkout";
+import { ensureCashfreeCheckoutScript, ensureRazorpayCheckoutScript } from "@/lib/checkout/deferred-payment-sdk";
 import { isStorefrontGuestOnly } from "@/lib/storefront/guest-demo";
 import { Button } from "@/components/ui/button";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
+import { CheckoutPaymentStepLazy } from "./checkout-payment-step";
 import { inrToPaise } from "@/services/payments/amount";
 import { cn, formatINR } from "@/lib/utils";
 import { useResolvedCart } from "@/hooks/use-resolved-cart";
 import { useCartStore } from "@/store/cart";
 import styles from "./checkout.module.css";
-
-function formatPaymentProviderLabel(provider: string) {
-  if (provider === "razorpay") return "Razorpay";
-  if (provider === "cashfree") return "Cashfree";
-  if (provider === "stub") return "Payment gateway";
-  return provider.charAt(0).toUpperCase() + provider.slice(1);
-}
-
-function formatPaymentProviderHint(provider: string) {
-  if (provider === "razorpay") return "Cards, UPI, net banking, and wallets";
-  if (provider === "cashfree") return "Cards, UPI, and bank transfers";
-  return "Secure online payment";
-}
 
 function readCheckoutErrorMessage(response: Response, payload: Record<string, unknown>) {
   if (typeof payload.error === "string" && payload.error.trim()) {
@@ -105,24 +93,6 @@ const emptyGuestAddress = (): GuestAddressForm => ({
   postalCode: ""
 });
 
-function loadCashfreeScript() {
-  return new Promise<boolean>((resolve) => {
-    if (typeof window === "undefined") {
-      resolve(false);
-      return;
-    }
-    if (window.Cashfree) {
-      resolve(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
-    script.async = true;
-    script.onload = () => resolve(Boolean(window.Cashfree));
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
 
 async function completeStubPayment(intentId: string, amount: number) {
   const response = await fetch("/api/payments/webhooks/stub", {
@@ -588,13 +558,6 @@ export function CheckoutPageClient() {
     };
   }, []);
 
-  useEffect(() => {
-    if (paymentProvider !== "razorpay") return;
-    void loadRazorpayCheckoutScript().then((loaded) => {
-      logRazorpayClientEvent("script_prefetch", { loaded, provider: "razorpay" });
-    });
-  }, [paymentProvider]);
-
   useEffect(() => () => {
     stopCheckoutStatusPolling();
   }, [stopCheckoutStatusPolling]);
@@ -762,7 +725,7 @@ export function CheckoutPageClient() {
       return false;
     }
 
-    const loaded = await loadRazorpayCheckoutScript();
+    const loaded = await ensureRazorpayCheckoutScript();
     if (!loaded || !window.Razorpay) {
       logRazorpayClientEvent("checkout_script_unavailable", {}, "error");
       setError("Payment gateway failed to load. Please refresh and try again.");
@@ -953,7 +916,7 @@ export function CheckoutPageClient() {
     email: string;
     signedIn: boolean;
   }) {
-    const loaded = await loadCashfreeScript();
+    const loaded = await ensureCashfreeCheckoutScript();
     if (!loaded || !window.Cashfree) {
       setError("Payment gateway failed to load. Please refresh and try again.");
       return false;
@@ -1517,31 +1480,11 @@ export function CheckoutPageClient() {
                 {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
                 {paymentProviders.length > 0 ? (
-                  <fieldset className={styles.fieldset}>
-                    <legend className={styles.legend}>Payment method</legend>
-                    <p className={styles.paymentLead}>Choose how you would like to pay. You will complete payment in a secure gateway window.</p>
-                    <div className={styles.paymentOptions}>
-                      {paymentProviders.map((provider) => (
-                        <label
-                          key={provider}
-                          className={cn(styles.paymentOption, paymentProvider === provider && styles.paymentOptionSelected)}
-                        >
-                          <input
-                            type="radio"
-                            name="paymentProvider"
-                            value={provider}
-                            checked={paymentProvider === provider}
-                            onChange={() => setPaymentProvider(provider)}
-                            className={styles.paymentOptionInput}
-                          />
-                          <span className={styles.paymentOptionBody}>
-                            <span className={styles.paymentOptionTitle}>{formatPaymentProviderLabel(provider)}</span>
-                            <span className={styles.paymentOptionHint}>{formatPaymentProviderHint(provider)}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
+                  <CheckoutPaymentStepLazy
+                    paymentProviders={paymentProviders}
+                    paymentProvider={paymentProvider}
+                    onPaymentProviderChange={setPaymentProvider}
+                  />
                 ) : null}
 
                 <div className={styles.actions}>

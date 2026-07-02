@@ -2070,3 +2070,38 @@
   height: 180px;
   object-fit: cover;
 }
+
+@media (max-width: 767px) {
+  .quantityButton {
+    width: var(--mobile-touch-min, 44px);
+    height: var(--mobile-touch-min, 44px);
+  }
+
+  .sectionNavInner {
+    gap: 1rem;
+    padding-inline: var(--mobile-page-inline, 12px);
+    scroll-padding-inline: var(--mobile-page-inline, 12px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sectionNavLink {
+    min-height: var(--mobile-touch-min, 44px);
+  }
+
+  .reviewsSection {
+    padding: var(--mobile-section-gap, 1.5rem) var(--mobile-page-inline, 12px) 3rem;
+  }
+
+  .reviewsSummaryCard {
+    grid-template-columns: 1fr;
+    padding: 1.25rem;
+  }
+
+  .reviewStarRow {
+    flex-wrap: wrap;
+  }
+
+  .reviewsScoreMeta {
+    line-height: 1.6;
+  }
+}

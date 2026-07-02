@@ -1,33 +1,23 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { createClient } from "@/lib/client";
-import { createEnterpriseRealtimeManager } from "@/services/enterprise-realtime";
+import { useControlPlaneLiveSync } from "@/components/control-plane/use-control-plane-live-sync";
+
+const WAREHOUSE_DASHBOARD_TABLES = new Set([
+  "orders",
+  "order_items",
+  "inventory",
+  "warehouse_stock",
+  "shipments",
+  "notifications",
+  "activity_logs"
+]);
 
 export function WarehouseDashboardLiveSync({ enabled = true }: { enabled?: boolean }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!enabled) return undefined;
-    const supabase = createClient();
-    const manager = createEnterpriseRealtimeManager({
-      supabase,
-      scope: "warehouse",
-      onEvent: (event) => {
-        if (["orders", "order_items", "inventory", "warehouse_stock", "shipments", "notifications", "activity_logs"].includes(event.table)) {
-          router.refresh();
-        }
-      },
-      onDiagnostics: () => undefined,
-      onReplayRequired: () => router.refresh()
-    });
-
-    manager.subscribe();
-    return () => {
-      void manager.unsubscribe();
-    };
-  }, [enabled, router]);
+  useControlPlaneLiveSync(
+    "warehouse",
+    (table) => WAREHOUSE_DASHBOARD_TABLES.has(table),
+    enabled
+  );
 
   if (!enabled) return null;
 

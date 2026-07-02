@@ -199,6 +199,10 @@ describe("Supabase free-plan performance contract", () => {
     const catalog = source("services/catalog.ts");
     expect(catalog).toContain("async function fetchCatalogRows");
     expect(catalog).toContain("fetchAllCatalogRows");
+    expect(catalog).toContain("fetchCatalogRowsForCategoryName");
+    expect(catalog).toContain("getProductsByCategorySlug");
+    expect(catalog).toContain("getCatalogCutoutMediaForSlugs");
+    expect(catalog).toContain("scopeToRows: true");
     expect(catalog).toContain("getProductRowBySlug");
     expect(catalog).toContain("getProductAffinityRowBySlug");
     expect(catalog).toContain("getCheckoutPricingBySlugs");
@@ -210,6 +214,50 @@ describe("Supabase free-plan performance contract", () => {
     expect(catalog).toContain("select=slug");
     expect(catalog).not.toContain("\"Accept-Encoding\": \"identity\"");
     expect(catalog).not.toContain("const products = await getProducts();\n  return products.find((product) => product.slug === slug);");
+    const categoryLoader = catalog.match(/export async function getProductsForCategorySlug[\s\S]*?^}/m)?.[0] ?? "";
+    expect(categoryLoader).not.toContain("getProducts()");
+  });
+
+  it("uses targeted CMS reads for category metadata and product reviews", () => {
+    const cms = source("services/cms.ts");
+    const productPage = source("app/(storefront)/product/[slug]/page.tsx");
+
+    expect(cms).toContain("getCategoryCmsMetadataOnly");
+    expect(cms).toContain("getProductReviewsCmsSlice");
+    expect(cms).toContain("route_key=eq.");
+    expect(productPage).toContain("getProductReviewsCmsSlice");
+    expect(productPage).not.toContain("getPublicCmsSnapshot");
+  });
+
+  it("debounces control-plane realtime refresh via tagged revalidation", () => {
+    const hook = source("components/control-plane/use-control-plane-live-sync.ts");
+    const action = source("lib/control-plane/revalidate-realtime.ts");
+
+    expect(hook).toContain("revalidateControlPlaneRealtime");
+    expect(hook).toContain("DEBOUNCE_MS");
+    expect(action).toContain("revalidateTag");
+    expect(action).toContain("control-plane-orders");
+  });
+
+  it("dedupes checkout stock reads and batches order item inserts", () => {
+    const checkoutRoute = source("app/api/checkout/route.ts");
+    const checkoutStock = source("services/checkout-stock.ts");
+    const adminActions = source("services/admin-actions.ts");
+
+    expect(checkoutRoute).toContain("prepareCheckoutStock");
+    expect(checkoutRoute).toContain("createCustomerCheckoutOrderItemRecords");
+    expect(checkoutRoute).not.toContain("verifyCheckoutStockAvailability(body.items)");
+    expect(checkoutRoute).not.toContain("resolveCheckoutStockSkus(body.items)");
+    expect(checkoutStock).toContain("prepareCheckoutStock");
+    expect(adminActions).toContain("createCustomerCheckoutOrderItemRecords");
+  });
+
+  it("defers storefront search index preload until overlay intent", () => {
+    const shell = source("components/layout/store-shell-client.tsx");
+    const searchOverlay = source("components/overlays/search-overlay.tsx");
+
+    expect(shell).not.toContain('fetch("/api/catalog/search?intent=index")');
+    expect(searchOverlay).toContain('fetch("/api/catalog/search?intent=index"');
   });
 
   it("keeps the shared storefront shell on lightweight product summaries", () => {

@@ -117,9 +117,10 @@ export async function verifyOrderStockAvailability(
 
 export async function resolveOrderStockSkus(
   items: Array<{ productSlug: string; quantity: number }>,
-  env: EnvSource = process.env
+  env: EnvSource = process.env,
+  quantities?: Map<string, { quantity: number; sku: string }>
 ): Promise<OrderStockItem[]> {
-  const quantities = await getInventoryQuantitiesBySlug(
+  const resolvedQuantities = quantities ?? await getInventoryQuantitiesBySlug(
     items.map((item) => item.productSlug),
     env
   );
@@ -127,8 +128,50 @@ export async function resolveOrderStockSkus(
   return items.map((item) => ({
     productSlug: item.productSlug,
     quantity: item.quantity,
-    sku: quantities.get(item.productSlug)?.sku ?? deriveProductSku(item.productSlug)
+    sku: resolvedQuantities.get(item.productSlug)?.sku ?? deriveProductSku(item.productSlug)
   }));
+}
+
+export async function prepareCheckoutStockItems(
+  items: Array<{ productSlug: string; quantity: number }>,
+  env: EnvSource = process.env,
+  warehouseCode?: string
+): Promise<OrderStockItem[]> {
+  if (!items.length) return [];
+
+  const slugs = [...new Set(items.map((item) => item.productSlug))];
+  const quantities = await getInventoryQuantitiesBySlug(slugs, env);
+  const requestedBySlug = new Map<string, number>();
+
+  for (const item of items) {
+    requestedBySlug.set(item.productSlug, (requestedBySlug.get(item.productSlug) ?? 0) + item.quantity);
+  }
+
+  const issues: OrderStockIssue[] = [];
+  for (const [slug, requested] of requestedBySlug) {
+    const available = quantities.get(slug)?.quantity ?? 0;
+    if (available < requested) {
+      issues.push({
+        productSlug: slug,
+        requested,
+        available,
+        hasInventoryRow: quantities.has(slug)
+      });
+    }
+  }
+
+  if (issues.length) {
+    const first = issues[0];
+    const error = new Error(
+      first
+        ? `Insufficient stock for ${first.productSlug}. Requested ${first.requested}, available ${first.available}.`
+        : "Insufficient stock for one or more items."
+    );
+    (error as Error & { issues: OrderStockIssue[] }).issues = issues;
+    throw error;
+  }
+
+  return resolveOrderStockSkus(items, env, quantities);
 }
 
 export async function setInventoryQuantity(

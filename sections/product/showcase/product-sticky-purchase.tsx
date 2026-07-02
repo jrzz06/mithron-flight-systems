@@ -1,5 +1,6 @@
 "use client";
 
+import { useCartHasHydrated } from "@/store/cart";
 import { useDesktopPurchaseLayout } from "@/hooks/use-desktop-purchase-layout";
 import { formatINR, cn } from "@/lib/utils";
 import { useProductPurchaseActions } from "@/sections/product/product-purchase-context";
@@ -20,8 +21,10 @@ export function ProductStickyPurchase({
 }) {
   const isDesktop = useDesktopPurchaseLayout();
   const purchaseActions = useProductPurchaseActions();
+  const cartHasHydrated = useCartHasHydrated();
   const actionsReady = Boolean(purchaseActions);
   const actionsBusy = purchaseActions?.isAdding ?? false;
+  const purchaseDisabled = !actionsReady || actionsBusy || !cartHasHydrated;
 
   return (
     <>
@@ -44,7 +47,7 @@ export function ProductStickyPurchase({
             <button
               type="button"
               className={styles.mobilePurchaseSecondaryCta}
-              disabled={!actionsReady || actionsBusy}
+              disabled={purchaseDisabled}
               onClick={() => purchaseActions?.addToCart()}
             >
               Add to Cart
@@ -52,7 +55,7 @@ export function ProductStickyPurchase({
             <button
               type="button"
               className={styles.mobilePurchaseCta}
-              disabled={!actionsReady || actionsBusy}
+              disabled={purchaseDisabled}
               onClick={() => purchaseActions?.buyNow()}
             >
               Buy Now

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCartSlice } from "@/store/cart";
+import { createCartSlice, mergeRehydratedCartState } from "@/store/cart";
 
 describe("cart store core", () => {
   it("adds bundles, merges repeated items, and tracks item counts without persisting prices", () => {
@@ -34,5 +34,44 @@ describe("cart store core", () => {
 
     expect(cart.checkout.step).toBe("payment");
     expect(cart.checkout.promoCode).toBe("MITHRON-FIELD");
+  });
+
+  it("normalizes empty bundle ids to standard", () => {
+    const cart = createCartSlice();
+
+    cart.addItem({
+      productSlug: "pixy-lr",
+      bundleId: "",
+      productName: "Pixy LR"
+    });
+
+    expect(cart.items[0]?.bundleId).toBe("standard");
+  });
+
+  it("keeps in-memory cart items when rehydrated storage is empty", () => {
+    const currentState = createCartSlice();
+    currentState.addItem({
+      productSlug: "pixy-lr",
+      bundleId: "standard",
+      productName: "Pixy LR"
+    });
+
+    const merged = mergeRehydratedCartState({ items: [], checkout: currentState.checkout }, currentState);
+
+    expect(merged.items).toHaveLength(1);
+    expect(merged.items[0]?.productSlug).toBe("pixy-lr");
+  });
+
+  it("prefers rehydrated cart items when storage has data", () => {
+    const currentState = createCartSlice();
+    const merged = mergeRehydratedCartState(
+      {
+        items: [{ productSlug: "stored-product", bundleId: "standard", quantity: 2 }],
+        checkout: currentState.checkout
+      },
+      currentState
+    );
+
+    expect(merged.items).toEqual([{ productSlug: "stored-product", bundleId: "standard", quantity: 2 }]);
   });
 });

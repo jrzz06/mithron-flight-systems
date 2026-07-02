@@ -439,6 +439,24 @@
   }
 }
 
+@media (max-width: 767px) {
+  .closeButton {
+    min-width: var(--mobile-touch-min, 44px);
+    min-height: var(--mobile-touch-min, 44px);
+    padding: 0;
+  }
+
+  .quantityStepper {
+    grid-template-columns: repeat(3, var(--mobile-touch-min, 44px));
+    height: var(--mobile-touch-min, 44px);
+  }
+
+  .quantityButton {
+    width: var(--mobile-touch-min, 44px);
+    height: var(--mobile-touch-min, 44px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .serviceCard,
   .quantityButton,

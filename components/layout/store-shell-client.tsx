@@ -87,12 +87,12 @@ export function StoreShellClient({
     };
   }, [pathname]);
 
+  useEffect(() => {
+    if (!usesStorefrontChrome) return;
+    void useCartStore.persist.rehydrate();
+  }, [usesStorefrontChrome]);
+
   const requestSearchPreload = useCallback((mountWhenReady = false) => {
-    void fetch("/api/catalog/search?intent=index").catch((error: unknown) => {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Search index preload failed", error);
-      }
-    });
     void import("@/components/overlays/search-overlay").catch((error: unknown) => {
       if (process.env.NODE_ENV !== "production") {
         console.error("Search overlay preload failed", error);
@@ -113,15 +113,9 @@ export function StoreShellClient({
     const preloadSupportOverlays = () => {
       if (!active) return;
 
-      requestSearchPreload(true);
       void import("@/components/overlays/cart-drawer").catch((error: unknown) => {
         if (process.env.NODE_ENV !== "production") {
           console.error("Overlay preload failed", error);
-        }
-      });
-      void import("@/components/overlays/search-overlay").catch((error: unknown) => {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Search overlay preload failed", error);
         }
       });
     };
@@ -141,7 +135,7 @@ export function StoreShellClient({
         globalThis.clearTimeout(timerId);
       }
     };
-  }, [requestSearchPreload, usesStorefrontChrome]);
+  }, [usesStorefrontChrome]);
 
   if (skipsStorefrontChrome) {
     return (

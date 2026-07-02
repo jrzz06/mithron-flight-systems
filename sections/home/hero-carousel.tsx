@@ -291,7 +291,7 @@ export function HeroCarousel({
           setIsHovered(false);
         }
       }}
-      className="hero-premium-field relative isolate h-[80svh] min-h-[480px] md:min-h-[580px] w-full overflow-hidden bg-[#050505]"
+      className="hero-premium-field relative isolate h-[min(72svh,520px)] min-h-[min(420px,72svh)] md:h-[80svh] md:min-h-[580px] w-full overflow-hidden bg-[#050505]"
     >
       {safeSlides.map((item, itemIndex) => {
         const slideInk = getHeroContentInk(item, itemIndex);

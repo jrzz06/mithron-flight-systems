@@ -45,10 +45,15 @@ const initialCheckout: CheckoutDraft = {
   region: "India"
 };
 
+function normalizeBundleId(bundleId: string | undefined) {
+  const normalized = bundleId?.trim();
+  return normalized || "standard";
+}
+
 function toPersistedItem(item: NewCartItem): PersistedCartItem {
   return {
     productSlug: item.productSlug,
-    bundleId: item.bundleId,
+    bundleId: normalizeBundleId(item.bundleId),
     quantity: item.quantity ?? 1,
     ...(item.variantId ? { variantId: item.variantId } : {}),
     ...(item.productName?.trim() ? { productName: item.productName.trim() } : {}),
@@ -148,9 +153,29 @@ export function createCartSlice(): CartSlice {
   return slice;
 }
 
-type CartStore = CartSlice;
+type CartStore = CartSlice & {
+  _hasHydrated: boolean;
+};
 
 const CART_STORAGE_VERSION = 3;
+
+export function mergeRehydratedCartState(persistedState: unknown, currentState: CartSlice): Pick<CartSlice, "items" | "checkout"> {
+  const persisted = (persistedState ?? {}) as Partial<CartSlice>;
+  const persistedItems = persisted.items ?? [];
+  const currentItems = currentState.items ?? [];
+
+  const items =
+    currentItems.length > 0 && persistedItems.length === 0
+      ? currentItems
+      : persistedItems.length > 0
+        ? persistedItems
+        : currentItems;
+
+  return {
+    items,
+    checkout: persisted.checkout ?? currentState.checkout
+  };
+}
 
 export const useCartStore = create<CartStore>()(
   persist(
@@ -159,6 +184,7 @@ export const useCartStore = create<CartStore>()(
       checkout: initialCheckout,
       isCartOpen: false,
       hasOpenedCart: false,
+      _hasHydrated: false,
       addItem(item) {
         const persisted = toPersistedItem({ ...item, quantity: 1 });
         set((state) => {
@@ -271,9 +297,33 @@ export const useCartStore = create<CartStore>()(
           ...(item.image ? { image: item.image } : {})
         })),
         checkout: state.checkout
-      })
+      }),
+      skipHydration: true,
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...mergeRehydratedCartState(persistedState, currentState),
+        _hasHydrated: true
+      }),
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.error("[cart] Failed to rehydrate persisted cart state.", error);
+        }
+        useCartStore.setState({ _hasHydrated: true });
+      }
     }
   )
 );
 
 export type { CartItem };
+
+export function useCartItemCount() {
+  return useCartStore((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
+}
+
+export function useCartItems() {
+  return useCartStore((state) => state.items);
+}
+
+export function useCartHasHydrated() {
+  return useCartStore((state) => state._hasHydrated);
+}

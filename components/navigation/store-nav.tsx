@@ -9,7 +9,7 @@ import { useAdaptiveNavbarTone } from "@/hooks/use-adaptive-navbar-tone";
 import { normalizeStorefrontPath, resolveInitialNavbarTone } from "@/lib/navbar-ink-sampling";
 import { MithronCardImage } from "@/components/media/mithron-card-image";
 import { MithronBrandMark } from "@/components/brand/mithron-brand-mark";
-import { EditorRenderedContent } from "@/components/editor/editor-rendered-content";
+import { EditorRenderedHtml } from "@/components/editor/editor-rendered-html";
 import type { NavigationNode } from "@/config/types";
 import type { EnterpriseMenuConfig, EnterpriseMenuOption, FeaturedMenuCard, MegaMenuConfig } from "@/lib/nav-menu-types";
 import { catalogCategoryDefinitions, ACCESSORIES_CATALOG_HREF } from "@/lib/catalog-categories";
@@ -566,7 +566,7 @@ function EnterpriseMenuPanel({
           <div className="enterprise-franchise-menu__copy">
             <p className="enterprise-mega-menu__eyebrow">{menu.eyebrow}</p>
             <h2>{menu.headline}</h2>
-            <EditorRenderedContent html={menu.body} className="enterprise-franchise-menu__body" />
+            <EditorRenderedHtml html={menu.body} className="enterprise-franchise-menu__body" />
             <div className="enterprise-franchise-menu__links">
               {menu.items.map((item) => (
                 <EnterpriseMenuLink
@@ -698,7 +698,7 @@ function EnterpriseFeaturedCard({
       <div className="enterprise-feature-card__body">
         <p className="enterprise-mega-menu__eyebrow">{card.eyebrow}</p>
         <h3>{card.name}</h3>
-        <EditorRenderedContent html={card.body} className="enterprise-feature-card__description" />
+        <EditorRenderedHtml html={card.body} className="enterprise-feature-card__description" />
         <dl className="enterprise-feature-card__specs">
           {card.specs.map((spec) => (
             <div key={`${card.key}-${spec.label}`}>
@@ -771,7 +771,7 @@ function MobileMenu({
                 href={item.href}
                 tabIndex={open ? 0 : -1}
                 onClick={onClose}
-                className="adaptive-mobile-menu__link nav-interactive inline-flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-[14px] font-medium tracking-[0.01em]"
+                className="adaptive-mobile-menu__link nav-interactive inline-flex min-h-11 w-full items-center justify-between rounded-2xl border px-4 py-3.5 text-[14px] font-medium tracking-[0.01em]"
               >
                 {item.label}
               </Link>

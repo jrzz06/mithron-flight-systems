@@ -1,33 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { createClient } from "@/lib/client";
-import { createEnterpriseRealtimeManager } from "@/services/enterprise-realtime";
+import { useControlPlaneLiveSync } from "@/components/control-plane/use-control-plane-live-sync";
+
+const ENQUIRY_TABLES = new Set(["enquiries", "orders", "contact_requests", "notifications"]);
 
 export function EnquiryQueueLiveSync({ enabled = true }: { enabled?: boolean }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!enabled) return undefined;
-    const supabase = createClient();
-    const manager = createEnterpriseRealtimeManager({
-      supabase,
-      scope: "admin",
-      onEvent: (event) => {
-        if (event.table === "enquiries" || event.table === "orders" || event.table === "contact_requests" || event.table === "notifications") {
-          router.refresh();
-        }
-      },
-      onDiagnostics: () => undefined,
-      onReplayRequired: () => router.refresh()
-    });
-
-    manager.subscribe();
-    return () => {
-      void manager.unsubscribe();
-    };
-  }, [enabled, router]);
+  useControlPlaneLiveSync(
+    "admin",
+    (table) => ENQUIRY_TABLES.has(table),
+    enabled
+  );
 
   if (!enabled) return null;
 

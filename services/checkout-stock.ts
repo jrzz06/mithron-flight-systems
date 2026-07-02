@@ -1,6 +1,7 @@
 import {
   deductInventoryForOrder,
   orderInventoryDeducted,
+  prepareCheckoutStockItems,
   resolveOrderStockSkus,
   verifyOrderStockAvailability
 } from "@/services/inventory";
@@ -50,6 +51,29 @@ export async function resolveCheckoutStockSkus(
   env: EnvSource = process.env
 ): Promise<CheckoutStockItem[]> {
   return resolveOrderStockSkus(items, env);
+}
+
+export async function prepareCheckoutStock(
+  items: Array<{ productSlug: string; quantity: number }>,
+  env: EnvSource = process.env,
+  warehouseCode?: string
+): Promise<CheckoutStockItem[]> {
+  try {
+    return await prepareCheckoutStockItems(items, env);
+  } catch (error) {
+    const issues = (error as Error & { issues?: Array<{ productSlug: string; requested: number; available: number; hasInventoryRow: boolean }> }).issues ?? [];
+    if (!issues.length) throw error;
+    throw new CheckoutStockVerificationError(
+      issues.map((issue) => ({
+        productSlug: issue.productSlug,
+        requested: issue.requested,
+        available: issue.available,
+        warehouseCode: warehouseCode?.trim() || "IN-WEST-01",
+        hasWarehouseRow: issue.hasInventoryRow
+      })),
+      warehouseCode?.trim() || "IN-WEST-01"
+    );
+  }
 }
 
 export async function verifyCheckoutStockAvailability(

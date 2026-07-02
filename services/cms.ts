@@ -866,7 +866,30 @@ async function loadStorefrontShellCms(): Promise<StorefrontShellCms> {
 
 export const getStorefrontShellCms = cache(async () => loadStorefrontShellCms());
 
+export const getCategoryCmsMetadataOnly = cache(async (routeKey: string): Promise<CategoryMetadata> => {
+  if (!(await hasCmsSchema())) {
+    return mergeCategoryMetadata(routeKey, undefined);
+  }
+
+  const rows = await fetchCmsRows(
+    "category_metadata",
+    `select=route_key,title,subtitle,hero_image,showcase_image,sort_order,is_visible,status&route_key=eq.${encodeURIComponent(routeKey)}&limit=1`
+  );
+  const published = publishedRows(rows);
+  const mapped = mapCategoryRows(published.rows);
+  return mergeCategoryMetadata(routeKey, mapped?.[routeKey]);
+});
+
+export const getProductReviewsCmsSlice = cache(async () => {
+  if (!(await hasCmsSchema())) {
+    return fallbackSnapshot.productSupport.reviews;
+  }
+
+  const rows = await fetchCmsRows("product_reviews", publicCmsQueries.productReviews);
+  const published = publishedRows(rows);
+  return mapReviewRows(published.rows) ?? fallbackSnapshot.productSupport.reviews;
+});
+
 export async function getCategoryCmsMetadata(routeKey: string) {
-  const snapshot = await getPublicCmsSnapshot();
-  return mergeCategoryMetadata(routeKey, snapshot.categories[routeKey]);
+  return getCategoryCmsMetadataOnly(routeKey);
 }

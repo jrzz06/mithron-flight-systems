@@ -3,6 +3,8 @@ import { DataList, ModulePanel, OperationalFeedback, StatusBadge } from "@/compo
 import { FormField, Input, Select } from "@/components/platform";
 import { OperationalSubmitButton } from "@/components/admin/operational-submit-button";
 import { getProductManagerSnapshot, fetchProductEditorDetail } from "@/services/admin";
+import { getCurrentAuthContext } from "@/services/auth";
+import { roleHasPermission } from "@/lib/auth/permissions";
 import { getProductCatalogMetrics } from "@/services/inventory-metrics";
 import { deleteProductCategoryFormAction, saveProductCategoryFormAction, saveProductDraftFormAction, saveProductInventoryWorkflowFormAction, saveProductMediaLinkFormAction, saveProductPublishStateFormAction, saveProductSeoFormAction, saveProductVariantsFormAction } from "./actions";
 import { resolveNextImageSrc } from "@/lib/media/next-image-src";
@@ -116,18 +118,26 @@ function readProductTool(value: string): ProductToolKey | "" {
 export default async function AdminProductsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const params = searchParams ? await searchParams : {};
   const selectedProductSlug = searchValue(params, "product_slug");
-  const [snapshot, warehouses, checkoutWarehouseCode, catalogMetrics, editorProduct] = await Promise.all([
+  const [snapshot, warehouses, checkoutWarehouseCode, catalogMetrics, editorProduct, authContext] = await Promise.all([
     getProductManagerSnapshot(),
     listActiveWarehouses(),
     getCheckoutWarehouseCode(),
     getProductCatalogMetrics(),
-    selectedProductSlug ? fetchProductEditorDetail(selectedProductSlug) : Promise.resolve(null)
+    selectedProductSlug ? fetchProductEditorDetail(selectedProductSlug) : Promise.resolve(null),
+    getCurrentAuthContext()
   ]);
   const query = searchValue(params, "q").toLowerCase();
   const statusFilter = searchValue(params, "workflow_status");
   const activeTool = readProductTool(searchValue(params, "tool").toLowerCase());
   const productStatus = searchValue(params, "product_status");
   const productMessage = decodeMessage(searchValue(params, "product_message"));
+  const productAction = searchValue(params, "product_action");
+  const feedbackContext = productAction === "remove"
+    ? "Product remove"
+    : productAction === "permanent_delete"
+      ? "Permanent delete"
+      : "Product update";
+  const canForceDeleteProducts = roleHasPermission(authContext.role, "products.permanent_delete");
   const categoryOptions = uniqueCategoryOptions(snapshot.data.products, snapshot.data.categories);
   const nextCategorySortOrder = (categoryOptions.length + 1) * 10;
   const filteredProducts = snapshot.data.products.map((product) => {
@@ -239,7 +249,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
           <OperationalFeedback
             status={productStatus}
             message={productMessage}
-            context="Product update"
+            context={feedbackContext}
             idle="Saved changes and errors appear here."
           />
           <form data-product-search className="grid gap-3 md:grid-cols-[minmax(0,1fr)_168px_auto] md:items-end">
@@ -361,7 +371,12 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               </div>
             </form>
           ) : null}
-          <ProductCatalogGrid rows={productRows} totalCount={filteredProducts.length} />
+          <ProductCatalogGrid
+            rows={productRows}
+            totalCount={filteredProducts.length}
+            statusFilter={statusFilter || "active"}
+            canForceDelete={canForceDeleteProducts}
+          />
         </div>
       </ModulePanel>
 

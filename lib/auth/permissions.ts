@@ -10,6 +10,7 @@ export type CmsRole = (typeof ENTERPRISE_ROLES)[number];
 export const ENTERPRISE_PERMISSIONS = [
   "cms.write",
   "products.write",
+  "products.permanent_delete",
   "products.submit",
   "inventory.update_own",
   "media.write",

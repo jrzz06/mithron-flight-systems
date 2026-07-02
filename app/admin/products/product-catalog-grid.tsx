@@ -3,13 +3,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Copy, Eye, EyeOff, MoreHorizontal, Pencil } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { resolveNextImageSrc } from "@/lib/media/next-image-src";
 import { formatINR } from "@/lib/utils";
+import type { ProductDeletionBlockerResult } from "@/services/admin-actions";
 import {
+  previewProductDeleteAction,
   saveProductDuplicateFormAction,
+  saveProductForceDeleteFormAction,
   saveProductHardDeleteFormAction,
-  saveProductPublishStateFormAction
+  saveProductPublishStateFormAction,
+  saveProductRemoveFormAction
 } from "./actions";
 import { ProductDetailEditDialog } from "./product-detail-edit-dialog-loader";
 
@@ -123,9 +127,17 @@ function ProductPublishToggle({
   );
 }
 
+function formatBlockerSummary(blockers: ProductDeletionBlockerResult["blockers"]) {
+  return Object.entries(blockers)
+    .filter(([, count]) => count > 0)
+    .map(([key, count]) => `${key.replaceAll("_", " ")}: ${count}`)
+    .join(", ");
+}
+
 const ProductCard = memo(function ProductCard({
   product,
   menuOpen,
+  isArchivedView,
   onMenuToggle,
   onEdit,
   onArchive,
@@ -134,6 +146,7 @@ const ProductCard = memo(function ProductCard({
 }: {
   product: ProductCatalogGridRow;
   menuOpen: boolean;
+  isArchivedView: boolean;
   onMenuToggle: (id: string) => void;
   onEdit: (product: ProductCatalogGridRow) => void;
   onArchive: (id: string) => void;
@@ -223,33 +236,35 @@ const ProductCard = memo(function ProductCard({
           onPublishState={onPublishState}
         />
 
-        <div className="grid grid-cols-2 gap-1.5">
-          <form
-            action={saveProductPublishStateFormAction}
-            data-product-row-action="archive"
-            onSubmit={() => onArchive(product.id)}
-            className="min-w-0"
-          >
-            <input type="hidden" name="product_slug" value={product.id} />
-            <input type="hidden" name="workflow_status" value="archived" />
-            <input type="hidden" name="change_summary" value={`Archive product ${product.id}`} />
-            <button
-              type="submit"
-              title="Archive product"
-              className="product-row-btn inline-flex h-8 w-full items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors"
+        <div className={isArchivedView ? "grid grid-cols-1 gap-1.5" : "grid grid-cols-2 gap-1.5"}>
+          {isArchivedView ? null : (
+            <form
+              action={saveProductPublishStateFormAction}
               data-product-row-action="archive"
+              onSubmit={() => onArchive(product.id)}
+              className="min-w-0"
             >
-              Archive
-            </button>
-          </form>
+              <input type="hidden" name="product_slug" value={product.id} />
+              <input type="hidden" name="workflow_status" value="archived" />
+              <input type="hidden" name="change_summary" value={`Archive product ${product.id}`} />
+              <button
+                type="submit"
+                title="Archive product"
+                className="product-row-btn inline-flex h-8 w-full items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors"
+                data-product-row-action="archive"
+              >
+                Archive
+              </button>
+            </form>
+          )}
           <button
             type="button"
-            data-product-row-action="delete"
-            title="Delete product"
+            data-product-row-action={isArchivedView ? "permanent-delete" : "remove"}
+            title={isArchivedView ? "Permanently delete product" : "Remove product from catalog"}
             onClick={() => onDelete(product)}
             className="product-row-btn inline-flex h-8 w-full items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors"
           >
-            Delete
+            {isArchivedView ? "Permanent delete" : "Remove"}
           </button>
         </div>
       </div>
@@ -259,28 +274,51 @@ const ProductCard = memo(function ProductCard({
 
 export function ProductCatalogGrid({
   rows,
-  totalCount
+  totalCount,
+  statusFilter,
+  canForceDelete
 }: {
   rows: ProductCatalogGridRow[];
   totalCount: number;
+  statusFilter: string;
+  canForceDelete: boolean;
 }) {
-  const [deletedProductIds, setDeletedProductIds] = useState<Set<string>>(() => new Set());
+  const isArchivedView = statusFilter === "archived";
   const [productOverrides, setProductOverrides] = useState<Record<string, Partial<ProductCatalogGridRow>>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<ProductCatalogGridRow | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<ProductCatalogGridRow | null>(null);
+  const [deleteBlockers, setDeleteBlockers] = useState<ProductDeletionBlockerResult | null>(null);
+  const [forceDeleteConfirmed, setForceDeleteConfirmed] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 24;
-  const baseProducts = useMemo(
-    () => rows.filter((product) => !deletedProductIds.has(product.id)),
-    [deletedProductIds, rows]
-  );
   const products = useMemo(
-    () => baseProducts.map((product) => ({ ...product, ...(productOverrides[product.id] ?? {}) })),
-    [baseProducts, productOverrides]
+    () => rows.map((product) => ({ ...product, ...(productOverrides[product.id] ?? {}) })),
+    [rows, productOverrides]
   );
   const visibleProducts = useMemo(() => products.slice(0, page * pageSize), [page, products]);
-  const adjustedTotalCount = Math.max(totalCount - deletedProductIds.size, products.length);
+  const adjustedTotalCount = Math.max(totalCount, products.length);
+
+  useEffect(() => {
+    if (!deleteProduct) {
+      setDeleteBlockers(null);
+      setForceDeleteConfirmed(false);
+      return;
+    }
+
+    let cancelled = false;
+    previewProductDeleteAction(deleteProduct.id)
+      .then((result) => {
+        if (!cancelled) setDeleteBlockers(result);
+      })
+      .catch(() => {
+        if (!cancelled) setDeleteBlockers(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deleteProduct]);
 
   function updateProduct(id: string, fields: Partial<ProductCatalogGridRow>) {
     setProductOverrides((current) => ({
@@ -309,6 +347,7 @@ export function ProductCatalogGrid({
           <ProductCard
             key={product.id}
             product={product}
+            isArchivedView={isArchivedView}
             menuOpen={openMenuId === product.id}
             onMenuToggle={(id) => setOpenMenuId((current) => current === id ? null : id)}
             onEdit={(nextProduct) => {
@@ -357,32 +396,76 @@ export function ProductCatalogGrid({
       {deleteProduct ? (
         <div data-product-delete-modal className="fixed inset-0 z-50 grid place-items-center bg-[color-mix(in_srgb,var(--platform-bg)_72%,transparent)] p-4 backdrop-blur-[2px]">
           <form
-            action={saveProductHardDeleteFormAction}
-            onSubmit={() => {
-              setDeletedProductIds((current) => {
-                const next = new Set(current);
-                next.add(deleteProduct.id);
-                return next;
-              });
-              setDeleteProduct(null);
-            }}
+            action={
+              isArchivedView && forceDeleteConfirmed
+                ? saveProductForceDeleteFormAction
+                : isArchivedView
+                  ? saveProductHardDeleteFormAction
+                  : saveProductRemoveFormAction
+            }
             className="w-full max-w-md rounded-2xl border border-[var(--platform-border)] bg-[var(--platform-surface)] p-5"
             style={{ boxShadow: "var(--platform-shadow-md)" }}
           >
             <input type="hidden" name="product_slug" value={deleteProduct.id} />
             <input type="hidden" name="confirm_slug" value={deleteProduct.id} />
-            <input type="hidden" name="change_summary" value={`Delete product ${deleteProduct.id} from catalog grid`} />
-            <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--platform-danger)]">Delete product</p>
+            <input
+              type="hidden"
+              name="change_summary"
+              value={
+                isArchivedView && forceDeleteConfirmed
+                  ? `Force delete product ${deleteProduct.id} from archived catalog`
+                  : isArchivedView
+                    ? `Permanently delete product ${deleteProduct.id} from archived catalog`
+                    : `Remove product ${deleteProduct.id} from catalog grid`
+              }
+            />
+            {isArchivedView && forceDeleteConfirmed ? <input type="hidden" name="force_delete" value="1" /> : null}
+            <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-[var(--platform-danger)]">
+              {isArchivedView ? "Permanent delete" : "Remove product"}
+            </p>
             <h2 className="mt-2 text-lg font-medium text-[var(--platform-text-primary)]">{deleteProduct.title}</h2>
             <p className="mt-3 text-sm leading-6 text-[var(--platform-text-muted)]">
-              This permanently deletes the product from the database. This action cannot be undone.
+              {isArchivedView
+                ? "This permanently deletes the archived product from the database. This action cannot be undone."
+                : "Removes the product from the storefront. Products with stock or operational history are archived instead of destroyed."}
             </p>
+            {deleteBlockers?.hasBlockers ? (
+              <p className="mt-3 rounded-lg bg-[var(--platform-surface-muted)] px-3 py-2 text-xs leading-5 text-[var(--platform-text-secondary)]">
+                {isArchivedView
+                  ? `Operational references block permanent delete: ${formatBlockerSummary(deleteBlockers.blockers)}.`
+                  : `This product has operational references (${formatBlockerSummary(deleteBlockers.blockers)}). It will be archived, not destroyed.`}
+              </p>
+            ) : isArchivedView ? (
+              <p className="mt-3 rounded-lg bg-[var(--platform-surface-muted)] px-3 py-2 text-xs leading-5 text-[var(--platform-text-secondary)]">
+                No operational references were found. Permanent delete is allowed.
+              </p>
+            ) : null}
+            {isArchivedView && canForceDelete && deleteBlockers?.hasBlockers ? (
+              <label className="mt-4 flex items-start gap-2 text-xs leading-5 text-[var(--platform-text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={forceDeleteConfirmed}
+                  onChange={(event) => setForceDeleteConfirmed(event.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Force delete despite operational references. Order and shipment history still block force delete.
+                </span>
+              </label>
+            ) : null}
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={() => setDeleteProduct(null)} className="rounded-lg px-4 py-2 text-sm font-medium text-[var(--platform-text-secondary)] hover:bg-[var(--platform-accent-soft)]">
                 Cancel
               </button>
-              <button className="rounded-lg bg-[var(--platform-danger-soft)] px-4 py-2 text-sm font-medium text-[var(--platform-danger)] hover:bg-[var(--platform-danger-soft)]">
-                Delete product
+              <button
+                className="rounded-lg bg-[var(--platform-danger-soft)] px-4 py-2 text-sm font-medium text-[var(--platform-danger)] hover:bg-[var(--platform-danger-soft)]"
+                disabled={isArchivedView && Boolean(deleteBlockers?.hasBlockers) && !forceDeleteConfirmed}
+              >
+                {isArchivedView
+                  ? forceDeleteConfirmed
+                    ? "Force delete product"
+                    : "Permanently delete"
+                  : "Remove product"}
               </button>
             </div>
           </form>

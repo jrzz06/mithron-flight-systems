@@ -216,7 +216,7 @@ export function CartDrawer() {
                     {index > 0 ? <hr className={styles.sectionDivider} /> : null}
                     <div className={styles.productRow}>
                       <div className={styles.productThumb}>
-                        {isCartOpen ? (
+                        {isCartOpen && item.image?.trim() ? (
                           <MithronThumbImage
                             src={item.image}
                             alt={item.productName}

@@ -23,6 +23,29 @@ export function buildOptimisticCartLines(items: PersistedCartItem[]): CartItem[]
   }));
 }
 
+export function mergeCartDisplayWithPricing(displayLines: CartItem[], resolvedLines: CartItem[]) {
+  const pricedByKey = new Map(
+    resolvedLines.map((line) => [`${line.productSlug}:${line.bundleId}`, line] as const)
+  );
+
+  return displayLines.map((line) => {
+    const priced = pricedByKey.get(`${line.productSlug}:${line.bundleId}`);
+    if (!priced) return line;
+
+    return {
+      ...line,
+      unitPrice: priced.unitPrice,
+      compareAt: priced.compareAt,
+      ...(priced.chargeTax !== undefined ? { chargeTax: priced.chargeTax } : {}),
+      ...(priced.taxGroup ? { taxGroup: priced.taxGroup } : {}),
+      ...(priced.taxRate !== undefined ? { taxRate: priced.taxRate } : {}),
+      ...(priced.taxIncluded !== undefined ? { taxIncluded: priced.taxIncluded } : {}),
+      ...(priced.category ? { category: priced.category } : {}),
+      ...(priced.sku ? { sku: priced.sku } : {})
+    };
+  });
+}
+
 export function cartLinesMatchPersisted(persisted: PersistedCartItem[], resolved: CartItem[]) {
   if (persisted.length !== resolved.length) return false;
 

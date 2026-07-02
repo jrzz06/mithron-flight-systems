@@ -975,14 +975,34 @@ export function updateProductPublicationRecord(payload: JsonRecord, actorId: str
   return updateAdminRecord("mithron_products", "slug", String(payload.slug ?? ""), payload, actorId, env);
 }
 
-export async function deleteProductRecordSafely(slug: string, actorId: string | null, env: EnvSource = process.env) {
-  assertMutableTable("mithron_products");
-  await assertAdminMutationPermission("mithron_products", actorId);
-  const product = await fetchExistingAdminRecord("mithron_products", { slug }, "slug", env);
-  if (!product) {
-    throw new Error(`Product ${slug} does not exist or was already deleted.`);
-  }
+export type ProductDeletionBlockers = {
+  inventory_movements: number;
+  shipment_items: number;
+  order_items: number;
+  hero_banners: number;
+  product_reviews: number;
+  faqs: number;
+};
 
+export type ProductDeletionBlockerResult = {
+  blockers: ProductDeletionBlockers;
+  hasBlockers: boolean;
+  blockerCount: number;
+};
+
+export type ProductDeleteMode = "auto" | "hard" | "force_hard";
+
+export type ProductDeleteOutcome = "archived" | "deleted" | "force_deleted";
+
+export function isProductArchivedRecord(product: JsonRecord) {
+  const workflow = String(product.workflow_status ?? "");
+  return workflow === "archived" || Boolean(product.archived_at);
+}
+
+export async function getProductDeletionBlockers(
+  slug: string,
+  env: EnvSource = process.env
+): Promise<ProductDeletionBlockerResult> {
   const [
     inventoryMovements,
     shipmentItems,
@@ -998,7 +1018,8 @@ export async function deleteProductRecordSafely(slug: string, actorId: string | 
     fetchAdminRecordsByColumn("product_reviews", "product_slug", slug, env),
     fetchAdminRecordsByColumn("faqs", "product_slug", slug, env)
   ]);
-  const blockers = {
+
+  const blockers: ProductDeletionBlockers = {
     inventory_movements: inventoryMovements.length,
     shipment_items: shipmentItems.length,
     order_items: orderItems.length,
@@ -1007,10 +1028,65 @@ export async function deleteProductRecordSafely(slug: string, actorId: string | 
     faqs: faqs.length
   };
   const blockerCount = Object.values(blockers).reduce((sum, count) => sum + count, 0);
-  if (blockerCount) {
+
+  return {
+    blockers,
+    hasBlockers: blockerCount > 0,
+    blockerCount
+  };
+}
+
+function formatProductDeletionBlockerMessage(slug: string, blockers: ProductDeletionBlockers) {
+  return `Product ${slug} has operational or storefront references (${JSON.stringify(blockers)}). Archive it instead of hard deleting.`;
+}
+
+function assertProductCanForceDelete(slug: string, blockers: ProductDeletionBlockers) {
+  if (blockers.order_items > 0 || blockers.shipment_items > 0) {
     throw new Error(
-      `Product ${slug} has operational or storefront references (${JSON.stringify(blockers)}). Archive it instead of hard deleting.`
+      `Cannot force delete product ${slug} with order or shipment history (${JSON.stringify({
+        order_items: blockers.order_items,
+        shipment_items: blockers.shipment_items
+      })}).`
     );
+  }
+}
+
+export async function archiveProductRecord(slug: string, actorId: string | null, env: EnvSource = process.env) {
+  assertMutableTable("mithron_products");
+  await assertAdminMutationPermission("mithron_products", actorId);
+  const product = await fetchExistingAdminRecord("mithron_products", { slug }, "slug", env);
+  if (!product) {
+    throw new Error(`Product ${slug} does not exist or was already deleted.`);
+  }
+
+  const now = new Date().toISOString();
+  const record = await updateProductPublicationRecord(
+    {
+      slug,
+      workflow_status: "archived",
+      is_visible: false,
+      published_at: null,
+      archived_at: now,
+      updated_at: now
+    },
+    actorId,
+    env
+  );
+
+  return {
+    beforeData: product,
+    record
+  };
+}
+
+async function hardDeleteProductRecord(
+  slug: string,
+  actorId: string | null,
+  env: EnvSource = process.env
+) {
+  const product = await fetchExistingAdminRecord("mithron_products", { slug }, "slug", env);
+  if (!product) {
+    throw new Error(`Product ${slug} does not exist or was already deleted.`);
   }
 
   const deletedDependencies = {
@@ -1024,6 +1100,90 @@ export async function deleteProductRecordSafely(slug: string, actorId: string | 
     ...deletedProduct,
     beforeData: product,
     deletedDependencies
+  };
+}
+
+export async function deleteOrArchiveProduct(
+  slug: string,
+  actorId: string | null,
+  options: { mode: ProductDeleteMode },
+  env: EnvSource = process.env
+) {
+  assertMutableTable("mithron_products");
+  await assertAdminMutationPermission("mithron_products", actorId);
+  const product = await fetchExistingAdminRecord("mithron_products", { slug }, "slug", env);
+  if (!product) {
+    throw new Error(`Product ${slug} does not exist or was already deleted.`);
+  }
+
+  const blockerResult = await getProductDeletionBlockers(slug, env);
+
+  if (options.mode === "auto") {
+    if (blockerResult.hasBlockers) {
+      const archived = await archiveProductRecord(slug, actorId, env);
+      return {
+        outcome: "archived" as const,
+        blockers: blockerResult.blockers,
+        ...archived
+      };
+    }
+
+    const deleted = await hardDeleteProductRecord(slug, actorId, env);
+    return {
+      outcome: "deleted" as const,
+      blockers: blockerResult.blockers,
+      ...deleted
+    };
+  }
+
+  if (!isProductArchivedRecord(product)) {
+    throw new Error(`Product ${slug} must be archived before permanent delete.`);
+  }
+
+  if (options.mode === "hard") {
+    if (blockerResult.hasBlockers) {
+      throw new Error(formatProductDeletionBlockerMessage(slug, blockerResult.blockers));
+    }
+
+    const deleted = await hardDeleteProductRecord(slug, actorId, env);
+    return {
+      outcome: "deleted" as const,
+      blockers: blockerResult.blockers,
+      ...deleted
+    };
+  }
+
+  assertProductCanForceDelete(slug, blockerResult.blockers);
+  const deleted = await hardDeleteProductRecord(slug, actorId, env);
+  return {
+    outcome: "force_deleted" as const,
+    blockers: blockerResult.blockers,
+    ...deleted
+  };
+}
+
+export async function deleteProductRecordSafely(
+  slug: string,
+  actorId: string | null,
+  env: EnvSource = process.env,
+  options: { force?: boolean } = {}
+) {
+  const result = await deleteOrArchiveProduct(
+    slug,
+    actorId,
+    { mode: options.force ? "force_hard" : "hard" },
+    env
+  );
+
+  if (result.outcome !== "deleted" && result.outcome !== "force_deleted") {
+    throw new Error(`Expected hard delete for ${slug}, received ${result.outcome}.`);
+  }
+
+  return {
+    beforeData: result.beforeData,
+    deletedDependencies: result.deletedDependencies,
+    blockers: result.blockers,
+    outcome: result.outcome
   };
 }
 
@@ -1101,6 +1261,31 @@ export function createCustomerCheckoutOrderRecord(payload: JsonRecord, actorId: 
 /** Customer checkout line items — auth verified in /api/checkout before calling this. */
 export function createCustomerCheckoutOrderItemRecord(payload: JsonRecord, actorId: string | null, env: EnvSource = process.env) {
   return createAdminRecord("order_items", payload, actorId, env, checkoutApiMutationOptions);
+}
+
+/** Batch insert checkout line items in a single Supabase request. */
+export async function createCustomerCheckoutOrderItemRecords(
+  payloads: JsonRecord[],
+  actorId: string | null,
+  env: EnvSource = process.env
+) {
+  if (!payloads.length) return;
+
+  assertMutableTable("order_items");
+  await assertAdminMutationPermission("order_items", actorId, checkoutApiMutationOptions);
+  const config = assertSupabaseAdminConfig(env);
+  const response = await fetch(`${config.url}/rest/v1/order_items`, {
+    method: "POST",
+    headers: {
+      ...headers(config.serviceRoleKey),
+      Prefer: "return=minimal"
+    },
+    body: JSON.stringify(payloads)
+  });
+
+  if (!response.ok) {
+    throw new Error(await mutationErrorMessage(response, "order_items", "create"));
+  }
 }
 
 /** Customer checkout payment row — auth verified in /api/checkout before calling this. */

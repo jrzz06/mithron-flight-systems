@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOptimisticCartLines, cartLinesMatchPersisted } from "@/lib/cart-display";
+import { buildOptimisticCartLines, cartLinesMatchPersisted, mergeCartDisplayWithPricing } from "@/lib/cart-display";
 import type { CartItem } from "@/config/types";
 
 describe("cart display helpers", () => {
@@ -56,5 +56,39 @@ describe("cart display helpers", () => {
     expect(
       cartLinesMatchPersisted([{ productSlug: "pixy-lr", bundleId: "standard", quantity: 2 }], resolved)
     ).toBe(false);
+  });
+
+  it("enriches display lines with resolved pricing without replacing persisted metadata", () => {
+    const displayLines = buildOptimisticCartLines([
+      {
+        productSlug: "pixy-lr",
+        bundleId: "standard",
+        quantity: 1,
+        productName: "Pixy LR",
+        bundleName: "Standard configuration",
+        image: "/assets/products/pixy.webp"
+      }
+    ]);
+
+    const merged = mergeCartDisplayWithPricing(displayLines, [
+      {
+        productSlug: "pixy-lr",
+        bundleId: "standard",
+        quantity: 1,
+        productName: "Server Pixy LR",
+        bundleName: "Server bundle",
+        unitPrice: 125000,
+        compareAt: 140000,
+        image: "/server.webp"
+      }
+    ]);
+
+    expect(merged[0]).toMatchObject({
+      productName: "Pixy LR",
+      bundleName: "Standard configuration",
+      image: "/assets/products/pixy.webp",
+      unitPrice: 125000,
+      compareAt: 140000
+    });
   });
 });

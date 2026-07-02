@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CartItem } from "@/config/types";
-import { buildOptimisticCartLines, cartLinesMatchPersisted } from "@/lib/cart-display";
+import {
+  buildOptimisticCartLines,
+  cartLinesMatchPersisted,
+  mergeCartDisplayWithPricing
+} from "@/lib/cart-display";
 import { summarizeCartTax } from "@/lib/product-tax";
 import { useCartStore } from "@/store/cart";
 
@@ -71,11 +75,13 @@ export function useResolvedCart() {
     [persistedItems, resolvedItems, error]
   );
 
+  const displayLines = useMemo(() => buildOptimisticCartLines(persistedItems), [persistedItems]);
+
   const items = useMemo(() => {
-    if (hasResolvedPricing) return resolvedItems;
-    if (!persistedItems.length) return [];
-    return buildOptimisticCartLines(persistedItems);
-  }, [hasResolvedPricing, persistedItems, resolvedItems]);
+    if (!displayLines.length) return [];
+    if (!hasResolvedPricing) return displayLines;
+    return mergeCartDisplayWithPricing(displayLines, resolvedItems);
+  }, [displayLines, hasResolvedPricing, resolvedItems]);
 
   const pricing = useMemo(() => summarizeCartTax(hasResolvedPricing ? resolvedItems : []), [hasResolvedPricing, resolvedItems]);
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);

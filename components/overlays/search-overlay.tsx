@@ -194,7 +194,13 @@ export function SearchOverlay() {
               tabIndex={open ? 0 : -1}
               className="h-12 flex-1 bg-transparent font-display text-2xl font-medium outline-none placeholder:text-white/40"
             />
-            <button tabIndex={open ? 0 : -1} aria-label="Close search" onClick={() => setOverlay(null)} type="button">
+            <button
+              tabIndex={open ? 0 : -1}
+              aria-label="Close search"
+              onClick={() => setOverlay(null)}
+              type="button"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center"
+            >
               <X className="size-7" />
             </button>
           </form>
@@ -227,9 +233,9 @@ export function SearchOverlay() {
                             title={`View ${product.name}`}
                             tabIndex={open ? 0 : -1}
                             onClick={() => setOverlay(null)}
-                            className="search-result-card ambient-surface ambient-muted group grid min-h-28 grid-cols-[82px_1fr] items-center gap-4 rounded-2xl border border-[var(--surface-border)] p-3 outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            className="search-result-card ambient-surface ambient-muted group grid min-h-28 grid-cols-[82px_1fr] items-center gap-4 rounded-2xl border border-[var(--surface-border)] p-3 outline-none focus-visible:ring-2 focus-visible:ring-white max-[767px]:min-h-0"
                           >
-                            <span className="relative size-20 overflow-hidden rounded-xl bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
+                            <span className="relative size-20 shrink-0 overflow-hidden rounded-xl bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.9)]">
                               <MithronThumbImage
                                 src={product.image.src}
                                 alt={product.image.alt || product.name}
@@ -241,13 +247,13 @@ export function SearchOverlay() {
                                 sizes="80px"
                               />
                             </span>
-                            <span>
+                            <span className="min-w-0">
                               <span className="type-meta text-[10px] text-white/40">{product.category}</span>
-                              <span className="type-card-title mt-1 block text-base leading-5">{product.name}</span>
+                              <span className="type-card-title mt-1 block truncate text-base leading-5">{product.name}</span>
                               {product.tagline ? (
                                 <span className="type-body mt-1 block line-clamp-2 text-xs text-white/45">{product.tagline}</span>
                               ) : null}
-                              <span className="type-price mt-2 flex items-center justify-between gap-3 text-xs font-medium text-white/50">
+                              <span className="type-price mt-2 flex items-center justify-between gap-3 text-xs font-medium text-white/50 max-[390px]:flex-col max-[390px]:items-start max-[390px]:gap-1">
                                 From {formatINR(product.price)}
                                 <ArrowRight className="size-4 text-white/90" aria-hidden="true" />
                               </span>
@@ -290,7 +296,7 @@ export function SearchOverlay() {
                     title={`Browse ${category.label}`}
                     tabIndex={open ? 0 : -1}
                     onClick={() => setOverlay(null)}
-                    className="search-chip type-button rounded-full border border-[var(--surface-border)] bg-white/5 px-4 py-2"
+                    className="search-chip type-button inline-flex min-h-11 items-center rounded-full border border-[var(--surface-border)] bg-white/5 px-4 py-2"
                   >
                     {category.label}
                   </Link>

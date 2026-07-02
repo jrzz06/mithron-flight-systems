@@ -2,7 +2,7 @@
 
 import { ShoppingBag } from "lucide-react";
 import { useCallback, useSyncExternalStore } from "react";
-import { useCartStore } from "@/store/cart";
+import { useCartItemCount, useCartStore } from "@/store/cart";
 
 function preloadCartDrawer() {
   void import("@/components/overlays/cart-drawer").catch((error: unknown) => {
@@ -18,7 +18,7 @@ export function CartNavButton() {
     () => true,
     () => false
   );
-  const count = useCartStore((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
+  const count = useCartItemCount();
   const setCartOpen = useCartStore((state) => state.setCartOpen);
   const handlePointerEnter = useCallback(() => {
     preloadCartDrawer();

@@ -897,3 +897,45 @@
   margin: 0;
   padding-left: 1.25rem;
 }
+
+@media (max-width: 767px) {
+  .heroSection {
+    padding-inline: var(--mobile-page-inline, 12px);
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .stage {
+    max-height: min(56svh, 420px);
+    aspect-ratio: 4 / 3;
+  }
+
+  .thumbRail {
+    scroll-padding-inline: var(--mobile-page-inline, 12px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .compareTableWrap {
+    scrollbar-gutter: stable;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobilePurchaseBar {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .mobilePurchaseActions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .mobilePurchaseSecondaryCta,
+  .mobilePurchaseCta {
+    min-height: var(--mobile-touch-min, 44px);
+    white-space: normal;
+    text-align: center;
+    padding-inline: 0.75rem;
+  }
+}

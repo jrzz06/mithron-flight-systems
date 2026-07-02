@@ -512,7 +512,7 @@ function statusFromMetrics(metrics: CountMetric[]): "LIVE" | "PARTIAL" {
   return metrics.every((metric) => metric.status === "LIVE") ? "LIVE" : "PARTIAL";
 }
 
-export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.env) => {
+const loadAdminDashboardSnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);
   const emptyOperationalCounts: DashboardOperationalCounts = {
     pendingOrdersReview: { table: "orders.pending_review", count: 0, status: "UNAVAILABLE" },
@@ -604,6 +604,26 @@ export const getAdminDashboardSnapshot = cache(async (env: EnvSource = process.e
     }
   };
 });
+
+export async function getAdminDashboardSnapshot(env: EnvSource = process.env) {
+  const { cacheControlPlaneRead } = await import("@/lib/control-plane/query-cache");
+  return cacheControlPlaneRead(
+    ["admin-dashboard-snapshot"],
+    () => loadAdminDashboardSnapshot(env),
+    {
+      revalidate: 30,
+      tags: [
+        "admin-dashboard",
+        "control-plane-orders",
+        "control-plane-inventory",
+        "control-plane-enquiries",
+        "control-plane-notifications",
+        "control-plane-activity",
+        "control-plane-catalog"
+      ]
+    }
+  );
+}
 
 export const getAuditObservabilitySnapshot = cache(async (env: EnvSource = process.env) => {
   const config = getSupabaseAdminConfig(env);

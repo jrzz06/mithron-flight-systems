@@ -123,6 +123,13 @@ describe("cinematic media contract", () => {
     expect(image).toHaveAttribute("fetchpriority", "auto");
   });
 
+  it("does not render an img element when src is empty", () => {
+    const { container } = render(createElement(MithronThumbImage, { src: "", alt: "Missing product image", sizes: "80px" }));
+
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(container.querySelector('[data-mithron-image-fallback="missing"]')).not.toBeNull();
+  });
+
   it("renders Supabase catalog cutouts without legacy CDN srcsets", () => {
     const catalogSrc = "https://ictnoydmxlywwxwnugal.supabase.co/storage/v1/object/public/mithron-products/catalog-cutouts/v1/15-inch-drone-frame-001b273acafa.webp";
 
