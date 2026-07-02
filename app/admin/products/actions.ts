@@ -637,6 +637,9 @@ export async function saveProductHardDeleteFormAction(formData: FormData) {
     const deleteInput = buildProductDeleteFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     const result = await deleteOrArchiveProduct(deleteInput.identity.slug, actorId, { mode: "hard" });
+    if (result.outcome === "archived") {
+      throw new Error("Product could not be permanently deleted.");
+    }
 
     await recordProductAuditTrail(
       {
@@ -679,6 +682,9 @@ export async function saveProductForceDeleteFormAction(formData: FormData) {
     const deleteInput = buildProductForceDeleteFromFormData(formData);
     const { actorId, actorRole } = await currentActorContext();
     const result = await deleteOrArchiveProduct(deleteInput.identity.slug, actorId, { mode: "force_hard" });
+    if (result.outcome === "archived") {
+      throw new Error("Product could not be force deleted.");
+    }
 
     await recordProductAuditTrail(
       {
