@@ -1,7 +1,8 @@
+import { describe, expect, it } from "vitest";
+import { assertAddressUsage, mergeAddressUsageFlags } from "@/lib/customer/address-usage";
+import { roleHasPermission } from "@/lib/auth/permissions";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { roleHasPermission } from "@/lib/auth/permissions";
 
 const root = process.cwd();
 
@@ -17,6 +18,7 @@ describe("customer address actions", () => {
     expect(existsSync(join(root, "services/customer-address-actions.ts"))).toBe(true);
     expect(service).toContain('from("customer_addresses")');
     expect(service).toContain("requireAuthenticatedUserId");
+    expect(service).toContain("auth.getUser()");
     expect(service).not.toContain("createAdminRecord");
     expect(service).not.toContain("updateAdminRecord");
     expect(service).not.toContain("deleteAdminRecord");
@@ -34,6 +36,20 @@ describe("customer address actions", () => {
     expect(actions).toContain("updateCustomerAddress(addressId, { isDefault: true }, supabase)");
   });
 
+  it("returns structured action state instead of throwing user-facing errors", () => {
+    const actions = source("app/(storefront)/account/addresses/actions.ts");
+    const manager = source("components/account/address-manager.tsx");
+
+    expect(actions).toContain("export type AddressActionState");
+    expect(actions).toContain("return { ok: true }");
+    expect(actions).toContain("return { ok: false, error:");
+    expect(actions).toContain("toActionError(error)");
+    expect(manager).toContain("useActionState(createAddressFormAction");
+    expect(manager).toContain("useActionState(updateAddressFormAction");
+    expect(manager).toContain("useActionState(deleteAddressFormAction");
+    expect(manager).toContain("useActionState(setDefaultAddressFormAction");
+  });
+
   it("keeps checkout ownership checks on the server-side verifier", () => {
     const checkout = source("app/api/checkout/route.ts");
     const enquiryCheckout = source("app/api/checkout/enquiry/route.ts");
@@ -45,5 +61,25 @@ describe("customer address actions", () => {
   it("does not require enquiries.write for customer self-service address saves", () => {
     expect(roleHasPermission("user", "enquiries.write")).toBe(false);
     expect(roleHasPermission("user", "account.read.self")).toBe(true);
+  });
+});
+
+describe("address usage validation", () => {
+  it("merges billing and shipping flags before validating partial updates", () => {
+    expect(
+      mergeAddressUsageFlags(
+        { isBilling: true, isShipping: false },
+        { isShipping: false }
+      )
+    ).toEqual({ isBilling: true, isShipping: false });
+
+    expect(() =>
+      assertAddressUsage(
+        mergeAddressUsageFlags(
+          { isBilling: true, isShipping: true },
+          { isBilling: false, isShipping: false }
+        )
+      )
+    ).toThrow("An address must be enabled for shipping, billing, or both.");
   });
 });

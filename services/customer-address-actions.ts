@@ -1,5 +1,6 @@
 import "server-only";
 
+import { assertAddressUsage, mergeAddressUsageFlags } from "@/lib/customer/address-usage";
 import { createClient } from "@/lib/server";
 
 type CustomerAddressClient = Awaited<ReturnType<typeof createClient>>;
@@ -40,29 +41,25 @@ const ADDRESS_SELECT =
   "id,user_id,label,line1,line2,city,region,postal_code,country,phone,is_default,is_billing,is_shipping,created_at,updated_at";
 
 async function requireAuthenticatedUserId(supabase: CustomerAddressClient) {
-  const { data, error } = await supabase.auth.getClaims();
-  if (error) {
-    throw new Error("Authentication required.");
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const claimsUserId = typeof claimsData?.claims?.sub === "string" ? claimsData.claims.sub : null;
+  if (claimsUserId) {
+    return claimsUserId;
   }
 
-  const userId = typeof data?.claims?.sub === "string" ? data.claims.sub : null;
-  if (!userId) {
-    throw new Error("Authentication required.");
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (!userError && userData.user?.id) {
+    return userData.user.id;
   }
 
-  return userId;
-}
-
-function assertAddressUsage(input: Pick<CustomerAddressInput, "isBilling" | "isShipping">) {
-  const isBilling = input.isBilling ?? true;
-  const isShipping = input.isShipping ?? true;
-  if (!isBilling && !isShipping) {
-    throw new Error("An address must be enabled for shipping, billing, or both.");
-  }
+  throw new Error("Authentication required.");
 }
 
 function toInsertRow(userId: string, input: CustomerAddressInput) {
-  assertAddressUsage(input);
+  assertAddressUsage({
+    isBilling: input.isBilling,
+    isShipping: input.isShipping
+  });
 
   return {
     user_id: userId,
@@ -98,13 +95,6 @@ function toUpdateRow(input: Partial<CustomerAddressInput>) {
   if (input.isBilling !== undefined) patch.is_billing = input.isBilling;
   if (input.isShipping !== undefined) patch.is_shipping = input.isShipping;
 
-  if (input.isBilling !== undefined || input.isShipping !== undefined) {
-    assertAddressUsage({
-      isBilling: input.isBilling,
-      isShipping: input.isShipping
-    });
-  }
-
   return patch;
 }
 
@@ -116,6 +106,27 @@ function formatAddressMutationError(action: "read" | "create" | "update" | "dele
   return message?.trim()
     ? `Failed to ${action} address: ${message}`
     : `Failed to ${action} address.`;
+}
+
+async function getOwnedAddress(
+  client: CustomerAddressClient,
+  addressId: string
+): Promise<CustomerAddressRecord> {
+  const { data, error } = await client
+    .from("customer_addresses")
+    .select(ADDRESS_SELECT)
+    .eq("id", addressId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(formatAddressMutationError("read", error.message));
+  }
+
+  if (!data) {
+    throw new Error("Address not found for this account.");
+  }
+
+  return data as CustomerAddressRecord;
 }
 
 export async function listCustomerAddresses(
@@ -168,6 +179,19 @@ export async function updateCustomerAddress(
 
   if (!addressId.trim()) {
     throw new Error("Address not found for this account.");
+  }
+
+  const existing = await getOwnedAddress(client, addressId);
+
+  if (input.isBilling !== undefined || input.isShipping !== undefined) {
+    const mergedUsage = mergeAddressUsageFlags(
+      { isBilling: existing.is_billing, isShipping: existing.is_shipping },
+      {
+        isBilling: input.isBilling,
+        isShipping: input.isShipping
+      }
+    );
+    assertAddressUsage(mergedUsage);
   }
 
   const { data, error } = await client
